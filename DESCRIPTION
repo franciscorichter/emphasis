@@ -1,0 +1,23 @@
+Package: remphasis
+Type: Package
+Title: Expectation Maximization on Phylogenetic Applications with Simulations and Importance Sampling
+Version: 0.1.4
+Authors@R: c(person("Francisco","Richter", email = "f.richter@rug.nl", role = c("aut", "cre")),
+                person("Thijs","Janzen", email = "t.janzen@rug.nl", role=c("ctb")),
+                person("Hanno","Hildenbrandt", email = "h.hildenbrandt@rug.nl", role = c("ctb")))
+Description: Set of statistical tools for the study of diversification of species and ecological drivers of macro-evolution.
+License: GPL (>= 2)
+Encoding: UTF-8
+Depends: R (>= 3.5.0),
+         Rcpp, 
+         RcppParallel
+Imports: nloptr,
+         MASS,
+         ape
+LinkingTo: Rcpp, 
+           RcppParallel, 
+           nloptr
+Suggests: TreeSim,
+          testthat (>= 3.0.0)
+SystemRequirements: C++14
+RoxygenNote: 7.1.1

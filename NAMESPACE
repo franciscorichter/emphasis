@@ -1,0 +1,8 @@
+useDynLib(remphasis, .registration=TRUE)
+exportPattern("^[[:alpha:]]+")
+importFrom("stats", "coef", "sd")
+importFrom("utils", "tail")
+import(nloptr)
+importFrom(Rcpp, evalCpp)
+importFrom(RcppParallel, RcppParallelLibs)
+
