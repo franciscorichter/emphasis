@@ -181,7 +181,7 @@ mcEM_step <- function(brts,
   times <- NULL
   while (sde > tol) {
     i <- i + 1
-    results <- remphasis::em_cpp(brts,
+    results <- emphasis::em_cpp(brts,
                                  pars,
                                  sample_size,
                                  maxN = 10 * sample_size,                   

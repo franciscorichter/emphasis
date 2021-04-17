@@ -1,6 +1,5 @@
 \name{emphasis-package}
 \alias{emphasis-package}
-\alias{emphasis}
 \docType{package}
 \title{
   A short title line describing what the package does
