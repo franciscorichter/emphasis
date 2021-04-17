@@ -1,4 +1,4 @@
-useDynLib(remphasis, .registration=TRUE)
+useDynLib(emphasis, .registration=TRUE)
 exportPattern("^[[:alpha:]]+")
 importFrom("stats", "coef", "sd")
 importFrom("utils", "tail")

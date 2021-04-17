@@ -7,7 +7,7 @@ using namespace Rcpp;
 
 // rcpp_mce
 List rcpp_mce(const std::vector<double>& brts, const std::vector<double>& init_pars, int sample_size, int maxN, const std::string& plugin, int soc, int max_missing, double max_lambda, const std::vector<double>& lower_bound, const std::vector<double>& upper_bound, double xtol_rel, int num_threads);
-RcppExport SEXP _remphasis_rcpp_mce(SEXP brtsSEXP, SEXP init_parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP pluginSEXP, SEXP socSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP lower_boundSEXP, SEXP upper_boundSEXP, SEXP xtol_relSEXP, SEXP num_threadsSEXP) {
+RcppExport SEXP _emphasis_rcpp_mce(SEXP brtsSEXP, SEXP init_parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP pluginSEXP, SEXP socSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP lower_boundSEXP, SEXP upper_boundSEXP, SEXP xtol_relSEXP, SEXP num_threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -29,7 +29,7 @@ END_RCPP
 }
 // rcpp_mcem
 List rcpp_mcem(const std::vector<double>& brts, const std::vector<double>& init_pars, int sample_size, int maxN, const std::string& plugin, int soc, int max_missing, double max_lambda, const std::vector<double>& lower_bound, const std::vector<double>& upper_bound, double xtol_rel, int num_threads, bool copy_trees, Nullable<Function> rconditional);
-RcppExport SEXP _remphasis_rcpp_mcem(SEXP brtsSEXP, SEXP init_parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP pluginSEXP, SEXP socSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP lower_boundSEXP, SEXP upper_boundSEXP, SEXP xtol_relSEXP, SEXP num_threadsSEXP, SEXP copy_treesSEXP, SEXP rconditionalSEXP) {
+RcppExport SEXP _emphasis_rcpp_mcem(SEXP brtsSEXP, SEXP init_parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP pluginSEXP, SEXP socSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP lower_boundSEXP, SEXP upper_boundSEXP, SEXP xtol_relSEXP, SEXP num_threadsSEXP, SEXP copy_treesSEXP, SEXP rconditionalSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -53,7 +53,7 @@ END_RCPP
 }
 // rcpp_mcm
 List rcpp_mcm(List e_step, const std::vector<double>& init_pars, const std::string& plugin, const std::vector<double>& lower_bound, const std::vector<double>& upper_bound, double xtol_rel, int num_threads, Nullable<Function> rconditional);
-RcppExport SEXP _remphasis_rcpp_mcm(SEXP e_stepSEXP, SEXP init_parsSEXP, SEXP pluginSEXP, SEXP lower_boundSEXP, SEXP upper_boundSEXP, SEXP xtol_relSEXP, SEXP num_threadsSEXP, SEXP rconditionalSEXP) {
+RcppExport SEXP _emphasis_rcpp_mcm(SEXP e_stepSEXP, SEXP init_parsSEXP, SEXP pluginSEXP, SEXP lower_boundSEXP, SEXP upper_boundSEXP, SEXP xtol_relSEXP, SEXP num_threadsSEXP, SEXP rconditionalSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -71,14 +71,14 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_remphasis_rcpp_mce", (DL_FUNC) &_remphasis_rcpp_mce, 12},
-    {"_remphasis_rcpp_mcem", (DL_FUNC) &_remphasis_rcpp_mcem, 14},
-    {"_remphasis_rcpp_mcm", (DL_FUNC) &_remphasis_rcpp_mcm, 8},
+    {"_emphasis_rcpp_mce", (DL_FUNC) &_emphasis_rcpp_mce, 12},
+    {"_emphasis_rcpp_mcem", (DL_FUNC) &_emphasis_rcpp_mcem, 14},
+    {"_emphasis_rcpp_mcm", (DL_FUNC) &_emphasis_rcpp_mcm, 8},
     {NULL, NULL, 0}
 };
 
 void remphasis_init(DllInfo *dll);
-RcppExport void R_init_remphasis(DllInfo *dll) {
+RcppExport void R_init_emphasis(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
     remphasis_init(dll);
