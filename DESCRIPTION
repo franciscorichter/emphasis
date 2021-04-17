@@ -1,4 +1,4 @@
-Package: remphasis
+Package: emphasis
 Type: Package
 Title: Expectation Maximization on Phylogenetic Applications with Simulations and Importance Sampling
 Version: 0.1.4
