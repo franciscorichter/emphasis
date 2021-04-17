@@ -16,5 +16,4 @@ testthat::test_that("test_locate_plugin", {
  phy <- TreeSim::sim.bd.age(age = 5, numbsim = 1, lambda = 1, mu = 0)[[1]]
  lambda_estim <- ape::birthdeath(phy)$para[[2]] # this is the lambda estimate
  testthat::expect_equal(1, lambda_estim, tolerance = 0.5)
- 
 })

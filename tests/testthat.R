@@ -1,4 +1,4 @@
 library(testthat)
-library(remphasis) # nolint
+library(emphasis) # nolint
 
-test_check("remphasis")
+test_check("emphasis")
