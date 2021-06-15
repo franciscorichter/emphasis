@@ -15,7 +15,7 @@ create_grid <- function(llim,
   return(pars)
 }
 
-
+#' @keywords internal
 simulation_step <- function(grid, 
                             model,
                             ct,
@@ -37,11 +37,11 @@ simulation_step <- function(grid,
       srv[i] = tau$srv
       Trees[[i]] = tau$tree
     }
-    
   }
   return(list(srv = srv, Trees = Trees))
 }
 
+#' @keywords internal
 sim_survival <- function(diversification_model, 
                          ct, 
                          timeLimit = 10) {
@@ -62,7 +62,11 @@ sim_survival <- function(diversification_model,
               srv = srv))
 }
 
-
+#' fit gam survival 
+#' @description function to fit a GAM function to simulated extinction data.
+#' @param simulations a dataframe containing the simulations
+#' @param splines either bivariate or univariate
+#' @export
 fit_gam_survival <- function(simulations,
                              splines = "bivariate") {
   
@@ -82,7 +86,7 @@ fit_gam_survival <- function(simulations,
 
 
 ### simulation of trees 
-
+#' @keywords internal
 simTree_dd <- function(pars, ct, timeLimit) {
   setTimeLimit(timeLimit)
   tree =  data.frame(brts = c(0, 0),
@@ -151,7 +155,7 @@ simTree_dd <- function(pars, ct, timeLimit) {
   return(tree)
 }
 
-
+#' @keywords internal
 simTree_pd <- function(pars,
                        ct,
                        timeLimit){

@@ -30,6 +30,10 @@
 #' @export
 #' @return a list with two components: 1) \code{pars} contains the average parameter
 #' estimate and 2) \code{MCEM} matrix of parameter estimates and likelihoods.
+#' @rawNamespace useDynLib(emphasis)
+#' @rawNamespace import(nloptr)
+#' @rawNamespace import(Rcpp)
+#' @rawNamespace import(RcppParallel)
 emphasis <- function(brts,
                      init_par,
                      soc = 2,
@@ -111,7 +115,7 @@ emphasis <- function(brts,
                     burnin = 10,
                     conditional)
     
-    ta <- tail(mc$mcem, n = nrow(M) / 2)
+    ta <- utils::tail(mc$mcem, n = nrow(M) / 2)
     pars <- c(mean(ta$par1),
               mean(ta$par2),
               mean(ta$par3),
