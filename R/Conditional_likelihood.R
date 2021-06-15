@@ -1,4 +1,7 @@
-create_grid <- function(llim,rlim, n.grid){
+#' @keywords internal
+create_grid <- function(llim, 
+                        rlim, 
+                        n.grid){
   p = length(llim)
   theta.range = cbind(llim, rlim)
   pars = NULL
@@ -13,14 +16,14 @@ create_grid <- function(llim,rlim, n.grid){
 }
 
 
-Simulation_step <- function(grid, 
+simulation_step <- function(grid, 
                             model,
                             ct,
                             timeLimit) {
   srv = vector(mode = "numeric", length = nrow(grid))
   Trees = vector(mode = "list", length = nrow(grid))
   for (i in 1:nrow(grid)) {
-    svMisc:::progress(i,max.value = nrow(grid))
+    svMisc::progress(i, max.value = nrow(grid))
     tau = try(emphasis::sim_survival(
                               diversification_model = list(pars = grid[i,],
                                                            model = model),
@@ -65,12 +68,12 @@ fit_gam_survival <- function(simulations,
   
   if (splines == "bivariate") {
     srv.gam = mgcv::gam(srv ~ s(p1, p2) + s(p1, p3) + s(p2, p3),
-                        family = binomial, 
+                        family = stats::binomial, 
                         data = simulations)
   }
   if (splines == "univariate") {
     srv.gam = mgcv::gam(srv ~ s(p1) + s(p3) + s(p2),
-                        family = binomial,
+                        family = stats::binomial,
                         data = simulations)
   }
 
@@ -97,7 +100,7 @@ simTree_dd <- function(pars, ct, timeLimit) {
     N = N1 + N2 
     lambda_ct = max(0, pars[2] + pars[3] * N)  # diversity dependence only 
     rate_max = (lambda_ct + mu) * N
-    u1 = runif(1)
+    u1 = stats::runif(1)
     next_event_time = cbt - log(x = u1) / rate_max
     
     if (next_event_time < ct) {
@@ -171,12 +174,12 @@ simTree_pd <- function(pars,
                        pars[3]*N  +  
                        ((P + N * (next_bt - cbt) - cbt) / N) * pars[4])
     rate_max = (lambda_mx + mu)*N 
-    u1 = runif(1)
+    u1 = stats::runif(1)
     next_event_time = cbt - log(x = u1) / rate_max
     P = P + N * (next_event_time - cbt)
     
     if (next_event_time < next_bt) {
-      u2 = runif(1)
+      u2 = stats::runif(1)
       lambda_ct = max(0, 
                       pars[2] + 
                       pars[3]*N  +  
