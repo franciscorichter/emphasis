@@ -27,7 +27,7 @@ Simulation_step <- function(grid,
                            ct = ct,
                            timeLimit = timeLimit),
               silent = TRUE)
-    if (class(tau) == "try-error"){
+    if (class(tau) == "try-error") {
       srv[i] = -1
       Trees[[i]] = "error"
     } else {
@@ -44,10 +44,10 @@ sim_survival <- function(diversification_model,
                          timeLimit = 10) {
   pars = diversification_model$pars
   model = diversification_model$model
-  if (model == "rpd1"){
+  if (model == "rpd1") {
     tree = simTree_dd(pars,ct,timeLimit = timeLimit)
   }
-  if (model == "rpd5"){
+  if (model == "rpd5") {
     tree = simTree_pd(pars,ct,timeLimit = timeLimit)
   }
   if (length(tree) == 1) {

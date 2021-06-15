@@ -1,7 +1,7 @@
 Package: emphasis
 Type: Package
 Title: Expectation Maximization on Phylogenetic Applications with Simulations and Importance Sampling
-Version: 0.1.4
+Version: 0.1.5
 Authors@R: c(person("Francisco","Richter", email = "f.richter@rug.nl", role = c("aut", "cre")),
                 person("Thijs","Janzen", email = "t.janzen@rug.nl", role=c("ctb")),
                 person("Hanno","Hildenbrandt", email = "h.hildenbrandt@rug.nl", role = c("ctb")))
@@ -13,7 +13,9 @@ Depends: R (>= 3.5.0),
          RcppParallel
 Imports: nloptr,
          MASS,
-         ape
+         ape,
+         mgcv,
+         svMisc
 LinkingTo: Rcpp, 
            RcppParallel, 
            nloptr
