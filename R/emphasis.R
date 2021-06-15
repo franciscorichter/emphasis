@@ -33,7 +33,7 @@
 #' @rawNamespace useDynLib(emphasis)
 #' @rawNamespace import(nloptr)
 #' @rawNamespace import(Rcpp)
-#' @rawNamespace import(RcppParallel)
+#' @rawNamespace importFrom(RcppParallel, RcppParallelLibs)
 emphasis <- function(brts,
                      init_par,
                      soc = 2,
@@ -185,20 +185,20 @@ mcEM_step <- function(brts,
   times <- NULL
   while (sde > tol) {
     i <- i + 1
-    results <- emphasis::em_cpp(brts,
-                                 pars,
-                                 sample_size,
-                                 maxN = 10 * sample_size,                   
-                                 locate_plugin(model),           
-                                 soc,
-                                 max_missing,           
-                                 max_lambda,           
-                                 lower_bound,
-                                 upper_bound,
-                                 xtol_rel = xtol,                   
-                                 num_threads,
-                                 return_trees,
-                                 conditional)
+    results <- em_cpp(brts,
+                      pars,
+                      sample_size,
+                      maxN = 10 * sample_size,                   
+                      locate_plugin(model),           
+                      soc,
+                      max_missing,           
+                      max_lambda,           
+                      lower_bound,
+                      upper_bound,
+                      xtol_rel = xtol,                   
+                      num_threads,
+                      return_trees,
+                      conditional)
     pars <- results$estimates
     mcem <- rbind(mcem, data.frame(par1 = pars[1],
                                    par2 = pars[2],

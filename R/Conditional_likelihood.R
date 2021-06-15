@@ -24,7 +24,7 @@ simulation_step <- function(grid,
   Trees = vector(mode = "list", length = nrow(grid))
   for (i in 1:nrow(grid)) {
     svMisc::progress(i, max.value = nrow(grid))
-    tau = try(emphasis::sim_survival(
+    tau = try(sim_survival(
                               diversification_model = list(pars = grid[i,],
                                                            model = model),
                            ct = ct,
