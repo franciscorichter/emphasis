@@ -170,16 +170,20 @@ tree_t simtree_dd(const std::vector<double>& pars,
     }
     cbt = next_event_time
   }
+  
   if ((N1 == 0) |  (N2 == 0)) {
-    tree = cbt
+   // tree = cbt
   } else {
+    /*
     tree = rbind(tree,data.frame(brts = ct,
                                  to = 1,
                                  t_ext = Inf,
                                  lambda = lambda_ct, 
                                  clade = 0))
+     */
   }
   return(tree)
 }
       
+} // end namespace emphasis
     
