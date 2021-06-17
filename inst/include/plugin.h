@@ -50,6 +50,7 @@ struct emp_node_t
   double n;         /* n[i] = number of species in [time_i-1, time_i) */
   double t_ext;     /* emp_t_ext_tip for present-day species;  emp_t_ext_extinct for extinction nodes */
   double pd;
+  int clade; // required for sim_tree
 };
 
 
