@@ -48,10 +48,10 @@ sim_survival <- function(diversification_model,
   pars = diversification_model$pars
   model = diversification_model$model
   if (model == "rpd1") {
-    tree = simTree_dd(pars,ct,timeLimit = timeLimit)
+    tree = simTree_dd(pars, ct, timeLimit = timeLimit)
   }
   if (model == "rpd5") {
-    tree = simTree_pd(pars,ct,timeLimit = timeLimit)
+    tree = simTree_pd(pars, ct, timeLimit = timeLimit)
   }
   if (length(tree) == 1) {
     srv = 0
@@ -231,6 +231,7 @@ simTree_pd <- function(pars,
     
     cbt = next_event_time
   }
+  
   if ((N1 == 0) |  (N2 == 0)) {
     tree = cbt
   } else {
