@@ -56,14 +56,14 @@ sim_tree_pd_minimal <- function(pars, max_t) {
   return(c(N, t, P))
 }
 
-#' simulation function to simulate a minimal pd model
+#' simulation function to simulate a tree under the pd model
 #' @description super fast function to simulate the process of diversification
 #' with diversity dependence and phylogenetic diversity dependence
 #' @param pars parameter vector with c(mu, lambda_0, beta_N, beta_P)
 #' @param max_t crown age
-#' @return a vector with population size, time of extinction (equal to the crown 
-#' age in the absence of extinction), and the phylogenetic diversity at the time
-#' of extinction (or crown age).
+#' @return a list with the phylogeny, and a vector with population size, 
+#' time of extinction (equal to the crown #' age in the absence of extinction), 
+#' and the phylogenetic diversity at the time of extinction (or crown age).
 #' @export
 sim_tree_pd_full <- function(pars, max_t) {
   N <- 2
@@ -111,9 +111,8 @@ sim_tree_pd_full <- function(pars, max_t) {
           # pick random species
           to_remove <- sample(which(tree[, 4] == -1), 1)
           P <- P - (t - tree[to_remove, 5]) # we have to correct P for the extinct species 
-        #  tree <- tree[-to_remove, ]
           tree[to_remove, 4] <- next_event_time
-           N <- N - 1
+          N <- N - 1
         }
       }
     }
