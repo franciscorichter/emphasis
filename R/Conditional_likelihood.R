@@ -172,7 +172,7 @@ simTree_pd <- function(pars,
   while ((cbt < ct)  &
          (N1 >= 1) &  
          (N2 >= 1)) {
-    next_bt = min(c(tree$brts[tree$brts > cbt], ct))
+    next_bt = ct # min(c(tree$brts[tree$brts > cbt], ct))
     N = N1 + N2
     lambda_mx = max(0, pars[2] + 
                        pars[3]*N  +  
@@ -188,7 +188,8 @@ simTree_pd <- function(pars,
                       pars[2] + 
                       pars[3]*N  +  
                       ((P + N * (next_event_time - cbt) - next_event_time) / N) * pars[4])
-      pt = ((lambda_ct + mu) * N )/rate_max  
+      
+      pt = ((lambda_ct + mu) * N ) / rate_max  
       
       if (u2 < pt) {
         to = sample(c(1, 0),

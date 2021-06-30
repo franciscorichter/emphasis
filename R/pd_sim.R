@@ -1,3 +1,23 @@
+#' @keywords internal
+find_daughter <- function(tree, focal) {
+  daughters <- which(tree[, 3] == focal &
+                     tree[, 4] == -1)
+  if (length(daughters) == 1) {
+    return(daughters[1])
+  }
+  if (length(daughters) < 1) {
+    return(focal)
+  }
+  
+  if (length(daughters) > 1) {
+    ages <- tree[daughters, 1]
+    youngest_daughter <- which.min(ages)
+    return(daughters[youngest_daughter])
+  }
+}
+
+
+
 #' simulation function to simulate a tree under the pd model
 #' @description super fast function to simulate the process of diversification
 #' with diversity dependence and phylogenetic diversity dependence
