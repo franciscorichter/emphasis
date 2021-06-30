@@ -1,6 +1,6 @@
 #' @keywords internal
 find_daughter <- function(tree, focal) {
-  daughters <- which(tree[, 3] == focal &
+  daughters <- which(tree[, 2] == focal &
                      tree[, 4] == -1)
   if (length(daughters) == 1) {
     return(daughters[1])
