@@ -82,12 +82,11 @@ sim_tree_pd <- function(pars, max_t) {
         } else {
           # extinction
           # pick random species
-          to_remove <- sample(which(tree[, 4] == -1), 1) # random pick
+          to_remove <- sample(which(tree[, 4] == -1), 1)
           
-          daughter <- find_daughter(tree, to_remove)
-          start_brt <- tree[daughter, 1]
+          to_remove <- find_daughter(tree, to_remove)
           
-          P <- P - (t - start_brt) # we have to correct P for the extinct species 
+          P <- P - (t - tree[to_remove, 1]) # we have to correct P for the extinct species 
           tree[to_remove, 4] <- next_event_time
           if (tree[to_remove, 3] < 0) {
             N2 <- N2 - 1
