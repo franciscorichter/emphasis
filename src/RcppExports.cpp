@@ -5,6 +5,40 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
+// simulate_pd_trees_cpp
+Rcpp::NumericMatrix simulate_pd_trees_cpp(Rcpp::NumericVector pars, float max_t, size_t repl);
+RcppExport SEXP _emphasis_simulate_pd_trees_cpp(SEXP parsSEXP, SEXP max_tSEXP, SEXP replSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type pars(parsSEXP);
+    Rcpp::traits::input_parameter< float >::type max_t(max_tSEXP);
+    Rcpp::traits::input_parameter< size_t >::type repl(replSEXP);
+    rcpp_result_gen = Rcpp::wrap(simulate_pd_trees_cpp(pars, max_t, repl));
+    return rcpp_result_gen;
+END_RCPP
+}
+// explore_grid_cpp
+Rcpp::NumericMatrix explore_grid_cpp(Rcpp::NumericVector par1, Rcpp::NumericVector par2, Rcpp::NumericVector par3, Rcpp::NumericVector par4, float max_t, int num_repl);
+RcppExport SEXP _emphasis_explore_grid_cpp(SEXP par1SEXP, SEXP par2SEXP, SEXP par3SEXP, SEXP par4SEXP, SEXP max_tSEXP, SEXP num_replSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type par1(par1SEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type par2(par2SEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type par3(par3SEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type par4(par4SEXP);
+    Rcpp::traits::input_parameter< float >::type max_t(max_tSEXP);
+    Rcpp::traits::input_parameter< int >::type num_repl(num_replSEXP);
+    rcpp_result_gen = Rcpp::wrap(explore_grid_cpp(par1, par2, par3, par4, max_t, num_repl));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rcpp_mce
 List rcpp_mce(const std::vector<double>& brts, const std::vector<double>& init_pars, int sample_size, int maxN, const std::string& plugin, int soc, int max_missing, double max_lambda, const std::vector<double>& lower_bound, const std::vector<double>& upper_bound, double xtol_rel, int num_threads);
 RcppExport SEXP _emphasis_rcpp_mce(SEXP brtsSEXP, SEXP init_parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP pluginSEXP, SEXP socSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP lower_boundSEXP, SEXP upper_boundSEXP, SEXP xtol_relSEXP, SEXP num_threadsSEXP) {
@@ -71,6 +105,8 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_emphasis_simulate_pd_trees_cpp", (DL_FUNC) &_emphasis_simulate_pd_trees_cpp, 3},
+    {"_emphasis_explore_grid_cpp", (DL_FUNC) &_emphasis_explore_grid_cpp, 6},
     {"_emphasis_rcpp_mce", (DL_FUNC) &_emphasis_rcpp_mce, 12},
     {"_emphasis_rcpp_mcem", (DL_FUNC) &_emphasis_rcpp_mcem, 14},
     {"_emphasis_rcpp_mcm", (DL_FUNC) &_emphasis_rcpp_mcm, 8},

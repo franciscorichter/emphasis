@@ -1,25 +1,11 @@
 #' @keywords internal
-find_daughter <- function(tree, focal) {
-  daughters <- which(tree[, 2] == focal &
-                     tree[, 4] == -1)
-
-  if (length(daughters) == 1) {
-    return(daughters[1])
-  }
-  if (length(daughters) < 1) {
-    return(focal)
-  }
-
-  if (length(daughters) > 1) {
-    ages <- tree[daughters, 1]
-    youngest_daughter <- which.min(ages)
-    return(daughters[youngest_daughter])
-  }
+calc_p <- function(l_table, t) {
+  l_table[, 1] <- t - l_table[, 1]
+  return(sum(DDD::L2phylo(l_table, dropextinct = T)$edge.length))
 }
 
-
-
-#' simulation function to simulate a tree under the pd model
+#' simulation function to simulate a tree under the pd model, returns the full
+#' tree.
 #' @description super fast function to simulate the process of diversification
 #' with diversity dependence and phylogenetic diversity dependence
 #' @param pars parameter vector with c(mu, lambda_0, beta_N, beta_P)
@@ -28,7 +14,7 @@ find_daughter <- function(tree, focal) {
 #' time of extinction (equal to the crown #' age in the absence of extinction), 
 #' and the phylogenetic diversity at the time of extinction (or crown age).
 #' @export
-sim_tree_pd <- function(pars, max_t) {
+sim_tree_pd_R <- function(pars, max_t) {
   N1 <- 1
   N2 <- 1
   N <- 2
@@ -48,8 +34,15 @@ sim_tree_pd <- function(pars, max_t) {
                        pars[3] * N  +  
                        ((P + N * (max_t - t) - t) / N) * pars[4])
     total_rate <- (spec_rate + mu) * N
-    next_event_time <- t + stats::rexp(n = 1, rate = total_rate)  # max_t - log(x = u1) / total_rate
-    P <- P + N * (next_event_time - t)
+    
+    if (total_rate == 0) {
+      t <- max_t
+      break
+    }
+    
+    next_event_time <- t + stats::rexp(n = 1, rate = total_rate)  
+
+    P <- calc_p(tree, t)
     
     if (next_event_time < max_t) {
       focal_spec <- max(0, pars[2] + 
@@ -64,6 +57,7 @@ sim_tree_pd <- function(pars, max_t) {
         # pick event type:
         if (stats::runif(1) < focal_spec / (focal_spec + mu)) {
           # speciation
+         # cat("speciation", "\n")
           parent <- sample(which(tree[, 4] == -1), 1)
           
           new_ID <- tree_ID
@@ -82,12 +76,11 @@ sim_tree_pd <- function(pars, max_t) {
         } else {
           # extinction
           # pick random species
+         # cat("extinction", "\n")
           to_remove <- sample(which(tree[, 4] == -1), 1)
           
-          to_remove <- find_daughter(tree, to_remove)
-          
-          P <- P - (t - tree[to_remove, 1]) # we have to correct P for the extinct species 
           tree[to_remove, 4] <- next_event_time
+          
           if (tree[to_remove, 3] < 0) {
             N2 <- N2 - 1
           } else {
@@ -96,7 +89,7 @@ sim_tree_pd <- function(pars, max_t) {
         }
       }
     }
-    t = next_event_time
+    t <- next_event_time
   }
   
   tree[, 1] <- max_t - tree[, 1]
@@ -113,3 +106,53 @@ sim_tree_pd <- function(pars, max_t) {
               "result" = c(N, t, P)))
 }
 
+
+
+
+#' simulation function to simulate a tree under the pd model, returning whether
+#' the tree went extinct before max_t or not. 
+#' This function does not return a phylogenetic tree to improve computation speed. 
+#' @description super fast function to simulate the process of diversification
+#' with diversity dependence and phylogenetic diversity dependence
+#' @param pars parameter vector with c(mu, lambda_0, beta_N, beta_P)
+#' @param max_t crown age
+#' @param num_repl number of replicates
+#' @return a list with the phylogeny, and a vector with population size, 
+#' time of extinction (equal to the crown #' age in the absence of extinction), 
+#' and the phylogenetic diversity at the time of extinction (or crown age).
+#' @export
+sim_tree_pd_cpp <- function(pars, max_t, num_repl = 1) {
+    result <- simulate_pd_trees_cpp(pars, max_t, num_repl)
+    colnames(result) <- c("is_extinct", "t", "N", "P")
+    result <- tibble::as_tibble(result)
+    return(result)
+}
+
+
+#' simulation function to simulate a tree under the pd model
+#' @description super fast function to simulate the process of diversification
+#' with diversity dependence and phylogenetic diversity dependence
+#' @param pars parameter vector with c(mu, lambda_0, beta_N, beta_P)
+#' @param max_t crown age
+#' @param num_repl number of replicates
+#' @return a list with the phylogeny, and a vector with population size, 
+#' time of extinction (equal to the crown #' age in the absence of extinction), 
+#' and the phylogenetic diversity at the time of extinction (or crown age).
+#' @export
+sim_tree_pd_grid <- function(mu_vec,
+                             lambda_vec,
+                             b_n_vec,
+                             b_p_vec,
+                             max_t,
+                             num_repl) {
+  result <- explore_grid_cpp(mu_vec,
+                             lambda_vec,
+                             b_n_vec,
+                             b_p_vec,
+                             max_t,
+                             num_repl)
+  colnames(result) <- c("is_extinct", "t", "N", "P")
+  result <- tibble::as_tibble(result)
+  return(result)
+}
+  
