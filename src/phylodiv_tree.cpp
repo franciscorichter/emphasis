@@ -12,10 +12,10 @@ Rcpp::NumericMatrix simulate_pd_trees_cpp(Rcpp::NumericVector pars,
   Rcpp::NumericMatrix results(repl, 4);
   for (size_t r = 0; r < repl; ++r) {
     bool is_extant = sim_tree.simulate_tree();
-    results(repl, 0) = is_extant;
-    results(repl, 1) = sim_tree.t;
-    results(repl, 2) = sim_tree.N;
-    results(repl, 3) = sim_tree.P;
+    results(r, 0) = is_extant;
+    results(r, 1) = sim_tree.t;
+    results(r, 2) = sim_tree.N;
+    results(r, 3) = sim_tree.P;
   }
   return results;
 }

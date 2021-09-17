@@ -13,6 +13,7 @@
 #include <vector>
 #include <random>
 #include <thread>
+#include <iostream>
 
 struct rnd_t {
   std::mt19937 rndgen_;
@@ -147,6 +148,11 @@ struct phylodiv {
   }
 
   bool simulate_tree() {
+ //   std::cerr << "Simulating tree with:\n";
+//    for (auto i : pars) {
+//      std::cerr << i << " ";
+//    } std::cerr << "\n";
+//    std::cerr << "max_t: " << max_t << "\n";
    size_t N1 = 1;
    size_t N2 = 1;
    N = 2;
