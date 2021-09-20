@@ -148,29 +148,26 @@ struct phylodiv {
   }
 
   bool simulate_tree() {
- //   std::cerr << "Simulating tree with:\n";
-//    for (auto i : pars) {
-//      std::cerr << i << " ";
-//    } std::cerr << "\n";
-//    std::cerr << "max_t: " << max_t << "\n";
    size_t N1 = 1;
    size_t N2 = 1;
    N = 2;
-
-   P = 0.f;
+   
    float prev_t = 0.f;
    t = 0.f;
 
+   tree.clear();
    tree.push_back( branch(t, 0, -1, -1));
    tree.push_back( branch(t, -1, 2, -1));
 
    int tree_id = 3;
-   P = 0.0;
+   P = 0.f;
+   
    float mu = pars[0];
    while(t < max_t && N1 >= 1 && N2 >= 1) {
 
      N = N1 + N2;
-
+     
+     
      float spec_rate = pars[1] + pars[2] * N  +
                        ((P + N * (max_t - t) - t) / N) * pars[3];
      if (spec_rate < 0.f) spec_rate = 0.f;
@@ -180,13 +177,15 @@ struct phylodiv {
      float next_event_time = t + rndgen.expon(total_rate);
 
      P += (t - prev_t) * N;
-     prev_t = t;
-
+     
+     //P = calculate_full_phylodiv(t);
+     
      if (next_event_time < max_t) {
-       float focal_spec = pars[1] + pars[2] * N  +
+       float focal_spec = pars[1] +
+                          pars[2] * N  +
                           ((P + N * (next_event_time - t) - t) / N) * pars[3];
        float pt = ((focal_spec + mu) * N ) / total_rate;
-
+       
        if (rndgen.bernouilli(pt)) {
          // event is accepted
          if (rndgen.bernouilli(focal_spec / (focal_spec + mu))) {
@@ -223,12 +222,21 @@ struct phylodiv {
            P -= purge_tree_record(to_remove);
          }
        }
+       prev_t = t;
+       t = next_event_time;
+     } else {
+       t = max_t;
      }
-     t = next_event_time;
+     
    }
    
-   if (t < max_t) return false;
-   return true;
+   N = N1 + N2;
+   P = calculate_full_phylodiv(t); // final check.
+   
+   if (t < max_t) {
+     return true;
+   }
+   return false;
   }
 
 

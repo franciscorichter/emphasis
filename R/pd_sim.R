@@ -17,7 +17,7 @@ calc_p <- function(l_table, t) {
 sim_tree_pd_R <- function(pars, max_t) {
   N1 <- 1
   N2 <- 1
-  N <- 2
+  N <- N1 + N2
   t <- 0
   tree <- matrix(nrow = 2, ncol = 4)  # birth date, parent label, ID, time of extinction, clade
   
@@ -29,6 +29,7 @@ sim_tree_pd_R <- function(pars, max_t) {
   P <- 0
   while (t < max_t && 
          N1 >= 1 && N2 >= 1) {
+    
     N <- N1 + N2
     spec_rate <- max(0, pars[2] + 
                        pars[3] * N  +  
@@ -92,18 +93,22 @@ sim_tree_pd_R <- function(pars, max_t) {
     t <- next_event_time
   }
   
+  if (N1 >= 1 && N2 >= 1) P <- calc_p(tree, t)
+  N <- N1 + N2
+  
   tree[, 1] <- max_t - tree[, 1]
   extinct <- which(tree[, 4] != -1)
   tree[extinct, 4] <- max_t - tree[extinct, 4]
   
-  for_ddd <- as.matrix(tree[, 1:4])
+   for_ddd <- as.matrix(tree[, 1:4])
   
-  phy <- DDD::L2phylo(as.matrix(tree[, 1:4]), dropextinct = FALSE)
+   phy <- DDD::L2phylo(as.matrix(tree[, 1:4]), dropextinct = FALSE)
   
   t <- min(t, max_t)
   
   return(list("phy" = phy, 
               "result" = c(N, t, P)))
+  # return(list("result" = c(N, t, P)))
 }
 
 
