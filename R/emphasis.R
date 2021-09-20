@@ -10,26 +10,27 @@
 #' model. Set to -Infinity if left empty.
 #' @param upper_bound vector of the upper limit of parameter values used by the
 #' model. Set to +Infinity if left empty
-#' @param max_lambda maximum speciation rate, default is 500. Should not be set 
+#' @param max_lambda maximum speciation rate, default is 500. Should not be set
 #' too high to avoid extremely long run times
 #' @param xtol tolerance of step size in the M step
 #' @param em_tol tolerance of step size in cycling through EM
 #' @param sample_size_tol tolerance in determining the sample size
-#' @param verbose if TRUE, provides textual output of intermediate steps 
+#' @param verbose if TRUE, provides textual output of intermediate steps
 #' @param return_trees boolean, if TRUE the simulated trees are returned as well
 #' @param max_missing maximum number of tips a tree can be augmented with.
 #' @param burnin_sample_size sample size during burn-in
-#' @param pilot_sample_size vector of sample sizes used to determine the true 
+#' @param pilot_sample_size vector of sample sizes used to determine the true
 #' sampling size
 #' @param burnin_iterations number of iterations of the EM algorithm to discard
 #' as burn-in
-#' @param num_threads number of threads to be used. If set to 0, the maximum 
-#' number of threads available is chosen. 
-#' @param conditional a function that takes a parameter set as argument and returns
-#' conditional probability. 
+#' @param num_threads number of threads to be used. If set to 0, the maximum
+#' number of threads available is chosen.
+#' @param conditional a function that takes a parameter set as argument and
+#' returns conditional probability.
 #' @export
-#' @return a list with two components: 1) \code{pars} contains the average parameter
-#' estimate and 2) \code{MCEM} matrix of parameter estimates and likelihoods.
+#' @return a list with two components: 1) \code{pars} contains the average
+#' parameter estimate and 2) \code{MCEM} matrix of parameter estimates and
+#' likelihoods.
 #' @rawNamespace useDynLib(emphasis)
 #' @rawNamespace import(nloptr)
 #' @rawNamespace import(Rcpp)

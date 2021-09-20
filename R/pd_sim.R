@@ -10,8 +10,8 @@ calc_p <- function(l_table, t) {
 #' with diversity dependence and phylogenetic diversity dependence
 #' @param pars parameter vector with c(mu, lambda_0, beta_N, beta_P)
 #' @param max_t crown age
-#' @return a list with the phylogeny, and a vector with population size, 
-#' time of extinction (equal to the crown #' age in the absence of extinction), 
+#' @return a list with the phylogeny, and a vector with population size,
+#' time of extinction (equal to the crown #' age in the absence of extinction),
 #' and the phylogenetic diversity at the time of extinction (or crown age).
 #' @export
 sim_tree_pd_R <- function(pars, max_t) {
@@ -19,7 +19,8 @@ sim_tree_pd_R <- function(pars, max_t) {
   N2 <- 1
   N <- N1 + N2
   t <- 0
-  tree <- matrix(nrow = 2, ncol = 4)  # birth date, parent label, ID, time of extinction, clade
+  # birth date, parent label, ID, time of extinction, clade
+  tree <- matrix(nrow = 2, ncol = 4)  
   
   tree[1, ] <- c(0, 0, -1, -1)
   tree[2, ] <- c(0, -1, 2, -1)
