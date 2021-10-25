@@ -20,7 +20,7 @@ sim_tree_pd_R <- function(pars, max_t) {
   N <- N1 + N2
   t <- 0
   # birth date, parent label, ID, time of extinction, clade
-  tree <- matrix(nrow = 2, ncol = 4)  
+  tree <- matrix(nrow = 2, ncol = 4)
   
   tree[1, ] <- c(0, 0, -1, -1)
   tree[2, ] <- c(0, -1, 2, -1)
@@ -123,12 +123,13 @@ sim_tree_pd_R <- function(pars, max_t) {
 #' @param pars parameter vector with c(mu, lambda_0, beta_N, beta_P)
 #' @param max_t crown age
 #' @param num_repl number of replicates
+#' @param max_N number of lineages past which non-extinction is assumed.
 #' @return a list with the phylogeny, and a vector with population size, 
 #' time of extinction (equal to the crown #' age in the absence of extinction), 
 #' and the phylogenetic diversity at the time of extinction (or crown age).
 #' @export
-sim_tree_pd_cpp <- function(pars, max_t, num_repl = 1) {
-    result <- simulate_pd_trees_cpp(pars, max_t, num_repl)
+sim_tree_pd_cpp <- function(pars, max_t, num_repl = 1, max_N) {
+    result <- simulate_pd_trees_cpp(pars, max_t, num_repl, max_N)
     colnames(result) <- c("is_extinct", "t", "N", "P")
     result <- tibble::as_tibble(result)
     return(result)
@@ -138,10 +139,15 @@ sim_tree_pd_cpp <- function(pars, max_t, num_repl = 1) {
 #' simulation function to simulate a tree under the pd model
 #' @description super fast function to simulate the process of diversification
 #' with diversity dependence and phylogenetic diversity dependence
-#' @param pars parameter vector with c(mu, lambda_0, beta_N, beta_P)
+#' @param mu_vec vector of extinction rates to explore
+#' @param lambda_vec vector of lambda rates to explore
+#' @param b_n_vec vector of B_n rates to explore
+#' @param b_p_vec vector of B_p rates to explore
 #' @param max_t crown age
+#' @param max_N maximum number of lineages past which non-extinction is assumed.
 #' @param num_repl number of replicates
-#' @return a list with the phylogeny, and a vector with population size, 
+#' @return a list with the used parameter combinations, the phylogeny, 
+#' and a vector with population size, 
 #' time of extinction (equal to the crown #' age in the absence of extinction), 
 #' and the phylogenetic diversity at the time of extinction (or crown age).
 #' @export
@@ -150,13 +156,15 @@ sim_tree_pd_grid <- function(mu_vec,
                              b_n_vec,
                              b_p_vec,
                              max_t,
-                             num_repl) {
+                             num_repl,
+                             max_N) {
   result <- explore_grid_cpp(mu_vec,
                              lambda_vec,
                              b_n_vec,
                              b_p_vec,
                              max_t,
-                             num_repl)
+                             num_repl,
+                             max_N)
   colnames(result) <- c("is_extinct", "t", "N", "P")
   result <- tibble::as_tibble(result)
   return(result)

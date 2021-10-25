@@ -11,21 +11,22 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // simulate_pd_trees_cpp
-Rcpp::NumericMatrix simulate_pd_trees_cpp(Rcpp::NumericVector pars, float max_t, size_t repl);
-RcppExport SEXP _emphasis_simulate_pd_trees_cpp(SEXP parsSEXP, SEXP max_tSEXP, SEXP replSEXP) {
+Rcpp::NumericMatrix simulate_pd_trees_cpp(Rcpp::NumericVector pars, float max_t, size_t repl, float max_N);
+RcppExport SEXP _emphasis_simulate_pd_trees_cpp(SEXP parsSEXP, SEXP max_tSEXP, SEXP replSEXP, SEXP max_NSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type pars(parsSEXP);
     Rcpp::traits::input_parameter< float >::type max_t(max_tSEXP);
     Rcpp::traits::input_parameter< size_t >::type repl(replSEXP);
-    rcpp_result_gen = Rcpp::wrap(simulate_pd_trees_cpp(pars, max_t, repl));
+    Rcpp::traits::input_parameter< float >::type max_N(max_NSEXP);
+    rcpp_result_gen = Rcpp::wrap(simulate_pd_trees_cpp(pars, max_t, repl, max_N));
     return rcpp_result_gen;
 END_RCPP
 }
 // explore_grid_cpp
-Rcpp::NumericMatrix explore_grid_cpp(Rcpp::NumericVector par1, Rcpp::NumericVector par2, Rcpp::NumericVector par3, Rcpp::NumericVector par4, float max_t, int num_repl);
-RcppExport SEXP _emphasis_explore_grid_cpp(SEXP par1SEXP, SEXP par2SEXP, SEXP par3SEXP, SEXP par4SEXP, SEXP max_tSEXP, SEXP num_replSEXP) {
+Rcpp::NumericMatrix explore_grid_cpp(Rcpp::NumericVector par1, Rcpp::NumericVector par2, Rcpp::NumericVector par3, Rcpp::NumericVector par4, float max_t, int num_repl, int max_N);
+RcppExport SEXP _emphasis_explore_grid_cpp(SEXP par1SEXP, SEXP par2SEXP, SEXP par3SEXP, SEXP par4SEXP, SEXP max_tSEXP, SEXP num_replSEXP, SEXP max_NSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -35,7 +36,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type par4(par4SEXP);
     Rcpp::traits::input_parameter< float >::type max_t(max_tSEXP);
     Rcpp::traits::input_parameter< int >::type num_repl(num_replSEXP);
-    rcpp_result_gen = Rcpp::wrap(explore_grid_cpp(par1, par2, par3, par4, max_t, num_repl));
+    Rcpp::traits::input_parameter< int >::type max_N(max_NSEXP);
+    rcpp_result_gen = Rcpp::wrap(explore_grid_cpp(par1, par2, par3, par4, max_t, num_repl, max_N));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -105,8 +107,8 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_emphasis_simulate_pd_trees_cpp", (DL_FUNC) &_emphasis_simulate_pd_trees_cpp, 3},
-    {"_emphasis_explore_grid_cpp", (DL_FUNC) &_emphasis_explore_grid_cpp, 6},
+    {"_emphasis_simulate_pd_trees_cpp", (DL_FUNC) &_emphasis_simulate_pd_trees_cpp, 4},
+    {"_emphasis_explore_grid_cpp", (DL_FUNC) &_emphasis_explore_grid_cpp, 7},
     {"_emphasis_rcpp_mce", (DL_FUNC) &_emphasis_rcpp_mce, 12},
     {"_emphasis_rcpp_mcem", (DL_FUNC) &_emphasis_rcpp_mcem, 14},
     {"_emphasis_rcpp_mcm", (DL_FUNC) &_emphasis_rcpp_mcm, 8},

@@ -16,7 +16,7 @@ sim_tree_dd_minimal <- function(pars, max_t) {
                         pars[3] * N)
     rate_max <- (lambda_ct + mu) * N
     next_t <- t + stats::rexp(n = 1, rate = rate_max)
-    
+
     if (next_t < max_t) {
       if (stats::runif(1, 0, 1) < lambda_ct / (lambda_ct + mu)) {
         # speciation

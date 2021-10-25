@@ -5,9 +5,10 @@
 // [[Rcpp::export]]
 Rcpp::NumericMatrix simulate_pd_trees_cpp(Rcpp::NumericVector pars,
                                  float max_t,
-                                 size_t repl) {
+                                 size_t repl,
+                                 float max_N) {
   
-  phylodiv sim_tree(max_t,  {pars[0], pars[1], pars[2], pars[3]});
+  phylodiv sim_tree(max_t,  {pars[0], pars[1], pars[2], pars[3]}, max_N);
   
   Rcpp::NumericMatrix results(repl, 4);
   for (size_t r = 0; r < repl; ++r) {
@@ -26,7 +27,8 @@ Rcpp::NumericMatrix explore_grid_cpp(Rcpp::NumericVector par1,
                                      Rcpp::NumericVector par3,
                                      Rcpp::NumericVector par4,
                                      float max_t,
-                                     int num_repl) {
+                                     int num_repl,
+                                     int max_N) {
   
   size_t total_number_simulations = par1.size() * par2.size() * 
                                     par3.size() * par4.size() * num_repl;
@@ -41,7 +43,8 @@ Rcpp::NumericMatrix explore_grid_cpp(Rcpp::NumericVector par1,
           phylodiv sim_tree(max_t,  {static_cast<double>(a), 
                                      static_cast<double>(b), 
                                      static_cast<double>(c), 
-                                     static_cast<double>(d)});
+                                     static_cast<double>(d)},
+                            max_N);
           
           for (size_t r = 0; r < num_repl; ++r) {
             bool is_extant = sim_tree.simulate_tree();

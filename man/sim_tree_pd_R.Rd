@@ -13,8 +13,8 @@ sim_tree_pd_R(pars, max_t)
 \item{max_t}{crown age}
 }
 \value{
-a list with the phylogeny, and a vector with population size, 
-time of extinction (equal to the crown #' age in the absence of extinction), 
+a list with the phylogeny, and a vector with population size,
+time of extinction (equal to the crown #' age in the absence of extinction),
 and the phylogenetic diversity at the time of extinction (or crown age).
 }
 \description{

@@ -12,8 +12,8 @@ sim_tree_dd_minimal(pars, max_t)
 \item{max_t}{crown age}
 }
 \value{
-a vector with population size and time of extinction (equal to the crown 
-age in the absence of extinction)
+a vector with population size and time of extinction
+(equal to the crown age in the absence of extinction)
 }
 \description{
 super fast function to simulate the process of diversification

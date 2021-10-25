@@ -41,7 +41,7 @@ model. Set to -Infinity if left empty.}
 \item{upper_bound}{vector of the upper limit of parameter values used by the
 model. Set to +Infinity if left empty}
 
-\item{max_lambda}{maximum speciation rate, default is 500. Should not be set 
+\item{max_lambda}{maximum speciation rate, default is 500. Should not be set
 too high to avoid extremely long run times}
 
 \item{xtol}{tolerance of step size in the M step}
@@ -58,21 +58,22 @@ too high to avoid extremely long run times}
 
 \item{burnin_sample_size}{sample size during burn-in}
 
-\item{pilot_sample_size}{vector of sample sizes used to determine the true 
+\item{pilot_sample_size}{vector of sample sizes used to determine the true
 sampling size}
 
 \item{burnin_iterations}{number of iterations of the EM algorithm to discard
 as burn-in}
 
-\item{num_threads}{number of threads to be used. If set to 0, the maximum 
+\item{num_threads}{number of threads to be used. If set to 0, the maximum
 number of threads available is chosen.}
 
-\item{conditional}{a function that takes a parameter set as argument and returns
-conditional probability.}
+\item{conditional}{a function that takes a parameter set as argument and
+returns conditional probability.}
 }
 \value{
-a list with two components: 1) \code{pars} contains the average parameter
-estimate and 2) \code{MCEM} matrix of parameter estimates and likelihoods.
+a list with two components: 1) \code{pars} contains the average
+parameter estimate and 2) \code{MCEM} matrix of parameter estimates and
+likelihoods.
 }
 \description{
 Main function of emphasis, that uses an E-M approach to fit a

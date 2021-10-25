@@ -20,6 +20,8 @@ LinkingTo: Rcpp,
            RcppParallel, 
            nloptr
 Suggests: TreeSim,
-          testthat (>= 3.0.0)
+          testthat (>= 3.0.0),
+          DDD,
+          tibble
 SystemRequirements: C++14
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2

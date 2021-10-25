@@ -23,11 +23,6 @@ struct rnd_t {
     rndgen_ = rndgen_t;
   }
 
-  rnd_t(int seed) {
-    std::mt19937 rndgen_t(seed);
-    rndgen_ = rndgen_t;
-   }
-
   int get_seed() {
     const auto tt = static_cast<int64_t>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
     auto tid = std::this_thread::get_id();
@@ -107,6 +102,7 @@ struct phylodiv {
   float max_t;
   float P; // phylogenetic diversity
   float t; // time
+  float max_N; // number of lineages after which we assume non-extinction
   size_t N; // number of extant species
   std::array< double, 4> pars; // mu, lambda, B_n, B_p
 
@@ -116,18 +112,10 @@ struct phylodiv {
 
   phylodiv(float total_time,
            const std::array<double, 4>& p,
-           int seed) :
+           int maxN) :
   max_t(total_time),
-  pars(p) {
-    P = 0.f;
-    t = 0.f;
-    rndgen = rnd_t(seed);
-  }
-
-  phylodiv(float total_time,
-           const std::array<double, 4>& p) :
-  max_t(total_time),
-  pars(p) {
+  pars(p),
+  max_N(maxN){
     P = 0.f;
     t = 0.f;
     rndgen = rnd_t();
@@ -166,6 +154,8 @@ struct phylodiv {
    while(t < max_t && N1 >= 1 && N2 >= 1) {
 
      N = N1 + N2;
+     if (N >= max_N) 
+       break;
      
      
      float spec_rate = pars[1] + pars[2] * N  +
@@ -234,7 +224,9 @@ struct phylodiv {
    P = calculate_full_phylodiv(t); // final check.
    
    if (t < max_t) {
-     return true;
+     if (N < max_N) {
+      return true;
+     }
    }
    return false;
   }
@@ -263,7 +255,7 @@ struct phylodiv {
   }
 
   size_t sample_tip(size_t N) {
-    size_t index = -1; // yields OOB if code below fails!
+    size_t index = 0; 
     if (N * 10 < tree.size()) {
       // there are many extinct tips!
       std::vector< size_t > alive;
@@ -281,105 +273,6 @@ struct phylodiv {
     return index;
   }
 };
-
-
-/*
-
- void simulate_tree_full_pd() {
-    size_t N1 = 1;
-    size_t N2 = 1;
-    N = 2;
-
-    P = 0.f;
-    t = 0.f;
-
-    tree.push_back( branch(t, 0, -1, -1, 1) );
-    tree.push_back( branch(t, -1, 2, -1, 0));
-
-    int tree_id = 3;
-    P = 0.0;
-    float mu = pars[0];
-    while(t < max_t && N1 >= 1 && N2 >= 1) {
-
-      N = N1 + N2;
-
-      float spec_rate = pars[1] + pars[2] * N  +
-                        ((P + N * (max_t - t) - t) / N) * pars[3];
-      if (spec_rate < 0.f) spec_rate = 0.f;
-
-      float total_rate = (spec_rate + mu ) * N;
-
-      float next_event_time = t + rndgen.expon(total_rate);
-
-      P = calculate_full_phylodiv(t);
-
-      if (next_event_time < max_t) {
-        float focal_spec = pars[1] + pars[2] * N  +
-                           ((P + N * (next_event_time - t) - t) / N) * pars[3];
-        float pt = ((focal_spec + mu) * N ) / total_rate;
-
-        if (rndgen.bernouilli(pt)) {
-          // event is accepted
-          if (rndgen.bernouilli(focal_spec / (focal_spec + mu))) {
-            // speciation
-         //   std::cout << next_event_time << " " << N << "\n";
-            size_t parent = sample_tip(N);
-            int new_id_1 = tree_id;
-            tree_id++;
-            int new_id_2 = tree_id;
-            tree_id++;
-
-            if (tree[parent].label < 0) {
-              new_id_1 *= -1;
-              new_id_2 *= -1;
-              N2++;
-            } else {
-              N1++;
-            }
-
-            tree[parent].end_date = next_event_time;
-            tree[parent].daughters.push_back(new_id_1);
-            tree[parent].daughters.push_back(new_id_2);
-            tree.push_back( branch(next_event_time, tree[parent].label, new_id_1, -1, tree[parent].clade));
-            tree.push_back( branch(next_event_time, tree[parent].label, new_id_2, -1, tree[parent].clade));
-          } else {
-            // extinction
-            size_t to_remove = sample_tip(N);
-            tree[to_remove].end_date = next_event_time;
-            if (tree[to_remove].label < 0) {
-              N2--;
-            } else {
-              N1--;
-            }
-
-            purge_tree(to_remove);
-          }
-        }
-      }
-      t = next_event_time;
-    }
-  }
-
- void purge_tree(size_t focal_index) {
-    int label_removed = tree[focal_index].label;
-    int parent = tree[focal_index].parent_label;
-    // first, we remove the focal tree:
-    tree[focal_index] = tree.back();
-    tree.pop_back();
-    // now, we have to remove it from the parent:
-    auto parent_loc = std::find_if(tree.begin(), tree.end(),
-                                   [parent](const branch& other){return other.label == parent;});
-
-    if (parent_loc != tree.end()) { // root has no parents.
-      parent_loc->remove_daughter(label_removed);
-      if (parent_loc->daughters.empty()) {
-        auto parent_index = std::distance(tree.begin(), parent_loc);
-        purge_tree(parent_index);
-      }
-    }
-  }
- */
-
 
 
 #endif /* phylodiv_tree_h */

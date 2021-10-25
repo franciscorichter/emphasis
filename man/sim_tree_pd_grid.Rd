@@ -4,17 +4,26 @@
 \alias{sim_tree_pd_grid}
 \title{simulation function to simulate a tree under the pd model}
 \usage{
-sim_tree_pd_grid(mu_vec, lambda_vec, b_n_vec, b_p_vec, max_t, num_repl)
+sim_tree_pd_grid(mu_vec, lambda_vec, b_n_vec, b_p_vec, max_t, num_repl, max_N)
 }
 \arguments{
+\item{mu_vec}{vector of extinction rates to explore}
+
+\item{lambda_vec}{vector of lambda rates to explore}
+
+\item{b_n_vec}{vector of B_n rates to explore}
+
+\item{b_p_vec}{vector of B_p rates to explore}
+
 \item{max_t}{crown age}
 
 \item{num_repl}{number of replicates}
 
-\item{pars}{parameter vector with c(mu, lambda_0, beta_N, beta_P)}
+\item{max_N}{maximum number of lineages past which non-extinction is assumed.}
 }
 \value{
-a list with the phylogeny, and a vector with population size, 
+a list with the used parameter combinations, the phylogeny, 
+and a vector with population size, 
 time of extinction (equal to the crown #' age in the absence of extinction), 
 and the phylogenetic diversity at the time of extinction (or crown age).
 }

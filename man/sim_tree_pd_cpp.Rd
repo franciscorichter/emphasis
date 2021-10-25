@@ -6,7 +6,7 @@
 the tree went extinct before max_t or not. 
 This function does not return a phylogenetic tree to improve computation speed.}
 \usage{
-sim_tree_pd_cpp(pars, max_t, num_repl = 1)
+sim_tree_pd_cpp(pars, max_t, num_repl = 1, max_N)
 }
 \arguments{
 \item{pars}{parameter vector with c(mu, lambda_0, beta_N, beta_P)}
@@ -14,6 +14,8 @@ sim_tree_pd_cpp(pars, max_t, num_repl = 1)
 \item{max_t}{crown age}
 
 \item{num_repl}{number of replicates}
+
+\item{max_N}{number of lineages past which non-extinction is assumed.}
 }
 \value{
 a list with the phylogeny, and a vector with population size, 
