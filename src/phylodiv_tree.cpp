@@ -8,7 +8,7 @@ Rcpp::NumericMatrix simulate_pd_trees_cpp(Rcpp::NumericVector pars,
                                  size_t repl,
                                  float max_N) {
   
-  phylodiv sim_tree(max_t,  {pars[0], pars[1], pars[2], pars[3]}, max_N);
+  sim_tree::phylodiv sim_tree(max_t,  {pars[0], pars[1], pars[2], pars[3]}, max_N);
   
   Rcpp::NumericMatrix results(repl, 4);
   for (size_t r = 0; r < repl; ++r) {
@@ -40,7 +40,7 @@ Rcpp::NumericMatrix explore_grid_cpp(Rcpp::NumericVector par1,
       for (auto c : par3) {
         for (auto d : par4) {
           
-          phylodiv sim_tree(max_t,  {static_cast<double>(a), 
+          sim_tree::phylodiv sim_tree(max_t,  {static_cast<double>(a), 
                                      static_cast<double>(b), 
                                      static_cast<double>(c), 
                                      static_cast<double>(d)},
