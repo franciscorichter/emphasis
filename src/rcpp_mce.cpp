@@ -22,7 +22,8 @@ namespace {
 
 }
 
-
+//' function to perform one step of the E-M algorithm
+//' @export
 // [[Rcpp::export(name = "e_cpp")]]
 List rcpp_mce(const std::vector<double>& brts,       
               const std::vector<double>& init_pars,      
