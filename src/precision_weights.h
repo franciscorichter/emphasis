@@ -9,18 +9,17 @@ namespace mp = boost::multiprecision;
 
 template <class forIt>
 double calc_sum_w(forIt first, forIt last, const double& max_sum_w) {
-  double sum_w = 0.0;
+  mp::cpp_dec_float_100 sum_w(0.0);
   for (auto it = first; it != last; ++it) {
     double exponent = *it - max_sum_w;
     
     mp::cpp_dec_float_100 exp_prec(exponent);
     auto w_prec = mp::exp(exp_prec);
   
-    double w_d = w_prec.convert_to<double>();
-    
-    sum_w += w_d;
-    *it = w_d;
+    sum_w += w_prec;
+    *it = w_prec.convert_to<double>();
   }
-  return sum_w;
+  
+  return sum_w.convert_to<double>();
 }
 #endif /* PRECISION_WEIGHTS_H */
