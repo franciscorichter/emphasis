@@ -7,6 +7,7 @@
 #include "augment_tree.hpp"
 #include "plugin.hpp"
 #include "model_helpers.hpp"
+#include "precision_weights.h"
 
 
 namespace emphasis {
@@ -104,11 +105,7 @@ namespace emphasis {
       throw emphasis_error("maxN exceeded");
     }
     const double max_log_w = *std::max_element(E.weights.cbegin(), E.weights.cend());
-    double sum_w = 0.0;
-    for (size_t i = 0; i < E.weights.size(); ++i) {
-      const double w = std::exp(E.weights[i] - max_log_w);
-      sum_w += (E.weights[i] = w);
-    }
+    double sum_w = calc_sum_w(E.weights.begin(), E.weights.end(), max_log_w);
     E.rejected = E.rejected_lambda + E.rejected_overruns + E.rejected_zero_weights;
     E.fhat = std::log(sum_w / (N + E.rejected)) + max_log_w;
     auto T1 = std::chrono::high_resolution_clock::now();
