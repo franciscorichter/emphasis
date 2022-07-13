@@ -2,6 +2,7 @@
 #include <atomic>
 #include <algorithm>
 #include <numeric>
+#include <string>
 #include <tbb/tbb.h>
 #include "emphasis.hpp"
 #include "augment_tree.hpp"
@@ -102,7 +103,14 @@ namespace emphasis {
       }
     });
     if (static_cast<int>(E.weights.size()) < N) {
-      throw emphasis_error("maxN exceeded");
+      if (static_cast<int>(E.weights.size()) < N) {
+        std::string msg = "maxN exceeded with rejection reasons: ";
+        msg += std::to_string(E.rejected_lambda) + " lambda; ";
+        msg += std::to_string(E.rejected_overruns) + " overruns; ";
+        msg += std::to_string(E.rejected_overruns) + " zero weights.";
+        msg += " Trees so far: " + std::to_string(E.trees.size());
+        throw emphasis_error(msg.c_str());
+      }
     }
     const double max_log_w = *std::max_element(E.weights.cbegin(), E.weights.cend());
     double sum_w = calc_sum_w(E.weights.begin(), E.weights.end(), max_log_w);

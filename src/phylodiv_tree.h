@@ -13,6 +13,7 @@
 #include <vector>
 #include <random>
 #include <thread>
+#include <algorithm>
 
 namespace sim_tree {
 
