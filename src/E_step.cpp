@@ -51,7 +51,7 @@ namespace emphasis {
                   int num_threads)
   {
     if (!model->is_threadsafe()) num_threads = 1;
-    tbb::task_scheduler_init _tbb((num_threads > 0) ? num_threads : tbb::task_scheduler_init::automatic);
+    //tbb::task_scheduler_init _tbb((num_threads > 0) ? num_threads : tbb::task_scheduler_init::automatic);
     std::mutex mutex;
     std::atomic<bool> stop{ false };    // non-handled exception
     tree_t init_tree = detail::create_tree(brts, static_cast<double>(soc));
@@ -59,7 +59,8 @@ namespace emphasis {
     std::vector<double> logf_;
     auto E = E_step_t{};
     auto T0 = std::chrono::high_resolution_clock::now();
-    tbb::parallel_for(tbb::blocked_range<unsigned>(0, maxN), [&](const tbb::blocked_range<unsigned>& r) {
+    const int grainsize = maxN / num_threads;
+    tbb::parallel_for(tbb::blocked_range<unsigned>(0, maxN, grainsize), [&](const tbb::blocked_range<unsigned>& r) {
       for (unsigned i = r.begin(); i < r.end(); ++i) {
         try {
           if (!stop) {
@@ -81,9 +82,7 @@ namespace emphasis {
                 E.weights.push_back(log_w);
                 logf_.push_back(logf);
                 logg_.push_back(logg);
-                if (static_cast<int>(E.trees.size()) == N) {
-                  stop = true;
-                }
+                stop = (E.trees.size() == N);
               }
             }
             else {
@@ -100,6 +99,8 @@ namespace emphasis {
           std::lock_guard<std::mutex> _(mutex);
           ++E.rejected_lambda;
         }
+	      catch (...) {
+	      }
       }
     });
     if (static_cast<int>(E.weights.size()) < N) {
@@ -107,7 +108,8 @@ namespace emphasis {
         std::string msg = "maxN exceeded with rejection reasons: ";
         msg += std::to_string(E.rejected_lambda) + " lambda; ";
         msg += std::to_string(E.rejected_overruns) + " overruns; ";
-        msg += std::to_string(E.rejected_overruns) + " zero weights.";
+        msg += std::to_string(E.rejected_overruns) + " zero weights; ";
+        msg += std::to_string(N - E.trees.size()) + " unhandled exception.";
         msg += " Trees so far: " + std::to_string(E.trees.size());
         throw emphasis_error(msg.c_str());
       }

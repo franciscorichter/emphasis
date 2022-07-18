@@ -67,7 +67,7 @@ namespace emphasis {
     int rejected_overruns = 0;          // # trees rejected because overrun of missing branches
     int rejected_lambda = 0;            // # trees rejected because of lambda overrun
     int rejected_zero_weights = 0;      // # trees rejected because of zero-weight
-    int rejected = 0;
+    int rejected = 0;                   // # trees rejected because of unhandled exception
     double elapsed = 0;                 // elapsed runtime [ms]
   };
 
