@@ -105,8 +105,11 @@ namespace emphasis {
         double next_bt = get_next_bt(tree, cbt);
         double lambda_max = ml(cbt, next_bt, pars, tree, model);
         if (lambda_max > max_lambda) throw augmentation_lambda{};
-        double u1 = std::uniform_real_distribution<>()(reng);
-        double next_speciation_time = cbt - std::log(u1) / lambda_max;
+        double next_speciation_time = next_bt;
+        if (0.0 != lambda_max) {
+          const double u1 = std::uniform_real_distribution<>()(reng);
+          next_speciation_time = cbt - std::log(u1) / lambda_max;
+        }
         if (next_speciation_time < next_bt) {
           double u2 = std::uniform_real_distribution<>()(reng);
           // calc pd(next_speciation_time)
@@ -142,8 +145,11 @@ namespace emphasis {
         lambda2 = std::max(0.0, model.nh_rate(next_bt, pars, tree));
         double lambda_max = std::max<double>(lambda1, lambda2);
         if (lambda_max > max_lambda) throw augmentation_lambda{};
-        const double u1 = std::uniform_real_distribution<>()(reng);
-        double next_speciation_time = cbt - std::log(u1) / lambda_max;
+        double next_speciation_time = next_bt;
+        if (0.0 != lambda_max) {
+          const double u1 = std::uniform_real_distribution<>()(reng);
+          next_speciation_time = cbt - std::log(u1) / lambda_max;
+        }
         dirty = false;
         if (next_speciation_time < next_bt) {
           double u2 = std::uniform_real_distribution<>()(reng);
