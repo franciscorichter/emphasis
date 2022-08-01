@@ -59,7 +59,7 @@ namespace emphasis {
     std::vector<double> logf_;
     auto E = E_step_t{};
     auto T0 = std::chrono::high_resolution_clock::now();
-    const int grainsize = maxN / num_threads;
+    const int grainsize = maxN / std::max<unsigned>(1, std::min<unsigned>(std::thread::hardware_concurrency(), num_threads));
     tbb::parallel_for(tbb::blocked_range<unsigned>(0, maxN, grainsize), [&](const tbb::blocked_range<unsigned>& r) {
       for (unsigned i = r.begin(); i < r.end(); ++i) {
         try {
