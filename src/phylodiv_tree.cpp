@@ -10,13 +10,14 @@ Rcpp::NumericMatrix simulate_pd_trees_cpp(Rcpp::NumericVector pars,
   
   sim_tree::phylodiv sim_tree(max_t,  {pars[0], pars[1], pars[2], pars[3]}, max_N);
   
-  Rcpp::NumericMatrix results(repl, 4);
+  Rcpp::NumericMatrix results(repl, 5);
   for (size_t r = 0; r < repl; ++r) {
     bool is_extinct = sim_tree.simulate_tree();
     results(r, 0) = is_extinct;
     results(r, 1) = sim_tree.t;
     results(r, 2) = sim_tree.N;
     results(r, 3) = sim_tree.P;
+    results(r, 4) = sim_tree.break_type;
   }
   return results;
 }
@@ -33,7 +34,7 @@ Rcpp::NumericMatrix explore_grid_cpp(Rcpp::NumericVector par1,
   size_t total_number_simulations = par1.size() * par2.size() * 
                                     par3.size() * par4.size() * num_repl;
   
-  Rcpp::NumericMatrix output(total_number_simulations, 8);
+  Rcpp::NumericMatrix output(total_number_simulations, 9);
   int row = 0;
   for (auto a : par1) {
     for (auto b : par2) {
@@ -58,6 +59,7 @@ Rcpp::NumericMatrix explore_grid_cpp(Rcpp::NumericVector par1,
             output(row, 5) = sim_tree.t;
             output(row, 6) = sim_tree.N;
             output(row, 7) = sim_tree.P;
+            output(row, 8) = sim_tree.break_type;
             row++;
           }
         }
