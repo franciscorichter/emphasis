@@ -54,11 +54,16 @@ Rcpp::List loglikelihood(const std::vector<double>& pars,
     logf[i] = model->loglik(pars, local_tree);
     log_w[i] = logf[i] - logg[i];
   }
+
+  double fhat = logf.front();
   
-  const double max_log_w = *std::max_element(log_w.cbegin(), log_w.cend());
-  double sum_w = calc_sum_w(log_w.begin(), log_w.end(), max_log_w);
+  if (trees.size() > 1) {
   
-  double fhat = std::log(sum_w / (trees.size() + num_rejected)) + max_log_w;
+    const double max_log_w = *std::max_element(log_w.cbegin(), log_w.cend());
+    double sum_w = calc_sum_w(log_w.begin(), log_w.end(), max_log_w);
+    
+    fhat = std::log(sum_w / (trees.size() + num_rejected)) + max_log_w;
+  }
   
   Rcpp::List ret;
   ret["logf"]    = logf;

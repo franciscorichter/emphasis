@@ -114,17 +114,16 @@ namespace emphasis {
         throw emphasis_error(msg.c_str());
       }
     }
-    const double max_log_w = *std::max_element(E.weights.cbegin(), E.weights.cend());
-    double sum_w = calc_sum_w(E.weights.begin(), E.weights.end(), max_log_w);
-    
+
     E.rejected = E.rejected_lambda + E.rejected_overruns + E.rejected_zero_weights;
     
-    E.fhat = std::log(sum_w / (N + E.rejected)) + max_log_w;
-    
-    // w = [loglik1 = logf1 - logg1]
-    // previously:  mean (exp(w))  , if #rejected == 1, then this is mean(exp(w), 0.0) --> < exp(w)
-    // in new branch: mean(w)      , if #rejected == 1, then this is mean(w, 0.0)      --> > w
-    
+    if (E.logf_.size() == 1) {
+      E.fhat = E.logf_.front();
+    } else {
+      const double max_log_w = *std::max_element(E.weights.cbegin(), E.weights.cend());
+      double sum_w = calc_sum_w(E.weights.begin(), E.weights.end(), max_log_w);
+      E.fhat = std::log(sum_w / (N + E.rejected)) + max_log_w;
+    }
     
     auto T1 = std::chrono::high_resolution_clock::now();
     E.elapsed = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count());
