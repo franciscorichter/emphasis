@@ -11,15 +11,17 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // loglikelihood
-Rcpp::NumericVector loglikelihood(const Rcpp::NumericVector& pars_r, const Rcpp::List& trees, const std::string& plugin);
-RcppExport SEXP _emphasis_loglikelihood(SEXP pars_rSEXP, SEXP treesSEXP, SEXP pluginSEXP) {
+Rcpp::List loglikelihood(const std::vector<double>& pars, const Rcpp::List& trees, const Rcpp::NumericVector& logg, const std::string& plugin, int num_rejected);
+RcppExport SEXP _emphasis_loglikelihood(SEXP parsSEXP, SEXP treesSEXP, SEXP loggSEXP, SEXP pluginSEXP, SEXP num_rejectedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type pars_r(pars_rSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type pars(parsSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List& >::type trees(treesSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type logg(loggSEXP);
     Rcpp::traits::input_parameter< const std::string& >::type plugin(pluginSEXP);
-    rcpp_result_gen = Rcpp::wrap(loglikelihood(pars_r, trees, plugin));
+    Rcpp::traits::input_parameter< int >::type num_rejected(num_rejectedSEXP);
+    rcpp_result_gen = Rcpp::wrap(loglikelihood(pars, trees, logg, plugin, num_rejected));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -120,7 +122,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_emphasis_loglikelihood", (DL_FUNC) &_emphasis_loglikelihood, 3},
+    {"_emphasis_loglikelihood", (DL_FUNC) &_emphasis_loglikelihood, 5},
     {"_emphasis_simulate_pd_trees_cpp", (DL_FUNC) &_emphasis_simulate_pd_trees_cpp, 4},
     {"_emphasis_explore_grid_cpp", (DL_FUNC) &_emphasis_explore_grid_cpp, 7},
     {"_emphasis_rcpp_mce", (DL_FUNC) &_emphasis_rcpp_mce, 12},

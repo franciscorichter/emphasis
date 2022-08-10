@@ -4,6 +4,7 @@
 #include "emphasis.hpp"
 #include "plugin.hpp"
 #include "rinit.h"
+#include "precision_weights.h"
 using namespace Rcpp;
 
 namespace loglik {
@@ -30,21 +31,33 @@ emphasis::tree_t pack(const Rcpp::DataFrame& r_tree) {
 //' function to calculate log likelihood of pars for a tree set,
 //' @export
 // [[Rcpp::export]]
-Rcpp::NumericVector loglikelihood(const Rcpp::NumericVector& pars_r,
-                                  const Rcpp::List& trees,
-                                  const std::string& plugin) {
+Rcpp::List loglikelihood(const std::vector<double>& pars,
+                          const Rcpp::List& trees,
+                          const Rcpp::NumericVector& logg,
+                          const std::string& plugin,
+                          int num_rejected) {
   
   auto model = emphasis::create_plugin_model(plugin);  
   
-  Rcpp::NumericVector logf(trees.size());
-  
-  std::vector<double> pars(pars_r.begin(), pars_r.end()); // not sure if this can't be sugared directly on input.
+  std::vector<double> logf(trees.size());
+  std::vector<double> log_w(trees.size());
   
   // unpack list and convert to tree_t
   for (size_t i = 0; i < trees.size(); ++i) {
     auto local_tree = loglik::pack(Rcpp::as<Rcpp::DataFrame>(trees[i]));
     logf[i] = model->loglik(pars, local_tree);
+    log_w[i] = logf[i] - logg[i];
   }
   
-  return logf;
+  const double max_log_w = *std::max_element(log_w.cbegin(), log_w.cend());
+  double sum_w = calc_sum_w(log_w.begin(), log_w.end(), max_log_w);
+  
+  double fhat = std::log(sum_w / (trees.size() + num_rejected)) + max_log_w;
+  
+  Rcpp::List ret;
+  ret["logf"]    = logf;
+  ret["weights"] = log_w;
+  ret["fhat"]    = fhat;
+  
+  return ret;
 }

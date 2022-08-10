@@ -61,5 +61,7 @@ List rcpp_mce(const std::vector<double>& brts,
   ret["time"] = E.elapsed;
   ret["weights"] = E.weights;
   ret["fhat"] = E.fhat;
+  ret["logf"] = E.logf_;
+  ret["logg"] = E.logg_;
   return ret;
 }

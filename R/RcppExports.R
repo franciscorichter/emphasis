@@ -3,8 +3,8 @@
 
 #' function to calculate log likelihood of pars for a tree set,
 #' @export
-loglikelihood <- function(pars_r, trees, plugin) {
-    .Call('_emphasis_loglikelihood', PACKAGE = 'emphasis', pars_r, trees, plugin)
+loglikelihood <- function(pars, trees, logg, plugin, num_rejected) {
+    .Call('_emphasis_loglikelihood', PACKAGE = 'emphasis', pars, trees, logg, plugin, num_rejected)
 }
 
 simulate_pd_trees_cpp <- function(pars, max_t, repl, max_N) {

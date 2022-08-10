@@ -55,8 +55,8 @@ namespace emphasis {
     std::mutex mutex;
     std::atomic<bool> stop{ false };    // non-handled exception
     tree_t init_tree = detail::create_tree(brts, static_cast<double>(soc));
-    std::vector<double> logg_;
-    std::vector<double> logf_;
+   // std::vector<double> logg_;
+  //  std::vector<double> logf_;
     auto E = E_step_t{};
     auto T0 = std::chrono::high_resolution_clock::now();
     const int grainsize = maxN / std::max<unsigned>(1, std::min<unsigned>(std::thread::hardware_concurrency(), num_threads));
@@ -80,8 +80,8 @@ namespace emphasis {
               if (!stop) {
                 E.trees.emplace_back(pool_tree.cbegin(), pool_tree.cend());
                 E.weights.push_back(log_w);
-                logf_.push_back(logf);
-                logg_.push_back(logg);
+                E.logf_.push_back(logf);
+                E.logg_.push_back(logg);
                 stop = (E.trees.size() == N);
               }
             }
