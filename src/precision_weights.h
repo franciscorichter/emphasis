@@ -14,7 +14,7 @@ double calc_sum_w(forIt first, forIt last, const double& max_sum_w) {
     double exponent = *it - max_sum_w;
     
     mp::cpp_dec_float_100 exp_prec(exponent);
-    auto w_prec = mp::exp(exp_prec);
+    auto w_prec = mp::exp(exp_prec); // other branch with no exponential
   
     sum_w += w_prec;
     *it = w_prec.convert_to<double>();
