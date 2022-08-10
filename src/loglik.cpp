@@ -12,15 +12,21 @@ namespace loglik {
 emphasis::tree_t pack(const Rcpp::DataFrame& r_tree) {
   emphasis::tree_t new_tree;
   
-  Rcpp::NumericVector brts = r_tree["brts"];
-  Rcpp::NumericVector n = r_tree["n"];
+  // NOTE 10/8/22: this can probably be micro-optimized, as it would make more 
+  // sense to avoid copying everything, and instead traverse the DataFrame as
+  // a matrix in a row wise fashion.
+  
+  Rcpp::NumericVector brts  = r_tree["brts"];
+  Rcpp::NumericVector n     = r_tree["n"];
   Rcpp::NumericVector t_ext = r_tree["t_ext"];
+  Rcpp::NumericVector pd    = r_tree["pd"];
   
   for (size_t i = 0; i < r_tree.nrow(); ++i) {
     emphasis::node_t entry;
     entry.brts = brts[i];
     entry.n    = n[i];
     entry.t_ext = t_ext[i];
+    entry.pd    = pd[i];
     new_tree.push_back(entry);
   }
   return new_tree;
@@ -32,10 +38,10 @@ emphasis::tree_t pack(const Rcpp::DataFrame& r_tree) {
 //' @export
 // [[Rcpp::export]]
 Rcpp::List loglikelihood(const std::vector<double>& pars,
-                          const Rcpp::List& trees,
-                          const Rcpp::NumericVector& logg,
-                          const std::string& plugin,
-                          int num_rejected) {
+                         const Rcpp::List& trees,
+                         const Rcpp::NumericVector& logg,
+                         const std::string& plugin,
+                         const int num_rejected) {
   
   auto model = emphasis::create_plugin_model(plugin);  
   
@@ -58,6 +64,7 @@ Rcpp::List loglikelihood(const std::vector<double>& pars,
   ret["logf"]    = logf;
   ret["weights"] = log_w;
   ret["fhat"]    = fhat;
+  ret["N"]       = trees.size() + num_rejected;
   
   return ret;
 }
