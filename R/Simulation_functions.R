@@ -88,13 +88,12 @@ draw_event_time <- function(cbt,
                             next_bt,
                             diversification_model,
                             tree){
-  
-  
+
   nsr = sum_of_rates
   
   key = 0 
   while(key == 0 & cbt < next_bt){
-    lambda_max = optim(cbt,
+    lambda_max = optim::optim(cbt,
                        fn = nsr,
                        tree = tree,
                        diversification_model = diversification_model,
@@ -103,7 +102,7 @@ draw_event_time <- function(cbt,
                        method ="L-BFGS-B",
                        control=list(fnscale=-1,maxit=1))$value
     
-    u1 = runif(1)
+    u1 = stats::runif(1)
     if(lambda_max==0){
       cbt = Inf
     }else{
@@ -117,12 +116,11 @@ draw_event_time <- function(cbt,
                tree,
                diversification_model)/lambda_max
       
-      if(u2<pt){
+      if(u2 < pt) {
         key = 1
       }
     }
   }
   
   return(cbt)
-  
 }

@@ -74,28 +74,28 @@ PDTT_plot <- function(tree){
   ct = max(tree$brts)
   times = seq(0,ct,length.out = 1000)
   times = sort(times,decreasing = T)
-  PD=NULL
-  for(i in 1:length(times)){
-    G=GPD(times[i],tree[-1,])
+  PD = NULL
+  for (i in 1:length(times)) {
+    G = GPD(times[i],tree[-1,])
     
-    PD=rbind(PD,data.frame(time=rep(times[i],nrow(G)),
-                         P=colSums(G)/(nrow(G)-1),
-                         lineage=as.character(1:nrow(G))))
+    PD = rbind(PD,data.frame(time = rep(times[i], nrow(G)),
+                         P = colSums(G) / (nrow(G) - 1),
+                         lineage = as.character(1:nrow(G))))
   }
-  g1 = ggplot(PD)+
-    geom_line(aes(x=time,y=P,colour=lineage,alpha=0.5))+
-    theme(legend.position = "none",
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        panel.background = element_blank(), 
-        axis.line = element_line(colour = "black"))
+  g1 = ggplot2::ggplot(PD)+
+    ggplot2::geom_line(ggplot2::aes(x = time, y = P, colour = lineage, alpha = 0.5))+
+    ggplot2::theme(legend.position = "none",
+        panel.grid.major = ggplot2::element_blank(), 
+        panel.grid.minor = ggplot2::element_blank(),
+        panel.background = ggplot2::element_blank(), 
+        axis.line = ggplot2::element_line(colour = "black"))
 return(g1)
 }
 
 etree2phylo <- function(etree){
   ext = get_extant(tm = etree$ct, tree = etree)
   nw = newick(ext,CT = etree$ct)
-  tr = ape:::read.tree(text=nw)
+  tr = ape:::read.tree(text = nw)
   return(tr)
 }
 
@@ -106,15 +106,15 @@ phylo2etree <- function(phylo){
   brts = cumsum(-diff(c(brts_dd,0)))
   
   tree = list(extant = data.frame(brts = c(0,brts[-length(brts)]),
-                                  parent=c(1,abs(tree[,2][-1])),
-                                  child=abs(tree[,3])),
+                                  parent = c(1,abs(tree[,2][-1])),
+                                  child = abs(tree[,3])),
               extinct = data.frame(brts = numeric(),
                                    parent = numeric(),
                                    child = numeric(),
                                    t_ext = numeric()),
               
-              ct=brts_dd[1])
-  tree$extant[3:nrow(tree$extant),"parent"]=tree$extant[3:nrow(tree$extant),"parent"]+1
+              ct = brts_dd[1])
+  tree$extant[3:nrow(tree$extant),"parent"] = tree$extant[3:nrow(tree$extant),"parent"]+1
   tree$extant$child = tree$extant$child + 1 
   tree$extant$parent[1:2]=1
   tree$extinct$parent=tree$extinct$parent+1
@@ -127,7 +127,7 @@ phylo2etree <- function(phylo){
 
 
 
-GPD<- function(tree,tm){
+GPD <- function(tree, tm){
   # input: an ultramedric tree defined by a data.frame
   # with columns brts, parent, child
   # the first two rows are 

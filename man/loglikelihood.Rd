@@ -4,7 +4,7 @@
 \alias{loglikelihood}
 \title{function to calculate log likelihood of pars for a tree set,}
 \usage{
-loglikelihood(pars_r, trees, plugin)
+loglikelihood(pars, trees, logg, plugin, num_rejected)
 }
 \description{
 function to calculate log likelihood of pars for a tree set,
