@@ -4,10 +4,10 @@ create_grid <- function(llim, rlim, n.grid) {
     theta.range <- cbind(llim, rlim)
     pars <- NULL
     for (i in 1:p) {
-        v <- rep(rep(seq(theta.range[i, 1], 
-                         theta.range[i, 2], 
-                         length.out = n.grid), 
-                     each = n.grid^(p - i)), n.grid^(i -1))
+        v <- rep(rep(seq(theta.range[i, 1],
+                         theta.range[i, 2],
+                         length.out = n.grid),
+                     each = n.grid^(p - i)), n.grid^(i - 1))
         pars <- cbind(pars, v)
     }
     return(pars)
@@ -16,23 +16,24 @@ create_grid <- function(llim, rlim, n.grid) {
 #' @keywords internal
 simulation_step <- function(grid, model, ct, timeLimit) {
     srv <- vector(mode = "numeric", length = nrow(grid))
-    Trees <- vector(mode = "list", length = nrow(grid))
+    trees <- vector(mode = "list", length = nrow(grid))
     for (i in seq_len(grid)) {
         svMisc::progress(i, max.value = nrow(grid))
-        tau <- try(sim_survival(diversification_model = list(pars = grid[i, ], 
+        tau <- try(sim_survival(diversification_model = list(pars = grid[i, ],
                                                              model = model),
                                 ct = ct,
                                 timeLimit = timeLimit),
             silent = TRUE)
         if (inherits(tau, "try-error")) {
             srv[i] <- -1
-            Trees[[i]] <- "error"
+            trees[[i]] <- "error"
         } else {
             srv[i] <- tau$srv
-            Trees[[i]] <- tau$tree
+            trees[[i]] <- tau$tree
         }
     }
-    return(list(srv = srv, Trees = Trees))
+    return(list(srv = srv,
+                Trees = trees))
 }
 
 #' @keywords internal
@@ -92,7 +93,7 @@ simTree_dd <- function(pars, ct, timeLimit) {
         lambda_ct <- max(0, pars[2] + pars[3] * N)  # diversity dependence only
         rate_max <- (lambda_ct + mu) * N
         u1 <- stats::runif(1)
-        next_event_time <- cbt - log(x = u1)/rate_max
+        next_event_time <- cbt - log(x = u1) / rate_max
         if (next_event_time < ct) {
             to <- sample(c(1, 0),
                          size = 1,
@@ -113,7 +114,7 @@ simTree_dd <- function(pars, ct, timeLimit) {
                   N2 <- N2 - 1
                 }
                 if ((N1 >= 1) && (N2 >= 1)) {
-                  ext_spec <- sample(which(tree$to == 1 & 
+                  ext_spec <- sample(which(tree$to == 1 &
                                            tree$t_ext == Inf &
                                            tree$clade == clade), 1)
                   tree$t_ext[ext_spec] <- next_event_time
@@ -161,7 +162,7 @@ simTree_pd <- function(pars, ct, timeLimit) {
                          ((P + N * (next_bt - cbt) - cbt) / N) * pars[4])
         rate_max <- (lambda_mx + mu) * N
         u1 <- stats::runif(1)
-        next_event_time <- cbt - log(x = u1)/rate_max
+        next_event_time <- cbt - log(x = u1) / rate_max
         P <- P + N * (next_event_time - cbt)
 
         if (next_event_time < next_bt) {
@@ -172,7 +173,7 @@ simTree_pd <- function(pars, ct, timeLimit) {
             pars[3] * N +
             ((P + N * (next_event_time - cbt) - next_event_time) / N) * pars[4])
 
-            pt <- ((lambda_ct + mu) * N)/rate_max
+            pt <- ((lambda_ct + mu) * N) / rate_max
 
             if (u2 < pt) {
                 to <- sample(c(1, 0),
