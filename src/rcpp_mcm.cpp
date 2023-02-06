@@ -29,6 +29,23 @@ namespace {
 }
 
 //' function to perform one step of the E-M algorithm
+//' @param e_step result of e_step function, as a list
+//' @param init_pars vector of initial parameter values
+//' @param plugin string indicating plugin used, currently available: 'rpd1' and
+//' 'rpd5c'
+//' @param lower_bound vector of lower bound values for optimization, should
+//' be equal in length to the vector of init_pars
+//' @param upper_bound vector of upper bound values for optimization, should
+//' be equal in length to the vector of init_pars 
+//' @param xtol_rel relative tolerance for optimization
+//' @param num_threads number of threads used.
+//' @param rconditional R function that evaluates the GAM function.
+//' @return list with the following entries:
+//' \itemize{
+//'  \item{estimates}{vector of estimates}
+//'  \item{nlopt}{nlopt status}
+//'  \item{time}{used computation time} 
+//' }
 //' @export
 // [[Rcpp::export(name = "m_cpp")]]
 List rcpp_mcm(List e_step,       

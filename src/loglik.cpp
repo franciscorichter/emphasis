@@ -35,6 +35,18 @@ emphasis::tree_t pack(const Rcpp::DataFrame& r_tree) {
 }
 
 //' function to calculate log likelihood of pars for a tree set,
+//' @param pars vector of parameter values
+//' @param trees list of trees, e.g. a multiPhylo object
+//' @param logg vector of logg values
+//' @param plugin name of used plugin
+//' @param num_rejected number of rejected trees
+//' @return list with the following entries: 
+//' \itemize{
+//'  \item{logf}{logf values}
+//'  \item{log_w}{log of weight}
+//'  \item{fhat}{fhat values}
+//'  \item{N}{number of trees}
+//' }
 //' @export
 // [[Rcpp::export]]
 Rcpp::List loglikelihood(const std::vector<double>& pars,

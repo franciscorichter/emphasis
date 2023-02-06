@@ -22,7 +22,6 @@ sim_tree_pd_grid(mu_vec, lambda_vec, b_n_vec, b_p_vec, max_t, num_repl, max_N)
 \item{max_N}{maximum number of lineages past which non-extinction is assumed.}
 }
 \value{
-
 a list with the used parameter combinations, 
 extinction of the phylogeny, and a vector with population size, 
 time of extinction (equal to the crown #' age in the absence of extinction), 

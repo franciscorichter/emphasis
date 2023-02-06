@@ -7,27 +7,26 @@
 #' (equal to the crown age in the absence of extinction)
 #' @export
 sim_tree_dd_minimal <- function(pars, max_t) {
-  N <- 2
-  mu <- max(0, pars[1])
-  t <- 0
-  while (t < max_t && N >= 2 && N < 1000) {
+    N <- 2
+    mu <- max(0, pars[1])
+    t <- 0
+    while (t < max_t && N >= 2 && N < 1000) {
 
-    lambda_ct <- max(0, pars[2] +
-                        pars[3] * N)
-    rate_max <- (lambda_ct + mu) * N
-    next_t <- t + stats::rexp(n = 1, rate = rate_max)
+        lambda_ct <- max(0, pars[2] + pars[3] * N)
+        rate_max <- (lambda_ct + mu) * N
+        next_t <- t + stats::rexp(n = 1, rate = rate_max)
 
-    if (next_t < max_t) {
-      if (stats::runif(1, 0, 1) < lambda_ct / (lambda_ct + mu)) {
-        # speciation
-        N <- N + 1
-      } else {
-        # extinction
-        N <- N - 1
-      }
+        if (next_t < max_t) {
+            if (stats::runif(1, 0, 1) < lambda_ct / (lambda_ct + mu)) {
+                # speciation
+                N <- N + 1
+            } else {
+                # extinction
+                N <- N - 1
+            }
+        }
+        t <- next_t
     }
-    t <- next_t
-  }
-  t <- min(t, max_t)
-  return(c(N, t))
+    t <- min(t, max_t)
+    return(c(N, t))
 }

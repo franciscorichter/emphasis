@@ -6,6 +6,26 @@
 \usage{
 loglikelihood(pars, trees, logg, plugin, num_rejected)
 }
+\arguments{
+\item{pars}{vector of parameter values}
+
+\item{trees}{list of trees, e.g. a multiPhylo object}
+
+\item{logg}{vector of logg values}
+
+\item{plugin}{name of used plugin}
+
+\item{num_rejected}{number of rejected trees}
+}
+\value{
+list with the following entries: 
+\itemize{
+ \item{logf}{logf values}
+ \item{log_w}{log of weight}
+ \item{fhat}{fhat values}
+ \item{N}{number of trees}
+}
+}
 \description{
 function to calculate log likelihood of pars for a tree set,
 }

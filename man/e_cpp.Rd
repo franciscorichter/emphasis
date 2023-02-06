@@ -19,6 +19,49 @@ e_cpp(
   num_threads
 )
 }
+\arguments{
+\item{brts}{vector of branching times}
+
+\item{init_pars}{vector of initial parameter files}
+
+\item{sample_size}{number of samples}
+
+\item{maxN}{maximum number of failed trees}
+
+\item{plugin}{string indicating plugin used, currently available: 'rpd1' and
+'rpd5c'}
+
+\item{soc}{number of lineages at the root/crown (1/2)}
+
+\item{max_missing}{maximum number of species missing}
+
+\item{max_lambda}{maximum speciation rate}
+
+\item{lower_bound}{vector of lower bound values for optimization, should
+be equal in length to the vector of init_pars}
+
+\item{upper_bound}{vector of upper bound values for optimization, should
+be equal in length to the vector of init_pars}
+
+\item{xtol_rel}{relative tolerance for optimization}
+
+\item{num_threads}{number of threads used.}
+}
+\value{
+a list with the following components: 
+\itemize{
+ \item{trees}{list of trees}
+ \item{rejected}{number of rejected trees}
+ \item{rejected_overruns}{number of trees rejected due to too large size}
+ \item{rejected_lambda}{number of trees rejected due to lambda errors}
+ \item{rejected_zero_weights}{number of trees rejected to zero weight}
+ \item{time_elapsed}{time used}
+ \item{weights}{vector of weights}
+ \item{fhat}{vector of fhat values}
+ \item{logf}{vector of logf values}
+ \item{logg}{vector of logg values}
+}
+}
 \description{
 function to perform one step of the E-M algorithm
 }

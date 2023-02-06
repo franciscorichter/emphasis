@@ -23,6 +23,36 @@ namespace {
 }
 
 //' function to perform one step of the E-M algorithm
+//' @param brts vector of branching times
+//' @param init_pars vector of initial parameter files
+//' @param sample_size number of samples
+//' @param maxN maximum number of failed trees
+//' @param plugin string indicating plugin used, currently available: 'rpd1' and
+//' 'rpd5c'
+//' @param soc number of lineages at the root/crown (1/2)
+//' @param max_missing maximum number of species missing
+//' @param max_lambda maximum speciation rate
+//' @param lower_bound vector of lower bound values for optimization, should
+//' be equal in length to the vector of init_pars
+//' @param upper_bound vector of upper bound values for optimization, should
+//' be equal in length to the vector of init_pars
+//' @param xtol_rel relative tolerance for optimization
+//' @param num_threads number of threads used.
+//' @param copy_trees if set to true, the trees generated are returned as well
+//' @param rconditional R function that evaluates the GAM function.
+//' @return a list with the following components: 
+//' \itemize{
+//'  \item{trees}{list of trees}
+//'  \item{rejected}{number of rejected trees}
+//'  \item{rejected_overruns}{number of trees rejected due to too large size}
+//'  \item{rejected_lambda}{number of trees rejected due to lambda errors}
+//'  \item{rejected_zero_weights}{number of trees rejected to zero weight}
+//'  \item{estimates}{vector of estimates}
+//'  \item{nlopt}{nlopt status}
+//'  \item{fhat}{vector of fhat values}
+//'  \item{time}{time elapsed}
+//'  \item{weights}{vector of weights}
+//' }
 //' @export
 // [[Rcpp::export(name = "em_cpp")]]
 List rcpp_mcem(const std::vector<double>& brts,       

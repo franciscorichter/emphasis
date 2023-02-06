@@ -10,13 +10,14 @@ License: file LICENSE
 Encoding: UTF-8
 Depends: R (>= 3.5.0),
          Rcpp, 
-         RcppParallel,
-         BH
+         RcppParallel
 Imports: nloptr,
          MASS,
          ape,
          mgcv,
-         svMisc
+         svMisc,
+         apTreeshape,
+         ggplot2
 LinkingTo: Rcpp, 
            RcppParallel, 
            nloptr,
@@ -26,4 +27,4 @@ Suggests: TreeSim,
           DDD,
           tibble
 SystemRequirements: C++14
-RoxygenNote: 7.2.0
+RoxygenNote: 7.2.1

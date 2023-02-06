@@ -15,8 +15,8 @@ sim_tree_pd_cpp(pars, max_t, num_repl = 1, max_lin)
 
 \item{num_repl}{number of replicates}
 
-
 \item{max_lin}{number of lineages past which non-extinction is assumed.}
+}
 \value{
 a tibble with five columns: 1) whether or not the tree went extinct,
 2) the time of extinction (equal to the crown #' age in the absence of 

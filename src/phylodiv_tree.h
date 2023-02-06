@@ -101,6 +101,8 @@ namespace sim_tree {
   
   };
   
+  enum breaks {none, finished, extinction, maxN_exceeded};
+  
   struct phylodiv {
     float max_t;
     float P; // phylogenetic diversity
@@ -110,6 +112,8 @@ namespace sim_tree {
     std::array< double, 4> pars; // mu, lambda, B_n, B_p
   
     std::vector< branch > tree;
+  
+    breaks break_type;
   
     rnd_t rndgen;
   
