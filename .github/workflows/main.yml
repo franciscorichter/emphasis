@@ -4,13 +4,11 @@ on:
   push:
     branches:
       - main
-      - loglik_n_one
-      - master
+      - develop
   pull_request:
     branches:
       - main
-      - loglik_n_one
-      - master
+      - develop
 
 name: R-CMD-check
 
