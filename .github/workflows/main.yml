@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - main
+      - loglik_n_one
       - master
   pull_request:
     branches:
       - main
+      - loglik_n_one
       - master
 
 name: R-CMD-check
