@@ -10,6 +10,8 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+]
+
 // simulate_pd_trees_cpp
 Rcpp::NumericMatrix simulate_pd_trees_cpp(Rcpp::NumericVector pars, float max_t, size_t repl, float max_N);
 RcppExport SEXP _emphasis_simulate_pd_trees_cpp(SEXP parsSEXP, SEXP max_tSEXP, SEXP replSEXP, SEXP max_NSEXP) {

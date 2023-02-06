@@ -2,11 +2,13 @@
 #include <atomic>
 #include <algorithm>
 #include <numeric>
+#include <string>
 #include <tbb/tbb.h>
 #include "emphasis.hpp"
 #include "augment_tree.hpp"
 #include "plugin.hpp"
 #include "model_helpers.hpp"
+#include "precision_weights.h"
 
 
 namespace emphasis {
@@ -49,15 +51,16 @@ namespace emphasis {
                   int num_threads)
   {
     if (!model->is_threadsafe()) num_threads = 1;
-    tbb::task_scheduler_init _tbb((num_threads > 0) ? num_threads : tbb::task_scheduler_init::automatic);
+    //tbb::task_scheduler_init _tbb((num_threads > 0) ? num_threads : tbb::task_scheduler_init::automatic);
     std::mutex mutex;
     std::atomic<bool> stop{ false };    // non-handled exception
     tree_t init_tree = detail::create_tree(brts, static_cast<double>(soc));
-    std::vector<double> logg_;
-    std::vector<double> logf_;
+   // std::vector<double> logg_;
+  //  std::vector<double> logf_;
     auto E = E_step_t{};
     auto T0 = std::chrono::high_resolution_clock::now();
-    tbb::parallel_for(tbb::blocked_range<unsigned>(0, maxN), [&](const tbb::blocked_range<unsigned>& r) {
+    const int grainsize = maxN / std::max<unsigned>(1, std::min<unsigned>(std::thread::hardware_concurrency(), num_threads));
+    tbb::parallel_for(tbb::blocked_range<unsigned>(0, maxN, grainsize), [&](const tbb::blocked_range<unsigned>& r) {
       for (unsigned i = r.begin(); i < r.end(); ++i) {
         try {
           if (!stop) {
@@ -77,11 +80,9 @@ namespace emphasis {
               if (!stop) {
                 E.trees.emplace_back(pool_tree.cbegin(), pool_tree.cend());
                 E.weights.push_back(log_w);
-                logf_.push_back(logf);
-                logg_.push_back(logg);
-                if (static_cast<int>(E.trees.size()) == N) {
-                  stop = true;
-                }
+                E.logf_.push_back(logf);
+                E.logg_.push_back(logg);
+                stop = (E.trees.size() == N);
               }
             }
             else {
@@ -98,19 +99,32 @@ namespace emphasis {
           std::lock_guard<std::mutex> _(mutex);
           ++E.rejected_lambda;
         }
+	      catch (...) {
+	      }
       }
     });
     if (static_cast<int>(E.weights.size()) < N) {
-      throw emphasis_error("maxN exceeded");
+      if (static_cast<int>(E.weights.size()) < N) {
+        std::string msg = "maxN exceeded with rejection reasons: ";
+        msg += std::to_string(E.rejected_lambda) + " lambda; ";
+        msg += std::to_string(E.rejected_overruns) + " overruns; ";
+        msg += std::to_string(E.rejected_overruns) + " zero weights; ";
+        msg += std::to_string(N - E.trees.size()) + " unhandled exception.";
+        msg += " Trees so far: " + std::to_string(E.trees.size());
+        throw emphasis_error(msg.c_str());
+      }
     }
-    const double max_log_w = *std::max_element(E.weights.cbegin(), E.weights.cend());
-    double sum_w = 0.0;
-    for (size_t i = 0; i < E.weights.size(); ++i) {
-      const double w = std::exp(E.weights[i] - max_log_w);
-      sum_w += (E.weights[i] = w);
-    }
+
     E.rejected = E.rejected_lambda + E.rejected_overruns + E.rejected_zero_weights;
-    E.fhat = std::log(sum_w / (N + E.rejected)) + max_log_w;
+    
+    if (E.logf_.size() == 1) {
+      E.fhat = E.logf_.front();
+    } else {
+      const double max_log_w = *std::max_element(E.weights.cbegin(), E.weights.cend());
+      double sum_w = calc_sum_w(E.weights.begin(), E.weights.end(), max_log_w);
+      E.fhat = std::log(sum_w / (N + E.rejected)) + max_log_w;
+    }
+    
     auto T1 = std::chrono::high_resolution_clock::now();
     E.elapsed = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count());
     return E;

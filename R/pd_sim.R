@@ -123,15 +123,22 @@ sim_tree_pd_R <- function(pars, max_t) {
 #' @param pars parameter vector with c(mu, lambda_0, beta_N, beta_P)
 #' @param max_t crown age
 #' @param num_repl number of replicates
-#' @param max_N number of lineages past which non-extinction is assumed.
-#' @return a list with the phylogeny, and a vector with population size, 
-#' time of extinction (equal to the crown #' age in the absence of extinction), 
-#' and the phylogenetic diversity at the time of extinction (or crown age).
+#' @param max_lin number of lineages past which non-extinction is assumed.
+#' @return a tibble with five columns: 1) whether or not the tree went extinct,
+#' 2) the time of extinction (equal to the crown #' age in the absence of 
+#' extinction), 3) the number of tips,4) the phylogenetic diversity at the 
+# time of extinction (or crown age), and 5) the break condition indicating why 
+# the simulation was stopped (options: no break (none), exceeded max_t, 
+# extinction, or exceeded max_lin).
 #' @export
-sim_tree_pd_cpp <- function(pars, max_t, num_repl = 1, max_N) {
-    result <- simulate_pd_trees_cpp(pars, max_t, num_repl, max_N)
-    colnames(result) <- c("is_extinct", "t", "N", "P")
+sim_tree_pd_cpp <- function(pars, max_t, num_repl = 1, max_lin) {
+    result <- simulate_pd_trees_cpp(pars, max_t, num_repl, max_lin)
+    colnames(result) <- c("is_extinct", "t", "N", "P", "break_condition")
     result <- tibble::as_tibble(result)
+    result$break_condition[result$break_condition == 3] <- "max_lin"
+    result$break_condition[result$break_condition == 2] <- "extinction"
+    result$break_condition[result$break_condition == 1] <- "max_t"
+    result$break_condition[result$break_condition == 0] <- "none"
     return(result)
 }
 
@@ -146,8 +153,8 @@ sim_tree_pd_cpp <- function(pars, max_t, num_repl = 1, max_N) {
 #' @param max_t crown age
 #' @param max_N maximum number of lineages past which non-extinction is assumed.
 #' @param num_repl number of replicates
-#' @return a list with the used parameter combinations, the phylogeny, 
-#' and a vector with population size, 
+#' @return a list with the used parameter combinations, 
+#' extinction of the phylogeny, and a vector with population size, 
 #' time of extinction (equal to the crown #' age in the absence of extinction), 
 #' and the phylogenetic diversity at the time of extinction (or crown age).
 #' @export

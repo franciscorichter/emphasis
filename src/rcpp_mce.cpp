@@ -11,18 +11,23 @@ namespace {
 
   DataFrame unpack(const emphasis::tree_t& tree)
   {
-    NumericVector brts, n, t_ext;
+    NumericVector brts, n, t_ext, pd;
     for (const emphasis::node_t& node : tree) {
       brts.push_back(node.brts);
       n.push_back(node.n);
       t_ext.push_back(node.t_ext);
+      pd.push_back(node.pd);
     }
-    return DataFrame::create(Named("brts") = brts, Named("n") = n, Named("t_ext") = t_ext);
+    return DataFrame::create(Named("brts") = brts, 
+                             Named("n") = n, 
+                             Named("t_ext") = t_ext,
+                             Named("pd") = pd);
   }
 
 }
 
-
+//' function to perform one step of the E-M algorithm
+//' @export
 // [[Rcpp::export(name = "e_cpp")]]
 List rcpp_mce(const std::vector<double>& brts,       
               const std::vector<double>& init_pars,      
@@ -60,5 +65,7 @@ List rcpp_mce(const std::vector<double>& brts,
   ret["time"] = E.elapsed;
   ret["weights"] = E.weights;
   ret["fhat"] = E.fhat;
+  ret["logf"] = E.logf_;
+  ret["logg"] = E.logg_;
   return ret;
 }

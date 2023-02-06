@@ -13,10 +13,14 @@ e_cpp <- function(brts, init_pars, sample_size, maxN, plugin, soc, max_missing, 
     .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, plugin, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads)
 }
 
+#' function to perform one step of the E-M algorithm
+#' @export
 em_cpp <- function(brts, init_pars, sample_size, maxN, plugin, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, rconditional = NULL) {
     .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, plugin, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, rconditional)
 }
 
+#' function to perform one step of the E-M algorithm
+#' @export
 m_cpp <- function(e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, rconditional = NULL) {
     .Call('_emphasis_rcpp_mcm', PACKAGE = 'emphasis', e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, rconditional)
 }

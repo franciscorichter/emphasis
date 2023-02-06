@@ -13,7 +13,7 @@
 #include <vector>
 #include <random>
 #include <thread>
-#include <iostream>
+#include <algorithm>
 
 namespace sim_tree {
 
@@ -154,13 +154,17 @@ namespace sim_tree {
      P = 0.f;
      
      float mu = pars[0];
-     while(t < max_t && 
-           N1 >= 1 && 
-           N2 >= 1) {
+
+     break_type = breaks::none;
+     
+     while(true) {
   
        N = N1 + N2;
-       if (N >= max_N) 
+       if (N >= max_N) {
+         break_type = breaks::maxN_exceeded;
          break;
+       }
+
        
        float spec_rate = pars[1] + pars[2] * N  +
                          ((P + N * (max_t - t) - t) / N) * pars[3];
@@ -169,7 +173,7 @@ namespace sim_tree {
        float total_rate = (spec_rate + mu ) * N;
   
        float next_event_time = t + rndgen.expon(total_rate);
-  
+
        P += (t - prev_t) * N;
        
        //P = calculate_full_phylodiv(t);
@@ -221,22 +225,31 @@ namespace sim_tree {
        } else {
          t = max_t;
        }
+     
+       if (N1 < 1 || N2 < 1) {
+         break_type = breaks::extinction;
+         break;
+       }
+       if (t >= max_t) {
+         break_type = breaks::finished;
+         break;
+       }
      }
      
      N = N1 + N2;
      P = calculate_full_phylodiv(t); // final check.
      
-     if (t < max_t) {
-       if (N < max_N) {
-        return true;
-       }
+     if (break_type == breaks::extinction) {
+       return true;
      }
+     
      return false;
     }
   
   
-    float purge_tree_record(size_t focal_index) {
-      float bt_removed = 0.f;
+
+    double purge_tree_record(size_t focal_index) {
+      double bt_removed = 0.f;
       auto label_removed = tree[focal_index].label;
       auto parent = tree[focal_index].parent_label;
       // first, we remove the focal tree:

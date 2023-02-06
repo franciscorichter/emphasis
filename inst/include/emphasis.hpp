@@ -63,11 +63,14 @@ namespace emphasis {
 
     std::vector<tree_t> trees;          // augmented trees
     std::vector<double> weights;
+    std::vector<double> logg_;
+    std::vector<double> logf_;
+    
     double fhat;                        // mean, unscaled, weight
     int rejected_overruns = 0;          // # trees rejected because overrun of missing branches
     int rejected_lambda = 0;            // # trees rejected because of lambda overrun
     int rejected_zero_weights = 0;      // # trees rejected because of zero-weight
-    int rejected = 0;
+    int rejected = 0;                   // # trees rejected because of unhandled exception
     double elapsed = 0;                 // elapsed runtime [ms]
   };
 

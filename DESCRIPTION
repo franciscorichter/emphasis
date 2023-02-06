@@ -10,7 +10,8 @@ License: file LICENSE
 Encoding: UTF-8
 Depends: R (>= 3.5.0),
          Rcpp, 
-         RcppParallel
+         RcppParallel,
+         BH
 Imports: nloptr,
          MASS,
          ape,
@@ -18,10 +19,11 @@ Imports: nloptr,
          svMisc
 LinkingTo: Rcpp, 
            RcppParallel, 
-           nloptr
+           nloptr,
+           BH
 Suggests: TreeSim,
           testthat (>= 3.0.0),
           DDD,
           tibble
 SystemRequirements: C++14
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.0

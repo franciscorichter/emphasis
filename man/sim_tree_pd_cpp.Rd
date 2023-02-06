@@ -6,7 +6,7 @@
 the tree went extinct before max_t or not. 
 This function does not return a phylogenetic tree to improve computation speed.}
 \usage{
-sim_tree_pd_cpp(pars, max_t, num_repl = 1, max_N)
+sim_tree_pd_cpp(pars, max_t, num_repl = 1, max_lin)
 }
 \arguments{
 \item{pars}{parameter vector with c(mu, lambda_0, beta_N, beta_P)}
@@ -15,12 +15,12 @@ sim_tree_pd_cpp(pars, max_t, num_repl = 1, max_N)
 
 \item{num_repl}{number of replicates}
 
-\item{max_N}{number of lineages past which non-extinction is assumed.}
-}
+
+\item{max_lin}{number of lineages past which non-extinction is assumed.}
 \value{
-a list with the phylogeny, and a vector with population size, 
-time of extinction (equal to the crown #' age in the absence of extinction), 
-and the phylogenetic diversity at the time of extinction (or crown age).
+a tibble with five columns: 1) whether or not the tree went extinct,
+2) the time of extinction (equal to the crown #' age in the absence of 
+extinction), 3) the number of tips,4) the phylogenetic diversity at the
 }
 \description{
 super fast function to simulate the process of diversification
