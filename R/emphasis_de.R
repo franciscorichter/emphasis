@@ -70,6 +70,16 @@ get_random_grid <- function(num_points,
   return(pars)
 }
 
+which_val <- function(val, dmval1){
+  check <- FALSE
+  s <- 0
+  while (check == FALSE) {
+    s <- s + 1 
+    if (!is.null(dmval1[[s]]$fhat))  check = (dmval1[[s]]$fhat == val)
+  }
+  return(s)
+}
+
 #' perform emphasis analysis using DE method
 #' @param brts branching times of tree to fit on
 #' @param num_iterations number of iterations of the DE algorithm
@@ -175,8 +185,8 @@ emphasis_de <- function(brts,
       rejo_count = c(rejo_count, k)
     }
     
-    wi = wi[!is.na(wi)]
-    for (i in 1:length(vals)){
+    wi <- NULL
+    for (i in 1:length(vals)) {
        wi = c(wi, which_val(vals[i], dmval1))
     }
     
