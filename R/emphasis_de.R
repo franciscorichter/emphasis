@@ -59,7 +59,7 @@ get_random_grid <- function(num_points,
   
   total_num <- num_dim * num_points
   
-  pars <- matrix(runif(total_num,
+  pars <- matrix(stats::runif(total_num,
                        min = lower_bound,
                        max = upper_bound),
                  byrow = TRUE,
@@ -93,6 +93,10 @@ which_val <- function(val, dmval1){
 #' @param max_lambda maximum value of lambda
 #' @param disc_prop proportion of particles retained per iteration
 #' @param verbose verbose output if TRUE
+#' @rawNamespace useDynLib(emphasis)
+#' @rawNamespace import(nloptr)
+#' @rawNamespace import(Rcpp)
+#' @rawNamespace importFrom(RcppParallel, RcppParallelLibs)
 emphasis_de <- function(brts,
                         num_iterations,
                         num_points,
@@ -135,7 +139,7 @@ emphasis_de <- function(brts,
   for (k in 1:num_iterations) {
     if (verbose) {
       
-      sd_vals <- as.numeric(apply(pars, 2, sd))
+      sd_vals <- as.numeric(apply(pars, 2, stats::sd))
       
       message(paste0("iteration: ", k, "sd: ", sd_vals, " ", sd(vals), "\n"))
      # pb$tick()
@@ -208,22 +212,22 @@ emphasis_de <- function(brts,
     par_vars <- c("par1", "par2", "par3", "par4")
     for (par_var in par_vars) {
       var_diff_name <- paste0(par_var, "diff")
-      assign(var_diff_name, c(get(var_diff_name), sd(pars[[par_var]])))
+      assign(var_diff_name, c(get(var_diff_name), stats::sd(pars[[par_var]])))
     }
 
-    fhatdiff <- c(fhatdiff, sd(vals))
+    fhatdiff <- c(fhatdiff, stats::sd(vals))
 
     # if we have more than 20% of the original particles, drop half of the particles
-    if (nrow(pars) > num_points * 0.2)  pars = pars[vals < quantile(vals, probs = disc_prop),]
+    if (nrow(pars) > num_points * 0.2)  pars = pars[vals < stats::quantile(vals, probs = disc_prop),]
 
     # Increase the number of particles until having at least the initial number of particles
     
     num_to_add <- num_points - nrow(pars) 
     indices <- sample(x = seq_len(nrow(pars)), size = num_to_add, replace = TRUE)
-    pars_to_add <- pars[indices, ] + data.frame(par1 = rnorm(num_to_add, mean = 0, sd = sd_vec[1]),
-                                                par2 = rnorm(num_to_add, mean = 0, sd = sd_vec[2]),
-                                                par3 = rnorm(num_to_add, mean = 0, sd = sd_vec[3]),
-                                                par4 = rnorm(num_to_add, mean = 0, sd = sd_vec[4]))
+    pars_to_add <- pars[indices, ] + data.frame(par1 = stats::rnorm(num_to_add, mean = 0, sd = sd_vec[1]),
+                                                par2 = stats::rnorm(num_to_add, mean = 0, sd = sd_vec[2]),
+                                                par3 = stats::rnorm(num_to_add, mean = 0, sd = sd_vec[3]),
+                                                par4 = stats::rnorm(num_to_add, mean = 0, sd = sd_vec[4]))
     pars <- rbind(pars, pars_to_add)
 
     # Decrease variation

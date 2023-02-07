@@ -257,8 +257,6 @@ AICw <- function(l1, l2, k1, k2) {
     return(weights[1])
 }
 
-
-
 # time calculation
 get.time <- function(time,
                      mode = "sec") {
