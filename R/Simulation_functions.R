@@ -68,7 +68,6 @@ sample_tree_full <- function(diversification_model,
 draw_allocation_full <- function(event_time,
                                  diversification_model,
                                  tree) {
-
     # calculate rates
     # TODO: find code where these come from:
     l <- speciation_rate(tm = event_time,

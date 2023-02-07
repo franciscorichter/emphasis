@@ -132,11 +132,12 @@ simTree_dd <- function(pars, ct, timeLimit) {
     if ((N1 == 0) || (N2 == 0)) {
         tree <- cbt
     } else {
-        tree <- rbind(tree, data.frame(brts = ct,
-                                       to = 1,
-                                       t_ext = Inf,
-                                       lambda = lambda_ct,
-                                       clade = 0))
+        tree <- rbind(tree,
+                      data.frame(brts = ct,
+                                 to = 1,
+                                 t_ext = Inf,
+                                 lambda = lambda_ct,
+                                 clade = 0))
     }
     return(tree)
 }

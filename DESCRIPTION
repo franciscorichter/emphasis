@@ -17,7 +17,9 @@ Imports: nloptr,
          mgcv,
          svMisc,
          apTreeshape,
-         ggplot2
+         ggplot2,
+         progress,
+         parallel
 LinkingTo: Rcpp, 
            RcppParallel, 
            nloptr,
