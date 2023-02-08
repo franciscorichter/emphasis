@@ -4,9 +4,9 @@
 #include <numeric>
 #include <string>
 #include <tbb/tbb.h>
+#include "model.hpp"
 #include "emphasis.hpp"
 #include "augment_tree.hpp"
-#include "model.hpp"
 #include "model_helpers.hpp"
 #include "precision_weights.hpp"
 

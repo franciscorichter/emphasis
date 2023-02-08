@@ -138,8 +138,6 @@ namespace emphasis {
               int num_threads = 0,
               conditional_fun_t* conditional = nullptr);
 
-
-  std::unique_ptr<class Model> create_model();
 }
 
 #endif
