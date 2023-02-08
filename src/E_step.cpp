@@ -6,9 +6,9 @@
 #include <tbb/tbb.h>
 #include "emphasis.hpp"
 #include "augment_tree.hpp"
-#include "plugin.hpp"
+#include "model.hpp"
 #include "model_helpers.hpp"
-#include "precision_weights.h"
+#include "precision_weights.hpp"
 
 
 namespace emphasis {
@@ -124,7 +124,7 @@ namespace emphasis {
       double sum_w = calc_sum_w(E.weights.begin(), E.weights.end(), max_log_w);
       E.fhat = std::log(sum_w / (N + E.rejected)) + max_log_w;
     }
-    
+
     auto T1 = std::chrono::high_resolution_clock::now();
     E.elapsed = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count());
     return E;

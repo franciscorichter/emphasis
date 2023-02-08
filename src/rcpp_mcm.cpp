@@ -2,7 +2,7 @@
 
 #include <Rcpp.h>
 #include "emphasis.hpp"
-#include "plugin.hpp"
+#include "model.hpp"
 #include "rinit.h"
 using namespace Rcpp;
 
@@ -70,7 +70,7 @@ List rcpp_mcm(List e_step,
   if (E.trees.empty()) {
     throw std::runtime_error("no trees, no optimization");
   }
-  auto model = emphasis::create_plugin_model(plugin);
+  auto model = emphasis::create_model();
   emphasis::conditional_fun_t conditional{};
   if (rconditional.isNotNull()) {
     conditional = [cond= Function(rconditional)](const emphasis::param_t& pars) {

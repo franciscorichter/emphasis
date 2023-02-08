@@ -32,8 +32,6 @@ explore_grid_cpp <- function(par1, par2, par3, par4, max_t, num_repl, max_N) {
 #' @param init_pars vector of initial parameter files
 #' @param sample_size number of samples
 #' @param maxN maximum number of failed trees
-#' @param plugin string indicating plugin used, currently available: 'rpd1' and
-#' 'rpd5c'
 #' @param soc number of lineages at the root/crown (1/2)
 #' @param max_missing maximum number of species missing
 #' @param max_lambda maximum speciation rate
@@ -57,8 +55,8 @@ explore_grid_cpp <- function(par1, par2, par3, par4, max_t, num_repl, max_N) {
 #'  \item{logg}{vector of logg values}
 #' }
 #' @export
-e_cpp <- function(brts, init_pars, sample_size, maxN, plugin, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads) {
-    .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, plugin, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads)
+e_cpp <- function(brts, init_pars, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads) {
+    .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads)
 }
 
 #' function to perform one step of the E-M algorithm
@@ -66,8 +64,6 @@ e_cpp <- function(brts, init_pars, sample_size, maxN, plugin, soc, max_missing, 
 #' @param init_pars vector of initial parameter files
 #' @param sample_size number of samples
 #' @param maxN maximum number of failed trees
-#' @param plugin string indicating plugin used, currently available: 'rpd1' and
-#' 'rpd5c'
 #' @param soc number of lineages at the root/crown (1/2)
 #' @param max_missing maximum number of species missing
 #' @param max_lambda maximum speciation rate
@@ -93,8 +89,8 @@ e_cpp <- function(brts, init_pars, sample_size, maxN, plugin, soc, max_missing, 
 #'  \item{weights}{vector of weights}
 #' }
 #' @export
-em_cpp <- function(brts, init_pars, sample_size, maxN, plugin, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, rconditional = NULL) {
-    .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, plugin, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, rconditional)
+em_cpp <- function(brts, init_pars, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, rconditional = NULL) {
+    .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, rconditional)
 }
 
 #' function to perform one step of the E-M algorithm

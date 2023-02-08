@@ -31,8 +31,7 @@
 #include <memory>
 #include <vector>
 #include <functional>
-#include "plugin.hpp"
-
+#include "model.hpp"
 
 namespace emphasis {
 
@@ -140,8 +139,7 @@ namespace emphasis {
               conditional_fun_t* conditional = nullptr);
 
 
-  std::unique_ptr<class Model> create_plugin_model(const std::string& model_dll);
-
+  std::unique_ptr<class Model> create_model();
 }
 
 #endif

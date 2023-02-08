@@ -2,7 +2,7 @@
 
 #include <Rcpp.h>
 #include "emphasis.hpp"
-#include "plugin.hpp"
+#include "model.hpp"
 #include "rinit.h"
 using namespace Rcpp;
 
@@ -31,8 +31,6 @@ namespace {
 //' @param init_pars vector of initial parameter files
 //' @param sample_size number of samples
 //' @param maxN maximum number of failed trees
-//' @param plugin string indicating plugin used, currently available: 'rpd1' and
-//' 'rpd5c'
 //' @param soc number of lineages at the root/crown (1/2)
 //' @param max_missing maximum number of species missing
 //' @param max_lambda maximum speciation rate
@@ -61,7 +59,6 @@ List rcpp_mce(const std::vector<double>& brts,
               const std::vector<double>& init_pars,      
               int sample_size,
               int maxN,
-              const std::string& plugin,             
               int soc,
               int max_missing,               
               double max_lambda,             
@@ -70,7 +67,8 @@ List rcpp_mce(const std::vector<double>& brts,
               double xtol_rel,                     
               int num_threads)
 {
-  auto model = emphasis::create_plugin_model(plugin);
+  auto model = emphasis::create_model();
+
   auto E = emphasis::E_step(sample_size,
                             maxN,
                             init_pars,

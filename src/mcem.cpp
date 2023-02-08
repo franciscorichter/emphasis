@@ -4,13 +4,12 @@
 #include <chrono>
 #include <functional>
 #include "emphasis.hpp"
-#include "plugin.hpp"
+#include "model.hpp"
 #include "augment_tree.hpp"
 #include "model_helpers.hpp"
 
 
 namespace emphasis {
-
 
   mcem_t mce(int N,      // sample size
             int maxN,   // max. number augmented trees (incl. invalid)
@@ -53,5 +52,4 @@ namespace emphasis {
     }
     return EM;
   }
-
 }

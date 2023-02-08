@@ -2,9 +2,9 @@
 
 #include <Rcpp.h>
 #include "emphasis.hpp"
-#include "plugin.hpp"
+#include "model.hpp"
 #include "rinit.h"
-#include "precision_weights.h"
+#include "precision_weights.hpp"
 using namespace Rcpp;
 
 namespace loglik {
@@ -55,7 +55,7 @@ Rcpp::List loglikelihood(const std::vector<double>& pars,
                          const std::string& plugin,
                          const int num_rejected) {
   
-  auto model = emphasis::create_plugin_model(plugin);  
+  auto model = emphasis::create_model();  
   
   std::vector<double> logf(trees.size());
   std::vector<double> log_w(trees.size());

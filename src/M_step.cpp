@@ -7,7 +7,7 @@
 #include <functional>
 #include <memory>
 #include <tbb/tbb.h>
-#include "plugin.hpp"
+#include "model.hpp"
 #include "emphasis.hpp"
 #include "sbplx.hpp"
 

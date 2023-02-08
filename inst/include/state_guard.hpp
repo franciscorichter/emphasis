@@ -1,8 +1,7 @@
 #ifndef EMPHASIS_GUARDS_HPP_INCLUDED
 #define EMPHASIS_GUARDS_HPP_INCLUDED
 
-#include "plugin.hpp"
-
+#include "model.hpp"
 
 namespace emphasis {
 
@@ -25,8 +24,6 @@ namespace emphasis {
     const Model* model_;
     void* state_;
   };
-
-
 }
 
 #endif

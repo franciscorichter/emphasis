@@ -2,7 +2,6 @@
 
 export(e_cpp)
 export(em_cpp)
-export(locate_plugin)
 export(loglikelihood)
 export(m_cpp)
 import(Rcpp)

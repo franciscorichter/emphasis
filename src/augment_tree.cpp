@@ -5,7 +5,7 @@
 #include <atomic>
 #include <tuple>
 #include <memory>
-#include "plugin.hpp"
+#include "model.hpp"
 #include "augment_tree.hpp"
 #include "model_helpers.hpp"
 #include "sbplx.hpp"

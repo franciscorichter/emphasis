@@ -1,4 +1,4 @@
-#include "phylodiv_tree.h"
+#include "phylodiv_tree.hpp"
 
 #include <Rcpp.h>
 

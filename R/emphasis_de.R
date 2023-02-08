@@ -5,7 +5,6 @@ dm_fun_ext <- function(pars, input){
                   init_pars = pars,
                   sample_size = input$sample_size,
                   maxN = input$sample_size*100000,
-                  plugin = locate_plugin("remphasisrpd5c"),
                   soc = 2,
                   max_missing = input$max_missing,
                   max_lambda = input$max_lambda,
@@ -141,8 +140,8 @@ emphasis_de <- function(brts,
       
       sd_vals <- as.numeric(apply(pars, 2, stats::sd))
       
-      message(paste0("iteration: ", k, "sd: ", sd_vals, " ", sd(vals), "\n"))
-     # pb$tick()
+      message(paste0("iteration: ", k, "sd: ", sd_vals, " ", stats::sd(vals), "\n"))
+      pb$tick()
     }
     
     pv[[k]] <- pars  # Save parameter grid
