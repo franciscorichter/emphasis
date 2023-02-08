@@ -15,7 +15,7 @@ emphasis_de(
   max_lambda,
   disc_prop = 0.5,
   verbose = FALSE,
-  num_theads = 1
+  num_threads = 1
 )
 }
 \arguments{

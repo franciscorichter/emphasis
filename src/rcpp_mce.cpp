@@ -133,7 +133,6 @@ std::vector<double> rcpp_mce_nothrow(const std::vector<double>& brts,
             double(E.E_.rejected_lambda),
             double(E.E_.rejected_overruns), 
             double(E.E_.rejected_zero_weights)};
-   // return {-1, -1, -1, -1};
   }
 }
 

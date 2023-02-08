@@ -102,7 +102,7 @@ which_val <- function(val, dmval1){
 }
 
 which_val2 <- function(val, dmval) {
-  return(which(dmval[, 1]) == val)
+  return(which(dmval[, 1] == val))
 }
 
 
@@ -118,10 +118,13 @@ which_val2 <- function(val, dmval) {
 #' used to populate the particles
 #' @param upper_bound vector of upper bound values for parameters, used to
 #' populate the particles
+#' @param maxN maximum number of tries per parameter combination before giving
+#' up
 #' @param max_lambda maximum value of lambda
 #' @param disc_prop proportion of particles retained per iteration
 #' @param verbose verbose output if TRUE
 #' @param num_threads number of threads
+#' @export
 #' @rawNamespace useDynLib(emphasis)
 #' @rawNamespace import(nloptr)
 #' @rawNamespace import(Rcpp)
@@ -133,10 +136,20 @@ emphasis_de <- function(brts,
                         sd_vec,
                         lower_bound,
                         upper_bound,
+                        maxN = 10,
                         max_lambda,
                         disc_prop = 0.5,
                         verbose = FALSE,
-                        num_threads = 1){
+                        num_threads = 1) {
+  
+  if (length(upper_bound) != length(lower_bound)) {
+    stop("lower bound and upper bound vectors need to be same length")
+  }
+  
+  if (length(upper_bound) != length(sd_vec)) {
+    stop("sd vector is not adequate length")
+  }
+  
   init_time <- proc.time()
   
   alpha = sd_vec / num_iterations
@@ -146,7 +159,7 @@ emphasis_de <- function(brts,
                 lower_bound = lower_bound,
                 upper_bound =  upper_bound,
                 sample_size = 1,
-                maxN = 10,
+                maxN = maxN,
                 max_lambda = max_lambda,
                 disc_prop = disc_prop)
   # get first grid
@@ -164,18 +177,11 @@ emphasis_de <- function(brts,
   pars_DE1b <- NULL
   
   if (verbose) {
-    pb <- progress::progress_bar$new(format = "Progress: [:bar] :percent", total = 100)
+    pb <- progress::progress_bar$new(format = "Progress: [:bar] :percent", total = num_iterations)
   }
   fhatdiff <- c()
   for (k in 1:num_iterations) {
-    if (verbose) {
-      
-      sd_vals <- as.numeric(apply(pars, 2, stats::sd))
-      
-      message(paste0("iteration: ", k, "sd: ", sd_vals, " ", stats::sd(vals), "\n"))
-      pb$tick()
-    }
-    
+   
     pv[[k]] <- pars  # Save parameter grid
     dmval = NULL
     
@@ -194,17 +200,18 @@ emphasis_de <- function(brts,
     }
     
     vals = as.numeric(dmval[seq(from = 1, to = length(dmval), by = 4)])
+    fails <- which(vals == -1) # failed runs return fhat = -1
     rejl = as.numeric(dmval[seq(from = 2, to = length(dmval), by = 4)])
     rejo = as.numeric(dmval[seq(from = 3, to = length(dmval), by = 4)])
     
     # if there were any stopped simulations due to max_lambda constrain
-    if (max(rejl) > 0) {
+    if (sum(rejl[fails]) > 0) {
       input$max_lambda = input$max_lambda + 100
       rejl_count = c(rejl_count, k)
     }
     
     # 
-    if (max(rejo) > 0) {
+    if (sum(rejo[fails]) > 0) {
       input$max_missing = input$max_missing + 1000
       rejo_count = c(rejo_count, k)
     }
@@ -215,13 +222,13 @@ emphasis_de <- function(brts,
        wi = c(wi, which_val2(vals[i], dmval))
     }
     
-    pars = pars[wi,]
+    pars = pars[wi, ]
     vals = -vals 
     
     # Methods 
     
     ## DE1
-    minval = which.min(vals)
+    minval = which.min(-vals)
     logf_DE1 = c(logf_DE1, vals[minval])
     pars_DE1 = rbind(pars_DE1, as.numeric(pars[minval,]))
     
@@ -230,11 +237,7 @@ emphasis_de <- function(brts,
     pars_DE1b = rbind(pars_DE1b, colMeans(pars[1:4]))
     
     ## Saving variation in the estimations 
-    par_vars <- c("par1", "par2", "par3", "par4")
-    for (par_var in par_vars) {
-      var_diff_name <- paste0(par_var, "diff")
-      assign(var_diff_name, c(get(var_diff_name), stats::sd(pars[[par_var]])))
-    }
+    sd_pars <- apply(pars, 2, stats::sd)
 
     fhatdiff <- c(fhatdiff, stats::sd(vals))
 
@@ -249,10 +252,22 @@ emphasis_de <- function(brts,
                                                 par2 = stats::rnorm(num_to_add, mean = 0, sd = sd_vec[2]),
                                                 par3 = stats::rnorm(num_to_add, mean = 0, sd = sd_vec[3]),
                                                 par4 = stats::rnorm(num_to_add, mean = 0, sd = sd_vec[4]))
+    
+    for (index in 1:length(upper_bound)) {
+      pars_to_add[, index] <- min(pars_to_add[, index], upper_bound[index])
+      pars_to_add[, index] <- max(pars_to_add[, index], lower_bound[index])
+    }
+    
     pars <- rbind(pars, pars_to_add)
 
     # Decrease variation
     sd_vec = sd_vec - alpha
+    
+    if (verbose) {
+      cat("iteration: ", k, "sd: ", sd_pars, "\n")
+      pb$tick()
+    }
+    
   }
   total_time = proc.time() - init_time
 
