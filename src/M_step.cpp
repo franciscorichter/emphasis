@@ -18,7 +18,7 @@ namespace emphasis {
 
     struct nlopt_f_data
     {
-      nlopt_f_data(const Model* M, 
+      nlopt_f_data(const Model& M, 
                    const std::vector<tree_t>& Trees, 
                    const std::vector<double>& W,
                    conditional_fun_t* Conditional)
@@ -31,7 +31,7 @@ namespace emphasis {
         auto empty = tree_t{};
       }
 
-      const Model* model;
+      const Model& model;
       const std::vector<tree_t>& trees;
       const std::vector<double>& w;
       conditional_fun_t* conditional;
@@ -45,7 +45,7 @@ namespace emphasis {
       const double Q = tbb::parallel_reduce(tbb::blocked_range<size_t>(0, psd->trees.size()), 0.0, 
         [&](const tbb::blocked_range<size_t>& r, double q) -> double {
           for (size_t i = r.begin(); i < r.end(); ++i) {
-            const double loglik = psd->model->loglik(pars, psd->trees[i]);
+            const double loglik = psd->model.loglik(pars, psd->trees[i]);
             q += loglik * psd->w[i];
           }
           return q;
@@ -57,21 +57,20 @@ namespace emphasis {
       }
       return -Q * psd->conditional->operator()(pars);
     }
-    
   }
 
 
   M_step_t M_step(const param_t& pars,
                   const std::vector<tree_t>& trees,          // augmented trees
                   const std::vector<double>& weights,
-                  class Model* model,
+                  const Model& model,
                   const param_t& lower_bound, // overrides model.lower_bound
                   const param_t& upper_bound, // overrides model.upper.bound
                   double xtol_rel,
                   int num_threads,
                   conditional_fun_t* conditional)
   {
-    if (!model->is_threadsafe()) num_threads = 1;
+ //   if (!model.is_threadsafe()) num_threads = 1;
     tbb::task_scheduler_init _tbb((num_threads > 0) ? num_threads : tbb::task_scheduler_init::automatic);
     auto T0 = std::chrono::high_resolution_clock::now();
     nlopt_f_data sd{ model, trees, weights, conditional };
@@ -79,9 +78,9 @@ namespace emphasis {
     sbplx nlopt(pars.size());
     M.estimates = pars;
     nlopt.set_xtol_rel(xtol_rel);
-    auto lower = lower_bound.empty() ? model->lower_bound() : lower_bound;
+    auto lower = lower_bound.empty() ? model.lower_bound() : lower_bound;
     if (!lower.empty()) nlopt.set_lower_bounds(lower);
-    auto upper = upper_bound.empty() ? model->upper_bound() : upper_bound;
+    auto upper = upper_bound.empty() ? model.upper_bound() : upper_bound;
     if (!upper.empty()) nlopt.set_upper_bounds(upper);
     nlopt.set_min_objective(objective, &sd);
     M.minf = nlopt.optimize(M.estimates);

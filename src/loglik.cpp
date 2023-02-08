@@ -55,7 +55,7 @@ Rcpp::List loglikelihood(const std::vector<double>& pars,
                          const std::string& plugin,
                          const int num_rejected) {
   
-  auto model = emphasis::create_model();  
+  auto model = emphasis::Model();  
   
   std::vector<double> logf(trees.size());
   std::vector<double> log_w(trees.size());
@@ -63,7 +63,7 @@ Rcpp::List loglikelihood(const std::vector<double>& pars,
   // unpack list and convert to tree_t
   for (size_t i = 0; i < trees.size(); ++i) {
     auto local_tree = loglik::pack(Rcpp::as<Rcpp::DataFrame>(trees[i]));
-    logf[i] = model->loglik(pars, local_tree);
+    logf[i] = model.loglik(pars, local_tree);
     log_w[i] = logf[i] - logg[i];
   }
 

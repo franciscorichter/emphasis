@@ -44,19 +44,18 @@ namespace emphasis {
                   int maxN,
                   const param_t& pars,
                   const brts_t& brts,
-                  Model* model,
+                  const Model& model,
                   int soc,
                   int max_missing,
                   double max_lambda,
                   int num_threads)
   {
-    if (!model->is_threadsafe()) num_threads = 1;
+    if (!model.is_threadsafe()) num_threads = 1;
     //tbb::task_scheduler_init _tbb((num_threads > 0) ? num_threads : tbb::task_scheduler_init::automatic);
     std::mutex mutex;
     std::atomic<bool> stop{ false };    // non-handled exception
     tree_t init_tree = detail::create_tree(brts, static_cast<double>(soc));
-   // std::vector<double> logg_;
-  //  std::vector<double> logf_;
+
     auto E = E_step_t{};
     auto T0 = std::chrono::high_resolution_clock::now();
     const int grainsize = maxN / std::max<unsigned>(1, std::min<unsigned>(std::thread::hardware_concurrency(), num_threads));
@@ -66,13 +65,15 @@ namespace emphasis {
           if (!stop) {
             // reuse tree from pool
             auto& pool_tree = detail::pooled_tree;
+
             emphasis::augment_tree(pars, init_tree, model, max_missing, max_lambda, pool_tree);
+
             double log_w = 0.0;
             double logf = 0.0;
             double logg = 0.0;
             {
-              logf = model->loglik(pars, pool_tree);
-              logg = model->sampling_prob(pars, pool_tree);
+              logf = model.loglik(pars, pool_tree);
+              logg = model.sampling_prob(pars, pool_tree);
               log_w = logf - logg;
             }
             if (std::isfinite(log_w) && (0.0 < std::exp(log_w))) {

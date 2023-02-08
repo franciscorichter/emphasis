@@ -4,7 +4,7 @@ dm_fun_ext <- function(pars, input){
   it <- try(e_cpp(brts = input$brts,
                   init_pars = pars,
                   sample_size = input$sample_size,
-                  maxN = input$sample_size*100000,
+                  maxN = input$sample_size,
                   soc = 2,
                   max_missing = input$max_missing,
                   max_lambda = input$max_lambda,

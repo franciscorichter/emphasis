@@ -15,7 +15,7 @@ namespace emphasis {
             int maxN,   // max. number augmented trees (incl. invalid)
             const param_t& pars,
             const brts_t& brts,
-            class Model* model,
+            const Model& model,
             int soc,
             int max_missing,
             double max_lambda,
@@ -34,7 +34,7 @@ namespace emphasis {
               int maxN,   // max. number augmented trees (incl. invalid)
               const param_t& pars,
               const brts_t& brts,
-              class Model* model,
+              const Model& model,
               int soc,
               int max_missing,
               double max_lambda,

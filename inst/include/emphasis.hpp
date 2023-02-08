@@ -78,7 +78,7 @@ namespace emphasis {
                   int maxN,   // max number of augmented trees (incl. invalid)
                   const param_t& pars,
                   const brts_t& brts,
-                  class Model* model,
+                  const Model& model,
                   int soc = 2,
                   int max_missing = default_max_missing_branches,
                   double max_lambda = default_max_aug_lambda,
@@ -101,7 +101,7 @@ namespace emphasis {
   M_step_t M_step(const param_t& pars,
                   const std::vector<tree_t>& trees,          // augmented trees
                   const std::vector<double>& weights,
-                  class Model* model,
+                  const Model& model,
                   const param_t& lower_bound = {}, // overrides model.lower_bound
                   const param_t& upper_bound = {}, // overrides model.upper.bound
                   double xtol_rel = 0.001,
@@ -128,7 +128,7 @@ namespace emphasis {
               int maxN,   // max. number of augmented trees (incl. invalid)
               const param_t& pars,
               const brts_t& brts,
-              class Model* model,
+              const Model& model,
               int soc = 2,
               int max_missing = default_max_missing_branches,
               double max_lambda = default_max_aug_lambda,

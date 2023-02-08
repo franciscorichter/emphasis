@@ -70,7 +70,7 @@ List rcpp_mcm(List e_step,
   if (E.trees.empty()) {
     throw std::runtime_error("no trees, no optimization");
   }
-  auto model = emphasis::create_model();
+  auto model = emphasis::Model(lower_bound, upper_bound);
   emphasis::conditional_fun_t conditional{};
   if (rconditional.isNotNull()) {
     conditional = [cond= Function(rconditional)](const emphasis::param_t& pars) {
@@ -80,7 +80,7 @@ List rcpp_mcm(List e_step,
   auto M = emphasis::M_step(init_pars, 
                             E.trees, 
                             E.weights, 
-                            model.get(), 
+                            model, 
                             lower_bound, 
                             upper_bound, 
                             xtol_rel, 

@@ -67,7 +67,7 @@ List rcpp_mcem(const std::vector<double>& brts,
                bool copy_trees,
                Nullable<Function> rconditional = R_NilValue) 
 {
-  auto model = emphasis::create_model();
+  auto model = emphasis::Model(lower_bound, upper_bound);
   
   emphasis::conditional_fun_t conditional{};
   if (rconditional.isNotNull()) {
@@ -79,7 +79,7 @@ List rcpp_mcem(const std::vector<double>& brts,
                              maxN,
                              init_pars,
                              brts,
-                             model.get(),
+                             model,
                              soc,
                              max_missing,
                              max_lambda,

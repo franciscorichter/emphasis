@@ -67,13 +67,13 @@ List rcpp_mce(const std::vector<double>& brts,
               double xtol_rel,                     
               int num_threads)
 {
-  auto model = emphasis::create_model();
+  auto model = emphasis::Model(lower_bound, upper_bound);
 
   auto E = emphasis::E_step(sample_size,
                             maxN,
                             init_pars,
                             brts,
-                            model.get(),
+                            model,
                             soc,
                             max_missing,
                             max_lambda,

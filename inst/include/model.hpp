@@ -28,7 +28,6 @@
 #ifndef EMPHASIS_PLUGIN_HPP_INCLUDED
 #define EMPHASIS_PLUGIN_HPP_INCLUDED
 
-#include <memory> // unique_pointer
 #include <vector>
 #include <functional>
 #include "model_helpers.hpp"
@@ -39,17 +38,22 @@ namespace emphasis {
   using param_t = std::vector<double>;                  // unspecific parameters
   using tree_t = std::vector<node_t>;                   // tree, sorted by note_t::brts
 
-  namespace {  
-    using reng_t = std::mt19937_64;   // we need doubles
-    static thread_local reng_t reng_ = make_random_engine<reng_t>();
-  }  
+  using reng_t = std::mt19937_64;   // we need doubles
 
   // diversification model
   class Model
   {
   public:
-    Model() = default;
-    ~Model() = default;
+    Model() {
+      lower_bound_ = {10e-9, 10e-9, -100, -100};
+      upper_bound_ = {100.0, 100.0, 100.0, 100.0};
+    }
+    
+    Model(const param_t& lb, const param_t& ub) : lower_bound_(lb), upper_bound_(ub) {
+      // done
+    }
+    
+   ~Model() = default;
     
     const char* description() const { return "rpd5c model"; }   // textual description of the model
     bool is_threadsafe() const { return true; }                  // is this implementation thread-safe?
@@ -58,7 +62,8 @@ namespace emphasis {
     
     // diversification model
     double extinction_time(double t_speciation, const param_t& pars, const tree_t& tree) const {
-      return t_speciation + emphasis::detail::trunc_exp(tree[tree.size() - 1].brts - t_speciation, pars[0], reng_);
+      static thread_local reng_t reng_ = make_random_engine<reng_t>();
+      return t_speciation + emphasis::detail::trunc_exp(tree.back().brts - t_speciation, pars[0], reng_);
     }
     
     double speciation_rate(const param_t& pars, const node_t& node) const {
@@ -71,12 +76,12 @@ namespace emphasis {
       auto it = lower_bound_node(t, tree.size(), &tree[0]);
       const double pd = calculate_pd(t, tree.size(), &tree[0]);
       const double lambda = std::max(0.0, pars[1] + pars[2] * it->n + pars[3] * pd / it->n);
-      return lambda * it->n * (1.0 - std::exp(-pars[0] * (tree[tree.size() - 1].brts - t)));
+      return lambda * it->n * (1.0 - std::exp(-pars[0] * (tree.back().brts - t)));
     }
     
     
     double sampling_prob(const param_t& pars, const tree_t& tree) const {
-      mu_integral muint(pars[0], tree[tree.size() - 1].brts);
+      mu_integral muint(pars[0], tree.back().brts);
       double inte = 0;
       double logg = 0;
       double prev_brts = 0;
@@ -119,13 +124,12 @@ namespace emphasis {
     }
     
     // optional hints for optimization step
-    param_t lower_bound() const { return param_t(); }
-    param_t upper_bound() const { return param_t(); }
+    param_t lower_bound() const { return lower_bound_; }
+    param_t upper_bound() const { return upper_bound_; }
+  private:
+    param_t lower_bound_;
+    param_t upper_bound_;
   };
-
-  inline std::unique_ptr<Model> create_model() {
-    return std::unique_ptr<Model>(new Model);
-  }
 }
 
 #endif

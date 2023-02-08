@@ -174,15 +174,15 @@ namespace emphasis {
   } // namespace augment
 
 
-  void augment_tree(const param_t& pars, const tree_t& input_tree, Model* model, int max_missing, double max_lambda, tree_t& pooled)
+  void augment_tree(const param_t& pars, const tree_t& input_tree, const Model& model, int max_missing, double max_lambda, tree_t& pooled)
   {
     pooled.resize(input_tree.size());
     std::copy(input_tree.cbegin(), input_tree.cend(), pooled.begin());
-    if (model->numerical_max_lambda()) {
-      do_augment_tree(pars, pooled, *model, max_missing, max_lambda);
+    if (model.numerical_max_lambda()) {
+      do_augment_tree(pars, pooled, model, max_missing, max_lambda);
     }
     else {
-      do_augment_tree_cont(pars, pooled, *model, max_missing, max_lambda);
+      do_augment_tree_cont(pars, pooled, model, max_missing, max_lambda);
     }
   }
 

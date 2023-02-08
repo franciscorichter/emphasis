@@ -24,7 +24,7 @@ namespace emphasis {
 
   void augment_tree(const param_t& pars,
                     const tree_t& input_tree,
-                    class Model* model,
+                    const Model& model,
                     int max_missing,
                     double max_lambda,
                     tree_t& out);
