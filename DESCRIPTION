@@ -15,9 +15,7 @@ Imports: nloptr,
          ape,
          apTreeshape,
          ggplot2,
-         progress,
-         parallel,
-         pbmcapply
+         progress
 LinkingTo: Rcpp, 
            RcppParallel, 
            nloptr,

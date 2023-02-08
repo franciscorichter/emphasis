@@ -59,6 +59,10 @@ e_cpp <- function(brts, init_pars, sample_size, maxN, soc, max_missing, max_lamb
     .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads)
 }
 
+rcpp_mce_grid <- function(pars_R, brts, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads) {
+    .Call('_emphasis_rcpp_mce_grid', PACKAGE = 'emphasis', pars_R, brts, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads)
+}
+
 #' function to perform one step of the E-M algorithm
 #' @param brts vector of branching times
 #' @param init_pars vector of initial parameter files

@@ -9,7 +9,6 @@ e_cpp(
   init_pars,
   sample_size,
   maxN,
-  plugin,
   soc,
   max_missing,
   max_lambda,
@@ -27,9 +26,6 @@ e_cpp(
 \item{sample_size}{number of samples}
 
 \item{maxN}{maximum number of failed trees}
-
-\item{plugin}{string indicating plugin used, currently available: 'rpd1' and
-'rpd5c'}
 
 \item{soc}{number of lineages at the root/crown (1/2)}
 

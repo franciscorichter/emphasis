@@ -14,7 +14,8 @@ emphasis_de(
   upper_bound,
   max_lambda,
   disc_prop = 0.5,
-  verbose = FALSE
+  verbose = FALSE,
+  num_theads = 1
 )
 }
 \arguments{
@@ -39,6 +40,8 @@ populate the particles}
 \item{disc_prop}{proportion of particles retained per iteration}
 
 \item{verbose}{verbose output if TRUE}
+
+\item{num_threads}{number of threads}
 }
 \description{
 perform emphasis analysis using DE method

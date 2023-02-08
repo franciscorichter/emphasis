@@ -1,3 +1,25 @@
+
+dm_fun_all <- function(pars,
+                       input,
+                       num_threads) {
+  
+  res <- rcpp_mce_grid(as.matrix(pars),
+                       brts = input$brts,
+                       sample_size = input$sample_size,
+                       maxN = input$maxN,
+                       soc = 2,
+                       max_missing = input$max_missing,
+                       max_lambda = input$max_lambda,
+                       lower_bound = input$lower_bound,
+                       upper_bound = input$upper_bound,
+                       xtol_rel = 0.1,
+                       num_threads = num_threads)
+
+  return(res)
+}
+
+
+
 #' @keywords internal
 dm_fun_ext <- function(pars, input){
   pars = as.numeric(pars)
@@ -79,6 +101,13 @@ which_val <- function(val, dmval1){
   return(s)
 }
 
+which_val2 <- function(val, dmval) {
+  return(which(dmval[, 1]) == val)
+}
+
+
+
+
 #' perform emphasis analysis using DE method
 #' @param brts branching times of tree to fit on
 #' @param num_iterations number of iterations of the DE algorithm
@@ -92,6 +121,7 @@ which_val <- function(val, dmval1){
 #' @param max_lambda maximum value of lambda
 #' @param disc_prop proportion of particles retained per iteration
 #' @param verbose verbose output if TRUE
+#' @param num_threads number of threads
 #' @rawNamespace useDynLib(emphasis)
 #' @rawNamespace import(nloptr)
 #' @rawNamespace import(Rcpp)
@@ -105,7 +135,8 @@ emphasis_de <- function(brts,
                         upper_bound,
                         max_lambda,
                         disc_prop = 0.5,
-                        verbose = FALSE){
+                        verbose = FALSE,
+                        num_threads = 1){
   init_time <- proc.time()
   
   alpha = sd_vec / num_iterations
@@ -115,6 +146,7 @@ emphasis_de <- function(brts,
                 lower_bound = lower_bound,
                 upper_bound =  upper_bound,
                 sample_size = 1,
+                maxN = 10,
                 max_lambda = max_lambda,
                 disc_prop = disc_prop)
   # get first grid
@@ -149,18 +181,7 @@ emphasis_de <- function(brts,
     
     # Evaluate / Simulate  loglikelihood at every point
     while (is.null(dmval)) {
-      
-      if (verbose) {
-        dmval1 = pbmcapply::mclapply(X = split(pars, seq(nrow(pars))), 
-                                    FUN = dm_fun_ext,input = input,
-                                    mc.cores = parallel::detectCores())
-      } else {
-        dmval1 = parallel::mclapply(X = split(pars, seq(nrow(pars))), 
-                                  FUN = dm_fun_ext,input = input,
-                                  mc.cores = parallel::detectCores())
-      }
-      
-      dmval = unlist(dmval1, use.names = FALSE)
+      dmval = dm_fun_all(pars, input, num_threads)
       if (is.null(dmval)) {
         message("No valid values, trying a new grid with looser
                  max_lambda and max_missing")
@@ -172,9 +193,9 @@ emphasis_de <- function(brts,
       }
     }
     
-    vals = as.numeric(dmval[seq(from = 1, to = length(dmval), by = 5)])
-    rejl = as.numeric(dmval[seq(from = 2, to = length(dmval), by = 5)])
-    rejo = as.numeric(dmval[seq(from = 3, to = length(dmval), by = 5)])
+    vals = as.numeric(dmval[seq(from = 1, to = length(dmval), by = 4)])
+    rejl = as.numeric(dmval[seq(from = 2, to = length(dmval), by = 4)])
+    rejo = as.numeric(dmval[seq(from = 3, to = length(dmval), by = 4)])
     
     # if there were any stopped simulations due to max_lambda constrain
     if (max(rejl) > 0) {
@@ -190,7 +211,8 @@ emphasis_de <- function(brts,
     
     wi <- NULL
     for (i in 1:length(vals)) {
-       wi = c(wi, which_val(vals[i], dmval1))
+       # wi = c(wi, which_val(vals[i], dmval1))
+       wi = c(wi, which_val2(vals[i], dmval))
     }
     
     pars = pars[wi,]

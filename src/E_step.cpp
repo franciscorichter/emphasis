@@ -112,7 +112,7 @@ namespace emphasis {
         msg += std::to_string(E.rejected_overruns) + " zero weights; ";
         msg += std::to_string(N - E.trees.size()) + " unhandled exception.";
         msg += " Trees so far: " + std::to_string(E.trees.size());
-        throw emphasis_error(msg.c_str());
+        throw emphasis_error_E(E, N);
       }
     }
 

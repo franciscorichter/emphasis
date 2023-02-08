@@ -38,13 +38,13 @@ namespace emphasis {
   static constexpr int default_max_missing_branches = 10000;
   static constexpr double default_max_aug_lambda = 500.0;
 
-
   class emphasis_error : public std::runtime_error
   {
   public:
     explicit emphasis_error(const std::string& what) : std::runtime_error(what) {}
     explicit emphasis_error(const char* what) : std::runtime_error(what) {}
   };
+  
 
 
   using brts_t = std::vector<double>;     // input tree
@@ -138,6 +138,25 @@ namespace emphasis {
               int num_threads = 0,
               conditional_fun_t* conditional = nullptr);
 
+  class emphasis_error_E : public std::runtime_error
+  {
+    public:
+
+      std::string make_msg(const E_step_t& E, int N) {
+        std::string msg = "maxN exceeded with rejection reasons: ";
+        msg += std::to_string(E.rejected_lambda) + " lambda; ";
+        msg += std::to_string(E.rejected_overruns) + " overruns; ";
+        msg += std::to_string(E.rejected_overruns) + " zero weights; ";
+        msg += std::to_string(N - E.trees.size()) + " unhandled exception.";
+        msg += " Trees so far: " + std::to_string(E.trees.size());
+        return msg;
+      }
+    
+    explicit emphasis_error_E(const E_step_t& E, int N) : std::runtime_error(make_msg(E, N)), E_(E) {
+    }
+    
+    const E_step_t& E_;
+  };
 }
 
 #endif
