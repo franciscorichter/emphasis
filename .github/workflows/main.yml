@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - syst_biol
       - develop
   pull_request:
     branches:
