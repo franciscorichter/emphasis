@@ -1,4 +1,4 @@
-#' @export
+#' @keywords internal
 get_random_grid <- function(num_points,
                             lower_bound = c(0, 0, -0.4, 0),
                             upper_bound = c(1, 7, 0.01, 0)) {

@@ -136,7 +136,6 @@ std::vector<double> rcpp_mce_nothrow(const std::vector<double>& brts,
   }
 }
 
-//' @export
 // [[Rcpp::export]]
 Rcpp::NumericMatrix rcpp_mce_grid(const Rcpp::NumericMatrix pars_R,
                                   const std::vector<double>& brts,       
