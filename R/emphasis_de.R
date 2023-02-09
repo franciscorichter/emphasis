@@ -1,108 +1,118 @@
-
-dm_fun_all <- function(pars,
-                       input,
-                       num_threads) {
-  
-  res <- rcpp_mce_grid(as.matrix(pars),
-                       brts = input$brts,
-                       sample_size = input$sample_size,
-                       maxN = input$maxN,
-                       soc = 2,
-                       max_missing = input$max_missing,
-                       max_lambda = input$max_lambda,
-                       lower_bound = input$lower_bound,
-                       upper_bound = input$upper_bound,
-                       xtol_rel = 0.1,
-                       num_threads = num_threads)
-
-  return(res)
-}
-
-
-
-#' @keywords internal
-dm_fun_ext <- function(pars, input){
-  pars = as.numeric(pars)
-  it <- try(e_cpp(brts = input$brts,
-                  init_pars = pars,
-                  sample_size = input$sample_size,
-                  maxN = input$sample_size,
-                  soc = 2,
-                  max_missing = input$max_missing,
-                  max_lambda = input$max_lambda,
-                  lower_bound = input$lower_bound,
-                  upper_bound = input$upper_bound,
-                  xtol_rel = 0.1,                   
-                  num_threads = 8),
-            silent = TRUE)
-  
-  out <- list()
-  if (!inherits(it, "try-error")) {
-    
-    out <- list(fhat = it$fhat,
-                rej_lam = it$rejected_lambda,
-                rej_ov = it$rejected_overruns,
-                rej_zw = it$rejected_zero_weights,
-                it = it)
-  }else{
-    str = it
-    v1 <- unlist(gregexpr("*reasons*", str)) + 9
-    v2 <- unlist(gregexpr("*lamba*", str)) - 2
-    
-    nlamb <- as.numeric(substr(str, v1, v2))
-    
-    v1 <- unlist(gregexpr("*lamba*", str)) + 7
-    v2 <- unlist(gregexpr("*overruns*", str)) - 2
-    
-    nover <- as.numeric(substr(str, v1, v2))
-    
-    v1 <- unlist(gregexpr("*overruns*", str)) + 10
-    v2 <- unlist(gregexpr("*zero weights*", str)) - 2
-    
-    zerow <- as.numeric(substr(str, v1, v2))
-    out <- list(fhat = NA,
-                rej_lam = nlamb,
-                rej_ov = nover,
-                rej_zw = zerow,
-                it = it)
-  }
-  return(out)
-}
-
-
-
-
 #' @export
 get_random_grid <- function(num_points,
                             lower_bound = c(0, 0, -0.4, 0),
-                            upper_bound = c(1, 7, 0.01, 0)){
-  num_dim = length(lower_bound)
-  
+                            upper_bound = c(1, 7, 0.01, 0)) {
+  num_dim <- length(lower_bound)
+
   total_num <- num_dim * num_points
-  
+
   pars <- matrix(stats::runif(total_num,
                        min = lower_bound,
                        max = upper_bound),
                  byrow = TRUE,
                  ncol = num_dim)
-  
+
   pars <- as.data.frame(pars)
   names(pars) <- paste0("par", 1:num_dim)
   return(pars)
 }
 
-which_val <- function(val, dmval1){
-  check <- FALSE
-  s <- 0
-  while (check == FALSE) {
-    s <- s + 1 
-    if (!is.null(dmval1[[s]]$fhat))  check = (dmval1[[s]]$fhat == val)
+#' @keywords internal
+get_results <- function(pars, input, num_threads, num_points) {
+  dmval <- rcpp_mce_grid(as.matrix(pars),
+                         brts = input$brts,
+                         sample_size = input$sample_size,
+                         maxN = input$maxN,
+                         soc = 2,
+                         max_missing = input$max_missing,
+                         max_lambda = input$max_lambda,
+                         lower_bound = input$lower_bound,
+                         upper_bound = input$upper_bound,
+                         xtol_rel = 0.1,
+                         num_threads = num_threads)
+
+  local_max_miss <- input$max_missing
+  local_max_lambda <- input$max_lambda
+  local_max_N <- input$maxN
+  while (sum(is.na(dmval[, 1])) == num_points) {
+    local_max_miss <- local_max_miss * 10
+    local_max_lambda <- local_max_lambda * 10
+    local_max_N <- local_max_N * 10
+    if (local_max_N > 10000) {
+      stop("exceeded maxN")
+    }
+    dmval <- rcpp_mce_grid(as.matrix(pars),
+                           brts = input$brts,
+                           sample_size = input$sample_size,
+                           maxN = local_max_N,
+                           soc = 2,
+                           max_missing = local_max_miss,
+                           max_lambda = local_max_lambda,
+                           lower_bound = input$lower_bound,
+                           upper_bound = input$upper_bound,
+                           xtol_rel = 0.1,
+                           num_threads = num_threads)
   }
-  return(s)
+  return(dmval)
 }
 
+#' @keywords internal
+update_pars <- function(pars,
+                        num_points,
+                        disc_prop,
+                        vals,
+                        lower_bound,
+                        upper_bound,
+                        sd_vec) {
+  # if we have more than 20% of the original particles,
+  # drop half of the particles
+  if (nrow(pars) > num_points * 0.2)  {
+    pars <- pars[vals < stats::quantile(vals, probs = disc_prop), ]
+  }
 
+  # Increase the number of particles until having at least
+  # the initial number of particles
 
+  num_to_add <- num_points - nrow(pars)
+  indices <- sample(x = seq_len(nrow(pars)),
+                    size = num_to_add,
+                    replace = TRUE)
+
+  pars_to_add <- pars[indices, ]
+  for (index in seq_len(nrow(pars_to_add))) {
+    for (param in seq_along(upper_bound)) {
+      if (upper_bound[param] == lower_bound[param]) {
+        pars_to_add[index, param] <- upper_bound[param]
+      } else {
+        new_val <- stats::rnorm(n = 1,
+                                mean = pars_to_add[index, param],
+                                sd = sd_vec[param])
+
+        # here, we can either clamp the value, or decide to redraw it
+        clamp_value <- FALSE
+        if (clamp_value) {
+          new_val <- min(new_val, upper_bound[param])
+          new_val <- max(new_val, lower_bound[param])
+        } else {
+          within_bounds <- new_val < upper_bound[param] &&
+                           new_val < lower_bound[param]
+          while (within_bounds) {
+            new_val <- stats::rnorm(n = 1,
+                                    mean = pars_to_add[index, param],
+                                    sd = sd_vec[param])
+            within_bounds <- new_val < upper_bound[param] &&
+                             new_val < lower_bound[param]
+          }
+        }
+
+        pars_to_add[index, param] <- new_val
+      }
+    }
+  }
+
+  pars <- rbind(pars, pars_to_add)
+  return(pars)
+}
 
 #' perform emphasis analysis using DE method
 #' @param brts branching times of tree to fit on
@@ -137,19 +147,19 @@ emphasis_de <- function(brts,
                         disc_prop = 0.5,
                         verbose = FALSE,
                         num_threads = 1) {
-  
+
   if (length(upper_bound) != length(lower_bound)) {
     stop("lower bound and upper bound vectors need to be same length")
   }
-  
+
   if (length(upper_bound) != length(sd_vec)) {
     stop("sd vector is not adequate length")
   }
-  
+
   init_time <- proc.time()
-  
-  alpha = sd_vec / num_iterations
-  
+
+  alpha <- sd_vec / num_iterations
+
   input <- list(brts = brts,
                 max_missing = max_missing,
                 lower_bound = lower_bound,
@@ -162,59 +172,49 @@ emphasis_de <- function(brts,
   pars <- get_random_grid(num_points,
                           lower_bound = lower_bound,
                           upper_bound = upper_bound)
-  
+
   # initialize
   pv <- list()
   rejl_count <- rejo_count <- NULL
-  logf_DE1 <- NULL
-  pars_DE1 <- NULL
-  
-  logf_DE1b <- NULL
-  pars_DE1b <- NULL
-  
+
+  min_loglik <- c()
+  min_pars <- c()
+  mean_loglik <- c()
+  mean_pars <- c()
+
   if (verbose) {
-    pb <- progress::progress_bar$new(format = "Progress: [:bar] :percent", total = num_iterations)
+    pb <- progress::progress_bar$new(format = "Progress: [:bar] :percent",
+                                     total = num_iterations)
   }
   fhatdiff <- c()
   for (k in 1:num_iterations) {
-   
+
     pv[[k]] <- pars  # Save parameter grid
-    dmval = rcpp_mce_grid(as.matrix(pars),
-                          brts = input$brts,
-                          sample_size = input$sample_size,
-                          maxN = input$maxN,
-                          soc = 2,
-                          max_missing = input$max_missing,
-                          max_lambda = input$max_lambda,
-                          lower_bound = input$lower_bound,
-                          upper_bound = input$upper_bound,
-                          xtol_rel = 0.1,
-                          num_threads = num_threads)
-    
-    # rcpp_mce_grid returns a matrix with columns:
+
+    dmval <- get_results(pars, input, num_threads, num_points)
+
+    # dmval is a matrix with columns:
     # 1 = fhat
     # 2 = rejected_lambda
     # 3 = rejected_overruns
     # 4 = rejected_zero_weights
-    
-    vals = dmval[, 1]  #as.numeric(dmval[seq(from = 1, to = length(dmval), by = 4)])
+
+    vals <- dmval[, 1] #as.numeric(dmval[seq(from = 1, to = length(dmval), by = 4)])
     fails <- which(is.na(vals)) # failed runs return fhat = -1
-    rejl = dmval[, 2] # as.numeric(dmval[seq(from = 2, to = length(dmval), by = 4)])
-    rejo = dmval[, 3] # as.numeric(dmval[seq(from = 3, to = length(dmval), by = 4)])
-    
+    rejl <- dmval[, 2] # as.numeric(dmval[seq(from = 2, to = length(dmval), by = 4)])
+    rejo <- dmval[, 3] # as.numeric(dmval[seq(from = 3, to = length(dmval), by = 4)])
+
     # if there were any stopped simulations due to max_lambda constrain
     if (sum(rejl[fails]) > 0) {
-      input$max_lambda = input$max_lambda + 100
-      rejl_count = c(rejl_count, k)
+      input$max_lambda <- input$max_lambda + 100
+      rejl_count <- c(rejl_count, k)
     }
-    
-    # 
+
     if (sum(rejo[fails]) > 0) {
-      input$max_missing = input$max_missing + 1000
-      rejo_count = c(rejo_count, k)
+      input$max_missing <- input$max_missing + 1000
+      rejo_count <- c(rejo_count, k)
     }
-    
-    
+
     # we no longer need to do the lookup stuff,
     # because dmval is now a matrix of results, not a list
     # wi <- NULL
@@ -223,76 +223,44 @@ emphasis_de <- function(brts,
     #   #wi = c(wi, which_val2(vals[i], dmval))
     # }
 
-    # still, we remove the NA values 
+    # still, we remove the NA values
     wi <- which(!is.na(vals))
-    
     pars <- pars[wi, ]
     vals <- -vals[wi]
-    
-    # Methods 
-    
-    ## DE1
-    minval = which.min(vals)
-    logf_DE1 = c(logf_DE1, vals[minval])
-    pars_DE1 = rbind(pars_DE1, as.numeric(pars[minval,]))
-    
-    ## DE1b
-    logf_DE1b = c(logf_DE1b, mean(vals))
-    pars_DE1b = rbind(pars_DE1b, colMeans(pars[1:4]))
-    
-    ## Saving variation in the estimations 
-    sd_pars <- apply(pars, 2, stats::sd)
+    # Methods
 
+    ## DE1
+    minval <- which.min(vals)
+    min_loglik <- c(min_loglik, vals[minval])
+    min_pars <- rbind(min_pars, as.numeric(pars[minval, ]))
+
+    ## DE1b
+    mean_loglik <- c(mean_loglik, mean(vals))
+    mean_pars <- rbind(mean_pars, colMeans(pars[1:4]))
+
+    ## Saving variation in the estimations
+    sd_pars <- apply(pars, 2, stats::sd)
     fhatdiff <- c(fhatdiff, stats::sd(vals))
 
-    # if we have more than 20% of the original particles, drop half of the particles
-    if (nrow(pars) > num_points * 0.2)  pars = pars[vals < stats::quantile(vals, probs = disc_prop),]
-
-    # Increase the number of particles until having at least the initial number of particles
-    
-    num_to_add <- num_points - nrow(pars) 
-    indices <- sample(x = seq_len(nrow(pars)), size = num_to_add, replace = TRUE)
-    pars_to_add <- pars[indices, ]
-    for (index in 1:nrow(pars_to_add)) {
-      for (param in 1:length(upper_bound)) {
-        if (upper_bound[param] == lower_bound[param]) {
-          pars_to_add[index, param] <- upper_bound[param]
-        } else {
-          new_val <- stats::rnorm(n = 1, mean = pars_to_add[index, param], sd = sd_vec[param])
-          
-          # here, we can either clamp the value, or decide to redraw it
-          clamp_value <- FALSE
-          if (clamp_value) {
-            new_val <- min(new_val, upper_bound[param])
-            new_val <- max(new_val, lower_bound[param])
-          } else {
-            within_bounds <- new_val < upper_bound[param] && new_val < lower_bound[param]
-            while (within_bounds) {
-              new_val <- stats::rnorm(n = 1, mean = pars_to_add[index, param], sd = sd_vec[param])
-              within_bounds <- new_val < upper_bound[param] && new_val < lower_bound[param]
-            }
-          }
-        
-          pars_to_add[index, param] <- new_val
-        }
-      }
-    }
-    
-    pars <- rbind(pars, pars_to_add)
+    pars <- update_pars(pars, num_points, disc_prop, vals,
+                        lower_bound, upper_bound, sd_vec)
 
     # Decrease variation
-    sd_vec = sd_vec - alpha
-    
+    sd_vec <- sd_vec - alpha
+
     if (verbose) {
       cat("iteration: ", k, "sd: ", sd_pars, "\n")
       pb$tick()
     }
-    
   }
-  total_time = proc.time() - init_time
+  total_time <- proc.time() - init_time
 
   out <- list("parameters" = pv,
               "time" = total_time,
-              "fhatdiff" = fhatdiff)
+              "fhatdiff" = fhatdiff,
+              "minloglik" = min_loglik,
+              "meanloglik" = mean_loglik,
+              "min_pars" = min_pars,
+              "mean_pars" = mean_pars)
   return(out)
 }

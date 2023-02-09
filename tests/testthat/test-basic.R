@@ -1,20 +1,18 @@
 context("basic utility")
 
 test_that("usage", {
-  testthat::skip_on_cran() # these tests take very long
-  brts = c(23.00561934, 21.195468322, 20.746201821, 18.902008788, 17.304304067, 15.067929628, 14.167797976, 13.988846134, 13.8825168485, 13.795630235, 13.5268474207, 13.486193637, 13.3421698891, 12.8029136214, 12.6741502447, 12.5345483123, 12.1361795621, 11.8883037189, 11.136573508, 10.4844868765, 10.4459892399, 9.975195792, 9.3034200997, 9.0963775655, 8.96618469, 8.3908517371, 8.1190734971, 7.5654860461, 7.5187823699, 7.39065007310001, 7.1610436747, 6.786407227, 6.4361082351, 6.3753499171, 5.6324570361, 5.5282243463, 5.2496102591, 4.6645019419, 4.5049617935, 4.414869521, 4.0587528027, 3.8005471055, 3.74581452210001, 3.6317982799, 3.5682999393, 3.3980901751, 3.184511077, 3.1277422551, 3.06140250530001, 2.8879972183, 2.6029706921, 2.49906198610001, 2.419526655, 2.3163916669, 1.657848116, 1.56645614130001, 1.32633955910001, 1.2899885509, 0.698276682500001, 0.506164862300004, 0.501914964300003, 0.221587182100006, 0.113807481300004, 0.0940854059000031)
-  
+  # create reconstructed bd tree
+  set.seed(42)
+  focal_tree <- ape::rphylo(n = 100, birth = 1, death = 0.2, fossils = FALSE)
+  brts <- ape::branching.times(focal_tree)
+
   max_missing <- 5000
-  disc_prop = 1.0 # DE Mutation proportion 
-  n_it = 1 # Number of iterations 
-  sd_vec = c(0.1, 1, 0.05, 0.01) # Initial parameter sampling variation
-  alpha = sd_vec / n_it # Decreasing variation function 
-  lower_bound = c(0,0,-0.01,-0.01)
-  upper_bound =  c(4,5,0.01,0.01)
-  max_lambda = 10000
-  
-  num_it <- 1
-  
+  disc_prop <- 0.5 # DE Mutation proportion
+  num_it <- 10 # Number of iterations
+  sd_vec <- c(0.1, 1, 0.05, 0.01) # Initial parameter sampling variation
+  lower_bound <- c(0, 0, 0.0, 0.0)
+  upper_bound <-  c(1, 3, 0.0, 0.0)
+  max_lambda <- 10000
   ax <- emphasis::emphasis_de(brts = brts,
                               num_iterations = num_it,
                               num_points = 1000,
@@ -22,10 +20,33 @@ test_that("usage", {
                               sd_vec = sd_vec,
                               lower_bound = lower_bound,
                               upper_bound = upper_bound,
+                              maxN = 10,
                               max_lambda = 100,
-                              disc_prop = 0.2,
+                              disc_prop = disc_prop,
                               verbose = FALSE,
-                              num_threads = 2)
-  
+                              num_threads = 1) # only one for CRAN/CI
+
   testthat::expect_equal(length(ax$parameters), num_it)
+
+  testthat::expect_output(
+    ml_estim <- DDD::bd_ML(brts = brts)
+  )
+  emphasis_estim <- colMeans(ax$parameters[[num_it]])
+
+  div_ml <- ml_estim$lambda0 - ml_estim$mu0
+  div_em <- emphasis_estim[[2]] - emphasis_estim[[1]]
+
+  testthat::expect_equal(div_ml, div_em, tolerance = 0.1)
+
+  # next two parameters were not fitted:
+  testthat::expect_equal(emphasis_estim[[3]], 0)
+  testthat::expect_equal(emphasis_estim[[4]], 0)
+
+  # another sanity check:
+  for (i in 2:length(ax$parameters)) {
+    sd_1 <- apply(ax$parameters[[i - 1]], 2, stats::sd)
+    sd_2 <- apply(ax$parameters[[i]], 2, stats::sd)
+    testthat::expect_lt(sd_2[1], sd_1[1])
+    testthat::expect_lt(sd_2[2], sd_1[2])
+  }
 })
