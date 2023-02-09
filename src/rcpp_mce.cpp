@@ -129,14 +129,14 @@ std::vector<double> rcpp_mce_nothrow(const std::vector<double>& brts,
                              double(E.rejected_zero_weights)};
   return out;
   } catch (const emphasis::emphasis_error_E& E) {
-    return {-1.0, //E.E_.fhat, 
+    return {42, //E.E_.fhat, 
             double(E.E_.rejected_lambda),
             double(E.E_.rejected_overruns), 
             double(E.E_.rejected_zero_weights)};
   }
 }
 
-
+//' @export
 // [[Rcpp::export]]
 Rcpp::NumericMatrix rcpp_mce_grid(const Rcpp::NumericMatrix pars_R,
                                   const std::vector<double>& brts,       
@@ -181,10 +181,14 @@ Rcpp::NumericMatrix rcpp_mce_grid(const Rcpp::NumericMatrix pars_R,
     });
   
   // and now back to Rcpp::NumericMatrix...
-  Rcpp::NumericMatrix out(pars.size(), pars[0].size());
-  for (int i = 0; i < pars.size(); ++i) {
-    for (int j = 0; j < pars[i].size(); ++j) {
-      out(i, j) = pars[i][j];
+  Rcpp::NumericMatrix out(results.size(), results[0].size());
+  for (int i = 0; i < results.size(); ++i) {
+    for (int j = 0; j < results[i].size(); ++j) {
+      if (results[i][j] == 42) {
+        out(i, j) = NA_REAL;
+      } else {
+        out(i, j) = results[i][j];
+      }
     }
   }
   return out;

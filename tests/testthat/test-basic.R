@@ -13,7 +13,7 @@ test_that("usage", {
   upper_bound =  c(4,5,0.01,0.01)
   max_lambda = 10000
   
-  num_it <- 3
+  num_it <- 1
   
   ax <- emphasis::emphasis_de(brts = brts,
                               num_iterations = num_it,

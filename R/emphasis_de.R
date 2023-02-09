@@ -72,7 +72,7 @@ dm_fun_ext <- function(pars, input){
 
 
 
-#' @keywords internal
+#' @export
 get_random_grid <- function(num_points,
                             lower_bound = c(0, 0, -0.4, 0),
                             upper_bound = c(1, 7, 0.01, 0)){
@@ -99,10 +99,6 @@ which_val <- function(val, dmval1){
     if (!is.null(dmval1[[s]]$fhat))  check = (dmval1[[s]]$fhat == val)
   }
   return(s)
-}
-
-which_val2 <- function(val, dmval) {
-  return(which(dmval[, 1] == val))
 }
 
 
@@ -183,26 +179,28 @@ emphasis_de <- function(brts,
   for (k in 1:num_iterations) {
    
     pv[[k]] <- pars  # Save parameter grid
-    dmval = NULL
+    dmval = rcpp_mce_grid(as.matrix(pars),
+                          brts = input$brts,
+                          sample_size = input$sample_size,
+                          maxN = input$maxN,
+                          soc = 2,
+                          max_missing = input$max_missing,
+                          max_lambda = input$max_lambda,
+                          lower_bound = input$lower_bound,
+                          upper_bound = input$upper_bound,
+                          xtol_rel = 0.1,
+                          num_threads = num_threads)
     
-    # Evaluate / Simulate  loglikelihood at every point
-    while (is.null(dmval)) {
-      dmval = dm_fun_all(pars, input, num_threads)
-      if (is.null(dmval)) {
-        message("No valid values, trying a new grid with looser
-                 max_lambda and max_missing")
-        input$max_missing = input$max_missing * 10
-        input$max_lambda = input$max_lambda * 10
-        pars <- get_random_grid(num_points, lower_bound, upper_bound)
-        rejo_count = c(rejo_count,Inf)
-        rejl_count = c(rejl_count,Inf)
-      }
-    }
+    # rcpp_mce_grid returns a matrix with columns:
+    # 1 = fhat
+    # 2 = rejected_lambda
+    # 3 = rejected_overruns
+    # 4 = rejected_zero_weights
     
-    vals = as.numeric(dmval[seq(from = 1, to = length(dmval), by = 4)])
-    fails <- which(vals == -1) # failed runs return fhat = -1
-    rejl = as.numeric(dmval[seq(from = 2, to = length(dmval), by = 4)])
-    rejo = as.numeric(dmval[seq(from = 3, to = length(dmval), by = 4)])
+    vals = dmval[, 1]  #as.numeric(dmval[seq(from = 1, to = length(dmval), by = 4)])
+    fails <- which(is.na(vals)) # failed runs return fhat = -1
+    rejl = dmval[, 2] # as.numeric(dmval[seq(from = 2, to = length(dmval), by = 4)])
+    rejo = dmval[, 3] # as.numeric(dmval[seq(from = 3, to = length(dmval), by = 4)])
     
     # if there were any stopped simulations due to max_lambda constrain
     if (sum(rejl[fails]) > 0) {
@@ -216,19 +214,25 @@ emphasis_de <- function(brts,
       rejo_count = c(rejo_count, k)
     }
     
-    wi <- NULL
-    for (i in 1:length(vals)) {
-       # wi = c(wi, which_val(vals[i], dmval1))
-       wi = c(wi, which_val2(vals[i], dmval))
-    }
     
-    pars = pars[wi, ]
-    vals = -vals 
+    # we no longer need to do the lookup stuff,
+    # because dmval is now a matrix of results, not a list
+    # wi <- NULL
+    # for (i in 1:length(vals)) {
+    # wi = c(wi, which_val(vals[i], dmval1))
+    #   #wi = c(wi, which_val2(vals[i], dmval))
+    # }
+
+    # still, we remove the NA values 
+    wi <- which(!is.na(vals))
+    
+    pars <- pars[wi, ]
+    vals <- -vals[wi]
     
     # Methods 
     
     ## DE1
-    minval = which.min(-vals)
+    minval = which.min(vals)
     logf_DE1 = c(logf_DE1, vals[minval])
     pars_DE1 = rbind(pars_DE1, as.numeric(pars[minval,]))
     
@@ -248,14 +252,30 @@ emphasis_de <- function(brts,
     
     num_to_add <- num_points - nrow(pars) 
     indices <- sample(x = seq_len(nrow(pars)), size = num_to_add, replace = TRUE)
-    pars_to_add <- pars[indices, ] + data.frame(par1 = stats::rnorm(num_to_add, mean = 0, sd = sd_vec[1]),
-                                                par2 = stats::rnorm(num_to_add, mean = 0, sd = sd_vec[2]),
-                                                par3 = stats::rnorm(num_to_add, mean = 0, sd = sd_vec[3]),
-                                                par4 = stats::rnorm(num_to_add, mean = 0, sd = sd_vec[4]))
-    
-    for (index in 1:length(upper_bound)) {
-      pars_to_add[, index] <- min(pars_to_add[, index], upper_bound[index])
-      pars_to_add[, index] <- max(pars_to_add[, index], lower_bound[index])
+    pars_to_add <- pars[indices, ]
+    for (index in 1:nrow(pars_to_add)) {
+      for (param in 1:length(upper_bound)) {
+        if (upper_bound[param] == lower_bound[param]) {
+          pars_to_add[index, param] <- upper_bound[param]
+        } else {
+          new_val <- stats::rnorm(n = 1, mean = pars_to_add[index, param], sd = sd_vec[param])
+          
+          # here, we can either clamp the value, or decide to redraw it
+          clamp_value <- FALSE
+          if (clamp_value) {
+            new_val <- min(new_val, upper_bound[param])
+            new_val <- max(new_val, lower_bound[param])
+          } else {
+            within_bounds <- new_val < upper_bound[param] && new_val < lower_bound[param]
+            while (within_bounds) {
+              new_val <- stats::rnorm(n = 1, mean = pars_to_add[index, param], sd = sd_vec[param])
+              within_bounds <- new_val < upper_bound[param] && new_val < lower_bound[param]
+            }
+          }
+        
+          pars_to_add[index, param] <- new_val
+        }
+      }
     }
     
     pars <- rbind(pars, pars_to_add)

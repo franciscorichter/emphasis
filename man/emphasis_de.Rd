@@ -12,6 +12,7 @@ emphasis_de(
   sd_vec,
   lower_bound,
   upper_bound,
+  maxN = 10,
   max_lambda,
   disc_prop = 0.5,
   verbose = FALSE,
@@ -34,6 +35,9 @@ used to populate the particles}
 
 \item{upper_bound}{vector of upper bound values for parameters, used to
 populate the particles}
+
+\item{maxN}{maximum number of tries per parameter combination before giving
+up}
 
 \item{max_lambda}{maximum value of lambda}
 
