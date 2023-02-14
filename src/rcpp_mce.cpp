@@ -71,29 +71,37 @@ List rcpp_mce(const std::vector<double>& brts,
               int num_threads)
 {
   auto model = emphasis::create_plugin_model(plugin);
-  auto E = emphasis::E_step(sample_size,
-                            maxN,
-                            init_pars,
-                            brts,
-                            model.get(),
-                            soc,
-                            max_missing,
-                            max_lambda,
-                            num_threads);
-  List ret;
-  List trees;
-  for (const emphasis::tree_t& tree : E.trees) {
-    trees.push_back(unpack(tree));
+  try {
+    auto E = emphasis::E_step(sample_size,
+                              maxN,
+                              init_pars,
+                              brts,
+                              model.get(),
+                              soc,
+                              max_missing,
+                              max_lambda,
+                              num_threads);
+    List ret;
+    List trees;
+    for (const emphasis::tree_t& tree : E.trees) {
+      trees.push_back(unpack(tree));
+    }
+    ret["trees"] = trees;
+    ret["rejected"] = E.rejected;
+    ret["rejected_overruns"] = E.rejected_overruns;
+    ret["rejected_lambda"] = E.rejected_lambda;
+    ret["rejected_zero_weights"] = E.rejected_zero_weights;
+    ret["time"] = E.elapsed;
+    ret["weights"] = E.weights;
+    ret["fhat"] = E.fhat;
+    ret["logf"] = E.logf_;
+    ret["logg"] = E.logg_;
+    return ret;
+  } catch (emphasis::emphasis_error e) {
+    std::cerr << e.what() << "\n";
+    return NA_REAL;
+  } catch (...) {
+    std::cerr << "unknown exception\n";
+    return NA_REAL;
   }
-  ret["trees"] = trees;
-  ret["rejected"] = E.rejected;
-  ret["rejected_overruns"] = E.rejected_overruns;
-  ret["rejected_lambda"] = E.rejected_lambda;
-  ret["rejected_zero_weights"] = E.rejected_zero_weights;
-  ret["time"] = E.elapsed;
-  ret["weights"] = E.weights;
-  ret["fhat"] = E.fhat;
-  ret["logf"] = E.logf_;
-  ret["logg"] = E.logg_;
-  return ret;
 }
