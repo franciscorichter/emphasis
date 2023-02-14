@@ -73,8 +73,14 @@ namespace emphasis {
     
   
     double nh_rate(double t, const param_t& pars, const tree_t& tree) const {
-      auto it = lower_bound_node(t, tree.size(), &tree[0]);
-      const double pd = calculate_pd(t, tree.size(), &tree[0]);
+      auto it = lower_bound_node(t,
+                                 tree.size(),
+                                 reinterpret_cast<const node_t*>(tree.data()));
+     const double pd = calculate_pd2(t, tree);
+     
+     // const double pd = calculate_pd(t,
+    //                                 tree.size(),
+    //                                 reinterpret_cast<const node_t*>(tree.data()));
       const double lambda = std::max(0.0, pars[1] + pars[2] * it->n + pars[3] * pd / it->n);
       return lambda * it->n * (1.0 - std::exp(-pars[0] * (tree.back().brts - t)));
     }

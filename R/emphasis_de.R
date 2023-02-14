@@ -249,7 +249,10 @@ emphasis_de <- function(brts,
     sd_vec <- sd_vec - alpha
 
     if (verbose) {
-      cat("iteration: ", k, "sd: ", sd_pars, "\n")
+      cat("iteration: ", k, " par estim: ")
+      last_min_pars <- min_pars[nrow(min_pars), ]
+      cat(last_min_pars)
+      cat(" sd: ", sd_pars, "\n")
       pb$tick()
     }
   }

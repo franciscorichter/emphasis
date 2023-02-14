@@ -49,4 +49,9 @@ test_that("usage", {
     testthat::expect_lt(sd_2[1], sd_1[1])
     testthat::expect_lt(sd_2[2], sd_1[2])
   }
+  
+  ll_ml <- ml_estim$loglik
+  ll_em <- -tail(ax$minloglik, 1)
+  testthat::expect_equal(ll_ml, ll_em, tolerance = 1)
+  
 })

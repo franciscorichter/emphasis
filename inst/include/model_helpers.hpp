@@ -199,6 +199,11 @@ namespace emphasis {
       }
       return pd + (tm - prev_brts) * ni;   // remainder
     }
+    
+    inline double calculate_pd2(double tm, const std::vector<node_t>& tree)
+    {
+      return calculate_pd(tm, static_cast<unsigned>(tree.size()), tree.data());
+    }
 
   }
 
