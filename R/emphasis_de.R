@@ -57,6 +57,38 @@ get_results <- function(pars, input, num_threads, num_points) {
 }
 
 #' @keywords internal
+update_value <- function(par, upper_bound, lower_bound,
+                         sd_val, clamp_value) {
+
+  if (upper_bound == lower_bound) {
+    par <- upper_bound
+  } else {
+    new_val <- stats::rnorm(n = 1,
+                            mean = par,
+                            sd = sd_val)
+
+    # here, we can either clamp the value, or decide to redraw it
+    if (clamp_value) {
+      new_val <- min(new_val, upper_bound)
+      new_val <- max(new_val, lower_bound)
+    } else {
+      within_bounds <- new_val < upper_bound &&
+                       new_val < lower_bound
+      while (within_bounds) {
+        new_val <- stats::rnorm(n = 1,
+                                mean = par,
+                                sd = sd_val)
+        within_bounds <- new_val < upper_bound &&
+                         new_val < lower_bound
+      }
+    }
+    par <- new_val
+  }
+
+  return(par)
+}
+
+#' @keywords internal
 update_pars <- function(pars,
                         num_points,
                         disc_prop,
@@ -81,32 +113,11 @@ update_pars <- function(pars,
   pars_to_add <- pars[indices, ]
   for (index in seq_len(nrow(pars_to_add))) {
     for (param in seq_along(upper_bound)) {
-      if (upper_bound[param] == lower_bound[param]) {
-        pars_to_add[index, param] <- upper_bound[param]
-      } else {
-        new_val <- stats::rnorm(n = 1,
-                                mean = pars_to_add[index, param],
-                                sd = sd_vec[param])
-
-        # here, we can either clamp the value, or decide to redraw it
-        clamp_value <- FALSE
-        if (clamp_value) {
-          new_val <- min(new_val, upper_bound[param])
-          new_val <- max(new_val, lower_bound[param])
-        } else {
-          within_bounds <- new_val < upper_bound[param] &&
-                           new_val < lower_bound[param]
-          while (within_bounds) {
-            new_val <- stats::rnorm(n = 1,
-                                    mean = pars_to_add[index, param],
-                                    sd = sd_vec[param])
-            within_bounds <- new_val < upper_bound[param] &&
-                             new_val < lower_bound[param]
-          }
-        }
-
-        pars_to_add[index, param] <- new_val
-      }
+      pars_to_add[index, param] <- update_value(pars_to_add[index, param],
+                                               lower_bound[param],
+                                               upper_bound[param],
+                                               sd_vec[param],
+                                               clamp_value = FALSE)
     }
   }
 
@@ -193,16 +204,10 @@ emphasis_de <- function(brts,
 
     dmval <- get_results(pars, input, num_threads, num_points)
 
-    # dmval is a matrix with columns:
-    # 1 = fhat
-    # 2 = rejected_lambda
-    # 3 = rejected_overruns
-    # 4 = rejected_zero_weights
-
-    vals <- dmval[, 1] #as.numeric(dmval[seq(from = 1, to = length(dmval), by = 4)])
-    fails <- which(is.na(vals)) # failed runs return fhat = -1
-    rejl <- dmval[, 2] # as.numeric(dmval[seq(from = 2, to = length(dmval), by = 4)])
-    rejo <- dmval[, 3] # as.numeric(dmval[seq(from = 3, to = length(dmval), by = 4)])
+    vals <- dmval[, 1]
+    fails <- which(is.na(vals))
+    rejl <- dmval[, 2]
+    rejo <- dmval[, 3]
 
     # if there were any stopped simulations due to max_lambda constrain
     if (sum(rejl[fails]) > 0) {
@@ -215,15 +220,7 @@ emphasis_de <- function(brts,
       rejo_count <- c(rejo_count, k)
     }
 
-    # we no longer need to do the lookup stuff,
-    # because dmval is now a matrix of results, not a list
-    # wi <- NULL
-    # for (i in 1:length(vals)) {
-    # wi = c(wi, which_val(vals[i], dmval1))
-    #   #wi = c(wi, which_val2(vals[i], dmval))
-    # }
-
-    # still, we remove the NA values
+    # remove the NA values
     wi <- which(!is.na(vals))
     pars <- pars[wi, ]
     vals <- -vals[wi]

@@ -24,11 +24,11 @@ get_extant <- function(tm, tree) {
                   ind2 <- which(extinct$parent == extant$parent[i] &
                                extinct$brts < extant$brts[i])
                   child <- extant$child[i]
-                  new.extant.row <- extinct[ind, ]
-                  new.extant.row[3] <- child
-                  new.extinct.row <- extant[i, c(1, 3, 2)]
-                  extant[i, ] <- new.extant.row
-                  extinct[ind, ] <- new.extinct.row
+                  new_extant_row <- extinct[ind, ]
+                  new_extant_row[3] <- child
+                  new_extinct_row <- extant[i, c(1, 3, 2)]
+                  extant[i, ] <- new_extant_row
+                  extinct[ind, ] <- new_extinct_row
                   extinct$parent[ind2] <- child
                 } else {
                   i <- i + 1
@@ -147,17 +147,17 @@ GPD <- function(tree, tm) {
     # parent, child the first two rows
     # are
     n <- nrow(tree)
-    child.nms <- as.character(tree$child)
-    parent.nms <- as.character(tree$parent)
-    species.nms <- child.nms
+    child_nms <- as.character(tree$child)
+    parent_nms <- as.character(tree$parent)
+    species_nms <- child_nms
     gpd <- matrix(0, ncol = n, nrow = n)
-    dimnames(gpd) <- list(species.nms, species.nms)
+    dimnames(gpd) <- list(species_nms, species_nms)
     species <- as.list(1:n)
     for (i in seq(n, 2)) {
-        p.set <- species[[which(species.nms == parent.nms[i])]]
-        c.set <- species[[which(species.nms == child.nms[i])]]
-        gpd[p.set, c.set] <- tm - tree$brts[i]
-        species[[which(species.nms == parent.nms[i])]] <- c(p.set, c.set)
+        p_set <- species[[which(species_nms == parent_nms[i])]]
+        c_set <- species[[which(species_nms == child_nms[i])]]
+        gpd[p_set, c_set] <- tm - tree$brts[i]
+        species[[which(species_nms == parent_nms[i])]] <- c(p_set, c_set)
     }
     gpd <- gpd + t(gpd)
     return(gpd)

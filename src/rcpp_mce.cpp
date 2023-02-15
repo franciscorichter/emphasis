@@ -161,7 +161,9 @@ Rcpp::NumericMatrix rcpp_mce_grid(const Rcpp::NumericMatrix pars_R,
     pars[i] = row_entry;
   }
   
-  const int grainsize = pars.size() / std::max<unsigned>(1, std::min<unsigned>(std::thread::hardware_concurrency(), num_threads));
+  const int grainsize = maxN / num_threads;
+  tbb::task_arena arena(num_threads);
+  
   tbb::parallel_for(tbb::blocked_range<unsigned>(0, pars.size(), grainsize), [&](const tbb::blocked_range<unsigned>& r) {
     for (unsigned i = r.begin(); i < r.end(); ++i) {
       std::vector<double> local_pars = pars[i];
@@ -175,7 +177,7 @@ Rcpp::NumericMatrix rcpp_mce_grid(const Rcpp::NumericMatrix pars_R,
                                      lower_bound,  
                                      upper_bound,  
                                      xtol_rel,                     
-                                     num_threads);
+                                     1); // use one thread here
      }
     });
   
@@ -183,7 +185,7 @@ Rcpp::NumericMatrix rcpp_mce_grid(const Rcpp::NumericMatrix pars_R,
   Rcpp::NumericMatrix out(results.size(), results[0].size());
   for (int i = 0; i < results.size(); ++i) {
     for (int j = 0; j < results[i].size(); ++j) {
-      if (results[i][j] == 42) {
+      if (results[i][j] == 42) { // this is not a fully safe flag...
         out(i, j) = NA_REAL;
       } else {
         out(i, j) = results[i][j];
@@ -192,50 +194,3 @@ Rcpp::NumericMatrix rcpp_mce_grid(const Rcpp::NumericMatrix pars_R,
   }
   return out;
 }
-
-
-
-
-//' @export
- // [[Rcpp::export(name = "e_cpp_test")]]
- List rcpp_mce_test(const std::vector<double>& brts,       
-                    const std::vector<double>& init_pars,      
-                    int sample_size,
-                    int maxN,
-                    int soc,
-                    int max_missing,               
-                    double max_lambda,             
-                    const std::vector<double>& lower_bound,  
-                    const std::vector<double>& upper_bound,  
-                    double xtol_rel,                     
-                    int num_threads)
- {
-   auto model = emphasis::Model(lower_bound, upper_bound);
-   
-   auto E = emphasis::E_step(sample_size,
-                             maxN,
-                             init_pars,
-                             brts,
-                             model,
-                             soc,
-                             max_missing,
-                             max_lambda,
-                             num_threads);
-   List ret;
-   List trees;
-   for (const emphasis::tree_t& tree : E.trees) {
-     trees.push_back(unpack(tree));
-   }
-   ret["trees"] = trees;
-   ret["rejected"] = E.rejected;
-   ret["rejected_overruns"] = E.rejected_overruns;
-   ret["rejected_lambda"] = E.rejected_lambda;
-   ret["rejected_zero_weights"] = E.rejected_zero_weights;
-   ret["time"] = E.elapsed;
-   ret["weights"] = E.weights;
-   ret["fhat"] = E.fhat;
-   return ret;
- }
-
-
-
