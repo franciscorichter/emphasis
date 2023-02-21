@@ -215,14 +215,6 @@ emphasis_de <- function(brts,
       rejo_count <- c(rejo_count, k)
     }
 
-    # we no longer need to do the lookup stuff,
-    # because dmval is now a matrix of results, not a list
-    # wi <- NULL
-    # for (i in 1:length(vals)) {
-    # wi = c(wi, which_val(vals[i], dmval1))
-    #   #wi = c(wi, which_val2(vals[i], dmval))
-    # }
-
     # still, we remove the NA values
     wi <- which(!is.na(vals))
     pars <- pars[wi, ]
@@ -239,7 +231,7 @@ emphasis_de <- function(brts,
     mean_pars <- rbind(mean_pars, colMeans(pars[1:4]))
 
     ## Saving variation in the estimations
-    sd_pars <- apply(pars, 2, stats::sd)
+    # sd_pars <- apply(pars, 2, stats::sd)
     fhatdiff <- c(fhatdiff, stats::sd(vals))
 
     pars <- update_pars(pars, num_points, disc_prop, vals,
@@ -249,21 +241,24 @@ emphasis_de <- function(brts,
     sd_vec <- sd_vec - alpha
 
     if (verbose) {
-      cat("iteration: ", k, " par estim: ")
-      last_min_pars <- min_pars[nrow(min_pars), ]
-      cat(last_min_pars)
-      cat(" sd: ", sd_pars, "\n")
+   #   cat("iteration: ", k, " par estim: ")
+  #    last_min_pars <- min_pars[nrow(min_pars), ]
+  #    cat(last_min_pars)
+  #    cat(" sd: ", sd_pars, "\n")
       pb$tick()
     }
   }
   total_time <- proc.time() - init_time
 
+  obtained_estim <- colMeans(min_pars[nrow(min_pars), ])
+  
   out <- list("parameters" = pv,
               "time" = total_time,
               "fhatdiff" = fhatdiff,
               "minloglik" = min_loglik,
               "meanloglik" = mean_loglik,
               "min_pars" = min_pars,
-              "mean_pars" = mean_pars)
+              "mean_pars" = mean_pars,
+              "obtained_estim" = obtained_estim)
   return(out)
 }
