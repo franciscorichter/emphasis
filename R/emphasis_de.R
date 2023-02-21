@@ -250,7 +250,7 @@ emphasis_de <- function(brts,
   }
   total_time <- proc.time() - init_time
 
-  obtained_estim <- colMeans(min_pars[nrow(min_pars), ])
+  obtained_estim <- colMeans(min_pars)
   
   out <- list("parameters" = pv,
               "time" = total_time,
