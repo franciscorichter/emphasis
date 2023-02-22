@@ -190,7 +190,7 @@ namespace emphasis {
     }
     
     if (E.info.num_trees < N) {
-      E.info.fhat = std::nan("");    // ?????  --> TJ: this is NA. Perhaps Inf is better?
+      E.info.fhat = std::numeric_limits<double>::signaling_NaN();    // ?????  --> TJ: this is NA. Perhaps Inf is better?
     }
     else {  
       const double max_log_w = *std::max_element(E.weights.cbegin(), E.weights.cend());
