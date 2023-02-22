@@ -5,6 +5,8 @@
 #include <atomic>
 #include <tuple>
 #include <memory>
+#include <thread>
+#include <tbb/tbb.h>
 #include "model.hpp"
 #include "augment_tree.hpp"
 #include "model_helpers.hpp"
@@ -184,6 +186,31 @@ namespace emphasis {
     else {
       do_augment_tree_cont(pars, pooled, model, max_missing, max_lambda);
     }
+  }
+
+
+  // returns augmented tree per vpars
+  // failures results in empty tree
+  std::vector<tree_t> augment_trees(const std::vector<param_t>& vpars, const tree_t& input_tree, const Model& model, int max_missing, double max_lambda, int num_threads)
+  {
+    num_threads = std::max(1, std::min(num_threads, static_cast<int>(std::thread::hardware_concurrency())));
+    const int grainsize = static_cast<int>(vpars.size()) / num_threads;
+    tbb::task_arena arena(num_threads);
+    std::vector<tree_t> trees(vpars.size(), input_tree);
+
+    for (size_t i = 0; i < vpars.size(); ++i) {
+      try {
+        if (model.numerical_max_lambda()) {
+          do_augment_tree(vpars[i], trees[i], model, max_missing, max_lambda);
+        }
+        else {
+          do_augment_tree_cont(vpars[i], trees[i], model, max_missing, max_lambda);
+        }
+      } catch (...) {
+        trees[i].clear();
+      }
+    }
+    return trees;
   }
 
 

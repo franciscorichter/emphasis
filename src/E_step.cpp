@@ -51,11 +51,11 @@ namespace emphasis {
                   int num_threads)
   {
     if (!model.is_threadsafe()) num_threads = 1;
-    //tbb::task_scheduler_init _tbb((num_threads > 0) ? num_threads : tbb::task_scheduler_init::automatic);
+    num_threads = std::max(1, std::min(num_threads, static_cast<int>(std::thread::hardware_concurrency())));
     std::mutex mutex;
     std::atomic<bool> stop{ false };
-    tree_t init_tree = detail::create_tree(brts, static_cast<double>(soc));
 
+    tree_t init_tree = detail::create_tree(brts, static_cast<double>(soc));
     auto E = E_step_t{};
     auto T0 = std::chrono::high_resolution_clock::now();
 
