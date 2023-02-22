@@ -113,7 +113,7 @@ Rcpp::NumericMatrix rcpp_mce_grid(const Rcpp::NumericMatrix pars_R,
                                   double xtol_rel,
                                   int num_threads) 
 {                     
-  std::vector<std::array<double, 4>> results(pars_R.nrow(), {0});
+  std::vector<std::array<double, 6>> results(pars_R.nrow(), {0});
   
   // copy parameters to C++ object, for multithreading
   std::vector<std::vector<double>> pars(pars_R.nrow());
@@ -125,7 +125,10 @@ Rcpp::NumericMatrix rcpp_mce_grid(const Rcpp::NumericMatrix pars_R,
     pars[i] = row_entry;
   }
   
-  const int grainsize = pars.size() / std::max<unsigned>(1, std::min<unsigned>(std::thread::hardware_concurrency(), num_threads));
+  const int grainsize = pars.size() / std::max<unsigned>(1, num_threads);
+  
+  tbb::task_arena arena(num_threads);
+  
   tbb::parallel_for(tbb::blocked_range<unsigned>(0, pars.size(), grainsize), [&](const tbb::blocked_range<unsigned>& r) {
     for (unsigned i = r.begin(); i < r.end(); ++i) {
       auto model = emphasis::Model(lower_bound, upper_bound);
@@ -140,7 +143,9 @@ Rcpp::NumericMatrix rcpp_mce_grid(const Rcpp::NumericMatrix pars_R,
       results[i] = { EI.fhat, 
                      double(EI.rejected_lambda),
                      double(EI.rejected_overruns), 
-                     double(EI.rejected_zero_weights) };
+                     double(EI.rejected_zero_weights),
+                     double(EI.logf),
+                     double(EI.logg)};
     }
   });
   
@@ -148,7 +153,7 @@ Rcpp::NumericMatrix rcpp_mce_grid(const Rcpp::NumericMatrix pars_R,
   Rcpp::NumericMatrix out(results.size(), results[0].size());
   for (size_t i = 0; i < results.size(); ++i) {
     for (size_t j = 0; j < results[i].size(); ++j) {
-      if (results[i][j] == 42) {
+      if (std::isnan(results[i][j])) {
         out(i, j) = NA_REAL;
       } else {
         out(i, j) = results[i][j];
@@ -157,50 +162,3 @@ Rcpp::NumericMatrix rcpp_mce_grid(const Rcpp::NumericMatrix pars_R,
   }
   return out;
 }
-
-
-
-
-//' @export
- // [[Rcpp::export(name = "e_cpp_test")]]
- List rcpp_mce_test(const std::vector<double>& brts,       
-                    const std::vector<double>& init_pars,      
-                    int sample_size,
-                    int maxN,
-                    int soc,
-                    int max_missing,               
-                    double max_lambda,             
-                    const std::vector<double>& lower_bound,  
-                    const std::vector<double>& upper_bound,  
-                    double xtol_rel,                     
-                    int num_threads)
- {
-   auto model = emphasis::Model(lower_bound, upper_bound);
-   
-   auto E = emphasis::E_step(sample_size,
-                             maxN,
-                             init_pars,
-                             brts,
-                             model,
-                             soc,
-                             max_missing,
-                             max_lambda,
-                             num_threads);
-   List ret;
-   List trees;
-   for (const emphasis::tree_t& tree : E.trees) {
-     trees.push_back(unpack(tree));
-   }
-   ret["trees"] = trees;
-   ret["rejected"] = E.info.rejected;
-   ret["rejected_overruns"] = E.info.rejected_overruns;
-   ret["rejected_lambda"] = E.info.rejected_lambda;
-   ret["rejected_zero_weights"] = E.info.rejected_zero_weights;
-   ret["time"] = E.info.elapsed;
-   ret["weights"] = E.weights;
-   ret["fhat"] = E.info.fhat;
-   return ret;
- }
-
-
-

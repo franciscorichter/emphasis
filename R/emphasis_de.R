@@ -181,6 +181,7 @@ emphasis_de <- function(brts,
   min_pars <- c()
   mean_loglik <- c()
   mean_pars <- c()
+  
 
   if (verbose) {
     pb <- progress::progress_bar$new(format = "Progress: [:bar] :percent",
@@ -189,10 +190,12 @@ emphasis_de <- function(brts,
   fhatdiff <- c()
   for (k in 1:num_iterations) {
 
-    pv[[k]] <- pars  # Save parameter grid
-
     dmval <- get_results(pars, input, num_threads, num_points)
 
+    to_store <- cbind(pars, dmval[, 5], dmval[, 6], dmval[, 1])
+    colnames(to_store) <- c("par1", "par2", "par3", "par4", "logf", "logg", "fhat")
+    pv[[k]] <- to_store
+    
     # dmval is a matrix with columns:
     # 1 = fhat
     # 2 = rejected_lambda

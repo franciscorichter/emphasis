@@ -51,6 +51,8 @@ namespace emphasis {
     int rejected_zero_weights = 0;      // trees rejected because of zero-weight
     int rejected = 0;                   // trees rejected because of unhandled exception
     double elapsed = 0;                 // elapsed runtime [ms]
+    double logf = 0;                    // likelihood of simulated tree
+    double logg = 0;                    // sampling probability
   };
 
 

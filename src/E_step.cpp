@@ -179,8 +179,18 @@ namespace emphasis {
     auto T1 = std::chrono::high_resolution_clock::now();
     E.info.elapsed = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count());
 
+    if (!E.logf_.empty()) {
+      if (E.logf_.size() > 1) {
+        E.info.logf = std::accumulate(E.logf_.begin(), E.logf_.end(), 0.0) * 1.0 / E.logf_.size();
+        E.info.logg = std::accumulate(E.logg_.begin(), E.logg_.end(), 0.0) * 1.0 / E.logg_.size();
+      } else {
+        E.info.logf = E.logf_.front();
+        E.info.logg = E.logg_.front();
+      }
+    }
+    
     if (E.info.num_trees < N) {
-      E.info.fhat = 42;    // ?????
+      E.info.fhat = std::nan("");    // ?????  --> TJ: this is NA. Perhaps Inf is better?
     }
     else {  
       const double max_log_w = *std::max_element(E.weights.cbegin(), E.weights.cend());
