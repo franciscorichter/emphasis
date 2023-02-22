@@ -189,27 +189,29 @@ namespace emphasis {
   }
 
 
-  // returns augmented tree per vpars
+  // returns one augmented tree per vpars
   // failures results in empty tree
   std::vector<tree_t> augment_trees(const std::vector<param_t>& vpars, const tree_t& input_tree, const Model& model, int max_missing, double max_lambda, int num_threads)
   {
+    if (!model.is_threadsafe()) num_threads = 1;
     num_threads = std::max(1, std::min(num_threads, static_cast<int>(std::thread::hardware_concurrency())));
-    const int grainsize = static_cast<int>(vpars.size()) / num_threads;
     tbb::task_arena arena(num_threads);
     std::vector<tree_t> trees(vpars.size(), input_tree);
-
-    for (size_t i = 0; i < vpars.size(); ++i) {
-      try {
-        if (model.numerical_max_lambda()) {
-          do_augment_tree(vpars[i], trees[i], model, max_missing, max_lambda);
+    const size_t grainsize = vpars.size() / num_threads;
+    tbb::parallel_for(tbb::blocked_range<size_t>(0ull, vpars.size(), grainsize), [&](const tbb::blocked_range<size_t>& r) {
+      for (size_t i = r.begin(); i < r.end(); ++i) {
+        try {
+          if (model.numerical_max_lambda()) {
+            do_augment_tree(vpars[i], trees[i], model, max_missing, max_lambda);
+          }
+          else {
+            do_augment_tree_cont(vpars[i], trees[i], model, max_missing, max_lambda);
+          }
+        } catch (...) {
+          trees[i].clear();
         }
-        else {
-          do_augment_tree_cont(vpars[i], trees[i], model, max_missing, max_lambda);
-        }
-      } catch (...) {
-        trees[i].clear();
       }
-    }
+    });
     return trees;
   }
 
