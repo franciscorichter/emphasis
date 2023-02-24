@@ -40,15 +40,30 @@ namespace emphasis {
 
   class emphasis_error : public std::runtime_error
   {
+
   public:
     explicit emphasis_error(const std::string& what) : std::runtime_error(what) {}
     explicit emphasis_error(const char* what) : std::runtime_error(what) {}
+
+  }
+    
+    
+  struct E_step_info_t {  
+    double fhat = 0;                    // mean, unscaled, weight
+    int num_trees = 0;                  // number of trees augmented
+    int rejected_overruns = 0;          // trees rejected because overrun of missing branches
+    int rejected_lambda = 0;            // trees rejected because of lambda overrun
+    int rejected_zero_weights = 0;      // trees rejected because of zero-weight
+    int rejected = 0;                   // trees rejected because of unhandled exception
+    double elapsed = 0;                 // elapsed runtime [ms]
+    double logf = 0;                    // likelihood of simulated tree
+    double logg = 0;                    // sampling probability
+    
+    std::vector<double> logf_grid;                    // likelihood of simulated tree
+    std::vector<double> logg_grid;                    // sampling probability
   };
   
-
-
   using brts_t = std::vector<double>;     // input tree
-
 
   // results from e
   struct E_step_t
@@ -65,12 +80,7 @@ namespace emphasis {
     std::vector<double> logg_;
     std::vector<double> logf_;
     
-    double fhat;                        // mean, unscaled, weight
-    int rejected_overruns = 0;          // # trees rejected because overrun of missing branches
-    int rejected_lambda = 0;            // # trees rejected because of lambda overrun
-    int rejected_zero_weights = 0;      // # trees rejected because of zero-weight
-    int rejected = 0;                   // # trees rejected because of unhandled exception
-    double elapsed = 0;                 // elapsed runtime [ms]
+    E_step_info_t info;
   };
 
 
@@ -84,6 +94,25 @@ namespace emphasis {
                   double max_lambda = default_max_aug_lambda,
                   int num_threads = 0);
 
+  // single threaded, stripped vectors
+  E_step_info_t E_step_info(int N,      // sample size
+                            int maxN,   // max number of augmented trees (incl. invalid)
+                            const param_t& pars,
+                            const brts_t& brts,
+                            const Model& model,
+                            int soc = 2,
+                            int max_missing = default_max_missing_branches,
+                            double max_lambda = default_max_aug_lambda);
+
+  // single threaded, full factorial parameters
+  E_step_info_t E_step_info_grid(int maxN,   // max number of augmented trees (incl. invalid)
+                                 const param_t& focal_pars,
+                                 const std::vector<param_t>& all_pars,
+                                 const brts_t& brts,
+                                 const Model& model,
+                                 int soc = 2,
+                                 int max_missing = default_max_missing_branches,
+                                 double max_lambda = default_max_aug_lambda);
 
   // results from m
   struct M_step_t

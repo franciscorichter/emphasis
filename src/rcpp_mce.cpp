@@ -194,3 +194,96 @@ Rcpp::NumericMatrix rcpp_mce_grid(const Rcpp::NumericMatrix pars_R,
   }
   return out;
 }
+
+
+using mat2d = std::vector< std::vector<double>>;
+
+template<typename T>
+Rcpp::NumericMatrix two_d_vec_to_mat(const std::vector<T> from_cpp) {
+  // and now back to Rcpp::NumericMatrix...
+  Rcpp::NumericMatrix out(from_cpp.size(), from_cpp[0].size());
+  for (size_t i = 0; i < from_cpp.size(); ++i) {
+    for (size_t j = 0; j < from_cpp[i].size(); ++j) {
+      if (std::isnan(from_cpp[i][j])) {
+        out(i, j) = NA_REAL;
+      } else {
+        out(i, j) = from_cpp[i][j];
+      }
+    }
+  }
+  return out;
+}
+
+
+
+
+// [[Rcpp::export]]
+Rcpp::List rcpp_mce_factorial(const Rcpp::NumericMatrix pars_R,
+                              const std::vector<double>& brts,       
+                              int sample_size,
+                              int maxN,
+                              int soc,
+                              int max_missing,               
+                              double max_lambda,             
+                              const std::vector<double>& lower_bound,  
+                              const std::vector<double>& upper_bound,  
+                              double xtol_rel,
+                              int num_threads) 
+{                     
+  std::vector< std::array<double, 6> > results(pars_R.nrow(), {0});
+  
+
+  
+  // copy parameters to C++ object, for multithreading
+  mat2d pars(pars_R.nrow());
+  std::vector<double> row_entry(pars_R.ncol());
+  for (int i = 0; i < pars_R.nrow(); ++i) {
+    for(int j = 0; j < pars_R.ncol(); ++j) {
+      row_entry[j] = pars_R(i, j);
+    }
+    pars[i] = row_entry;
+  }
+  
+  mat2d logf_grid = std::vector< std::vector< double >>(pars.size(), std::vector<double>(pars.size(), 0.0));
+  mat2d logg_grid = logf_grid;
+  
+  const int grainsize = pars.size() / std::max<unsigned>(1, num_threads);
+  
+  tbb::task_arena arena(num_threads);
+  
+  tbb::parallel_for(tbb::blocked_range<unsigned>(0, pars.size(), grainsize), [&](const tbb::blocked_range<unsigned>& r) {
+    for (unsigned i = r.begin(); i < r.end(); ++i) {
+      auto model = emphasis::Model(lower_bound, upper_bound);
+      auto EI = emphasis::E_step_info_grid(sample_size,
+                                          maxN,
+                                          pars[i],
+                                          pars,
+                                          brts,
+                                          model,
+                                          soc,
+                                          max_missing,
+                                          max_lambda);
+      results[i] = { EI.fhat, 
+                     double(EI.rejected_lambda),
+                     double(EI.rejected_overruns), 
+                     double(EI.rejected_zero_weights),
+                     double(EI.logf),
+                     double(EI.logg)};
+      logf_grid[i] = EI.logf_grid;
+      logg_grid[i] = EI.logg_grid;
+    }
+  });
+  
+  // convert to NumericMatrix
+  Rcpp::List out;
+  out["results"]   = two_d_vec_to_mat(results);
+  out["logf_grid"] = two_d_vec_to_mat(logf_grid);
+  out["logg_grid"] = two_d_vec_to_mat(logg_grid);
+  
+  return out;
+}
+
+
+
+
+
