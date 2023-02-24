@@ -163,7 +163,6 @@ Rcpp::NumericMatrix two_d_vec_to_mat(const std::vector<T> from_cpp) {
   return out;
 }
 
-//' @export
 // [[Rcpp::export]]
 Rcpp::List rcpp_mce_grid_factorial(const Rcpp::NumericMatrix pars_R,
                                   const std::vector<double>& brts,       
