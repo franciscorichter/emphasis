@@ -3,6 +3,7 @@
 export(e_cpp)
 export(em_cpp)
 export(emphasis_de)
+export(emphasis_de_factorial)
 export(loglikelihood)
 export(m_cpp)
 import(Rcpp)

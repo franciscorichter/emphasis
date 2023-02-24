@@ -56,6 +56,7 @@ get_results <- function(pars, input, num_threads, num_points) {
   return(dmval)
 }
 
+
 #' @keywords internal
 update_pars <- function(pars,
                         num_points,

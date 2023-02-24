@@ -200,4 +200,89 @@ namespace emphasis {
     return E.info;
   }
 
+E_step_info_t E_step_info_grid(int maxN,
+                          const param_t& focal_pars,
+                          const std::vector<param_t>& all_pars,
+                          const brts_t& brts,
+                          const Model& model,
+                          int soc,
+                          int max_missing,
+                          double max_lambda)
+{
+  tree_t init_tree = detail::create_tree(brts, static_cast<double>(soc));
+  
+  auto E = E_step_t{};
+  auto T0 = std::chrono::high_resolution_clock::now();
+  
+  for (int i = 0; i < maxN; ++i) {
+    try {
+      // reuse tree from pool
+      tree_t focal_tree;
+      emphasis::augment_tree(focal_pars, init_tree, model, max_missing, max_lambda, focal_tree);
+      
+      double log_w = 0.0;
+      double logf = 0.0;
+      double logg = 0.0;
+      {
+        logf = model.loglik(focal_pars, focal_tree);
+        logg = model.sampling_prob(focal_pars, focal_tree);
+        log_w = logf - logg;
+      }
+      if (std::isfinite(log_w) && (0.0 < std::exp(log_w))) {
+        
+        E.weights.push_back(log_w);
+        E.logf_.push_back(logf);
+        E.logg_.push_back(logg);
+        
+        E.info.logf_grid.clear();
+        E.info.logg_grid.clear();
+        for (const auto& pars : all_pars) {
+          E.info.logf_grid.push_back(model.loglik(pars, focal_tree));
+          E.info.logg_grid.push_back(model.sampling_prob(pars, focal_tree));
+        }
+        E.trees.emplace_back(focal_tree);
+        
+        // always break after finding a valid tree, because N == 1
+        break;
+        
+      }
+      else {
+        ++E.info.rejected_zero_weights;
+      }
+    }
+    catch (const augmentation_overrun&) {
+      ++E.info.rejected_overruns;
+    }
+    catch (const augmentation_lambda&) {
+      ++E.info.rejected_lambda;
+    }
+    catch (...) {
+      ++E.info.rejected;
+    }
+  }
+  E.info.num_trees = static_cast<int>(E.trees.size());
+  auto T1 = std::chrono::high_resolution_clock::now();
+  E.info.elapsed = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count());
+  
+  if (!E.logf_.empty()) {
+    if (E.logf_.size() > 1) {
+      E.info.logf = std::accumulate(E.logf_.begin(), E.logf_.end(), 0.0) * 1.0 / E.logf_.size();
+      E.info.logg = std::accumulate(E.logg_.begin(), E.logg_.end(), 0.0) * 1.0 / E.logg_.size();
+    } else {
+      E.info.logf = E.logf_.front();
+      E.info.logg = E.logg_.front();
+    }
+  }
+  
+  if (E.info.num_trees < 1) {
+    E.info.fhat = std::numeric_limits<double>::signaling_NaN();    // ?????  --> TJ: this is NA. Perhaps Inf is better?
+  }
+  else {  
+    const double max_log_w = *std::max_element(E.weights.cbegin(), E.weights.cend());
+    double sum_w = calc_sum_w(E.weights.begin(), E.weights.end(), max_log_w);
+    E.info.fhat = std::log(sum_w) + max_log_w;
+  }
+  return E.info;
+}
+
 }
