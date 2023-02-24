@@ -88,7 +88,7 @@ namespace sim_tree {
   
       if (daughters.size() > 2) {
         // this should not happen normally.
-        for (int i = 0; i < daughters.size(); ++i) {
+        for (size_t i = 0; i < daughters.size(); ++i) {
           if (daughters[i] == to_remove) {
             daughters[i] = daughters.back();
             daughters.pop_back();

@@ -48,7 +48,7 @@ Rcpp::NumericMatrix explore_grid_cpp(Rcpp::NumericVector par1,
                                      static_cast<double>(d)},
                             max_N);
           
-          for (size_t r = 0; r < num_repl; ++r) {
+          for (int r = 0; r < num_repl; ++r) {
             bool is_extinct = sim_tree.simulate_tree();
             
             output(row, 0) = a;

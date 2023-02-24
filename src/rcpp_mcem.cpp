@@ -101,14 +101,14 @@ List rcpp_mcem(const std::vector<double>& brts,
   } else {
     ret["trees"] = static_cast<int>(mcem.e.trees.size());
   }
-  ret["rejected"] = mcem.e.rejected;
-  ret["rejected_overruns"] = mcem.e.rejected_overruns;
-  ret["rejected_lambda"] = mcem.e.rejected_lambda;
-  ret["rejected_zero_weights"] = mcem.e.rejected_zero_weights;
+  ret["rejected"] = mcem.e.info.rejected;
+  ret["rejected_overruns"] = mcem.e.info.rejected_overruns;
+  ret["rejected_lambda"] = mcem.e.info.rejected_lambda;
+  ret["rejected_zero_weights"] = mcem.e.info.rejected_zero_weights;
   ret["estimates"] = NumericVector(mcem.m.estimates.begin(), mcem.m.estimates.end());
   ret["nlopt"] = mcem.m.opt;
-  ret["fhat"]  = mcem.e.fhat;
-  ret["time"]  = mcem.e.elapsed + mcem.m.elapsed;
+  ret["fhat"]  = mcem.e.info.fhat;
+  ret["time"]  = mcem.e.info.elapsed + mcem.m.elapsed;
   ret["weights"] = mcem.e.weights;
   return ret;
 }

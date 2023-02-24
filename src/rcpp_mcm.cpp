@@ -60,12 +60,13 @@ List rcpp_mcm(List e_step,
   auto E = emphasis::E_step_t{};
   E.trees = pack(as<List>(e_step["trees"]));
   E.weights = as<std::vector<double>>(e_step["weights"]);
-  E.rejected = as<int>(e_step["rejected"]);
-  E.rejected_overruns = as<int>(e_step["rejected_overruns"]);
-  E.rejected_lambda = as<int>(e_step["rejected_lambda"]);
-  E.rejected_zero_weights = as<int>(e_step["rejected_zero_weights"]);
-  E.elapsed = as<double>(e_step["time"]);
-  E.fhat = as<double>(e_step["fhat"]);
+  E.info.num_trees = static_cast<int>(E.trees.size());
+  E.info.rejected = as<int>(e_step["rejected"]);
+  E.info.rejected_overruns = as<int>(e_step["rejected_overruns"]);
+  E.info.rejected_lambda = as<int>(e_step["rejected_lambda"]);
+  E.info.rejected_zero_weights = as<int>(e_step["rejected_zero_weights"]);
+  E.info.elapsed = as<double>(e_step["time"]);
+  E.info.fhat = as<double>(e_step["fhat"]);
 
   if (E.trees.empty()) {
     throw std::runtime_error("no trees, no optimization");

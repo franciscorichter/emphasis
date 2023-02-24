@@ -192,6 +192,7 @@ emphasis_de <- function(brts,
   min_pars <- c()
   mean_loglik <- c()
   mean_pars <- c()
+  
 
   if (verbose) {
     pb <- progress::progress_bar$new(format = "Progress: [:bar] :percent",
@@ -200,14 +201,23 @@ emphasis_de <- function(brts,
   fhatdiff <- c()
   for (k in 1:num_iterations) {
 
-    pv[[k]] <- pars  # Save parameter grid
-
     dmval <- get_results(pars, input, num_threads, num_points)
 
-    vals <- dmval[, 1]
-    fails <- which(is.na(vals))
-    rejl <- dmval[, 2]
-    rejo <- dmval[, 3]
+
+    to_store <- cbind(pars, dmval[, 5], dmval[, 6], dmval[, 1])
+    colnames(to_store) <- c("par1", "par2", "par3", "par4", "logf", "logg", "fhat")
+    pv[[k]] <- to_store
+    
+    # dmval is a matrix with columns:
+    # 1 = fhat
+    # 2 = rejected_lambda
+    # 3 = rejected_overruns
+    # 4 = rejected_zero_weights
+
+    vals <- dmval[, 1] #as.numeric(dmval[seq(from = 1, to = length(dmval), by = 4)])
+    fails <- which(is.na(vals)) # failed runs return fhat = -1
+    rejl <- dmval[, 2] # as.numeric(dmval[seq(from = 2, to = length(dmval), by = 4)])
+    rejo <- dmval[, 3] # as.numeric(dmval[seq(from = 3, to = length(dmval), by = 4)])
 
     # if there were any stopped simulations due to max_lambda constrain
     if (sum(rejl[fails]) > 0) {
@@ -220,7 +230,6 @@ emphasis_de <- function(brts,
       rejo_count <- c(rejo_count, k)
     }
 
-    # remove the NA values
     wi <- which(!is.na(vals))
     pars <- pars[wi, ]
     vals <- -vals[wi]
@@ -236,7 +245,7 @@ emphasis_de <- function(brts,
     mean_pars <- rbind(mean_pars, colMeans(pars[1:4]))
 
     ## Saving variation in the estimations
-    sd_pars <- apply(pars, 2, stats::sd)
+    # sd_pars <- apply(pars, 2, stats::sd)
     fhatdiff <- c(fhatdiff, stats::sd(vals))
 
     pars <- update_pars(pars, num_points, disc_prop, vals,
@@ -246,21 +255,24 @@ emphasis_de <- function(brts,
     sd_vec <- sd_vec - alpha
 
     if (verbose) {
-      cat("iteration: ", k, " par estim: ")
-      last_min_pars <- min_pars[nrow(min_pars), ]
-      cat(last_min_pars)
-      cat(" sd: ", sd_pars, "\n")
+   #   cat("iteration: ", k, " par estim: ")
+  #    last_min_pars <- min_pars[nrow(min_pars), ]
+  #    cat(last_min_pars)
+  #    cat(" sd: ", sd_pars, "\n")
       pb$tick()
     }
   }
   total_time <- proc.time() - init_time
 
+  obtained_estim <- colMeans(min_pars)
+  
   out <- list("parameters" = pv,
               "time" = total_time,
               "fhatdiff" = fhatdiff,
               "minloglik" = min_loglik,
               "meanloglik" = mean_loglik,
               "min_pars" = min_pars,
-              "mean_pars" = mean_pars)
+              "mean_pars" = mean_pars,
+              "obtained_estim" = obtained_estim)
   return(out)
 }

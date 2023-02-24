@@ -35,6 +35,7 @@
 using namespace emphasis::detail;
 
 namespace emphasis {
+  
   using param_t = std::vector<double>;                  // unspecific parameters
   using tree_t = std::vector<node_t>;                   // tree, sorted by note_t::brts
 

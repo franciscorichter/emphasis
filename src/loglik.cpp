@@ -21,7 +21,7 @@ emphasis::tree_t pack(const Rcpp::DataFrame& r_tree) {
   Rcpp::NumericVector t_ext = r_tree["t_ext"];
   Rcpp::NumericVector pd    = r_tree["pd"];
   
-  for (size_t i = 0; i < r_tree.nrow(); ++i) {
+  for (int i = 0; i < r_tree.nrow(); ++i) {
     emphasis::node_t entry;
     entry.brts = brts[i];
     entry.n    = n[i];
@@ -61,7 +61,7 @@ Rcpp::List loglikelihood(const std::vector<double>& pars,
   std::vector<double> log_w(trees.size());
   
   // unpack list and convert to tree_t
-  for (size_t i = 0; i < trees.size(); ++i) {
+  for (int i = 0; i < trees.size(); ++i) {
     auto local_tree = loglik::pack(Rcpp::as<Rcpp::DataFrame>(trees[i]));
     logf[i] = model.loglik(pars, local_tree);
     log_w[i] = logf[i] - logg[i];

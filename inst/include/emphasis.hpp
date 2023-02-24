@@ -27,6 +27,7 @@
 #define EMPHASIS_EMPHASIS_HPP_INCLUDED
 
 #include <stdexcept>
+#include <string>
 #include <limits>
 #include <memory>
 #include <vector>
@@ -79,9 +80,23 @@ namespace emphasis {
     std::vector<double> weights;
     std::vector<double> logg_;
     std::vector<double> logf_;
-    
+
     E_step_info_t info;
   };
+  
+
+  class emphasis_error_E : public std::runtime_error
+  {
+  private:
+    static std::string make_msg(const E_step_t& E) {
+      std::string msg = "maxN exceeded with rejection reasons: ";
+      msg += std::to_string(E.info.rejected_lambda) + " lambda; ";
+      msg += std::to_string(E.info.rejected_overruns) + " overruns; ";
+      msg += std::to_string(E.info.rejected_overruns) + " zero weights; ";
+      msg += std::to_string(E.info.rejected) + " unhandled exception; ";
+      msg += " Trees so far: " + std::to_string(E.info.num_trees);
+      return msg;
+    }
 
 
   E_step_t E_step(int N,      // sample size
@@ -167,25 +182,6 @@ namespace emphasis {
               int num_threads = 0,
               conditional_fun_t* conditional = nullptr);
 
-  class emphasis_error_E : public std::runtime_error
-  {
-    public:
-
-      std::string make_msg(const E_step_t& E, int N) {
-        std::string msg = "maxN exceeded with rejection reasons: ";
-        msg += std::to_string(E.rejected_lambda) + " lambda; ";
-        msg += std::to_string(E.rejected_overruns) + " overruns; ";
-        msg += std::to_string(E.rejected_overruns) + " zero weights; ";
-        msg += std::to_string(N - E.trees.size()) + " unhandled exception.";
-        msg += " Trees so far: " + std::to_string(E.trees.size());
-        return msg;
-      }
-    
-    explicit emphasis_error_E(const E_step_t& E, int N) : std::runtime_error(make_msg(E, N)), E_(E) {
-    }
-    
-    const E_step_t& E_;
-  };
 }
 
 #endif
