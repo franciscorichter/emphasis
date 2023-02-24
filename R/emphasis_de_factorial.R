@@ -16,7 +16,7 @@ get_results_factorial <- function(pars, input, num_threads, num_points) {
   local_max_miss <- input$max_missing
   local_max_lambda <- input$max_lambda
   local_max_N <- input$maxN
-  while (sum(is.na(dmval[, 1])) == num_points) {
+  while (sum(is.na(dmval$results[, 1])) == num_points) {
     local_max_miss <- local_max_miss * 10
     local_max_lambda <- local_max_lambda * 10
     local_max_N <- local_max_N * 10

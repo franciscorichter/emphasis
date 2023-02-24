@@ -163,6 +163,7 @@ Rcpp::NumericMatrix two_d_vec_to_mat(const std::vector<T> from_cpp) {
   return out;
 }
 
+//' @export
 // [[Rcpp::export]]
 Rcpp::List rcpp_mce_grid_factorial(const Rcpp::NumericMatrix pars_R,
                                   const std::vector<double>& brts,       
@@ -198,14 +199,14 @@ Rcpp::List rcpp_mce_grid_factorial(const Rcpp::NumericMatrix pars_R,
   tbb::parallel_for(tbb::blocked_range<unsigned>(0, pars.size(), grainsize), [&](const tbb::blocked_range<unsigned>& r) {
     for (unsigned i = r.begin(); i < r.end(); ++i) {
       auto model = emphasis::Model(lower_bound, upper_bound);
-      auto EI = emphasis::E_step_info(sample_size,
-                                      maxN,
-                                      pars[i],
-                                          brts,
-                                          model,
-                                          soc,
-                                          max_missing,
-                                          max_lambda);
+      auto EI = emphasis::E_step_info_grid(maxN,
+                                           pars[i],
+                                           pars,
+                                           brts,
+                                           model,
+                                           soc,
+                                           max_missing,
+                                           max_lambda);
       results[i] = { EI.fhat, 
                      double(EI.rejected_lambda),
                      double(EI.rejected_overruns), 
