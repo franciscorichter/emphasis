@@ -38,16 +38,6 @@ namespace emphasis {
 
   static constexpr int default_max_missing_branches = 10000;
   static constexpr double default_max_aug_lambda = 500.0;
-
-  class emphasis_error : public std::runtime_error
-  {
-
-  public:
-    explicit emphasis_error(const std::string& what) : std::runtime_error(what) {}
-    explicit emphasis_error(const char* what) : std::runtime_error(what) {}
-
-  }
-    
     
   struct E_step_info_t {  
     double fhat = 0;                    // mean, unscaled, weight
@@ -84,7 +74,14 @@ namespace emphasis {
     E_step_info_t info;
   };
   
-
+  class emphasis_error : public std::runtime_error
+  {
+  public:
+    explicit emphasis_error(const std::string& what) : std::runtime_error(what) {}
+    explicit emphasis_error(const char* what) : std::runtime_error(what) {}
+  };
+  
+  
   class emphasis_error_E : public std::runtime_error
   {
   private:
@@ -97,7 +94,11 @@ namespace emphasis {
       msg += " Trees so far: " + std::to_string(E.info.num_trees);
       return msg;
     }
-
+    
+  public:
+    explicit emphasis_error_E(const E_step_t& E) : std::runtime_error(make_msg(E)), info(E.info) {}
+    E_step_info_t info;
+  };
 
   E_step_t E_step(int N,      // sample size
                   int maxN,   // max number of augmented trees (incl. invalid)
@@ -181,7 +182,6 @@ namespace emphasis {
               double xtol_rel = 0.001,
               int num_threads = 0,
               conditional_fun_t* conditional = nullptr);
-
 }
 
 #endif

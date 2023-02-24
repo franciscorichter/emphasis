@@ -10,7 +10,6 @@
 #include "unpack.h"
 using namespace Rcpp;
 
-
 //' function to perform one step of the E-M algorithm
 //' @param brts vector of branching times
 //' @param init_pars vector of initial parameter files
@@ -81,6 +80,42 @@ List rcpp_mce(const std::vector<double>& brts,
   return ret;
 }
 
+std::vector<double> rcpp_mce_nothrow(const std::vector<double>& brts,       
+                                     const std::vector<double>& init_pars,      
+                                     int sample_size,
+                                     int maxN,
+                                     int soc,
+                                     int max_missing,               
+                                     double max_lambda,             
+                                     const std::vector<double>& lower_bound,  
+                                     const std::vector<double>& upper_bound,  
+                                     double xtol_rel,                     
+                                     int num_threads)
+{
+  auto model = emphasis::Model(lower_bound, upper_bound);
+  
+  try {
+    auto E = emphasis::E_step(sample_size,
+                              maxN,
+                              init_pars,
+                              brts,
+                              model,
+                              soc,
+                              max_missing,
+                              max_lambda,
+                              num_threads);
+    std::vector<double> out = {E.info.fhat, 
+                               double(E.info.rejected_lambda),
+                               double(E.info.rejected_overruns), 
+                               double(E.info.rejected_zero_weights)};
+    return out;
+  } catch (const emphasis::emphasis_error_E& E) {
+    return {42, //E.E_.fhat, 
+            double(E.info.rejected_lambda),
+            double(E.info.rejected_overruns), 
+            double(E.info.rejected_zero_weights)};
+  }
+}
 
 // [[Rcpp::export]]
 Rcpp::NumericMatrix rcpp_mce_grid(const Rcpp::NumericMatrix pars_R,
@@ -95,7 +130,7 @@ Rcpp::NumericMatrix rcpp_mce_grid(const Rcpp::NumericMatrix pars_R,
                                   double xtol_rel,
                                   int num_threads) 
 {                     
-  std::vector<std::array<double, 6>> results(pars_R.nrow(), {0});
+  std::vector<std::vector<double>> results(pars_R.nrow(), std::vector<double>(6, 0.0));
   
   // copy parameters to C++ object, for multithreading
   std::vector<std::vector<double>> pars(pars_R.nrow());
@@ -113,35 +148,15 @@ Rcpp::NumericMatrix rcpp_mce_grid(const Rcpp::NumericMatrix pars_R,
   
   tbb::parallel_for(tbb::blocked_range<unsigned>(0, pars.size(), grainsize), [&](const tbb::blocked_range<unsigned>& r) {
     for (unsigned i = r.begin(); i < r.end(); ++i) {
-      std::vector<double> local_pars = pars[i];
-      results[i] = rcpp_mce_nothrow(brts,       
-                                     local_pars,      
-                                     sample_size,
-                                     maxN,
-                                     soc,
-                                     max_missing,               
-                                     max_lambda,             
-                                     lower_bound,  
-                                     upper_bound,  
-                                     xtol_rel,                     
-                                     1); // use one thread here
-     }
-    });
-  
-  // and now back to Rcpp::NumericMatrix...
-  Rcpp::NumericMatrix out(results.size(), results[0].size());
-  for (int i = 0; i < results.size(); ++i) {
-    for (int j = 0; j < results[i].size(); ++j) {
-      if (results[i][j] == 42) { // this is not a fully safe flag...
       auto model = emphasis::Model(lower_bound, upper_bound);
       auto EI = emphasis::E_step_info(sample_size,
                                       maxN,
                                       pars[i],
-                                      brts,
-                                      model,
-                                      soc,
-                                      max_missing,
-                                      max_lambda);
+                                          brts,
+                                          model,
+                                          soc,
+                                          max_missing,
+                                          max_lambda);
       results[i] = { EI.fhat, 
                      double(EI.rejected_lambda),
                      double(EI.rejected_overruns), 
@@ -149,7 +164,7 @@ Rcpp::NumericMatrix rcpp_mce_grid(const Rcpp::NumericMatrix pars_R,
                      double(EI.logf),
                      double(EI.logg)};
     }
-  };
+  });
   
   // and now back to Rcpp::NumericMatrix...
   Rcpp::NumericMatrix out(results.size(), results[0].size());
@@ -224,8 +239,7 @@ Rcpp::List rcpp_mce_factorial(const Rcpp::NumericMatrix pars_R,
   tbb::parallel_for(tbb::blocked_range<unsigned>(0, pars.size(), grainsize), [&](const tbb::blocked_range<unsigned>& r) {
     for (unsigned i = r.begin(); i < r.end(); ++i) {
       auto model = emphasis::Model(lower_bound, upper_bound);
-      auto EI = emphasis::E_step_info_grid(sample_size,
-                                          maxN,
+      auto EI = emphasis::E_step_info_grid(maxN,
                                           pars[i],
                                           pars,
                                           brts,
