@@ -38,8 +38,12 @@ namespace emphasis {
 
   static constexpr int default_max_missing_branches = 10000;
   static constexpr double default_max_aug_lambda = 500.0;
-    
-  struct E_step_info_t {  
+
+  using brts_t = std::vector<double>;     // input tree
+
+
+  struct E_step_info_t
+  {
     double fhat = 0;                    // mean, unscaled, weight
     int num_trees = 0;                  // number of trees augmented
     int rejected_overruns = 0;          // trees rejected because overrun of missing branches
@@ -50,11 +54,10 @@ namespace emphasis {
     double logf = 0;                    // likelihood of simulated tree
     double logg = 0;                    // sampling probability
     
-    std::vector<double> logf_grid;                    // likelihood of simulated tree
-    std::vector<double> logg_grid;                    // sampling probability
+    std::vector<double> logf_grid;      // vector of logf for all pars
+    std::vector<double> logg_grid;      // vector of logg for all pars
   };
-  
-  using brts_t = std::vector<double>;     // input tree
+
 
   // results from e
   struct E_step_t
@@ -73,7 +76,8 @@ namespace emphasis {
 
     E_step_info_t info;
   };
-  
+
+
   class emphasis_error : public std::runtime_error
   {
   public:
@@ -81,7 +85,7 @@ namespace emphasis {
     explicit emphasis_error(const char* what) : std::runtime_error(what) {}
   };
   
-  
+
   class emphasis_error_E : public std::runtime_error
   {
   private:
@@ -100,6 +104,7 @@ namespace emphasis {
     E_step_info_t info;
   };
 
+
   E_step_t E_step(int N,      // sample size
                   int maxN,   // max number of augmented trees (incl. invalid)
                   const param_t& pars,
@@ -110,6 +115,7 @@ namespace emphasis {
                   double max_lambda = default_max_aug_lambda,
                   int num_threads = 0);
 
+
   // single threaded, stripped vectors
   E_step_info_t E_step_info(int N,      // sample size
                             int maxN,   // max number of augmented trees (incl. invalid)
@@ -119,8 +125,8 @@ namespace emphasis {
                             int soc = 2,
                             int max_missing = default_max_missing_branches,
                             double max_lambda = default_max_aug_lambda);
-
-  // single threaded, full factorial parameters
+  
+  // single threaded, stripped vectors
   E_step_info_t E_step_info_grid(int maxN,   // max number of augmented trees (incl. invalid)
                                  const param_t& focal_pars,
                                  const std::vector<param_t>& all_pars,
@@ -182,6 +188,7 @@ namespace emphasis {
               double xtol_rel = 0.001,
               int num_threads = 0,
               conditional_fun_t* conditional = nullptr);
+
 }
 
 #endif
