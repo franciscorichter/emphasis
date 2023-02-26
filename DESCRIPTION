@@ -1,7 +1,7 @@
 Package: emphasis
 Type: Package
 Title: Expectation Maximization on Phylogenetic Applications with Simulations and Importance Sampling
-Version: 0.1.5
+Version: 0.2
 Authors@R: c(person("Francisco","Richter", email = "f.richter@rug.nl", role = c("aut", "cre")),
                 person("Thijs","Janzen", email = "t.janzen@rug.nl", role=c("ctb")),
                 person("Hanno","Hildenbrandt", email = "h.hildenbrandt@rug.nl", role = c("ctb")))
@@ -10,18 +10,19 @@ License: file LICENSE
 Encoding: UTF-8
 Depends: R (>= 3.5.0),
          Rcpp, 
-         RcppParallel,
-         BH
+         RcppParallel
 Imports: nloptr,
-         MASS,
          ape,
-         mgcv,
-         svMisc
+         apTreeshape,
+         ggplot2,
+         progress
 LinkingTo: Rcpp, 
            RcppParallel, 
            nloptr,
            BH
 Suggests: TreeSim,
-          testthat (>= 3.0.0)
+          testthat (>= 3.0.0),
+          DDD,
+          tibble
 SystemRequirements: C++14
-RoxygenNote: 7.2.0
+RoxygenNote: 7.2.1

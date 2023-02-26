@@ -1,4 +1,4 @@
-#include "phylodiv_tree.h"
+#include "phylodiv_tree.hpp"
 
 #include <Rcpp.h>
 
@@ -34,6 +34,7 @@ Rcpp::NumericMatrix explore_grid_cpp(Rcpp::NumericVector par1,
   size_t total_number_simulations = par1.size() * par2.size() * 
                                     par3.size() * par4.size() * num_repl;
   
+
   Rcpp::NumericMatrix output(total_number_simulations, 9);
   int row = 0;
   for (auto a : par1) {
@@ -47,7 +48,7 @@ Rcpp::NumericMatrix explore_grid_cpp(Rcpp::NumericVector par1,
                                      static_cast<double>(d)},
                             max_N);
           
-          for (size_t r = 0; r < num_repl; ++r) {
+          for (int r = 0; r < num_repl; ++r) {
             bool is_extinct = sim_tree.simulate_tree();
             
             output(row, 0) = a;
