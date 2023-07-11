@@ -10,6 +10,20 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// simulate_single_pd_tree_cpp
+Rcpp::NumericMatrix simulate_single_pd_tree_cpp(Rcpp::NumericVector pars, float max_t, float max_N, int max_tries);
+RcppExport SEXP _emphasis_simulate_single_pd_tree_cpp(SEXP parsSEXP, SEXP max_tSEXP, SEXP max_NSEXP, SEXP max_triesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type pars(parsSEXP);
+    Rcpp::traits::input_parameter< float >::type max_t(max_tSEXP);
+    Rcpp::traits::input_parameter< float >::type max_N(max_NSEXP);
+    Rcpp::traits::input_parameter< int >::type max_tries(max_triesSEXP);
+    rcpp_result_gen = Rcpp::wrap(simulate_single_pd_tree_cpp(pars, max_t, max_N, max_tries));
+    return rcpp_result_gen;
+END_RCPP
+}
 // simulate_pd_trees_cpp
 Rcpp::NumericMatrix simulate_pd_trees_cpp(Rcpp::NumericVector pars, float max_t, size_t repl, float max_N);
 RcppExport SEXP _emphasis_simulate_pd_trees_cpp(SEXP parsSEXP, SEXP max_tSEXP, SEXP replSEXP, SEXP max_NSEXP) {
@@ -107,6 +121,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_emphasis_simulate_single_pd_tree_cpp", (DL_FUNC) &_emphasis_simulate_single_pd_tree_cpp, 4},
     {"_emphasis_simulate_pd_trees_cpp", (DL_FUNC) &_emphasis_simulate_pd_trees_cpp, 4},
     {"_emphasis_explore_grid_cpp", (DL_FUNC) &_emphasis_explore_grid_cpp, 7},
     {"_emphasis_rcpp_mce", (DL_FUNC) &_emphasis_rcpp_mce, 12},

@@ -143,6 +143,35 @@ sim_tree_pd_cpp <- function(pars, max_t, num_repl = 1, max_lin) {
     return(result)
 }
 
+#' simulation function to simulate a tree under the pd model
+#' @description super fast function to simulate the process of diversification
+#' with diversity dependence and phylogenetic diversity dependence
+#' @param pars parameter vector with c(mu, lambda_0, beta_N, beta_P)
+#' @param max_t crown age
+#' @param max_lin number of lineages past which non-extinction is assumed.
+#' @param max_tries maximum number of tries to get a non-extinct tree.
+#' @return list with: 1) tes - reconstructed tree, 2) tas - tree with extinct
+#' lineages, 3) L = Ltable and 4) brts - branching times of the reconstructed
+#' tree
+#' @export
+sim_single_tree_pd_cpp <- function(pars,
+                                   max_t,
+                                   max_lin = 1e6,
+                                   max_tries = 100) {
+  result <- simulate_single_pd_tree_cpp(pars, max_t, max_lin,
+                                        max_tries)
+  if (nrow(result) < 2) {
+    stop("could not simulate tree")
+  }
+  #phy_object <- DDD::L2phylo(result, dropextinct = dropextinct)
+  tes <- DDD::L2phylo(result, dropextinct = TRUE)
+  tas <- DDD::L2phylo(result, dropextinct = FALSE)
+  brts = DDD::L2brts(result, dropextinct = TRUE)
+  
+  out = list(tes = tes, tas = tas, L = result, brts = brts)
+  return(out)
+}
+
 
 #' simulation function to simulate a tree under the pd model
 #' @description super fast function to simulate the process of diversification

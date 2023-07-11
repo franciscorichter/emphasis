@@ -24,4 +24,4 @@ LinkingTo: Rcpp,
 Suggests: TreeSim,
           testthat (>= 3.0.0)
 SystemRequirements: C++14
-RoxygenNote: 7.2.0
+RoxygenNote: 7.2.3

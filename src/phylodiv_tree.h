@@ -14,6 +14,7 @@
 #include <random>
 #include <thread>
 #include <algorithm>
+#include <iostream>
 
 
 namespace sim_tree {
@@ -113,6 +114,7 @@ namespace sim_tree {
     std::array< double, 4> pars; // mu, lambda, B_n, B_p
   
     std::vector< branch > tree;
+    std::vector< branch > ltable;
     
     breaks break_type;
   
@@ -155,6 +157,8 @@ namespace sim_tree {
      tree.clear();
      tree.push_back( branch(t, 0, -1, -1));
      tree.push_back( branch(t, -1, 2, -1));
+     
+   //  ltable = tree;
   
      int tree_id = 3;
      P = 0.f;
@@ -164,8 +168,9 @@ namespace sim_tree {
      break_type = breaks::none;
      
      while(true) {
-  
+       
        N = N1 + N2;
+     //  std::cerr << N << "\n";
        if (N >= max_N) {
          break_type = breaks::maxN_exceeded;
          break;
@@ -207,14 +212,21 @@ namespace sim_tree {
              }
   
              tree[parent].end_date = next_event_time;
+             ltable[parent].end_date = next_event_time;
+             
              tree[parent].daughters.push_back(new_id_1);
              tree[parent].daughters.push_back(new_id_2);
              tree.push_back( branch(next_event_time, tree[parent].label, new_id_1, -1));
              tree.push_back( branch(next_event_time, tree[parent].label, new_id_2, -1));
+             
+         //    ltable.push_back( branch(next_event_time, tree[parent].label, new_id_1, -1));
+         //    ltable.push_back( branch(next_event_time, tree[parent].label, new_id_2, -1));
+             
            } else {
              // extinction
              size_t to_remove = sample_tip(N);
              tree[to_remove].end_date = next_event_time;
+         //    ltable[to_remove].end_date = next_event_time;
              if (tree[to_remove].label < 0) {
                N2--;
              } else {
@@ -291,6 +303,125 @@ namespace sim_tree {
       
       return index;
     }
+    
+    
+    bool simulate_tree_ltable() {
+      size_t N1 = 1;
+      size_t N2 = 1;
+      N = 2;
+      
+      float prev_t = 0.f;
+      t = 0.f;
+      
+      ltable.clear();
+      ltable.push_back( branch(t, 0, -1, -1));
+      ltable.push_back( branch(t, -1, 2, -1));
+      
+      int tree_id = 3;
+      P = 0.f;
+      
+      float mu = pars[0];
+      
+      break_type = breaks::none;
+      
+      while(true) {
+        
+        N = N1 + N2;
+
+        if (N >= max_N) {
+          break_type = breaks::maxN_exceeded;
+          break;
+        }
+        
+        float spec_rate = pars[1] + pars[2] * N  +
+          ((P + N * (max_t - t) - t) / N) * pars[3];
+        if (spec_rate < 0.f) spec_rate = 0.f;
+        
+        float total_rate = (spec_rate + mu ) * N;
+        
+        float next_event_time = t + rndgen.expon(total_rate);
+        P += (t - prev_t) * N;
+        
+        if (next_event_time < max_t) {
+          float focal_spec = pars[1] +
+            pars[2] * N  +
+            ((P + N * (next_event_time - t) - t) / N) * pars[3];
+          float pt = ((focal_spec + mu) * N ) / total_rate;
+          
+          if (rndgen.bernouilli(pt)) {
+            // event is accepted
+            if (rndgen.bernouilli(focal_spec / (focal_spec + mu))) {
+              // speciation
+              size_t parent = sample_tip_ltable();
+              
+              int new_id_1 = tree_id;
+              tree_id++;
+              
+              if (ltable[parent].label < 0) {
+                new_id_1 *= -1;
+                N2++;
+              } else {
+                N1++;
+              }
+              
+              ltable.push_back( branch(next_event_time, ltable[parent].label, new_id_1, -1));
+     
+            } else {
+              // extinction
+              size_t to_remove = sample_tip_ltable();
+              
+              ltable[to_remove].end_date = next_event_time;
+              
+              if (ltable[to_remove].label < 0) {
+                N2--;
+              } else {
+                N1--;
+              }
+              
+              P -= purge_tree_record_ltable(to_remove);
+            }
+          }
+          prev_t = t;
+          t = next_event_time;
+        } else {
+          t = max_t;
+        }
+        
+        if (N1 < 1 || N2 < 1) {
+          break_type = breaks::extinction;
+          break;
+        }
+        if (t >= max_t) {
+          break_type = breaks::finished;
+          break;
+        }
+      }
+      
+      N = N1 + N2;
+      
+      if (break_type == breaks::extinction) {
+        return true;
+      }
+      
+      return false;
+    }
+
+    size_t sample_tip_ltable() {
+        auto index = rndgen.random_number(ltable.size());
+        while(ltable[index].end_date != -1) {
+          index = rndgen.random_number(ltable.size());
+        }
+        return index;
+    }
+    
+    double purge_tree_record_ltable(size_t to_remove) {
+      double last_b = 0.0;
+      for (const auto& i : ltable) {
+        if (i.parent_label == to_remove) last_b = i.start_date;
+      }
+      return ltable[to_remove].end_date - last_b;
+    }
+    
   };
 }
 
