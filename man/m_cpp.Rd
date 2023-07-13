@@ -15,6 +15,34 @@ m_cpp(
   rconditional = NULL
 )
 }
+\arguments{
+\item{e_step}{result of e_step function, as a list}
+
+\item{init_pars}{vector of initial parameter values}
+
+\item{plugin}{string indicating plugin used, currently available: 'rpd1' and
+'rpd5c'}
+
+\item{lower_bound}{vector of lower bound values for optimization, should
+be equal in length to the vector of init_pars}
+
+\item{upper_bound}{vector of upper bound values for optimization, should
+be equal in length to the vector of init_pars}
+
+\item{xtol_rel}{relative tolerance for optimization}
+
+\item{num_threads}{number of threads used.}
+
+\item{rconditional}{R function that evaluates the GAM function.}
+}
+\value{
+list with the following entries:
+\itemize{
+ \item{estimates}{vector of estimates}
+ \item{nlopt}{nlopt status}
+ \item{time}{used computation time} 
+}
+}
 \description{
 function to perform one step of the E-M algorithm
 }

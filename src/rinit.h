@@ -17,8 +17,6 @@ extern "C" {
 
 
 /* some function pointers into nlopt to be filled in by R */
-
-
 REMP_EXPORT nlopt_opt(*remp_create)(nlopt_algorithm, unsigned);
 REMP_EXPORT void(*remp_destroy)(nlopt_opt);
 REMP_EXPORT nlopt_result(*remp_optimize)(nlopt_opt, double *, double *);

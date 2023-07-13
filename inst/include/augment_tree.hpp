@@ -24,10 +24,20 @@ namespace emphasis {
 
   void augment_tree(const param_t& pars,
                     const tree_t& input_tree,
-                    class Model* model,
+                    const Model& model,
                     int max_missing,
                     double max_lambda,
                     tree_t& out);
+
+
+  // returns augmented tree per vpars
+  // failures results in empty tree
+  std::vector<tree_t> augment_trees(const std::vector<param_t>& vpars, 
+                                    const tree_t& input_tree, 
+                                    const Model& model, 
+                                    int max_missing, 
+                                    double max_lambda,
+                                    int num_threads);
 
 }
 

@@ -5,7 +5,9 @@
 #include <atomic>
 #include <tuple>
 #include <memory>
-#include "plugin.hpp"
+#include <thread>
+#include <tbb/tbb.h>
+#include "model.hpp"
 #include "augment_tree.hpp"
 #include "model_helpers.hpp"
 #include "sbplx.hpp"
@@ -174,16 +176,43 @@ namespace emphasis {
   } // namespace augment
 
 
-  void augment_tree(const param_t& pars, const tree_t& input_tree, Model* model, int max_missing, double max_lambda, tree_t& pooled)
+  void augment_tree(const param_t& pars, const tree_t& input_tree, const Model& model, int max_missing, double max_lambda, tree_t& pooled)
   {
     pooled.resize(input_tree.size());
     std::copy(input_tree.cbegin(), input_tree.cend(), pooled.begin());
-    if (model->numerical_max_lambda()) {
-      do_augment_tree(pars, pooled, *model, max_missing, max_lambda);
+    if (model.numerical_max_lambda()) {
+      do_augment_tree(pars, pooled, model, max_missing, max_lambda);
     }
     else {
-      do_augment_tree_cont(pars, pooled, *model, max_missing, max_lambda);
+      do_augment_tree_cont(pars, pooled, model, max_missing, max_lambda);
     }
+  }
+
+
+  // returns one augmented tree per vpars
+  // failures results in empty tree
+  std::vector<tree_t> augment_trees(const std::vector<param_t>& vpars, const tree_t& input_tree, const Model& model, int max_missing, double max_lambda, int num_threads)
+  {
+    if (!model.is_threadsafe()) num_threads = 1;
+    num_threads = std::max(1, std::min(num_threads, static_cast<int>(std::thread::hardware_concurrency())));
+    tbb::task_arena arena(num_threads);
+    std::vector<tree_t> trees(vpars.size(), input_tree);
+    const size_t grainsize = vpars.size() / num_threads;
+    tbb::parallel_for(tbb::blocked_range<size_t>(0ull, vpars.size(), grainsize), [&](const tbb::blocked_range<size_t>& r) {
+      for (size_t i = r.begin(); i < r.end(); ++i) {
+        try {
+          if (model.numerical_max_lambda()) {
+            do_augment_tree(vpars[i], trees[i], model, max_missing, max_lambda);
+          }
+          else {
+            do_augment_tree_cont(vpars[i], trees[i], model, max_missing, max_lambda);
+          }
+        } catch (...) {
+          trees[i].clear();
+        }
+      }
+    });
+    return trees;
   }
 
 

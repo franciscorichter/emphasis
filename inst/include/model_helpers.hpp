@@ -34,7 +34,7 @@
 #include <thread>
 #include <numeric>
 #include <algorithm>
-#include "plugin.hpp"
+#include "model.hpp"
 
 
 #ifndef EMPHASIS_LOGSUM_LOWER_TRESHOLD
@@ -45,9 +45,23 @@
 #define EMPHASIS_LOGSUM_UPPER_TRESHOLD 10e+20
 #endif
 
+#define t_ext_tip 10e10     /* t_ext for present nodes */
+#define t_ext_extinct 0.0   /* t_ext for extinction nodes */
+
 
 namespace emphasis {
-
+  /* tree node */
+  struct node_t
+  {
+    double brts;
+    double n;         /* n[i] = number of species in [time_i-1, time_i) */
+    double t_ext;     /* emp_t_ext_tip for present-day species;  emp_t_ext_extinct for extinction nodes */
+    double pd;
+    int clade;        // required for sim_tree
+  };
+  
+  
+  
   namespace detail {
 
     static constexpr double huge = std::numeric_limits<double>::max();
@@ -184,6 +198,11 @@ namespace emphasis {
         }
       }
       return pd + (tm - prev_brts) * ni;   // remainder
+    }
+    
+    inline double calculate_pd2(double tm, const std::vector<node_t>& tree)
+    {
+      return calculate_pd(tm, static_cast<unsigned>(tree.size()), tree.data());
     }
 
   }

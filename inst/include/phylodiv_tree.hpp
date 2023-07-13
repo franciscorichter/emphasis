@@ -15,7 +15,6 @@
 #include <thread>
 #include <algorithm>
 
-
 namespace sim_tree {
 
   
@@ -89,7 +88,7 @@ namespace sim_tree {
   
       if (daughters.size() > 2) {
         // this should not happen normally.
-        for (int i = 0; i < daughters.size(); ++i) {
+        for (size_t i = 0; i < daughters.size(); ++i) {
           if (daughters[i] == to_remove) {
             daughters[i] = daughters.back();
             daughters.pop_back();
@@ -113,7 +112,7 @@ namespace sim_tree {
     std::array< double, 4> pars; // mu, lambda, B_n, B_p
   
     std::vector< branch > tree;
-    
+  
     breaks break_type;
   
     rnd_t rndgen;
@@ -127,7 +126,6 @@ namespace sim_tree {
       P = 0.f;
       t = 0.f;
       rndgen = rnd_t();
-      break_type = breaks::none;
     }
   
     float calculate_full_phylodiv(float t) {
@@ -160,7 +158,7 @@ namespace sim_tree {
      P = 0.f;
      
      float mu = pars[0];
-     
+
      break_type = breaks::none;
      
      while(true) {
@@ -170,6 +168,7 @@ namespace sim_tree {
          break_type = breaks::maxN_exceeded;
          break;
        }
+
        
        float spec_rate = pars[1] + pars[2] * N  +
                          ((P + N * (max_t - t) - t) / N) * pars[3];
@@ -178,6 +177,7 @@ namespace sim_tree {
        float total_rate = (spec_rate + mu ) * N;
   
        float next_event_time = t + rndgen.expon(total_rate);
+
        P += (t - prev_t) * N;
        
        //P = calculate_full_phylodiv(t);
@@ -229,7 +229,7 @@ namespace sim_tree {
        } else {
          t = max_t;
        }
-       
+     
        if (N1 < 1 || N2 < 1) {
          break_type = breaks::extinction;
          break;
@@ -251,6 +251,7 @@ namespace sim_tree {
     }
   
   
+
     double purge_tree_record(size_t focal_index) {
       double bt_removed = 0.f;
       auto label_removed = tree[focal_index].label;

@@ -9,7 +9,6 @@ em_cpp(
   init_pars,
   sample_size,
   maxN,
-  plugin,
   soc,
   max_missing,
   max_lambda,
@@ -20,6 +19,50 @@ em_cpp(
   copy_trees,
   rconditional = NULL
 )
+}
+\arguments{
+\item{brts}{vector of branching times}
+
+\item{init_pars}{vector of initial parameter files}
+
+\item{sample_size}{number of samples}
+
+\item{maxN}{maximum number of failed trees}
+
+\item{soc}{number of lineages at the root/crown (1/2)}
+
+\item{max_missing}{maximum number of species missing}
+
+\item{max_lambda}{maximum speciation rate}
+
+\item{lower_bound}{vector of lower bound values for optimization, should
+be equal in length to the vector of init_pars}
+
+\item{upper_bound}{vector of upper bound values for optimization, should
+be equal in length to the vector of init_pars}
+
+\item{xtol_rel}{relative tolerance for optimization}
+
+\item{num_threads}{number of threads used.}
+
+\item{copy_trees}{if set to true, the trees generated are returned as well}
+
+\item{rconditional}{R function that evaluates the GAM function.}
+}
+\value{
+a list with the following components: 
+\itemize{
+ \item{trees}{list of trees}
+ \item{rejected}{number of rejected trees}
+ \item{rejected_overruns}{number of trees rejected due to too large size}
+ \item{rejected_lambda}{number of trees rejected due to lambda errors}
+ \item{rejected_zero_weights}{number of trees rejected to zero weight}
+ \item{estimates}{vector of estimates}
+ \item{nlopt}{nlopt status}
+ \item{fhat}{vector of fhat values}
+ \item{time}{time elapsed}
+ \item{weights}{vector of weights}
+}
 }
 \description{
 function to perform one step of the E-M algorithm
