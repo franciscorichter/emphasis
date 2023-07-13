@@ -3,6 +3,46 @@
 #include <Rcpp.h>
 
 // [[Rcpp::export]]
+Rcpp::NumericMatrix simulate_single_pd_tree_cpp(Rcpp::NumericVector pars,
+                            float max_t,
+                            float max_N,
+                            int max_tries) {
+  
+  sim_tree::phylodiv simulation(max_t,  {pars[0], pars[1], pars[2], pars[3]}, max_N);
+  
+  bool is_extinct = simulation.simulate_tree_ltable();
+  size_t tries = 0;
+  while(is_extinct) {
+    is_extinct = simulation.simulate_tree_ltable();
+    if (simulation.ltable.size() == 2) is_extinct = true;
+    tries++;
+    if (tries > max_tries) break;
+  }
+  
+  
+  auto tree = simulation.ltable;
+  Rcpp::NumericMatrix out(tree.size(), 4);
+  size_t cnt = 0;
+  
+  auto crown_age = simulation.t;
+  
+  for (const auto& i : tree) {
+    out(cnt, 0) = crown_age - i.start_date;
+    out(cnt, 1) = i.parent_label;
+    out(cnt, 2) = i.label;
+    
+    auto end_date = i.end_date;
+    if (end_date >= 0.0) end_date = crown_age - end_date;
+    
+    out(cnt, 3) = end_date;
+    cnt++;
+  }
+  
+  return out;
+}
+
+
+// [[Rcpp::export]]
 Rcpp::NumericMatrix simulate_pd_trees_cpp(Rcpp::NumericVector pars,
                                  float max_t,
                                  size_t repl,
