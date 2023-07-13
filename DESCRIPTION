@@ -1,8 +1,8 @@
 Package: emphasis
 Type: Package
-Title: Expectation Maximization on Phylogenetic Applications with Simulations and Importance Sampling
+Title: Evolutionary Modeling on Phylogenetic Applications with Simulations and Importance Sampling
 Version: 0.4
-Authors@R: c(person("Francisco","Richter", email = "f.richter@rug.nl", role = c("aut", "cre")),
+Authors@R: c(person("Francisco","Richter", email = "richtf@usi.ch", role = c("aut", "cre")),
                 person("Thijs","Janzen", email = "t.janzen@rug.nl", role=c("ctb")),
                 person("Hanno","Hildenbrandt", email = "h.hildenbrandt@rug.nl", role = c("ctb")))
 Description: Set of statistical tools for the study of diversification of species and ecological drivers of macro-evolution.

@@ -1,6 +1,6 @@
-# EMPHASIS: Expectation Maximization on PHylogenetic Analysis with Simulations and Importance Sampling.
+# EMPHASIS: Evolutionary Modeling on PHylogenetic Analysis with Simulations and Importance Sampling.
 
-This package provides the code to apply the emphasis framework for study of species diversification processes. 
+This package provides the code to perform statistical inference on phylogenetic trees. 
 
 ### Installation. 
 
