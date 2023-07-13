@@ -2,26 +2,23 @@
 % Please edit documentation in R/pd_sim.R
 \name{sim_tree_pd_cpp}
 \alias{sim_tree_pd_cpp}
-\title{simulation function to simulate a tree under the pd model, returning whether
-the tree went extinct before max_t or not. 
-This function does not return a phylogenetic tree to improve computation
-speed.}
+\title{simulation function to simulate a tree under the pd model}
 \usage{
-sim_tree_pd_cpp(pars, max_t, num_repl = 1, max_lin)
+sim_tree_pd_cpp(pars, max_t, max_lin = 1e+06, max_tries = 100)
 }
 \arguments{
 \item{pars}{parameter vector with c(mu, lambda_0, beta_N, beta_P)}
 
 \item{max_t}{crown age}
 
-\item{num_repl}{number of replicates}
-
 \item{max_lin}{number of lineages past which non-extinction is assumed.}
+
+\item{max_tries}{maximum number of tries to get a non-extinct tree.}
 }
 \value{
-a tibble with five columns: 1) whether or not the tree went extinct,
-2) the time of extinction (equal to the crown #' age in the absence of 
-extinction), 3) the number of tips,4) the phylogenetic diversity at the
+list with: 1) tes - reconstructed tree, 2) tas - tree with extinct
+lineages, 3) L = Ltable and 4) brts - branching times of the reconstructed
+tree
 }
 \description{
 super fast function to simulate the process of diversification
