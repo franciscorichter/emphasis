@@ -19,7 +19,7 @@ generatePhyloDDD <- function(n_trees, lambda0_c,mu_c,carrying_capacity_c,age1,dd
     vec.param <- c(lambda0_sample,mu_sample,as.integer(carrying_capacity_sample),as.integer(crown_time_sample))
     sim.param <- c(lambda0_sample,mu_sample,as.integer(carrying_capacity_sample))
     
-    outputs <-  DDD:::dd_sim(pars = sim.param, age = crown_time_sample, ddmodel = ddmodel1)
+    outputs <-  DDD::dd_sim(pars = sim.param, age = crown_time_sample, ddmodel = ddmodel1)
     
     tree  <- outputs[[1]]
     extree  <- outputs[[2]]
