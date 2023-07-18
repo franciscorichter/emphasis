@@ -132,7 +132,7 @@ sim_tree_pd_R <- function(pars, max_t) {
 # the simulation was stopped (options: no break (none), exceeded max_t, 
 # extinction, or exceeded max_lin).
 #' @export
-sim_tree_pd_cpp <- function(pars, max_t, num_repl = 1, max_lin) {
+sim_tree_is_extinct_pd <- function(pars, max_t, num_repl = 1, max_lin) {
     result <- simulate_pd_trees_cpp(pars, max_t, num_repl, max_lin)
     colnames(result) <- c("is_extinct", "t", "N", "P", "break_condition")
     result <- tibble::as_tibble(result)
@@ -155,7 +155,7 @@ sim_tree_pd_cpp <- function(pars, max_t, num_repl = 1, max_lin) {
 #' lineages, 3) L = Ltable and 4) brts - branching times of the reconstructed
 #' tree
 #' @export
-sim_single_tree_pd_cpp <- function(pars,
+sim_tree_pd_cpp <- function(pars,
                                    max_t,
                                    max_lin = 1e6,
                                    max_tries = 100) {

@@ -14,7 +14,6 @@ Rcpp::NumericMatrix simulate_single_pd_tree_cpp(Rcpp::NumericVector pars,
   size_t tries = 0;
   while(is_extinct) {
     is_extinct = simulation.simulate_tree_ltable();
-    if (simulation.ltable.size() == 2) is_extinct = true;
     tries++;
     if (tries > max_tries) break;
   }
