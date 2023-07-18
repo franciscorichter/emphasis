@@ -16,8 +16,8 @@ generatePhyloDDD <- function(n_trees, mu_c,lambda0_c,beta_c,age1, ss_check = TRU
     beta_sample <- runif(1, min = beta_c[1], max = beta_c[2])
     crown_time_sample <- runif(1, min = age1[1], max = age1[2])
     
-    vec.param <- c(lambda0_sample,mu_sample,beta_sample,crown_time_sample)
-    sim.param <- c(lambda0_sample,mu_sample,beta_sample,0)
+    vec.param <- c(mu_sample,lambda0_sample,beta_sample,crown_time_sample)
+    sim.param <- c(mu_sample,lambda0_sample,beta_sample,0)
     
     #outputs <-  DDD::dd_sim(pars = sim.param, age = crown_time_sample, ddmodel = ddmodel1)
     outputs <- sim_single_tree_pd_cpp(pars = sim.param,
