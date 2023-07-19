@@ -163,8 +163,8 @@ sim_tree_pd_cpp <- function(pars,
                                         max_t,
                                         max_lin,
                                         max_tries)
-  if (nrow(result) < 2) {
-    stop("could not simulate tree")
+  if (nrow(result) <= 2) {
+    stop("could not simulate tree, all trees went extinct, try increasing max tries")
   }
   tes <- DDD::L2phylo(result, dropextinct = TRUE)
   tas <- DDD::L2phylo(result, dropextinct = FALSE)
