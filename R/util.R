@@ -268,3 +268,17 @@ get.time <- function(time,
         ti <- ti / 3600
     return(ti)
 }
+
+#' function to rescale the branching times of a phylogenetic tree
+#' @param phy phy object
+#' @param new_crown_age new crown age of the phylogenetic tree, set to 1 by 
+#' default
+#' @return rescaled phylogeny as a phy object
+#' @export
+rescale_tree <- function(phy, new_crown_age = 1) {
+    ltable <- DDD::phylo2L(phy)
+    ltable[, 1] <- new_crown_age * ltable[, 1] / max(ltable[, 1])
+    new_phy <- DDD::L2phylo(ltable)
+    return(new_phy)
+}
+

@@ -2,6 +2,7 @@ context("basic utility")
 
 test_that("usage", {
   # create reconstructed bd tree
+  
   set.seed(42)
   focal_tree <- ape::rphylo(n = 100, birth = 1, death = 0.4, fossils = FALSE)
   brts <- ape::branching.times(focal_tree)
@@ -27,23 +28,24 @@ test_that("usage", {
                               num_threads = 4) # only one for CRAN/CI
 
   testthat::expect_equal(length(ax$parameters), num_it)
-
-  testthat::expect_output(
-    ml_estim <- DDD::bd_ML(brts = brts)
-  )
   emphasis_estim <- tail(ax$min_pars, 1)
-
-  div_ml <- ml_estim$lambda0 - ml_estim$mu0
-  div_em <- emphasis_estim[[2]] - emphasis_estim[[1]]
-
-  testthat::expect_equal(div_ml, div_em, tolerance = 0.1)
-
   # next two parameters were not fitted:
   testthat::expect_equal(emphasis_estim[[3]], 0)
   testthat::expect_equal(emphasis_estim[[4]], 0)
+  
+  if (requireNamespace("DDD")) {
+  
+    testthat::expect_output(
+      ml_estim <- DDD::bd_ML(brts = brts)
+    )
 
-  ll_ml <- ml_estim$loglik
-  ll_em <- -tail(ax$minloglik, 1)
-  testthat::expect_equal(ll_ml, ll_em, tolerance = 1)
+    div_ml <- ml_estim$lambda0 - ml_estim$mu0
+    div_em <- emphasis_estim[[2]] - emphasis_estim[[1]]
+  
+    testthat::expect_equal(div_ml, div_em, tolerance = 0.1)
 
+    ll_ml <- ml_estim$loglik
+    ll_em <- -tail(ax$minloglik, 1)
+    testthat::expect_equal(ll_ml, ll_em, tolerance = 1)
+  }
 })
