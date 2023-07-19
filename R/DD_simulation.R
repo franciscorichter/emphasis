@@ -1,29 +1,35 @@
-generatePhyloDDD <- function(n_trees, mu_c,lambda0_c,beta_c,age1, ss_check = TRUE){
+generatePhyloDDD <- function(n_trees, 
+                             mu_interval,
+                             lambda_interval,
+                             K_interval, 
+                             ss_check = TRUE){
   
   trees <- list()
   extrees <- list()
   Lmats <- list()
   brds_s <- list()
   
-  name.param <- c("mu", "lambda","beta","age") 
-  true.param <- vector(mode='list', length=4)
+  name.param <- c("mu", "lambda","K") 
+  true.param <- vector(mode='list', length=3)
   names(true.param) <- name.param
   
   while(length(trees) < n_trees){
     
-    lambda0_sample <- runif(1, min = lambda0_c[1], max = lambda0_c[2])
-    mu_sample <- runif(1, min = mu[1], max = mu[2])
-    beta_sample <- runif(1, min = beta_c[1], max = beta_c[2])
-    crown_time_sample <- runif(1, min = age1[1], max = age1[2])
+    lambda0_sample <- runif(1, min = lambda_interval[1], max = lambda_interval[2])
+    mu_sample <- runif(1, min = mu_interval[1], max = mu_interval[2])
+    k_sample <- runif(1, min = K_interval[1], max = K_interval[2])
     
-    vec.param <- c(lambda0_sample,mu_sample,beta_sample,crown_time_sample)
-    sim.param <- c(lambda0_sample,mu_sample,beta_sample,0)
+    beta_sample = (mu_sample-lambda0_sample)/k_sample
+    #crown_time_sample <- runif(1, min = age1[1], max = age1[2])
+    
+    vec.param <- c(mu_sample,lambda0_sample,beta_sample)
+    sim.param <- c(mu_sample,lambda0_sample,beta_sample,0)
     
     #outputs <-  DDD::dd_sim(pars = sim.param, age = crown_time_sample, ddmodel = ddmodel1)
-    outputs <- sim_single_tree_pd_cpp(pars = sim.param,
-                                           max_t = crown_time_sample,
-                                           max_lin = 1e+10,
-                                           max_tries = 100)
+    outputs <- simulate_single_pd_tree_cpp(pars = sim.param,
+                                           max_t = 1,
+                                           max_lin = 1e+7,
+                                           max_tries = 1)
     
     
     tree  <- outputs[[1]]
@@ -44,7 +50,7 @@ generatePhyloDDD <- function(n_trees, mu_c,lambda0_c,beta_c,age1, ss_check = TRU
       Lmats <- append(Lmats, list(Lmat))                    #
       brds_s <- append(brds_s, list(brds))                    #
       
-      for (i in 1:4){
+      for (i in 1:3){
         
         true.param[[i]] <- c(true.param[[i]], vec.param[i]) # save param.
         
