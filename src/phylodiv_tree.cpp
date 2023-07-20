@@ -3,7 +3,7 @@
 #include <Rcpp.h>
 
 // [[Rcpp::export]]
-Rcpp::NumericMatrix simulate_single_pd_tree_cpp(Rcpp::NumericVector pars,
+Rcpp::List simulate_single_pd_tree_cpp(Rcpp::NumericVector pars,
                             float max_t,
                             float max_N,
                             int max_tries) {
@@ -12,7 +12,8 @@ Rcpp::NumericMatrix simulate_single_pd_tree_cpp(Rcpp::NumericVector pars,
   
   bool is_extinct = simulation.simulate_tree_ltable();
   size_t tries = 0;
-  while(is_extinct) {
+  while (simulation.break_type == sim_tree::breaks::extinction ||
+         simulation.break_type == sim_tree::breaks::maxN_exceeded) {
     is_extinct = simulation.simulate_tree_ltable();
     tries++;
     if (tries > max_tries) break;
@@ -37,7 +38,15 @@ Rcpp::NumericMatrix simulate_single_pd_tree_cpp(Rcpp::NumericVector pars,
     cnt++;
   }
   
-  return out;
+  std::string status = "done";
+  if (simulation.break_type == sim_tree::breaks::extinction) status = "extinct";
+  if (simulation.break_type == sim_tree::breaks::maxN_exceeded) status = "too_large";
+  
+  Rcpp::List res;
+  res["Ltable"] = out;
+  res["status"] = status;
+  
+  return res;
 }
 
 

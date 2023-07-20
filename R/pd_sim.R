@@ -153,7 +153,8 @@ sim_tree_is_extinct_pd <- function(pars, max_t, num_repl = 1, max_lin) {
 #' @param max_tries maximum number of tries to get a non-extinct tree.
 #' @return list with: 1) tes - reconstructed tree, 2) tas - tree with extinct
 #' lineages, 3) L = Ltable and 4) brts - branching times of the reconstructed
-#' tree
+#' tree and 5) status of simulation, options 1) "extinct", 2) "too_large" or 3)
+#' "done".
 #' @export
 sim_tree_pd_cpp <- function(pars,
                             max_t,
@@ -164,19 +165,24 @@ sim_tree_pd_cpp <- function(pars,
                                         max_t,
                                         max_lin,
                                         max_tries)
-  if (nrow(result) <= 2) {
-    warning("could not simulate tree, all trees went extinct, try increasing max tries")
-    tes <- NULL
-    tas <- NULL
-    brts <- NULL
-    
-  } else {
-    tes <- DDD::L2phylo(result, dropextinct = TRUE)
-    tas <- DDD::L2phylo(result, dropextinct = FALSE)
-    brts = DDD::L2brts(result, dropextinct = TRUE)
+  tes <- NULL
+  tas <- NULL
+  brts <- NULL
+  
+  if (result$status == "extinct") {
+    warning("could not simulate tree, all trees went extinct, try increasing max_tries")
+  }
+  if (result$status == "too_large") {
+    warning("could not simulate tree, all trees were too large, try increasing max_lin")
+  }
+  if (result$status == "done") {
+    tes <- DDD::L2phylo(result$Ltable, dropextinct = TRUE)
+    tas <- DDD::L2phylo(result$Ltable, dropextinct = FALSE)
+    brts = DDD::L2brts(result$Ltable, dropextinct = TRUE)
   }
   
-  out = list(tes = tes, tas = tas, L = result, brts = brts)
+  out = list(tes = tes, tas = tas, L = result$Ltable, brts = brts,
+             status = result$status)
   return(out)
 }
 

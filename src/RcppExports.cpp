@@ -26,7 +26,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // simulate_single_pd_tree_cpp
-Rcpp::NumericMatrix simulate_single_pd_tree_cpp(Rcpp::NumericVector pars, float max_t, float max_N, int max_tries);
+Rcpp::List simulate_single_pd_tree_cpp(Rcpp::NumericVector pars, float max_t, float max_N, int max_tries);
 RcppExport SEXP _emphasis_simulate_single_pd_tree_cpp(SEXP parsSEXP, SEXP max_tSEXP, SEXP max_NSEXP, SEXP max_triesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
