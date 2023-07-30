@@ -13,7 +13,6 @@ Depends: R (>= 3.5.0),
          RcppParallel
 Imports: nloptr,
          ape,
-         apTreeshape,
          progress
 LinkingTo: Rcpp, 
            RcppParallel, 
