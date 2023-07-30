@@ -14,15 +14,10 @@ Depends: R (>= 3.5.0),
 Imports: nloptr,
          ape,
          apTreeshape,
-         ggplot2,
          progress
 LinkingTo: Rcpp, 
            RcppParallel, 
            nloptr,
            BH
-Suggests: TreeSim,
-          testthat (>= 3.0.0),
-          DDD,
-          tibble
 SystemRequirements: C++14
 RoxygenNote: 7.2.3

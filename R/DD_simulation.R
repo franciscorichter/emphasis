@@ -25,7 +25,7 @@ generatePhyloDDD <- function(n_trees,
     
     key = 1 
     while(key){
-      outputs <- sim.tree(pars = sim.param,
+      outputs <- emphasis:::sim.tree(pars = sim.param,
                                max_t = 1,
                                max_lin = 1e+6,
                                max_tries = 1)
