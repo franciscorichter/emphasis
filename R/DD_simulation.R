@@ -25,10 +25,15 @@ generatePhyloDDD <- function(n_trees,
     
     key = 1 
     while(key){
-      outputs <- emphasis:::sim.tree(pars = sim.param,
-                               max_t = 1,
-                               max_lin = 1e+6,
-                               max_tries = 1)
+      
+      outputs <- try(emphasis:::sim_tree_pd_cpp(pars = pars*max_t,
+                          max_t = 1,
+                          max_lin = max_lin,
+                          max_tries = max_tries),silent = TRUE)
+      #outputs <- emphasis:::sim.tree(pars = sim.param,
+       #                        max_t = 1,
+        #                       max_lin = 1e+6,
+         #                      max_tries = 1)
       if(is.list(outputs)){
         if(max(outputs$brts)==1) key = 0
       } 
@@ -57,6 +62,8 @@ generatePhyloDDD <- function(n_trees,
   
   return(out)
 }
+
+
 
 
 
