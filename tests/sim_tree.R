@@ -29,18 +29,4 @@ tree=sim.tree(pars = pars*max_t,
 
 tree
 
-sim.tree <- function(pars,
-                     max_t = 1,
-                     max_lin,
-                     max_tries){
-  it <- try(sim_tree_pd_cpp(pars = pars*max_t,
-                            max_t = 1,
-                            max_lin = max_lin,
-                            max_tries = max_tries),silent = TRUE)
-  if(class(it)!="try-error"){
-    result = it
-  }else{
-    result = NaN
-  }
-  return(result)
-}
+
