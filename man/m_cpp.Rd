@@ -7,7 +7,6 @@
 m_cpp(
   e_step,
   init_pars,
-  plugin,
   lower_bound,
   upper_bound,
   xtol_rel,
@@ -20,8 +19,6 @@ m_cpp(
 
 \item{init_pars}{vector of initial parameter values}
 
-\item{plugin}{string indicating plugin used, currently available: 'rpd1' and
-'rpd5c'}
 
 \item{lower_bound}{vector of lower bound values for optimization, should
 be equal in length to the vector of init_pars}

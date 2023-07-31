@@ -159,7 +159,7 @@ sim_tree_is_extinct_pd <- function(pars, max_t, num_repl = 1, max_lin) {
 sim_tree_pd_cpp <- function(pars,
                             max_t,
                             max_lin = 1e6,
-                            max_tries = 100) {
+                            max_tries = 100, useDDD=FALSE) {
 
   result <- simulate_single_pd_tree_cpp(pars,
                                         max_t,
@@ -175,15 +175,15 @@ sim_tree_pd_cpp <- function(pars,
   if (result$status == "too_large") {
     warning("could not simulate tree, all trees were too large, try increasing max_lin")
   }
-  if (result$status == "done") {
-    #tes <- DDD::L2phylo(result$Ltable, dropextinct = TRUE)
-    #tas <- DDD::L2phylo(result$Ltable, dropextinct = FALSE)
-    #brts = DDD::L2brts(result$Ltable, dropextinct = TRUE)
+  if (result$status == "done" & useDDD) {
+    tes <- DDD::L2phylo(result$Ltable, dropextinct = TRUE)
+    tas <- DDD::L2phylo(result$Ltable, dropextinct = FALSE)
+    brts = DDD::L2brts(result$Ltable, dropextinct = TRUE)
   }
   
-  #out = list(tes = tes, tas = tas, L = result$Ltable, brts = brts,
-   #          status = result$status)
-  out = result
+  out = list(tes = tes, tas = tas, L = result$Ltable, brts = brts,
+             status = result$status)
+  
   return(out)
 }
 
