@@ -90,7 +90,7 @@ generatePhyloDDD_minimal <- function(n_trees,
     outputs <- emphasis:::sim_tree_pd_cpp(pars = sim.param,
                                           max_t = 1,
                                           max_lin = 1e+6,
-                                          max_tries = 10)
+                                          max_tries = 100)
     
     trees <- append(trees, outputs)                    # save tree                   #
     
