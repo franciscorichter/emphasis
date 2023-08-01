@@ -68,7 +68,7 @@ generatePhyloDDD_minimal <- function(n_trees,
                                      lambda_interval,
                                      K_interval){
   
-  simulations <- list()
+  trees <- list()
   
   name.param <- c("lambda", "mu","K") 
   true.param <- vector(mode='list', length=3)
@@ -92,7 +92,7 @@ generatePhyloDDD_minimal <- function(n_trees,
                                           max_lin = 1e+6,
                                           max_tries = 10)
     
-    simulations <- append(simulations, outputs)                    # save tree                   #
+    trees <- append(trees, outputs)                    # save tree                   #
     
     for (i in 1:3){
       true.param[[i]] <- c(true.param[[i]], vec.param[i]) # save param.
@@ -103,7 +103,7 @@ generatePhyloDDD_minimal <- function(n_trees,
     
   }
   
-  out <- list("trees"    = simulations, "param"    = true.param)
+  out <- list("trees"    = trees, "param"    = true.param)
   
   return(out)
 }
