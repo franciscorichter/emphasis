@@ -92,7 +92,7 @@ generatePhyloDDD_minimal <- function(n_trees,
                                           max_lin = 1e+6,
                                           max_tries = 100)
     
-    trees <- append(trees, outputs)                    # save tree                   #
+    trees[[j]] <- outputs                    # save tree                   #
     
     for (i in 1:3){
       true.param[[i]] <- c(true.param[[i]], vec.param[i]) # save param.
