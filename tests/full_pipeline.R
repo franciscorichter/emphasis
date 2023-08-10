@@ -1,5 +1,5 @@
 #   Pipeline for full emphasis
-
+library(emphasis)
 ## Input 
 
 rm(list=ls())
@@ -11,16 +11,16 @@ load("~/Dropbox/Pancho/52 - EmphasisComplete/06-data/Phylogenies/FamilyAllTrees.
 clade = "Megapodiidae"
 brts = ape::branching.times(FamilyAllTrees$Megapodiidae$tree)
 
-num_iterations = 100
-num_points = 100
-max_missing = 2000
+num_iterations = 100000
+num_points = 1000
+max_missing = 20000
 lower_bound = c(0,0.5,-0.05,-0.05)
-upper_bound = c(0.5,1,0.05,0.05)
+upper_bound = c(0.5,2,0.05,0.05)
 maxN = 100
 max_lambda = 1000
 
 disc_prop = 0.75
-sd_vec = c(0.5,1,0.1,0.1)
+sd_vec = c(0.1,0.1,0.01,0.01)
 #alpha = sd_vec/n_it
 
 
@@ -41,8 +41,12 @@ est_de = emphasis_de(brts = brts,
             disc_prop = disc_prop,
             verbose = TRUE)
 
+save.image(file="results9Aug.RData")
 #### How to vizualize results 
-
+library(tidyr)
+library(purrr)
+library(dplyr)
+library(ggplot2)
 viz = viz_de(est_de)
 
 ### Prove how to calculate the GAM version 

@@ -200,6 +200,7 @@ emphasis_de <- function(brts,
                                      total = num_iterations)
   }
   fhatdiff <- c()
+  times <- Sys.time()
   for (k in 1:num_iterations) {
 
     dmval <- get_results(pars, input, num_threads, num_points)
@@ -262,6 +263,8 @@ emphasis_de <- function(brts,
   #    cat(" sd: ", sd_pars, "\n")
       pb$tick()
     }
+    
+  times  <- c(times,Sys.time())
   }
   total_time <- proc.time() - init_time
 
@@ -274,6 +277,7 @@ emphasis_de <- function(brts,
               "meanloglik" = mean_loglik,
               "min_pars" = min_pars,
               "mean_pars" = mean_pars,
-              "obtained_estim" = obtained_estim)
+              "obtained_estim" = obtained_estim,
+              "times" = times)
   return(out)
 }
