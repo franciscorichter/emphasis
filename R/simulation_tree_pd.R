@@ -159,7 +159,8 @@ sim_tree_is_extinct_pd <- function(pars, max_t, num_repl = 1, max_lin) {
 sim_tree_pd_cpp <- function(pars,
                             max_t,
                             max_lin = 1e6,
-                            max_tries = 100, useDDD=FALSE) {
+                            max_tries = 100, 
+                            useDDD=TRUE) {
 
   result <- simulate_single_pd_tree_cpp(pars,
                                         max_t,
@@ -220,5 +221,14 @@ sim_tree_pd_grid <- function(mu_vec,
   colnames(result) <- c("is_extinct", "t", "N", "P")
   result <- tibble::as_tibble(result)
   return(result)
+}
+
+
+simulate_single_pd_tree_cpp <- function(pars, max_t, max_N, max_tries) {
+  .Call('_emphasis_simulate_single_pd_tree_cpp', PACKAGE = 'emphasis', pars, max_t, max_N, max_tries)
+}
+
+simulate_pd_trees_cpp <- function(pars, max_t, repl, max_N) {
+  .Call('_emphasis_simulate_pd_trees_cpp', PACKAGE = 'emphasis', pars, max_t, repl, max_N)
 }
   

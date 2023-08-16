@@ -11,11 +11,11 @@ load("~/Dropbox/Pancho/52 - EmphasisComplete/06-data/Phylogenies/FamilyAllTrees.
 clade = "Megapodiidae"
 brts = ape::branching.times(FamilyAllTrees$Megapodiidae$tree)
 
-num_iterations = 100000
-num_points = 1000
+num_iterations = 50000
+num_points = 100
 max_missing = 20000
 lower_bound = c(0,0.5,-0.05,-0.05)
-upper_bound = c(0.5,2,0.05,0.05)
+upper_bound = c(0.5,2,0.01,0.03)
 maxN = 100
 max_lambda = 1000
 
@@ -30,18 +30,9 @@ sd_vec = c(0.1,0.1,0.01,0.01)
 
 ## How to use DE algorithm 
 
-est_de = emphasis_de(brts = brts,
-            num_iterations = num_iterations,
-            num_points = num_points,
-            max_missing = max_missing,
-            sd_vec = sd_vec,
-            lower_bound = lower_bound,
-            upper_bound = upper_bound,maxN = maxN,
-            max_lambda = max_lambda,
-            disc_prop = disc_prop,
-            verbose = TRUE)
 
-save.image(file="results9Aug.RData")
+
+#save.image(file="results9Aug.RData")
 #### How to vizualize results 
 library(tidyr)
 library(purrr)
