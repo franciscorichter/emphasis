@@ -6,60 +6,6 @@ generatePhyloPD <- function(n_trees,
                             max_lin = 1e+6,
                             max_tries = 1){
   
-  # Preallocate lists
-  trees <- vector("list", n_trees)
-  extrees <- vector("list", n_trees)
-  Lmats <- vector("list", n_trees)
-  brds_s <- vector("list", n_trees)
-  
-  name.param <- c("mu","lambda", "betaN","betaP")
-  true.param <- vector(mode='list', length=4)
-  names(true.param) <- name.param
-  
-  for(j in 1:n_trees){
-    
-    # Randomly sample parameter values
-    lambda_sample <- runif(1, lambda_interval[1], lambda_interval[2])
-    mu_sample <- runif(1, mu_interval[1], mu_interval[2])
-    betaN_sample <- runif(1, betaN_interval[1], betaN_interval[2])
-    betaP_sample <- runif(1, betaP_interval[1], betaP_interval[2])
-    sim.param <- c(mu_sample, lambda_sample, betaN_sample, betaP_sample)
-    
-    outputs <- tryCatch({
-      sim_tree_pd_cpp(pars = sim.param, 
-                      max_t = 1, 
-                      max_lin = max_lin, 
-                      max_tries = max_tries,useDDD = TRUE)
-    }, error = function(e) NULL)
-    
-    if (is.list(outputs) && max(outputs$brts) == 1) {
-      trees[[j]] <- outputs[[1]]
-      extrees[[j]] <- outputs[[2]]
-      Lmats[[j]] <- outputs[[3]]
-      brds_s[[j]] <- outputs[[4]]
-      for (i in 1:4) {
-        true.param[[i]] <- c(true.param[[i]], sim.param[i])
-      }
-    }
-    
-    # Print progress
-    svMisc::progress(j, n_trees, progress.bar = TRUE, init = (j == 1))
-  }
-  
-  # Package and return results
-  results = list(trees = trees, param = true.param, tas = extrees, L = Lmats, brts = brds_s)
-  return(results)
-}
-
-
-generatePhyloPD_old <- function(n_trees,
-                            mu_interval,
-                            lambda_interval,
-                            betaN_interval,
-                            betaP_interval,
-                            max_lin = 1e+6,
-                            max_tries = 1){
-  
   trees <- list()
   extrees <- list()
   Lmats <- list()
