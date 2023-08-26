@@ -5,7 +5,7 @@
 library(svMisc)
 
 # Parameters for generatePhyloPD
-n_trees_desired <- 10000
+n_trees_desired <- 100
 
 mu_interval <- c(0, 0.5)
 lambda_interval <- c(0.5, 3)

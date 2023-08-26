@@ -30,13 +30,16 @@ e_cpp <- function(brts, init_pars, sample_size, maxN, soc, max_missing, max_lamb
   .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads)
 }
 
-augmentPD <- function(brts, pars, maxN, max_missing, lower_bound, upper_bound) {
+augmentPD <- function(phylo, pars, maxN, max_missing, lower_bound, upper_bound) {
     num_threads=1
     sample_size = 1
     init_pars = pars
     soc = 2 
     max_lambda = max_missing*100
     xtol_rel = 0.00001
+    brts = ape::branching.times(phylo)
+    # brts = sort(max(brts) - brts)
+    # brts = brts[-1]
   .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads)
 }
 

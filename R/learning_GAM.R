@@ -6,8 +6,7 @@ AugmentMultiplePhyloPD <- function(phylo,
                            betaP_interval,
                            max_lin = 1e+6,
                            max_tries = 1){
-  
-  brts = sort(ape::branching.times(phylo))
+
   # Preallocate lists
   trees <- vector("list", n_trees)
   rejected_overruns <- vector("list", n_trees)
@@ -32,7 +31,7 @@ AugmentMultiplePhyloPD <- function(phylo,
     sim.param <- c(mu_sample, lambda_sample, betaN_sample, betaP_sample)
     
     outputs <- try({
-      augmentPD(brts = brts,
+      augmentPD(phylo = phylo,
             pars = sim.param,
             maxN = max_tries,
             max_missing = max_lin,
