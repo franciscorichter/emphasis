@@ -282,3 +282,67 @@ rescale_tree <- function(phy, new_crown_age = 1) {
     return(new_phy)
 }
 
+
+
+
+# Compute (GPD) for an ultrametric phylogenetic tree
+GPD_improved <- function(tree, tm) {
+  # Check if the tree data frame has the required columns
+  if (!all(c("brts", "parent", "child") %in% names(tree))) {
+    stop("The input tree data frame must have columns: 'brts', 'parent', 'child'")
+  }
+  
+  # Initialize variables
+  num_rows <- nrow(tree)
+  child_names <- as.character(tree$child)
+  parent_names <- as.character(tree$parent)
+  species_names <- child_names
+  gpd_matrix <- matrix(0, ncol = num_rows, nrow = num_rows)
+  dimnames(gpd_matrix) <- list(species_names, species_names)
+  species_indices <- as.list(1:num_rows)
+  
+  # Loop through the tree nodes to fill the GPD matrix
+  for (i in seq_len(num_rows)) {
+    parent_set <- species_indices[[which(species_names == parent_names[i])]]
+    child_set <- species_indices[[which(species_names == child_names[i])]]
+    gpd_matrix[parent_set, child_set] <- tm - tree$brts[i]
+    species_indices[[which(species_names == parent_names[i])]] <- c(parent_set, child_set)
+  }
+  
+  # Make the GPD matrix symmetric
+  gpd_matrix <- gpd_matrix + t(gpd_matrix)
+  
+  return(gpd_matrix)
+}
+
+
+# Compute the phylogenetic distance matrix for an ultrametric tree
+computePhyloDistanceMatrix <- function(tree, tm) {
+  # Validate that the tree data frame has the required columns
+  if (!all(c("brts", "parent", "child") %in% names(tree))) {
+    stop("The input tree data frame must have columns: 'brts', 'parent', 'child'")
+  }
+  
+  # Initialize variables
+  num_rows <- nrow(tree)
+  child_names <- as.character(tree$child)
+  parent_names <- as.character(tree$parent)
+  species_names <- child_names
+  phylo_distance_matrix <- matrix(0, ncol = num_rows, nrow = num_rows)
+  dimnames(phylo_distance_matrix) <- list(species_names, species_names)
+  species_indices <- as.list(1:num_rows)
+  
+  # Loop through the tree nodes to fill the phylogenetic distance matrix
+  for (i in seq_len(num_rows)) {
+    parent_set <- species_indices[[which(species_names == parent_names[i])]]
+    child_set <- species_indices[[which(species_names == child_names[i])]]
+    phylo_distance_matrix[parent_set, child_set] <- tm - tree$brts[i]
+    species_indices[[which(species_names == parent_names[i])]] <- c(parent_set, child_set)
+  }
+  
+  # Make the phylogenetic distance matrix symmetric
+  phylo_distance_matrix <- phylo_distance_matrix + t(phylo_distance_matrix)
+  
+  return(phylo_distance_matrix)
+}
+
