@@ -31,9 +31,9 @@ compute_phylo_distance_matrix <- function(tree) {
 }
 
 # Create an example tree
-tree_newick <- "(((A:1,B:1):1,C:2):1,D:3);"
+tree_newick <- "(((A:1,B:1):1,C:2):1,(D:1.5,(E:0.5,F:0.5):1):1.5);"
 tree <- read.tree(text = tree_newick)
-
+plot(tree)
 # Compute the phylogenetic distance matrix
 df <- compute_phylo_distance_matrix(tree)
 print(df / 2)
