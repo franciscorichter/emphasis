@@ -10,6 +10,21 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// generateNonHomogeneousExpCpp
+NumericVector generateNonHomogeneousExpCpp(int num_variates, NumericMatrix covariates, NumericVector parameters, double start_time, double max_time);
+RcppExport SEXP _emphasis_generateNonHomogeneousExpCpp(SEXP num_variatesSEXP, SEXP covariatesSEXP, SEXP parametersSEXP, SEXP start_timeSEXP, SEXP max_timeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type num_variates(num_variatesSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type covariates(covariatesSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type parameters(parametersSEXP);
+    Rcpp::traits::input_parameter< double >::type start_time(start_timeSEXP);
+    Rcpp::traits::input_parameter< double >::type max_time(max_timeSEXP);
+    rcpp_result_gen = Rcpp::wrap(generateNonHomogeneousExpCpp(num_variates, covariates, parameters, start_time, max_time));
+    return rcpp_result_gen;
+END_RCPP
+}
 // loglikelihood
 Rcpp::List loglikelihood(const std::vector<double>& pars, const Rcpp::List& trees, const Rcpp::NumericVector& logg, const std::string& plugin, const int num_rejected);
 RcppExport SEXP _emphasis_loglikelihood(SEXP parsSEXP, SEXP treesSEXP, SEXP loggSEXP, SEXP pluginSEXP, SEXP num_rejectedSEXP) {
@@ -176,6 +191,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_emphasis_generateNonHomogeneousExpCpp", (DL_FUNC) &_emphasis_generateNonHomogeneousExpCpp, 5},
     {"_emphasis_loglikelihood", (DL_FUNC) &_emphasis_loglikelihood, 5},
     {"_emphasis_simulate_single_pd_tree_cpp", (DL_FUNC) &_emphasis_simulate_single_pd_tree_cpp, 4},
     {"_emphasis_simulate_pd_trees_cpp", (DL_FUNC) &_emphasis_simulate_pd_trees_cpp, 4},
