@@ -19,9 +19,3 @@ The computed rate value.
 This function calculates the rate of a non-homogeneous exponential process
 given a set of covariates and corresponding parameters.
 }
-\examples{
-covariates_example <- c(1, 2, 3)
-parameters_example <- c(0.1, -0.5, 0.3, -0.2)
-ExponentialRate(covariates_example, parameters_example)
-
-}

@@ -27,19 +27,10 @@ time-dependent.}
 }
 \value{
 A numeric vector of generated variates.
+
+print(generated_variates)
 }
 \description{
 This function generates random variates for a non-homogeneous exponential
 distribution using a thinning algorithm.
-}
-\examples{
-num_variates <- 5
-covariates_example <- matrix(seq(0, 10, length.out = 100), ncol = 1)
-parameters_example <- c(0.2, -0.01)
-generated_variates <- generateNonHomogeneousExp(num_variates, 
-                                                covariates_example, 
-                                                parameters_example, 
-                                                0, 10)
-print(generated_variates)
-
 }
