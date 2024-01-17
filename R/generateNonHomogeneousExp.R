@@ -16,7 +16,7 @@
 #' print(generated_variates)
 #'
 #' @export
-generateNonHomogeneousExp <- function(num_variates, covariates, parameters, start_time, max_time) {
+generateNonHomogeneousExp <- function(num_variates, rate_func, start_time, max_time) {
   if (max_time <= start_time) {
     stop("'max_time' must be greater than 'start_time'.")
   }
@@ -26,21 +26,15 @@ generateNonHomogeneousExp <- function(num_variates, covariates, parameters, star
   while (length(variates) < num_variates) {
     # Find the maximum rate over the interval
     time_points <- seq(start_time, max_time, length.out = 100)
-    rate_values <- sapply(time_points, function(t) {
-      updated_covariates <- covariates
-      updated_covariates[, ncol(covariates)] <- t  # Update time-dependent covariate
-      ExponentialRate(updated_covariates, parameters)
-    })
+    rate_values <- sapply(time_points, function(t) rate_func(t))
     max_rate <- max(rate_values)
     
     # Generate a candidate event time
     candidate_time <- start_time + rexp(1, max_rate)
-    
+    print(length(variates))
     if (candidate_time < max_time) {
       # Evaluate the true rate at the candidate time
-      updated_covariates <- covariates
-      updated_covariates[, ncol(covariates)] <- candidate_time
-      true_rate <- ExponentialRate(updated_covariates, parameters)
+      true_rate <- rate_func(candidate_time)
       
       # Accept or reject the candidate time
       if (runif(1) < true_rate / max_rate) {
@@ -50,6 +44,44 @@ generateNonHomogeneousExp <- function(num_variates, covariates, parameters, star
   }
   
   return(variates)
+}
+
+
+nhExpRand <- function(n, rate_func, now = 0, tMax = Inf) {
+  if (!is.function(rate_func)) {
+    stop("rate_func must be a function.")
+  }
+  if (tMax == Inf) {
+    stop("Need a valid tMax for computation")
+  }
+  if (now < 0) {
+    stop("now must be greater than or equal to 0")
+  }
+  
+  vars <- numeric(n)  # Initialize the output vector
+  
+  for (i in 1:n) {
+    p <- runif(1)  # Generate a uniform random number
+    f <- Vectorize(function(t) {
+      1 - p - exp(-integrate(Vectorize(function(x) rate_func(x)), lower = now, upper = t, 
+                             subdivisions = 2000, stop.on.error = FALSE)$value)
+    })
+    vars[i] <- suppressWarnings(uniroot(f, c(now, tMax), extendInt = "yes", tol = 0.0001)$root)
+  }
+  
+  return(vars)
+}
+
+
+rate_t <- function(t, params, cov_funcs, use_exponential = FALSE) {
+  cov_values <- sapply(cov_funcs, function(f) f(t))
+  linear_combination <- sum(params * c(1, cov_values))
+  
+  if (use_exponential) {
+    return(exp(linear_combination))
+  } else {
+    return(linear_combination)
+  }
 }
 
 

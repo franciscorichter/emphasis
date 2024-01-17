@@ -160,6 +160,10 @@ emphasis_de <- function(brts,
                         verbose = FALSE,
                         num_threads = 1) {
 
+  if (!is.numeric(lower_bound) || !is.numeric(upper_bound)) {
+    stop("lower_bound and upper_bound must be numeric vectors.")
+  }
+  
   if (length(upper_bound) != length(lower_bound)) {
     stop("lower bound and upper bound vectors need to be same length")
   }
@@ -167,6 +171,8 @@ emphasis_de <- function(brts,
   if (length(upper_bound) != length(sd_vec)) {
     stop("sd vector is not adequate length")
   }
+  
+  
 
   init_time <- proc.time()
 
@@ -190,15 +196,11 @@ emphasis_de <- function(brts,
   rejl_count <- rejo_count <- NULL
 
   min_loglik <- c()
-  min_pars <- c()
   mean_loglik <- c()
-  mean_pars <- c()
   
-
-  if (verbose) {
-    pb <- progress::progress_bar$new(format = "Progress: [:bar] :percent",
-                                     total = num_iterations)
-  }
+  min_pars <- matrix(nrow=num_iterations, ncol=length(lower_bound))
+  mean_pars <- matrix(nrow=num_iterations, ncol=length(lower_bound))
+  
   fhatdiff <- c()
   times <- Sys.time()
   for (k in 1:num_iterations) {
@@ -223,12 +225,16 @@ emphasis_de <- function(brts,
 
     # if there were any stopped simulations due to max_lambda constrain
     if (sum(rejl[fails]) > 0) {
-      input$max_lambda <- input$max_lambda + 100
+      #increase_factor_lambda <- 1 + sum(rejl[fails]) / length(fails)
+      increase_factor_lambda <- 1.1
+      input$max_lambda <- input$max_lambda * increase_factor_lambda
       rejl_count <- c(rejl_count, k)
     }
 
     if (sum(rejo[fails]) > 0) {
-      input$max_missing <- input$max_missing + 1000
+     # increase_factor_missing <- 1 + sum(rejo[fails]) / length(fails)
+      increase_factor_missing <- 1.1
+      input$max_missing <- input$max_missing * increase_factor_missing
       rejo_count <- c(rejo_count, k)
     }
 
@@ -240,11 +246,11 @@ emphasis_de <- function(brts,
     ## DE1
     minval <- which.min(vals)
     min_loglik <- c(min_loglik, vals[minval])
-    min_pars <- rbind(min_pars, as.numeric(pars[minval, ]))
+    min_pars[k,] <- as.numeric(pars[minval, ])
 
     ## DE1b
     mean_loglik <- c(mean_loglik, mean(vals))
-    mean_pars <- rbind(mean_pars, colMeans(pars[1:4]))
+    mean_pars[k,] <- colMeans(pars[1:4])
 
     ## Saving variation in the estimations
     # sd_pars <- apply(pars, 2, stats::sd)
@@ -257,12 +263,29 @@ emphasis_de <- function(brts,
     sd_vec <- sd_vec - alpha
 
     if (verbose) {
-   #   cat("iteration: ", k, " par estim: ")
-  #    last_min_pars <- min_pars[nrow(min_pars), ]
-  #    cat(last_min_pars)
-  #    cat(" sd: ", sd_pars, "\n")
-      pb$tick()
+      # Display iteration number
+      cat(sprintf("Iteration: %d/%d\n", k, num_iterations))
+      
+      # Display summary statistics
+      cat(sprintf("Minimum Log-Likelihood: %f\n", min_loglik[length(min_loglik)]))
+      cat(sprintf("Mean Log-Likelihood: %f\n", mean_loglik[length(mean_loglik)]))
+      
+      # Display parameter adjustments, if any
+      if (length(rejl_count) > 0 && tail(rejl_count, n=1) == k) {
+        cat(sprintf("Increased max_lambda to %f\n", input$max_lambda))
+      }
+      if (length(rejo_count) > 0 && tail(rejo_count, n=1) == k) {
+        cat(sprintf("Increased max_missing to %f\n", input$max_missing))
+      }
+      
+      # Display time taken for the current iteration
+      cat(sprintf("Time for iteration: %f seconds\n", difftime(Sys.time(), times[length(times)], units="secs")))
+      
+      # Update progress bar
+     
+      flush.console()
     }
+    
     
   times  <- c(times,Sys.time())
   }
