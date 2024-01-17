@@ -23,10 +23,10 @@ simulate_evolution <- function(N_max, spec_pars, ext_pars, max_t, ...) {
     event = sample(c(0,1),1,prob=c(sum(ext_rates)/sum(ext_rates+spe_rates),sum(spe_rates)/sum(ext_rates+spe_rates)))
     if(event==0){#extinction
       species = sample(1:nrow(E),prob=ext_rates)
-      E =
+      E = updateE(E=E,event="speciation",species=species)
     }else{ #speciation
       parent = sample(1:nrow(E),prob=ext_rates)
-      E =
+      E = updateE(E=E,event="extinction",species=parent)
     }
       
     n <- nrow(E)
@@ -124,4 +124,55 @@ handle_extinction <- function(E, extinct_species) {
 rate_diversity <- function(pars, covariates, g = function(x) x){
   rate =  g(sum(pars * c(1,covariates)))
   return(rate)
+}
+
+
+updateE_extant <- function(E,event,species,event_time){
+  if(event == "speciation"){
+    new_species = rep(0,nrow(E))
+    new_species[species] = event_time
+    E = cbind(E,new_species)
+    E = rbind(E,E[,ncol(E)])
+  }
+  if(event == "extinction"){
+    ext_species = E[species,]
+    heritage = which(E[species,]>0)
+    if(is.null(heritate)){
+      E = E[-species,-species]
+    }else{
+      mca_time = max(E[species,])
+      mca = which(E[species,]==mca_time)
+      E[mca,heritage] = E[species,heritage]
+      E = E[-species,-species]
+    }
+  }
+  return(E)
+}
+
+
+updateE_extant <- function(E, event, species, event_time) {
+  if (event == "speciation") {
+    # Add a new column for the new species
+    new_species = rep(0, nrow(E))
+    new_species[species] = event_time
+    E = cbind(E, new_species)
+    # Add a new row representing the new species
+    new_species_row = rep(0, ncol(E))
+    new_species_row[ncol(E)] = event_time
+    E = rbind(E, new_species_row)
+  } else if (event == "extinction") {
+    # Handling extinction
+    heritage = which(E[species, ] > 0)
+    if (length(heritage) == 0) {
+      # If no heritage, remove the species row and column
+      E = E[-species, -species]
+    } else {
+      # Find the most common ancestor and update its heritage
+      mca_time = max(E[species, heritage])
+      mca = which(E[, species] == mca_time)
+      E[mca, heritage] = E[species, heritage]
+      E = E[-species, -species]
+    }
+  }
+  return(E)
 }
