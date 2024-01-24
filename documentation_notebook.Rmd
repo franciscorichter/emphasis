@@ -1,0 +1,50 @@
+---
+title: "Emphasis Package Development"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(Emphasis) # Load the Emphasis package
+```
+
+# Introduction
+
+This notebook is dedicated to the development, documentation, and maintenance of the 'Emphasis' software package, focusing on statistical inference on phylogenetic trees.
+
+# Example Analysis
+
+Here, we can include examples of how the Emphasis package is used for phylogenetic analysis.
+
+```{r augmentation}
+
+
+n_trees <- 10000
+
+mu_interval <- c(0, 0.5)
+lambda_interval <- c(0.5, 3)
+betaN_interval <- c(-0.02, 0.02) 
+betaP_interval <- c(-0.02, 0.02) 
+
+max_lin = 10000
+max_tries = 100
+
+#load("FamilyAllTrees.RData")
+#FamilyBirdTrees
+j=88
+phylo = FamilyBirdTrees[[j]]$tree
+
+# Call the function
+results <- AugmentMultiplePhyloPD(phylo = phylo,
+                                  n_trees = n_trees,
+                                  mu_interval = mu_interval,
+                                  lambda_interval = lambda_interval,
+                                  betaN_interval = betaN_interval,
+                                  betaP_interval =betaP_interval,
+                                  max_lin = max_lin,
+                                  max_tries = max_tries)
+
+
+
+```
+

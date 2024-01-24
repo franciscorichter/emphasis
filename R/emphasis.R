@@ -35,8 +35,6 @@
 #' @rawNamespace import(Rcpp)
 #' @rawNamespace importFrom(RcppParallel, RcppParallelLibs)
 emphasis <- function(brts,
-                     init_par,
-                     soc = 2,
                      model,
                      lower_bound = numeric(0),
                      upper_bound = numeric(0),
@@ -60,8 +58,6 @@ emphasis <- function(brts,
   if (length(upper_bound) == 0) upper_bound <- rep(Inf, length(model$pars))
  # if (NULL != conditional) stopifnot(is.function(conditional))
   
-
-
   if (class(brts) == "phylo") {
     cat("You have provided the full phylogeny instead of the branching times\n")
     cat("Emphasis will extract the branching times for your convenience\n")
@@ -78,7 +74,7 @@ emphasis <- function(brts,
   if (verbose) cat("Starting initial parameter search phase using DE...\n")
   est_de <- emphasis_de(brts = brts, num_iterations = 10, num_points = 100,
                         max_missing = max_missing, sd_vec =  rep(0.5,times=length(lower_bound)), lower_bound = lower_bound,
-                        upper_bound = upper_bound, maxN = max_lambda, max_lambda = max_lambda,
+                        upper_bound = upper_bound, maxN = max_lambda*100, max_lambda = max_lambda,
                         disc_prop = 0.75, verbose = verbose)
   
   pars <- colMeans(est_de$min_pars)

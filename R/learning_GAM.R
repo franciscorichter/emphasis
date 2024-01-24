@@ -1,3 +1,23 @@
+#' Augment Multiple Phylogenetic Trees with Parameter Diversity
+#'
+#' This function simulates and augments phylogenetic data across multiple trees 
+#' using parameter sampling and the augmentPD function.
+#'
+#' @param phylo A phylogenetic tree object.
+#' @param n_trees Number of trees to simulate.
+#' @param mu_interval Interval for sampling mu parameter.
+#' @param lambda_interval Interval for sampling lambda parameter.
+#' @param betaN_interval Interval for sampling betaN parameter.
+#' @param betaP_interval Interval for sampling betaP parameter.
+#' @param max_lin Maximum number of lineages (default 1e+6).
+#' @param max_tries Maximum number of tries for augmentation (default 1).
+#' @return A list containing the generated trees, parameters, rejection reasons,
+#'         timings, and log-likelihood estimations.
+#' @examples
+#' # Example usage
+#' result <- AugmentMultiplePhyloPD(my_phylo, 10, c(0.1, 0.5), c(0.2, 0.6),
+#'                                  c(0.3, 0.7), c(0.4, 0.8))
+#' @export
 AugmentMultiplePhyloPD <- function(phylo,
                            n_trees,
                            mu_interval,

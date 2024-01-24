@@ -30,7 +30,7 @@ e_cpp <- function(brts, init_pars, sample_size, maxN, soc, max_missing, max_lamb
   .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads)
 }
 
-augmentPD <- function(phylo, pars, maxN, max_missing, lower_bound, upper_bound) {
+augmentPD_old <- function(phylo, pars, maxN, max_missing, lower_bound, upper_bound) {
     num_threads=1
     sample_size = 1
     init_pars = pars

@@ -212,19 +212,7 @@ extend_tree <- function(tree) {
     return(extended_tree)
 }
 
-foo <- function(phylo, metric = "colless") {
-    if (!is.null(phylo$tree)) {
-        phylo <- phylo$tree
-    }
-    if (metric == "colless") {
-        xx <- apTreeshape::as.treeshape(phylo)  # convert to apTreeshape format
-        return(apTreeshape::colless(xx, "yule"))  # calculate colless' metric
-    } else if (metric == "gamma") {
-        return(ape::gammaStat(phylo))
-    } else {
-        stop("metric should be one of colless or gamma")
-    }
-}
+
 
 phylodiversity <- function(tree, tm) {
     # input: an ultrametric tree
