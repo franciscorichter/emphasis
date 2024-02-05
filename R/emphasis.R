@@ -3,7 +3,6 @@
 #' diversification model to a phylogenetic tree.
 #' @param brts vector of branching times of the tree for which the model has to
 #' be fitted
-#' @param init_par initial parameter values of the model
 #' @param soc number of species at the root (1) or crown (2). Default is 2.
 #' @param model model to be used
 #' @param lower_bound vector of the lower limit of parameter values used by the

@@ -231,20 +231,6 @@ get_current_species <- function(tm, tree) {
     return(species)
 }
 
-
-AIC_llik <- function(log_lik, k) {
-    aic <- (2 * k) - (2 * log_lik)
-    return(aic)
-}
-
-AICw <- function(l1, l2, k1, k2) {
-    IC <- AIC_llik(c(l1, l2), c(k1, k2))
-    bestmodelIC <- min(IC)
-    weights <- exp(-0.5 * (IC - bestmodelIC))
-    weights <- weights / sum(weights)
-    return(weights[1])
-}
-
 # time calculation
 get.time <- function(time,
                      mode = "sec") {

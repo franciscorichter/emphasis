@@ -4,22 +4,12 @@
 \alias{generateNonHomogeneousExp}
 \title{Generate Variates for a Non-Homogeneous Exponential Process}
 \usage{
-generateNonHomogeneousExp(
-  num_variates,
-  covariates,
-  parameters,
-  start_time,
-  max_time
-)
+generateNonHomogeneousExp(num_variates, rate_func, start_time, max_time)
 }
 \arguments{
 \item{num_variates}{The number of variates to generate.}
 
-\item{covariates}{A numeric matrix of covariates where each row represents a 
-set of covariates and the last column is expected to be 
-time-dependent.}
-
-\item{parameters}{Parameters for the exponential rate function, including the bias.}
+\item{rate_func}{A function representing the rate of the non-homogeneous process.}
 
 \item{start_time}{The start time for the generation of variates.}
 
@@ -27,10 +17,13 @@ time-dependent.}
 }
 \value{
 A numeric vector of generated variates.
-
-print(generated_variates)
 }
 \description{
 This function generates random variates for a non-homogeneous exponential
 distribution using a thinning algorithm.
+}
+\examples{
+rate_function_example <- function(t) { 2 * t }
+variates <- generateNonHomogeneousExp(5, rate_function_example, 0, 10)
+print(variates)
 }

@@ -33,8 +33,7 @@ augmentPD <- function(phylo, pars, maxN, max_missing, lower_bound, upper_bound,
                       verbose = FALSE) {
   # Validate inputs
   if(!inherits(phylo, "phylo")) stop("The 'phylo' argument must be of class 'phylo'.")
-  if(length(pars) != 2) stop("The 'pars' argument must have a length of 2.")
-  
+
   # Ensure numeric inputs are all numeric
   if(!all(sapply(list(maxN, max_missing, lower_bound, upper_bound, num_threads, sample_size, soc, xtol_rel), is.numeric))) {
     stop("All parameters defining numerical values must be of type numeric.")
@@ -48,7 +47,7 @@ augmentPD <- function(phylo, pars, maxN, max_missing, lower_bound, upper_bound,
                   lower_bound, upper_bound, xtol_rel, num_threads)
   
   if(verbose) {
-    cat("MCEM algorithm completed.\n")
+    cat("Augmentation completed.\n")
   }
   
   return(result)

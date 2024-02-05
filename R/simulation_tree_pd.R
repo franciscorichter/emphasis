@@ -177,9 +177,9 @@ sim_tree_pd_cpp <- function(pars,
     warning("could not simulate tree, all trees were too large, try increasing max_lin")
   }
   if (result$status == "done" & useDDD) {
-    tes <- L2phylo(result$Ltable, dropextinct = TRUE)
-    tas <- L2phylo(result$Ltable, dropextinct = FALSE)
-    brts = L2brts(result$Ltable, dropextinct = TRUE)
+    tes <- DDD:::L2phylo(result$Ltable, dropextinct = TRUE)
+    tas <- DDD:::L2phylo(result$Ltable, dropextinct = FALSE)
+    brts = DDD:::L2brts(result$Ltable, dropextinct = TRUE)
   }
   
   out = list(tes = tes, tas = tas, L = result$Ltable, brts = brts,
@@ -224,6 +224,30 @@ sim_tree_pd_grid <- function(mu_vec,
 }
 
 
+
+#' Simulate a single phylogenetic diversity tree using C++ backend
+#'
+#' This function interfaces with a C++ function to simulate a single
+#' phylogenetic tree based on the provided parameters and constraints.
+#'
+#' @param pars A numeric vector of parameters required by the C++ simulation function.
+#' @param max_t The maximum time or iterations to run the simulation for.
+#' @param max_N The maximum number of nodes that the phylogenetic tree should have.
+#' @param max_tries The maximum number of tries to attempt the simulation before stopping.
+#'
+#' @return A simulated phylogenetic tree object (specific format to be detailed).
+#' @export
+#' @examples
+#' # Example usage:
+#' # Define parameters (example parameters to be replaced with actual ones)
+#' parameters <- c(0.1, 0.2, 0.3)
+#' max_time <- 10000
+#' max_nodes <- 100
+#' max_attempts <- 10
+#'
+#' # Run the simulation
+#' tree <- simulate_single_pd_tree_cpp(parameters, max_time, max_nodes, max_attempts)
+#' 
 simulate_single_pd_tree_cpp <- function(pars, max_t, max_N, max_tries) {
   .Call('_emphasis_simulate_single_pd_tree_cpp', PACKAGE = 'emphasis', pars, max_t, max_N, max_tries)
 }

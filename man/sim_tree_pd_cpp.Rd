@@ -21,18 +21,6 @@ lineages, 3) L = Ltable and 4) brts - branching times of the reconstructed
 tree and 5) status of simulation, options 1) "extinct", 2) "too_large" or 3)
 "done".
 }
-\example{
-sim.param = c(0.1, 0.8, -0.01, 0.01)
-
-
-tr = sim_tree_pd_cpp(pars = sim.param, 
-                max_t = 30, 
-                max_lin = 100000, 
-                max_tries = max_tries,useDDD = TRUE)
-
-
-plot(tr$tes)
-}
 \description{
 super fast function to simulate the process of diversification
 with diversity dependence and phylogenetic diversity dependence

@@ -1,3 +1,22 @@
+#' Generate Phylogenetic trees under PD model
+#'
+#' This function simulates phylogenetic trees based on given parameters.
+#' @param n_trees Number of trees to simulate.
+#' @param mu_interval Interval for mu parameter.
+#' @param lambda_interval Interval for lambda parameter.
+#' @param betaN_interval Interval for betaN parameter.
+#' @param betaP_interval Interval for betaP parameter.
+#' @param max_lin Maximum number of lineages.
+#' @param max_tries Maximum number of tries for simulation.
+#' @return A list containing the simulated trees and parameters.
+#' @examples
+#' generatePhyloPD(n_trees <- 10000,
+#'                mu_interval <- c(0, 0.5),
+#'                lambda_interval <- c(0.5, 3),
+#'                betaN_interval <- c(-0.02, 0.02) ,
+#'                betaP_interval <- c(-0.02, 0.02) )
+#'                
+#' @export
 generatePhyloPD <- function(n_trees,
                             mu_interval,
                             lambda_interval,

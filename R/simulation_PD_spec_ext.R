@@ -1,3 +1,17 @@
+#' Simulate Evolutionary Processes
+#'
+#' This function simulates evolutionary processes, including speciation and extinction events, 
+#' based on given parameters and time constraints.
+#' @param N_max Maximum number of species to simulate.
+#' @param spec_pars Parameters for speciation rates.
+#' @param ext_pars Parameters for extinction rates.
+#' @param max_t Maximum simulation time.
+#' @param ... Additional parameters.
+#' @return A list containing the tree matrix and metrics.
+#' @examples
+#' # Example usage:
+#' simulate_evolution(N_max = 100, spec_pars = c(0.1, 0.2), ext_pars = c(0.05, 0.1), max_t = 50)
+#' @export
 simulate_evolution <- function(N_max, spec_pars, ext_pars, max_t, ...) {
   
   tree_mat <- matrix(NA, ncol = 4, nrow = 0)
