@@ -1,0 +1,293 @@
+---
+title: "Estimation"
+output:
+  html_notebook:
+    toc: true
+    toc_float: true
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(emphasis) # Load the Emphasis package
+
+```
+
+
+On this noteboook, we will explore different estimation methods on species diversification processes. 
+We will focuss on estimating on the PD model 
+
+The Phylogenetic Diversification (PD) model describes the speciation rate over time within a phylogenetic tree. The model takes into account both speciation and extinction events, and it can be mathematically described by the following equations:
+
+The speciation rate \(\lambda_s(t)\) at time \(t\) is given by:
+
+$$
+\lambda_s(t | \lambda_0, \beta_N, \beta_P) = \max \left( 0, \lambda_0 + \beta_N N_t + \beta_P \frac{P_t}{N_t} \right);
+$$
+
+where:
+
+- \(\lambda_0\) is the baseline speciation rate,
+- \(\beta_N\) is the coefficient for the effect of the number of lineages at time \(t\) (denoted \(N_t\)),
+- \(\beta_P\) is the coefficient for the effect of the phylogenetic diversity at time \(t\) (denoted \(P_t\)), normalized by the number of lineages \(N_t\).
+
+The extinction rate \(\mu_s(t)\) is assumed to be constant over time, denoted by \(\mu_0\):
+
+$$
+\mu_s(t | \mu_0) = \mu_0
+$$
+
+The PD model ensures that the speciation rate is non-negative and allows for the simulation of complex evolutionary scenarios.
+
+
+
+```{r}
+getwd()
+#load("FamilyBirdTrees.Rdata")
+phylo = FamilyBirdTrees$Parulidae$tree
+ape:::plot.phylo(phylo)
+```
+
+
+
+
+Phylogenies that are derived from molecular data (e.g. DNA sequences) are, however, not full trees, as they do not contain the extinct species. The likelihood for an observed tree can be written in terms of the likelihood of compatible full trees. In principle, this is simply the integration over all possible full trees that are compatible with the observed tree $x_{obs}$:
+
+\begin{equation}
+	f(x_{obs}|\theta)  =  \displaystyle\int_{x \in \mathcal{X}(x_{obs})}   \exp(\ell _{x} (\theta|x_{obs})) dx 
+	\label{logy}
+\end{equation}
+
+This integration is usually impossible to compute in practice for most diversification models (\ref{logy}). We can obtain a numerical approximation by using the Monte-Carlo approach considering 
+
+\begin{eqnarray} 
+	f (x_{obs}|\theta) &=& \displaystyle\int_{x \in \mathcal{X}(x_{obs})} f (x|\theta) dx \nonumber \\ 
+	&=&\displaystyle\int_{x \in \mathcal{X}(x_{obs})} \frac{f (x|\theta)}{f_m (x|\theta,x_{obs})} f_m (x|\theta,x_{obs}) dx \nonumber \\ 
+	&\approx& \frac{1}{M}\sum_{x_i \sim f_m (x|\theta,x_{obs}) } \frac{f (x_i|\theta)}{f_m (x_i|\theta,x_{obs})} 
+	\label{MC}
+\end{eqnarray}
+for $f (x|\theta) = \exp(\ell _{x} (\theta|x_{obs}))$, $M$ the Monte-Carlo sample size and $f_m$ is an arbitrary sampler of the missing part of the full tree given an extant tree $x_{obs}$. Our statistical framework is a generalisation of that of, which makes use of an Expectation-Maximization algorithm for maximising the likelihood.
+
+
+
+
+```{r}
+path_data = "~/Library/CloudStorage/Dropbox/Pancho/78 - GAM paper/01 - Simulation data/Parulidae_20240205_233041.RData"
+load(path_data)
+process_and_plot(path_data)
+```
+
+
+## GAM 
+
+One option to estimate the full function is to use Generalized Additive Models. 
+
+
+
+```{r}
+gam1 = train_GAM(results)
+summary(gam1)
+```
+
+
+We can see that the GAM is trained and all parameters significant. Let's visuzalize the estimated likelihood 
+
+
+```{r}
+# Generate a grid of points within these ranges
+npoints = 10000
+grid_data <- data.frame(
+  mu = runif(npoints, min = mu_interval[1], max = mu_interval[2]),
+  lambda = runif(npoints, min = lambda_interval[1], max = lambda_interval[2]),
+  betaN = runif(npoints, min = betaN_interval[1], max = betaN_interval[2]),
+  betaP = runif(npoints, min = betaP_interval[1], max = betaP_interval[2])
+)
+
+# Predict log likelihood for each grid
+grid_data$loglik_pred <- predict(gam1, newdata = grid_data, type = "response")
+
+library(ggplot2)
+
+
+# Plot mu vs. lambda with density estimation
+p_mu_lambda <- ggplot(grid_data, aes(x = mu, y = lambda)) +
+  geom_point(aes(colour = loglik_pred)) +  # Create a tessellation of the values
+  #stat_density_2d(aes(fill = ..level..), geom = "polygon") +  # Density contours as polygons
+  scale_color_viridis_c() +
+  labs(title = "Density Plot of Log Likelihood for mu vs. lambda", x = "mu", y = "lambda") +
+  theme_minimal()
+
+# Plot betaN vs. betaP with density estimation
+p_betaN_betaP <- ggplot(grid_data, aes(x = betaN, y = betaP)) +
+  geom_point(aes(colour = loglik_pred)) +  # Create a tessellation of the values
+  #stat_density_2d(aes(fill = ..level..), geom = "polygon") +  # Density contours as polygons
+  scale_color_viridis_c() +
+  labs(title = "Density Plot of Log Likelihood for betaN vs. betaP", x = "betaN", y = "betaP") +
+  theme_minimal()
+
+# Print the plots
+print(p_mu_lambda)
+print(p_betaN_betaP)
+
+
+
+
+
+
+```
+
+```{r}
+
+p3 <- ggplot(grid_data, aes(x = betaN, y = betaP)) +
+  geom_point(aes(colour = loglik_pred)) +  # Create a tessellation of the values
+  #stat_density_2d(aes(fill = ..level..), geom = "polygon") +  # Density contours as polygons
+  scale_color_viridis_c() +
+  labs(title = "Density Plot of Log Likelihood for betaN vs. betaP", x = "betaN", y = "betaP") +
+  theme_minimal()
+
+```
+
+Now let's do some test.  The PD model is a generalization of the DD model, for which we do have the calculation of an analitical solution.
+
+```{r}
+DDD:::dd_ML(brts = branching.times(phylo))
+```
+
+
+```{r}
+
+data_point = data.frame(mu = 0.104095, lambda = 0.813530, betaN = (0.104095- 0.813530)/112.471829, betaP=0)
+predict(gam1, newdata = data_point, type = "response")
+
+```
+Prediction is not that close, let's see more points 
+
+
+```{r}
+
+data_point = data.frame(mu = rnorm(n=100,mean = 0.104095, sd = 0.1), 
+                        lambda = rnorm(n=100,mean = 0.813530, sd = 0.1), 
+                        betaN = rnorm(n=100,mean= -abs((0.104095- 0.813530)/112.471829), sd = 0.01),
+                        betaP=rep(0,100))
+
+head(data_point)
+predict_loglik = as.numeric(predict(gam1, newdata = data_point, type = "response"))
+
+
+loglik = NULL
+pars2 = c(1000,1,0,1,1,2)
+for(i in 1:nrow(data_point)){
+  pars1 = abs(c(data_point$lambda[i], data_point$mu[i], (data_point$lambda[i] - data_point$mu[i])/data_point$betaN[i]))
+  ll = DDD:::dd_loglik(pars1 = pars1,
+                                     pars2 = pars2,
+                                     brts = as.numeric(branching.times(phylo)),
+                                     missnumspec = 0)
+  loglik = c(loglik, ll)
+
+}
+
+plot(loglik,predict_loglik)
+abline()
+
+```
+
+
+Now, we can use the predictive function to find an estimation of the MLE. 
+
+
+```{r}
+# Adjusted objective function with betaP fixed at zero
+objective_function_fixed_betaP <- function(params) {
+  # Extract the parameters, but fix betaP to 0
+  mu <- params[1]
+  lambda <- params[2]
+  betaN <- params[3]
+  betaP <- 0  # Fixed
+  
+  # Create a data frame with these parameters
+  newdata <- data.frame(mu = mu, lambda = lambda, betaN = betaN, betaP = betaP)
+  
+  # Use predict() to get the estimated log likelihood
+  loglik_pred <- predict(gam1, newdata = newdata, type = "response")
+  
+  # Return the negative log likelihood
+  return(-loglik_pred)
+}
+
+# Initial values for the parameters (excluding betaP)
+init_params_fixed_betaP <- c(mu = mean(mu_interval), 
+                             lambda = mean(lambda_interval), 
+                             betaN = mean(betaN_interval))
+
+# Adjust optim to use the new objective function and initial parameters
+# Also adjust the bounds to exclude betaP
+optim_results_fixed_betaP <- optim(par = init_params_fixed_betaP, fn = objective_function_fixed_betaP, 
+                                   method = "L-BFGS-B", 
+                                   lower = c(min(mu_interval), min(lambda_interval), min(betaN_interval)), 
+                                   upper = c(max(mu_interval), max(lambda_interval), max(betaN_interval)))
+
+# Check the results
+optim_results_fixed_betaP
+
+
+
+```
+
+
+
+
+### Conditioning 
+
+
+
+## DE 
+
+```{r}
+
+
+pars = c(0.25,  0.80, -0.01,  0.01)
+max_t = 20
+
+max_lin = 100000
+max_tries = 1
+
+#sim_single_tree_pd_cpp
+tree = sim_tree_pd_cpp(pars = pars,
+                       max_t = 15,
+                       max_lin = max_lin,
+                       max_tries = max_tries)
+
+plot(tree$tes)
+
+num_iterations = 10
+num_points = 100
+max_missing = 2000
+lower_bound = c(0,0.5,-0.05,-0.05)
+upper_bound = c(0.5,2,0.01,0.03)
+maxN = 100
+max_lambda = 1000
+
+disc_prop = 0.75
+sd_vec = c(0.1,0.5,0.01,0.01)
+brts = tree$brts
+
+
+est_de = emphasis_de(brts = brts,
+                     num_iterations = num_iterations,
+                     num_points = num_points,
+                     max_missing = max_missing,
+                     sd_vec = sd_vec,
+                     lower_bound = lower_bound,
+                     upper_bound = upper_bound,
+                     maxN = maxN,
+                     max_lambda = max_lambda,
+                     disc_prop = disc_prop,
+                     verbose = TRUE)
+
+```
+
+
+## MCEM 
+
+## GMM 
