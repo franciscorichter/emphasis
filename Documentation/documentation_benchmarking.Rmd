@@ -1,0 +1,141 @@
+---
+title: "Benchmarking notebook"
+output: html_notebook
+---
+
+Benchmarking noteboook
+
+
+```{r}
+library(microbenchmark)
+
+# Example parameter set
+pars <- c(mu = 0.1, lambda_0 = 0.5, beta_N = -0.02, beta_P = 0.03)
+max_t <- 10
+max_lin <- 1e6
+max_tries <- 100
+
+benchmark_results <- microbenchmark(
+  CPP_version = emphasis:::sim_tree_pd_cpp(pars, max_t, max_lin, max_tries),
+  R_version = emphasis::sim_tree_pd_R(pars, max_t),
+  times = 500  # Adjust based on expected runtime and desired precision
+)
+
+# Print the benchmark results
+print(benchmark_results)
+
+autoplot(benchmark_results)
+
+```
+
+
+
+
+```{r}
+# Parameters
+#pars_pd = c(0.21779984, 1.16601633, -0.28090578, 0.01261866)
+pars_pd = c(0.104095, 0.813530, (0.104095 - 0.813530) / 112.471829, 0)
+pars_dd = c(0.813530,0.104095, 112.471829)
+
+# Initialize storage for trees, times, and additional information
+tr = tr_dd = list()
+times_pd = times_dd = NULL
+num_tips_pd = num_tips_dd = integer(100)  # Initialize vectors to store the number of tips
+nodes = c()
+
+for(i in 1:100){
+  #print(i)
+  
+  # Simulate and time tree using `sim_tree_pd_cpp` from the `emphasis` package
+  time0 = proc.time()
+  tr[[i]] = emphasis:::sim_tree_pd_cpp(pars_pd, max_t = 5, max_lin = 10000, max_tries = 100)
+  t1 = proc.time() - time0
+  times_pd = c(times_pd, t1[3])
+  
+  # Extract and store the number of tips for PD simulation
+  # Placeholder: You will need to replace `length(tr[[i]]$tip.label)` with the correct way to extract the number of tips
+  num_tips_pd[i] = length(tr[[i]]$tes$tip.label)  # Example placeholder
+  
+  # Simulate and time tree using `dd_sim` from the `DDD` package
+  time0 = proc.time()
+  tr_dd[[i]] = DDD:::dd_sim(pars = pars_dd, age = 5)
+  t1 = proc.time() - time0
+  times_dd = c(times_dd, t1[3])
+  
+  # Extract and store the number of tips for DD simulation
+  # Placeholder: You will need to replace `length(tr_dd[[i]]$tip.label)` with the correct way to extract the number of tips
+  num_tips_dd[i] = length(tr_dd[[i]]$tes$tip.label)  # Example placeholder
+}
+
+
+```
+
+
+```{r}
+plot(sort(num_tips_pd),sort(num_tips_dd))
+abline(a=0,b=1)
+```
+
+
+```{r}
+plot(sort(times_dd),sort(times_pd))
+abline(a=0,b=1)
+```
+
+
+
+```{r}
+library(emphasis)
+library(microbenchmark)
+
+
+brts = emphasis:::sim_tree_pd_cpp(pars_pd, max_t = 10, max_lin = 10000, max_tries = 1)$brts
+lower_bound = c(0,0,-0.1,-0.1)  
+upper_bound = c(1,3,0,0.1) 
+
+pars <- matrix(stats::runif(400,
+                              min = lower_bound,
+                              max = upper_bound),
+                 byrow = TRUE,
+                 ncol = 4)
+  
+
+# Define a range of threads to test
+numCores <- detectCores()
+thread_range = 1:numCores
+
+# Benchmarking loop
+benchmark_results = list()
+for (num_threads in thread_range) {
+  message(sprintf("Benchmarking with %d thread(s)", num_threads))
+  result = microbenchmark(
+    emphasis:::rcpp_mce_grid(pars, brts=brts, sample_size=1, maxN=1, soc=2, max_missing=1e+6, max_lambda=1e+6,
+                  lower_bound=lower_bound, upper_bound=upper_bound, xtol_rel=0.01, num_threads=num_threads),
+    times = 10  # Repeat the benchmark 10 times for each thread count
+  )
+  benchmark_results[[as.character(num_threads)]] = result
+}
+
+```
+
+
+```{r}
+
+library(ggplot2)
+
+# Prepare data for plotting
+benchmark_data = do.call(rbind, lapply(names(benchmark_results), function(n) {
+  data.frame(Threads = as.numeric(n), Time = benchmark_results[[n]]$time)
+}))
+
+ggplot(benchmark_data, aes(x = Threads, y = Time/1e6)) +  # Convert time to milliseconds
+  geom_point() +
+  xlab("Number of Threads") +
+  ylab("Execution Time (ms)") +
+  theme_minimal()
+
+```
+
+
+
+

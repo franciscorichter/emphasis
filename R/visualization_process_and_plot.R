@@ -106,11 +106,7 @@ plot4 = ggplot(params_completed, aes(x = betaN, y = betaP, color = nspecies)) +
 library(patchwork)
 
 
-# Combine the plots
-combined_plots <- (plot1 | plot2) / (plot3 | plot4)
 
-# Print the combined plot
-print(combined_plots)
 
 
 # Generate scatterplot for betaN and betaP, colored by log likelihood estimation
@@ -118,7 +114,11 @@ plot5 = ggplot(params_completed, aes(x = nspecies, y =  loglik)) +
   geom_point(alpha = 0.2) +
   theme_minimal()
 
-print(plot5)
-#
+# Combine the plots
+combined_plots <- (plot1 | plot2) / (plot3 | plot4) / plot5
 
+# Print the combined plot
+print(combined_plots)
+#
+return(results)
 }

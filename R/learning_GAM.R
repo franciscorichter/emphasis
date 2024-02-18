@@ -21,6 +21,11 @@
 #'
 train_GAM <- function(results){
   
+  count_extinct_species <- function(tree) {
+    extinction_times = as.data.frame(tree)["t_ext"]
+    sum(extinction_times < 1e+10)
+  }
+  
   completed_indices <- which(!sapply(results$loglik_estimation, inherits, "try-error"))
   trees = results$trees[completed_indices]
   num_extinct_per_tree <- sapply(trees, count_extinct_species)
@@ -49,6 +54,90 @@ train_GAM <- function(results){
   
   return(gam_loglik)
 }
+
+#' Optimize GAM Model Parameters with Fixed betaP
+#'
+#' This function optimizes the parameters of a given Generalized Additive Model (GAM) 
+#' with the constraint that betaP is fixed at zero. It applies penalties to discourage 
+#' selecting parameter values near the boundaries of their respective intervals, aiming 
+#' to find optimal values of mu, lambda, and betaN that minimize the estimated log likelihood.
+#'
+#' @param pgam A GAM model object for which the log likelihood is to be optimized. 
+#'             The model should include mu, lambda, betaN, and betaP as parameters.
+#'
+#' @return A list containing the optimized parameter values (pars) and the minimized 
+#'         log likelihood value (ml).
+#'
+#' @examples
+#' # Assuming you have a GAM model 'pgam' fitted with parameters including mu, lambda, betaN, betaP
+#' result <- dd_ML_est(pgam)
+#' print(result$pars)  # Optimized parameters
+#' print(result$ml)    # Minimized log likelihood
+#'
+#' @export
+#'
+#' @importFrom stats optim
+#' @importFrom mgcv predict
+dd_ML_est <- function(pgam){
+  
+  # Adjusted objective function with betaP fixed at zero
+  objective_function_fixed_betaP <- function(params) {
+    # Extract the parameters, but fix betaP to 0
+    mu <- params[2]
+    lambda <- params[1]
+    betaN <- (mu-lambda)/params[3]
+    betaP <- 0  # Fixed
+    
+    
+    betaN_interval <- range(pgam$model$betaN)
+    betaP_interval <-  range(pgam$model$betaP)
+    lambda_interval <-  range(pgam$model$lambda)
+    mu_interval <-  range(pgam$model$mu)
+    
+    # Penalty factors for each parameter near the boundaries
+    penalty_factor <- -1000  # Adjust the penalty factor based on the scale of your log likelihood values
+    
+    # Calculate penalty for being near the boundary of each parameter
+    # Assuming mu_interval, lambda_interval, and betaN_interval are defined globally
+    penalty <- 0
+    if (mu <= mu_interval[1] + (mu_interval[2] - mu_interval[1]) * 0.05 || mu >= mu_interval[2] - (mu_interval[2] - mu_interval[1]) * 0.05) {
+      penalty <- penalty + penalty_factor
+    }
+    if (lambda <= lambda_interval[1] + (lambda_interval[2] - lambda_interval[1]) * 0.05 || lambda >= lambda_interval[2] - (lambda_interval[2] - lambda_interval[1]) * 0.05) {
+      penalty <- penalty + penalty_factor
+    }
+    # Adding penalty for betaN based on its interval
+    if (betaN <= betaN_interval[1] + (betaN_interval[2] - betaN_interval[1]) * 0.05 || betaN >= betaN_interval[2] - (betaN_interval[2] - betaN_interval[1]) * 0.05) {
+      penalty <- penalty + penalty_factor
+    }
+    
+    # Create a data frame with these parameters
+    newdata <- data.frame(mu = mu, lambda = lambda, betaN = betaN, betaP = betaP)
+    
+    # Use predict() to get the estimated log likelihood
+    loglik_pred <- predict(pgam, newdata = newdata, type = "response")
+    
+    # Return the negative log likelihood
+    return(loglik_pred - penalty)
+  }
+  
+  # Initial values for the parameters
+  init_params_fixed_betaP <- c(0.8, 0.1, 120)
+  
+  # Adjust optim to use the new objective function and initial parameters
+  # Also adjust the bounds to exclude betaP
+  optim_results_fixed_betaP <- optim(par = init_params_fixed_betaP, fn = objective_function_fixed_betaP, 
+                                     method = "L-BFGS-B", 
+                                     lower = c(0, 0, 60), 
+                                     upper = c(1, 0.5, 1000))
+  
+  
+  return(list(pars=optim_results_fixed_betaP$par,ml = optim_results_fixed_betaP$value))
+}
+
+
+
+
 
 
 

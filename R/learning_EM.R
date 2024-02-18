@@ -43,7 +43,44 @@ augmentPD_old <- function(phylo, pars, maxN, max_missing, lower_bound, upper_bou
   .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads)
 }
 
-rcpp_mce_grid <- function(pars_R, brts, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads) {
+
+#' Monte Carlo Grid Calculation
+#'
+#' This function performs a Monte Carlo Expectation-Maximization (MCEM) grid calculation
+#' for given parameters, using Rcpp for improved performance. It is designed to work
+#' with the 'emphasis' package.
+#'
+#' @param pars_R Numeric matrix of parameters for the MCEM algorithm.
+#' @param brts Numeric vector of branching times.
+#' @param sample_size Integer, the number of samples to draw in the Monte Carlo simulation.
+#' @param maxN Integer, the maximum number of iterations for the EM algorithm.
+#' @param soc Numeric, scale parameter for optimization control. Defaults to 2.
+#' @param max_missing Numeric, the maximum allowed missing information.
+#' @param max_lambda Numeric, the maximum allowed lambda value.
+#' @param lower_bound Numeric vector, the lower bounds for each parameter.
+#' @param upper_bound Numeric vector, the upper bounds for each parameter.
+#' @param xtol_rel Numeric, the relative tolerance for optimization convergence. Defaults to 0.00001.
+#' @param num_threads Integer, the number of threads to use for parallel computation.
+#'
+#' @return Returns the result of the MCEM grid calculation as a numeric matrix.
+#' @export
+#' @examples
+#' # Define parameters for the MCEM grid calculation
+#' pars_R <- matrix(runif(20), nrow = 5) # Example parameter matrix
+#' brts <- runif(10, 0, 1) # Example branching times
+#' sample_size <- 100
+#' maxN <- 1000
+#' lower_bound <- rep(0, ncol(pars_R))
+#' upper_bound <- rep(1, ncol(pars_R))
+#' result <- mcemGridCalculation(pars_R, brts, sample_size, maxN, 2, 1e4, 1e4, lower_bound, upper_bound, 0.00001, 1)
+#' print(result)
+mcGrid <- function(pars_R, brts, sample_size, maxN, soc=2, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel=0.00001, num_threads) {
+  .Call('_emphasis_rcpp_mce_grid', PACKAGE = 'emphasis', pars_R, brts, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads)
+}
+
+
+
+rcpp_mce_grid <- function(pars_R, brts, sample_size, maxN, soc=2, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel=0.00001, num_threads) {
   .Call('_emphasis_rcpp_mce_grid', PACKAGE = 'emphasis', pars_R, brts, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads)
 }
 
@@ -81,8 +118,8 @@ rcpp_mce_grid_factorial <- function(pars_R, brts, sample_size, maxN, soc, max_mi
 #'  \item{weights}{vector of weights}
 #' }
 #' @export
-em_cpp <- function(brts, init_pars, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, rconditional = NULL) {
-  .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, rconditional)
+em_cpp <- function(brts, pars, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, rconditional = NULL) {
+  .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, rconditional)
 }
 
 #' function to perform one step of the E-M algorithm

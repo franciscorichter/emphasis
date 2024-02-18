@@ -1,10 +1,13 @@
 ---
-title: "Simulation "
-subtitle: "emphasis notes"
+title: 'Simulation '
+subtitle: emphasis notes
 output:
   html_notebook:
     toc: true
     toc_float: true
+  html_document:
+    toc: true
+    df_print: paged
 ---
 
 
@@ -131,9 +134,22 @@ Next, we use the n_from_time and phylodiversity functions to calculate species r
 
 
 ```{r}
-# Parameters for the PD model
-params <- c(lambda_0 = 0.5, beta_N = -0.8, beta_P = 1.2)
 
+# Install and load the required packages
+if (!requireNamespace("ape", quietly = TRUE)) {
+  install.packages("ape")
+}
+library(ape)
+
+# Example parameter set
+pars <- params <- c(mu = 0.1, lambda_0 = 0.5, beta_N = -0.02, beta_P = 0.03)
+max_t <- 10
+max_lin <- 1e6
+max_tries <- 100
+
+tree = emphasis:::sim_tree_pd_cpp(pars, max_t, max_lin, max_tries)$tes
+
+time_points = seq(0,max_t,length.out = 100)
 # Compute species richness (number of lineages) over time
 richness_values <- sapply(time_points, function(t) sum(ape:::branching.times(tree) < t))
 
@@ -189,25 +205,12 @@ The PD model ensures that the speciation rate is non-negative and allows for the
 
 
 ```{r}
-# Install and load the required packages
-if (!requireNamespace("ape", quietly = TRUE)) {
-  install.packages("ape")
-}
-library(ape)
 
-# Example parameter set
-pars <- c(mu = 0.1, lambda_0 = 0.5, beta_N = -0.02, beta_P = 0.03)
-max_t <- 10
-max_lin <- 1e6
-max_tries <- 100
 
-tree = emphasis:::sim_tree_pd_cpp(pars, max_t, max_lin, max_tries)
-
-larger_tree = tree$tes
   
-plot(larger_tree)
+plot(tree)
 
-
+larger_tree = tree
 # Define time points for visualization, ensuring they don't exceed the tree age
 max_time <- max(branching.times(larger_tree))
 time_points <- seq(0, max_time, length.out = 100)
@@ -265,48 +268,74 @@ This integration is usually impossible to compute in practice for most diversifi
 \end{eqnarray}
 for $f (x|\theta) = \exp(\ell _{x} (\theta|x_{obs}))$, $M$ the Monte-Carlo sample size and $f_m$ is an arbitrary sampler of the missing part of the full tree given an extant tree $x_{obs}$. Our statistical framework is a generalisation of that of, which makes use of an Expectation-Maximization algorithm for maximising the likelihood
 
+```{r}
+
+pars =c(0.21779984 ,1.16601633, -0.08090578 , 0.01261866)
+tree = sim_tree_pd_cpp(pars = pars,max_t = 5,max_lin = 1e+7,max_tries = 1)
+phylo = tree$tes
+plot(phylo)
+brts <- ape::branching.times(phylo)
+
+# Define parameter bounds
+lower_bound = c(0,0.5,-0.1,0)
+upper_bound = c(1,3,0,0.1)
+
+num_points <- 1000
+
+pars <- matrix(nrow = num_points, ncol = length(lower_bound))
+for (i in seq_along(lower_bound)) {
+  pars[, i] <- runif(num_points, min = lower_bound[i], max = upper_bound[i])
+}
+
+dmval <- mcGrid(pars, 
+                brts = brts, 
+                sample_size = 1, 
+                maxN = 1, 
+                soc = 2, 
+                max_missing = 1e+4, 
+                max_lambda = 1e+4, 
+                lower_bound = lower_bound, 
+                upper_bound = upper_bound, 
+                xtol_rel = 0.01, 
+                num_threads = 4)
+# Extract relevant columns
+loglikelihood_est <- dmval[, 1]
+sampled_x_loglikelihood <- dmval[, 5]
+sampling_probability <- dmval[, 6]
+
+# Remove rows with NA in loglikelihood_est
+valid_indices <- !is.na(loglikelihood_est)
+loglikelihood_est <- loglikelihood_est[valid_indices]
+sampled_x_loglikelihood <- sampled_x_loglikelihood[valid_indices]
+sampling_probability <- sampling_probability[valid_indices]
+
+# Plotting the distribution of loglikelihood estimates
+hist(sampling_probability/loglikelihood_est, main="Distribution of Loglikelihood Estimates", xlab="Loglikelihood Estimate")
+
+# Scatter plot of sampled_x_loglikelihood vs sampling_probability
+plot(sampled_x_loglikelihood, sampling_probability, main="Sampled Loglikelihood vs Sampling Probability",
+     xlab="Sampled Loglikelihood", ylab="Sampling Probability", pch=19)
+
+# Adding a line to visualize the ideal sampling distribution might require additional theoretical information
+# For simplicity, this example focuses on the distributions and relationships in the sampled data
 
 
+# Assuming dmval is your matrix
+plot(dmval[,5], dmval[,6], main = "Loglikelihood vs. Sampling Probability",
+     xlab = "Loglikelihood of Sampled x", ylab = "Sampling Probability",
+     pch = 19, col = "blue")
 
-```{r, eval=FALSE}
-n_trees <- 1000000
+# Adding a 1:1 line for perfect agreement
+abline(a = 0, b = 1, col = "red")
 
-time0 = proc.time()
-
-mu_interval <- c(0, 0.2)
-lambda_interval <- c(0.5, 1)
-betaN_interval <- c(-0.01, 0) 
-betaP_interval <- c(-0.02, 0.02) 
-
-max_lin = 10000
-max_tries = 10
-
-
-
-
-# Call the function
-results <- AugmentMultiplePhyloPD(phylo = phylo,
-                                  n_trees = n_trees,
-                                  mu_interval = mu_interval,
-                                  lambda_interval = lambda_interval,
-                                  betaN_interval = betaN_interval,
-                                  betaP_interval =betaP_interval,
-                                  max_lin = max_lin,
-                                  max_tries = max_tries)
-
-
-time1 = proc.time()
-
-# Define the name of the phylogenetic tree
-phylo_name <- "Parulidae"
-
-# Generate a timestamp string
-timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
-
-# Combine the phylo name, timestamp, and file extension for a specific and unique file name
-save.image(file = paste0(phylo_name, "_", timestamp, ".RData"))
+# Calculate correlation
+correlation <- cor(dmval[,5], dmval[,6], use = "complete.obs")
+cat("Correlation between Loglikelihood of Sampled x and Sampling Probability: ", correlation, "\n")
 
 ```
+
+
+
 
 ### Loading and visualizing agumented data
 

@@ -171,8 +171,6 @@ emphasis_de <- function(brts,
   if (length(upper_bound) != length(sd_vec)) {
     stop("sd vector is not adequate length")
   }
-  
-  
 
   init_time <- proc.time()
 

@@ -33,7 +33,7 @@
 #' @rawNamespace import(nloptr)
 #' @rawNamespace import(Rcpp)
 #' @rawNamespace importFrom(RcppParallel, RcppParallelLibs)
-emphasis <- function(brts,
+emphasis <- function(phylo, brts = NULL,
                      model,
                      lower_bound = numeric(0),
                      upper_bound = numeric(0),
@@ -57,10 +57,10 @@ emphasis <- function(brts,
   if (length(upper_bound) == 0) upper_bound <- rep(Inf, length(model$pars))
  # if (NULL != conditional) stopifnot(is.function(conditional))
   
-  if (class(brts) == "phylo") {
+  if (class(phylo) == "phylo") {
     cat("You have provided the full phylogeny instead of the branching times\n")
     cat("Emphasis will extract the branching times for your convenience\n")
-    brts <- ape::branching.times(brts)
+    brts <- ape::branching.times(phylo)
   }
   
   msg1 <- paste("Initializing emphasis...")
