@@ -6,7 +6,7 @@
 \usage{
 em_cpp(
   brts,
-  init_pars,
+  pars,
   sample_size,
   maxN,
   soc,
@@ -22,7 +22,7 @@ em_cpp(
 
 em_cpp(
   brts,
-  init_pars,
+  pars,
   sample_size,
   maxN,
   soc,
@@ -38,8 +38,6 @@ em_cpp(
 }
 \arguments{
 \item{brts}{vector of branching times}
-
-\item{init_pars}{vector of initial parameter files}
 
 \item{sample_size}{number of samples}
 
@@ -64,6 +62,8 @@ be equal in length to the vector of init_pars}
 \item{copy_trees}{if set to true, the trees generated are returned as well}
 
 \item{rconditional}{R function that evaluates the GAM function.}
+
+\item{init_pars}{vector of initial parameter files}
 }
 \value{
 a list with the following components: 

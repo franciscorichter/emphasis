@@ -5,7 +5,8 @@
 \title{Emphasis main function}
 \usage{
 emphasis(
-  brts,
+  phylo,
+  brts = NULL,
   model,
   lower_bound = numeric(0),
   upper_bound = numeric(0),

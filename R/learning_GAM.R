@@ -76,8 +76,6 @@ train_GAM <- function(results){
 #'
 #' @export
 #'
-#' @importFrom stats optim
-#' @importFrom mgcv predict
 dd_ML_est <- function(pgam){
   
   # Adjusted objective function with betaP fixed at zero

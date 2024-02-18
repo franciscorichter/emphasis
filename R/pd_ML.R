@@ -212,26 +212,3 @@ check_convergence <- function(current_means, previous_means, tolerance = 1e-4) {
 
 
 
-
-# Assuming `em_cpp` and `rcpp_mce_grid` are defined elsewhere and available
-
-# Example branching times, possibly from a phylogenetic tree analysis
-
-pars =c(0.21779984 ,1.16601633, -0.08090578 , 0.01261866)
-tree = sim_tree_pd_cpp(pars = pars,max_t = 5,max_lin = 1e+7,max_tries = 1)
-phylo = tree$tes
-plot(phylo)
-brts <- ape::branching.times(phylo)
-
-# Define parameter bounds
-lower_bound = c(0,0.5,-0.1,0)
-upper_bound = c(1,3,0,0.1)
-
-# Execute the parameter discovery MCEM algorithm
-result <- pd_ML(brts, lower_bound, upper_bound, verbose = TRUE)
-
-# Examine the results
-print(result$pars)  # Final parameter estimates
-print(result$MCEM)  # Iteration history
-
-
