@@ -20,3 +20,10 @@ devtools::install_github("franciscorichter/emphasis")
 ```
 
 
+## References
+
+For further reading and a deeper understanding of the methodologies and theories behind EMPHASIS, we recommend the following papers:
+
+1. **Richter, F., Baegeman, B., Etienne, R. S., & Wit, E. C. (2020). *Introducing a general class of species diversification models for phylogenetic trees*. Statistica Neerlandica, 74(3), 261-274.** [Read the paper](https://onlinelibrary.wiley.com/doi/pdf/10.1111/stan.12205)
+
+2. **Richter, F., Janzen, T., Hildenbrandt, H., Wit, E. C., & Etienne, R. S. (2021). *Detecting phylodiversity-dependent diversification with a general phylogenetic inference framework*. bioRxiv.** [Read the preprint](https://www.biorxiv.org/content/biorxiv/early/2021/07/04/2021.07.01.450729.full.pdf)
