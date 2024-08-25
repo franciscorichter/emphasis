@@ -1,4 +1,3 @@
-# EMPHASIS: Evolutionary Modeling on PHylogenetic Analysis with Simulations and Importance Sampling
 
 ![Emphasis Logo](./emphasis_logo.png)
 
