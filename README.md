@@ -5,10 +5,10 @@
 
 ## Key Features
 
-- **Simulations**: Generate and manipulate phylogenetic trees under various evolutionary models.
-- **Inference**: Perform statistical inference on phylogenetic trees using state-of-the-art methods.
-- **Analysis**: Analyze the structure and dynamics of phylogenetic trees, including branch lengths and topology.
-- **Prediction**: Forecast evolutionary outcomes and assess the uncertainty of phylogenetic inferences.
+
+- [Simulations](usage.md): Generate and manipulate phylogenetic trees under various evolutionary models.
+- [Inference](case-studies.md): Perform statistical inference on phylogenetic trees using state-of-the-art methods.
+- [Analysis and Prediction](api-documentation.md): Analyze the structure and dynamics of phylogenetic trees, forecast evolutionary outcomes and assess the uncertainty of phylogenetic inferences.
 
 ## Installation
 
