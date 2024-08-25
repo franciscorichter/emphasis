@@ -1,5 +1,5 @@
 
-![Emphasis Logo](./circ.png)
+![Emphasis Logo](./emphasis_logo_circ.png)
 
 **EMPHASIS** is an advanced R package designed to perform statistical inference on phylogenetic trees using evolutionary models. By integrating simulations and importance sampling techniques, EMPHASIS offers a powerful toolkit for researchers in evolutionary biology, genetics, and related fields.
 
