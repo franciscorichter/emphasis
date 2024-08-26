@@ -335,11 +335,6 @@ cat("Correlation between Loglikelihood of Sampled x and Sampling Probability: ",
 
 
 
-### Loading and visualizing agumented data
-
-
 ```{r}
-# load simulation data
-#path_data = "~/Library/CloudStorage/Dropbox/Pancho/78 - GAM paper/01 - Simulation data/Parulidae_20240205_233041.RData"
-#process_and_plot(path_data)
+
 ```

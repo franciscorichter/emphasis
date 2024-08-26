@@ -6,7 +6,7 @@
 ## Key Features
 
 
-- [Simulations](usage.md): Generate and manipulate phylogenetic trees under various evolutionary models.
+- [Simulations](doc/Simulation.html): Generate and manipulate phylogenetic trees under various evolutionary models.
 - [Inference](case-studies.md): Perform statistical inference on phylogenetic trees using state-of-the-art methods.
 - [Analysis and Prediction](api-documentation.md): Analyze the structure and dynamics of phylogenetic trees, forecast evolutionary outcomes and assess the uncertainty of phylogenetic inferences.
 
