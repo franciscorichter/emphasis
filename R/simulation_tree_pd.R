@@ -103,7 +103,7 @@ sim_tree_pd_R <- function(pars, max_t) {
   
    for_ddd <- as.matrix(tree[, 1:4])
   
-   phy <- DDD::L2phylo(as.matrix(tree[, 1:4]), dropextinct = FALSE)
+   phy <- DDD::L2phylo(as.matrix(tree[, 1:4]), dropextinct = TRUE)
   
   t <- min(t, max_t)
   

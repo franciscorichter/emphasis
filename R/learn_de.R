@@ -136,7 +136,7 @@ update_parameters <- function(pars, vals, Cr = 0.9, num_points) {
 learn_de <- function(phylo,
                      max_iterations=100,
                      num_points = 1000,
-                     max_missing = 100000,
+                     max_missing = 1e+5,
                      lower_bound = c(0,0,-0.1,-0.1),
                      upper_bound = c(1,5,0.1,0.1),
                      verbose = TRUE,

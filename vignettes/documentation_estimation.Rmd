@@ -44,10 +44,17 @@ $$
 The PD model ensures that the speciation rate is non-negative and allows for the simulation of complex evolutionary scenarios.
 
 ```{r}
-getwd()
-#load("FamilyBirdTrees.Rdata")
-phylo = FamilyBirdTrees$Parulidae$tree
-ape:::plot.phylo(phylo)
+
+library(rotl)
+taxon_name = "Primates"
+
+matched_names <- tnrs_match_names(taxon_name)
+taxon_id <- matched_names$ott_id[1]
+  
+# Retrieve the subtree for the taxon
+phylo <- tol_subtree(ott_id = taxon_id)
+
+plot(phylo)
 ```
 
 Phylogenies that are derived from molecular data (e.g. DNA sequences) are, however, not full trees, as they do not contain the extinct species. The likelihood for an observed tree can be written in terms of the likelihood of compatible full trees. In principle, this is simply the integration over all possible full trees that are compatible with the observed tree $x_{obs}$:
@@ -70,10 +77,63 @@ This integration is usually impossible to compute in practice for most diversifi
 ### Likelihood function
 
 ```{r}
-# load simulation data
-path_data = "~/Library/CloudStorage/Dropbox/Pancho/78 - GAM paper/01 - Simulation data/Parulidae_20240205_233041.RData"
-results = process_and_plot(path_data)
-class(results)
+brts <- ape::branching.times(phylo)
+
+# Define parameter bounds
+lower_bound = c(0,0.5,-0.1,0)
+upper_bound = c(1,3,0,0.1)
+
+num_points <- 1000
+
+pars <- matrix(nrow = num_points, ncol = length(lower_bound))
+for (i in seq_along(lower_bound)) {
+  pars[, i] <- runif(num_points, min = lower_bound[i], max = upper_bound[i])
+}
+
+dmval <- mcGrid(pars, 
+                brts = brts, 
+                sample_size = 1, 
+                maxN = 1, 
+                soc = 2, 
+                max_missing = 1e+4, 
+                max_lambda = 1e+4, 
+                lower_bound = lower_bound, 
+                upper_bound = upper_bound, 
+                xtol_rel = 0.01, 
+                num_threads = 4)
+# Extract relevant columns
+loglikelihood_est <- dmval[, 1]
+sampled_x_loglikelihood <- dmval[, 5]
+sampling_probability <- dmval[, 6]
+
+# Remove rows with NA in loglikelihood_est
+valid_indices <- !is.na(loglikelihood_est)
+loglikelihood_est <- loglikelihood_est[valid_indices]
+sampled_x_loglikelihood <- sampled_x_loglikelihood[valid_indices]
+sampling_probability <- sampling_probability[valid_indices]
+
+# Plotting the distribution of loglikelihood estimates
+hist(sampling_probability/loglikelihood_est, main="Distribution of Loglikelihood Estimates", xlab="Loglikelihood Estimate")
+
+# Scatter plot of sampled_x_loglikelihood vs sampling_probability
+plot(sampled_x_loglikelihood, sampling_probability, main="Sampled Loglikelihood vs Sampling Probability",
+     xlab="Sampled Loglikelihood", ylab="Sampling Probability", pch=19)
+
+# Adding a line to visualize the ideal sampling distribution might require additional theoretical information
+# For simplicity, this example focuses on the distributions and relationships in the sampled data
+
+
+# Assuming dmval is your matrix
+plot(dmval[,5], dmval[,6], main = "Loglikelihood vs. Sampling Probability",
+     xlab = "Loglikelihood of Sampled x", ylab = "Sampling Probability",
+     pch = 19, col = "blue")
+
+# Adding a 1:1 line for perfect agreement
+abline(a = 0, b = 1, col = "red")
+
+# Calculate correlation
+correlation <- cor(dmval[,5], dmval[,6], use = "complete.obs")
+cat("Correlation between Loglikelihood of Sampled x and Sampling Probability: ", correlation, "\n")
 ```
 
 ## GAM
