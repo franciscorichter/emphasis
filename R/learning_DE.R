@@ -19,7 +19,7 @@ get_random_grid <- function(num_points,
 
 #' @keywords internal
 get_results <- function(pars, input, num_threads, num_points) {
-  dmval <- emphasis:::rcpp_mce_grid(as.matrix(pars),
+  dmval <- rcpp_mce_grid(as.matrix(pars),
                          brts = input$brts,
                          sample_size = input$sample_size,
                          maxN = input$maxN,
@@ -79,8 +79,8 @@ update_value <- function(par, upper_bound, lower_bound,
         new_val <- stats::rnorm(n = 1,
                                 mean = par,
                                 sd = sd_val)
-        within_bounds <- new_val > lower_bound && new_val < upper_bound
-        
+        within_bounds <- new_val < upper_bound &&
+                         new_val < lower_bound
       }
     }
     par <- new_val

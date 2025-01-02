@@ -256,6 +256,7 @@ rescale_tree <- function(phy, new_crown_age = 1) {
     return(new_phy)
 }
 
+<<<<<<< HEAD
 
 
 
@@ -371,3 +372,5 @@ L2phylo <- function (L, dropextinct = T){
   tree = ape::as.phylo(phy)
   return(tree)
 }
+=======
+>>>>>>> parent of 5a2eaeb (adding other GPD functions)
