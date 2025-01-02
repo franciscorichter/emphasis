@@ -32,6 +32,9 @@ export(generatePhyloDDD)
 export(generatePhyloDDD_minimal)
 export(AugmentMultiplePhyloPD)
 export(augmentPD)
+<<<<<<< HEAD
+>>>>>>> parent of 5a2eaeb (adding other GPD functions)
+=======
 >>>>>>> parent of 5a2eaeb (adding other GPD functions)
 import(Rcpp)
 import(nloptr)
