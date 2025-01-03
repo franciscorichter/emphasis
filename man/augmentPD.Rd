@@ -11,7 +11,7 @@ augmentPD(
   max_missing,
   lower_bound,
   upper_bound,
-  num_threads = 0,
+  num_threads = 1,
   sample_size = 1,
   soc = 2,
   xtol_rel = 1e-05,

@@ -29,7 +29,7 @@
 #' 
 #' @export
 augmentPD <- function(phylo, pars, maxN, max_missing, lower_bound, upper_bound, 
-                      num_threads = 0, sample_size = 1, soc = 2, xtol_rel = 0.00001, 
+                      num_threads = 1, sample_size = 1, soc = 2, xtol_rel = 0.00001, 
                       verbose = FALSE) {
   # Validate inputs
   if(!inherits(phylo, "phylo")) stop("The 'phylo' argument must be of class 'phylo'.")

@@ -33,7 +33,7 @@
 #' @rawNamespace import(nloptr)
 #' @rawNamespace import(Rcpp)
 #' @rawNamespace importFrom(RcppParallel, RcppParallelLibs)
-emphasis <- function(phylo,
+emphasis <- function(brts,
                      model,
                      lower_bound = numeric(0),
                      upper_bound = numeric(0),
@@ -50,20 +50,17 @@ emphasis <- function(phylo,
                      num_threads = 0,
                      conditional = NULL) {
   
-  if (!(class(phylo) == "phylo")) {
-    stop("phylo must be a phylo object.")
+  if (!is.numeric(brts)) {
+    stop("brts must be a numeric vector.")
   }
-  
-  brts <- ape::branching.times(phylo)
-  
   if (length(lower_bound) == 0) lower_bound <- rep(-Inf, length(model$pars))
   if (length(upper_bound) == 0) upper_bound <- rep(Inf, length(model$pars))
  # if (NULL != conditional) stopifnot(is.function(conditional))
   
-  if (class(phylo) == "phylo") {
+  if (class(brts) == "phylo") {
     cat("You have provided the full phylogeny instead of the branching times\n")
     cat("Emphasis will extract the branching times for your convenience\n")
-    
+    brts <- ape::branching.times(brts)
   }
   
   msg1 <- paste("Initializing emphasis...")
@@ -160,6 +157,7 @@ emphasis <- function(phylo,
 mcEM_step <- function(brts,
                       pars,
                       sample_size,
+                      model,
                       soc,
                       max_missing,
                       max_lambda,
@@ -181,7 +179,8 @@ mcEM_step <- function(brts,
     results <- em_cpp(brts,
                       pars,
                       sample_size,
-                      maxN = 10 * sample_size,         
+                      maxN = 10 * sample_size,                   
+                      locate_plugin(model),           
                       soc,
                       max_missing,           
                       max_lambda,           
