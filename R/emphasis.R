@@ -4,6 +4,7 @@
 #' @param brts vector of branching times of the tree for which the model has to
 #' be fitted
 #' @param soc number of species at the root (1) or crown (2). Default is 2.
+#' @param model model to be used
 #' @param lower_bound vector of the lower limit of parameter values used by the
 #' model. Set to -Infinity if left empty.
 #' @param upper_bound vector of the upper limit of parameter values used by the
@@ -33,6 +34,7 @@
 #' @rawNamespace import(Rcpp)
 #' @rawNamespace importFrom(RcppParallel, RcppParallelLibs)
 emphasis <- function(phylo,
+                     model,
                      lower_bound = numeric(0),
                      upper_bound = numeric(0),
                      max_lambda = 500,
@@ -54,13 +56,8 @@ emphasis <- function(phylo,
   
   brts <- ape::branching.times(phylo)
   
-  #sort(ape::branching.times(phylo))
-  #sort(ape::branching.times(phylo),decreasing = T)
-  
-  pdnumpars = 4
-  
-  if (length(lower_bound) == 0) lower_bound <- rep(-Inf, pdnumpars)
-  if (length(upper_bound) == 0) upper_bound <- rep(Inf, pdnumpars)
+  if (length(lower_bound) == 0) lower_bound <- rep(-Inf, length(model$pars))
+  if (length(upper_bound) == 0) upper_bound <- rep(Inf, length(model$pars))
  # if (NULL != conditional) stopifnot(is.function(conditional))
   
   if (class(phylo) == "phylo") {
@@ -94,6 +91,7 @@ emphasis <- function(phylo,
     mc <- mcEM_step(brts = brts,
                     pars = pars,
                     sample_size = s,
+                    model = model,
                     soc = soc,
                     max_missing = max_missing,
                     max_lambda = max_lambda,
@@ -130,6 +128,7 @@ emphasis <- function(phylo,
     mc <- mcEM_step(brts = brts,
                     pars = pars,
                     sample_size = sample_size,
+                    model = model,
                     soc = soc,
                     max_missing = max_missing,
                     max_lambda = max_lambda,
