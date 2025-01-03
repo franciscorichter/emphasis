@@ -1,5 +1,4 @@
 
-# Install and load the rotl package
 #install.packages("rotl")
 library(rotl)
 library(emphasis)
@@ -8,9 +7,9 @@ tree <- sim_tree_pd_cpp(pars = c(0.1,0.6,-0.0175,0.001),max_t = 20)
 plot(tree$tes)
 
 # Perform the DE learning
-result <- learn_de(phylo = tree$tes,num_points = 10,max_iterations = 1000)
+result <- learn_de(phylo = tree$tes,num_points = 10,max_iterations = 500)
 
-
+result <- learn_em()
 
 
 

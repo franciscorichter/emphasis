@@ -30,6 +30,10 @@ e_cpp <- function(brts, init_pars, sample_size, maxN, soc, max_missing, max_lamb
   .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads)
 }
 
+em_cpp <- function(brts, pars, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, rconditional = NULL) {
+  .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, rconditional)
+}
+
 augmentPD_old <- function(phylo, pars, maxN, max_missing, lower_bound, upper_bound) {
     num_threads=1
     sample_size = 1
@@ -77,8 +81,6 @@ augmentPD_old <- function(phylo, pars, maxN, max_missing, lower_bound, upper_bou
 mcGrid <- function(pars_R, brts, sample_size, maxN, soc=2, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel=0.00001, num_threads) {
   .Call('_emphasis_rcpp_mce_grid', PACKAGE = 'emphasis', pars_R, brts, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads)
 }
-
-
 
 rcpp_mce_grid <- function(pars_R, brts, sample_size, maxN, soc=2, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel=0.00001, num_threads) {
   .Call('_emphasis_rcpp_mce_grid', PACKAGE = 'emphasis', pars_R, brts, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads)
