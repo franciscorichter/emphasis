@@ -1,9 +1,7 @@
 ---
 title: 'Simulation '
-subtitle: Emphasis notes
-output: 
-  rmarkdown::html_vignette:
-    toc: true       
+subtitle: emphasis notes
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Learning Module}
   %\VignetteEngine{knitr::rmarkdown}
@@ -35,7 +33,7 @@ To sample random variables (event times) from NHPP, one can use the `nhExpRand` 
 
 
 
-```{r nhpp-sampling, fig.align='center', fig.width=7, fig.height=4}
+```{r nhpp-sampling}
 # Define a rate function for the NHPP
 rate_function_example <- function(t) { 0.5 + 0.7*sin(t) }
 
@@ -48,7 +46,7 @@ tMax = 20        # Maximum time limit
 nhpp_event_times <- nhExpRand(n_samples, rate_function_example, now, tMax)
 
 # Print the sampled event times
-# print(nhpp_event_times)
+#print(nhpp_event_times)
 
 # Density histogram of sampled event times
 hist(nhpp_event_times, breaks = 100, col = 'skyblue', freq = FALSE,
@@ -65,6 +63,7 @@ legend('topright', legend = 'Rate Function', col = 'red', lwd = 2)
 In species evolutionary processes, understanding the rate of change at a specific time is crucial for modeling dynamics such as speciation or extinction. This rate can be influenced by various environmental and ecological factors, which themselves change over time. By modeling the rate, denoted as \( \lambda(t) \), as a function of time-dependent covariates, we create a more realistic and dynamic representation of these processes.
 
 
+### Rate Calculation
 
 Given these covariates, the rate \( \lambda(t) \) at a specific time `t` is calculated using a combination of parameters that weigh the influence of each covariate:
 
@@ -83,8 +82,9 @@ Given these covariates, the rate \( \lambda(t) \) at a specific time `t` is calc
 This mathematical formulation allows for a versatile and dynamic representation of rates in species evolutionary processes, capturing the nuances and complexities of biological systems over time.
 
 
+#### Example 1. Sinuosoidal covariates 
 
-```{r rate_t-function, fig.width=7, fig.height=4}
+```{r rate_t-function}
 # Define example covariate functions
 cov_func1 <- function(t) { sin(t) }
 cov_func2 <- function(t) { cos(t) }
@@ -118,12 +118,12 @@ legend('topright', legend = c('Covariate Function 1', 'Covariate Function 2', 'R
 
 
 
-## Simulation of Phylogenetic Trees
+### Simulation of Phylogenetic Trees
 
 In the study of evolutionary biology, phylogenetic trees represent the relationships between species or other taxonomic units based on genetic, morphological, or other types of data. Simulating phylogenetic trees allows researchers to understand and predict evolutionary patterns and processes. It provides a framework for testing biological hypotheses about the mechanisms of evolution, speciation, and extinction.
 
 
-### Phylogenetic Diversification (PD) Model
+#### Phylogenetic Diversification (PD) Model
 
 
 
@@ -131,7 +131,7 @@ In the study of evolutionary biology, phylogenetic trees represent the relations
 Next, we use the n_from_time and phylodiversity functions to calculate species richness and phylogenetic diversity over time and then visualize the rate:
 
 
-```{r phylosim, fig.width=7, fig.height=4}
+```{r}
 
 # Install and load the required packages
 if (!requireNamespace("ape", quietly = TRUE)) {
@@ -202,7 +202,7 @@ The PD model ensures that the speciation rate is non-negative and allows for the
 
 
 
-```{r pdsim, , fig.width=7, fig.height=4}
+```{r}
 
 
   
@@ -242,35 +242,31 @@ legend('topright', legend = c('Species Richness (Covariate)', 'Phylogenetic Dive
 
 
 
-## Augmentation of Phylogenetic Trees
 
 
-Phylogenies derived from molecular data (e.g., DNA sequences) are not complete trees, as they do not include extinct species. The analysis often involves computing a function over all possible full trees that are compatible with the observed tree \(x_{\text{obs}}\). This function, \( f(x|\theta) \), could represent various quantities of interest, such as the likelihood, the number of extinct species, or any other relevant measure.
-
-Mathematically, this involves integrating over all possible full trees that are compatible with the observed tree \(x_{\text{obs}}\):
-
-\[
-\Phi(x_{\text{obs}}|\theta) = \int_{x \in S(x_{\text{obs}})} f(x|\theta) \, dx
-\]
-
-However, this integration is usually impossible to compute directly for most models. Instead, we can approximate it numerically using a Monte Carlo approach:
-
-\[
-\Phi(x_{\text{obs}}|\theta) = \int_{x \in S(x_{\text{obs}})} \frac{f(x|\theta)}{f_m(x|\theta,x_{\text{obs}})} f_m(x|\theta,x_{\text{obs}}) \, dx 
-\approx \frac{1}{M} \sum_{x_i \sim f_m(x|\theta,x_{\text{obs}})} \frac{f(x_i|\theta)}{f_m(x_i|\theta,x_{\text{obs}})}
-\]
-
-Here:
-
-- \( f(x|\theta) \) is a general function that could represent the likelihood, the number of extinct species, or any other quantity of interest.
-- \( M \) is the Monte Carlo sample size.
-- \( f_m(x|\theta,x_{\text{obs}}) \) is a sampling function used to generate possible full trees based on the observed tree \( x_{\text{obs}} \).
-
-This approach generalizes existing methods, often using an Expectation-Maximization algorithm to maximize the quantity of interest.
+### Augmentation of Phylogenetic Trees
 
 
 
-```{r augment, fig.width=7, fig.height=4}
+
+Phylogenies that are derived from molecular data (e.g. DNA sequences) are, however, not full trees, as they do not contain the extinct species. The likelihood for an observed tree can be written in terms of the likelihood of compatible full trees. In principle, this is simply the integration over all possible full trees that are compatible with the observed tree $x_{obs}$:
+
+\begin{equation}
+	f(x_{obs}|\theta)  =  \displaystyle\int_{x \in \mathcal{X}(x_{obs})}   \exp(\ell _{x} (\theta|x_{obs})) dx 
+	\label{logy}
+\end{equation}
+
+This integration is usually impossible to compute in practice for most diversification models (\ref{logy}). We can obtain a numerical approximation by using the Monte-Carlo approach considering 
+
+\begin{eqnarray} 
+	f (x_{obs}|\theta) &=& \displaystyle\int_{x \in \mathcal{X}(x_{obs})} f (x|\theta) dx \nonumber \\ 
+	&=&\displaystyle\int_{x \in \mathcal{X}(x_{obs})} \frac{f (x|\theta)}{f_m (x|\theta,x_{obs})} f_m (x|\theta,x_{obs}) dx \nonumber \\ 
+	&\approx& \frac{1}{M}\sum_{x_i \sim f_m (x|\theta,x_{obs}) } \frac{f (x_i|\theta)}{f_m (x_i|\theta,x_{obs})} 
+	\label{MC}
+\end{eqnarray}
+for $f (x|\theta) = \exp(\ell _{x} (\theta|x_{obs}))$, $M$ the Monte-Carlo sample size and $f_m$ is an arbitrary sampler of the missing part of the full tree given an extant tree $x_{obs}$. Our statistical framework is a generalisation of that of, which makes use of an Expectation-Maximization algorithm for maximising the likelihood
+
+```{r}
 
 pars =c(0.21779984 ,1.16601633, -0.08090578 , 0.01261866)
 tree = sim_tree_pd_cpp(pars = pars,max_t = 5,max_lin = 1e+7,max_tries = 1)
