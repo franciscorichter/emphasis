@@ -19,7 +19,7 @@ library(ape)
 
 ```
 
-On this noteboook, we will explore different estimation methods on species diversification processes. We will focuss on estimating on the PD model.
+On this noteboook, we will explore different estimation methods on species diversification processes. We will focuss on estimating on the PD model
 
 The Phylogenetic Diversification (PD) model describes the speciation rate over time within a phylogenetic tree. The model takes into account both speciation and extinction events, and it can be mathematically described by the following equations:
 
