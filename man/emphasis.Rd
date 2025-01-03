@@ -6,7 +6,6 @@
 \usage{
 emphasis(
   phylo,
-  brts = NULL,
   model,
   lower_bound = numeric(0),
   upper_bound = numeric(0),
@@ -25,9 +24,6 @@ emphasis(
 )
 }
 \arguments{
-\item{brts}{vector of branching times of the tree for which the model has to
-be fitted}
-
 \item{model}{model to be used}
 
 \item{lower_bound}{vector of the lower limit of parameter values used by the
@@ -64,6 +60,9 @@ number of threads available is chosen.}
 
 \item{conditional}{a function that takes a parameter set as argument and returns
 conditional probability.}
+
+\item{brts}{vector of branching times of the tree for which the model has to
+be fitted}
 
 \item{soc}{number of species at the root (1) or crown (2). Default is 2.}
 }
