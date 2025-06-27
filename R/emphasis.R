@@ -81,7 +81,7 @@ emphasis <- function(brts,
   
   
   cat("\n", msg5, sep = "\n")
-  cat("Phase 2: Assesing required MC sampling size \n")
+  cat("Phase 2: Assessing required MC sampling size \n")
   
   for (s in pilot_sample_size) {
     cat(paste("\n Sampling size: ", as.character(s), "\n"))
