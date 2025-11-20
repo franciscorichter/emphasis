@@ -236,6 +236,60 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// safe_dummy_tree_cpp
+List safe_dummy_tree_cpp(NumericVector pars, double max_t, int max_N, int max_tries);
+RcppExport SEXP _emphasis_safe_dummy_tree_cpp(SEXP parsSEXP, SEXP max_tSEXP, SEXP max_NSEXP, SEXP max_triesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type pars(parsSEXP);
+    Rcpp::traits::input_parameter< double >::type max_t(max_tSEXP);
+    Rcpp::traits::input_parameter< int >::type max_N(max_NSEXP);
+    Rcpp::traits::input_parameter< int >::type max_tries(max_triesSEXP);
+    rcpp_result_gen = Rcpp::wrap(safe_dummy_tree_cpp(pars, max_t, max_N, max_tries));
+    return rcpp_result_gen;
+END_RCPP
+}
+// safe_phylodiv_ctor_cpp
+Rcpp::List safe_phylodiv_ctor_cpp(NumericVector pars, float max_t, size_t max_N);
+RcppExport SEXP _emphasis_safe_phylodiv_ctor_cpp(SEXP parsSEXP, SEXP max_tSEXP, SEXP max_NSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type pars(parsSEXP);
+    Rcpp::traits::input_parameter< float >::type max_t(max_tSEXP);
+    Rcpp::traits::input_parameter< size_t >::type max_N(max_NSEXP);
+    rcpp_result_gen = Rcpp::wrap(safe_phylodiv_ctor_cpp(pars, max_t, max_N));
+    return rcpp_result_gen;
+END_RCPP
+}
+// safe_phylodiv_sim_cpp
+Rcpp::List safe_phylodiv_sim_cpp(NumericVector pars, float max_t, size_t max_N);
+RcppExport SEXP _emphasis_safe_phylodiv_sim_cpp(SEXP parsSEXP, SEXP max_tSEXP, SEXP max_NSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type pars(parsSEXP);
+    Rcpp::traits::input_parameter< float >::type max_t(max_tSEXP);
+    Rcpp::traits::input_parameter< size_t >::type max_N(max_NSEXP);
+    rcpp_result_gen = Rcpp::wrap(safe_phylodiv_sim_cpp(pars, max_t, max_N));
+    return rcpp_result_gen;
+END_RCPP
+}
+// safe_simulate_div_tree_cpp
+Rcpp::List safe_simulate_div_tree_cpp(NumericVector pars, float max_t, size_t max_N, int max_tries);
+RcppExport SEXP _emphasis_safe_simulate_div_tree_cpp(SEXP parsSEXP, SEXP max_tSEXP, SEXP max_NSEXP, SEXP max_triesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type pars(parsSEXP);
+    Rcpp::traits::input_parameter< float >::type max_t(max_tSEXP);
+    Rcpp::traits::input_parameter< size_t >::type max_N(max_NSEXP);
+    Rcpp::traits::input_parameter< int >::type max_tries(max_triesSEXP);
+    rcpp_result_gen = Rcpp::wrap(safe_simulate_div_tree_cpp(pars, max_t, max_N, max_tries));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_emphasis_simulate_div_tree_cpp", (DL_FUNC) &_emphasis_simulate_div_tree_cpp, 4},
@@ -251,6 +305,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_emphasis_rcpp_mce_grid_factorial", (DL_FUNC) &_emphasis_rcpp_mce_grid_factorial, 11},
     {"_emphasis_rcpp_mcem", (DL_FUNC) &_emphasis_rcpp_mcem, 13},
     {"_emphasis_rcpp_mcm", (DL_FUNC) &_emphasis_rcpp_mcm, 8},
+    {"_emphasis_safe_dummy_tree_cpp", (DL_FUNC) &_emphasis_safe_dummy_tree_cpp, 4},
+    {"_emphasis_safe_phylodiv_ctor_cpp", (DL_FUNC) &_emphasis_safe_phylodiv_ctor_cpp, 3},
+    {"_emphasis_safe_phylodiv_sim_cpp", (DL_FUNC) &_emphasis_safe_phylodiv_sim_cpp, 3},
+    {"_emphasis_safe_simulate_div_tree_cpp", (DL_FUNC) &_emphasis_safe_simulate_div_tree_cpp, 4},
     {NULL, NULL, 0}
 };
 

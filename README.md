@@ -42,20 +42,69 @@ print(result)
 
 ## Main Functions
 - `emphasis()`: Main interface for fitting diversification models using EM.
-- `simulate_evolution()`: Simulate phylogenetic trees under various models.
-- `loglikelihood()`, `augmentPD()`, `generateNonHomogeneousExp()`, `nhExpRand()`: Utility and simulation functions.
 
-See the [reference manual](man/) and [vignettes](vignettes/) for all available functions and detailed documentation.
+## Simulation Methods
+
+The emphasis package provides several simulation tools for evolutionary and phylogenetic modeling:
+
+- `simulate_evolution()`: Simulate phylogenetic trees under a variety of diversification models (stub; see vignettes for examples).
+- `generateNonHomogeneousExp()`: Simulate events from a non-homogeneous Poisson process (stub).
+- `nhExpRand()`: Sample event times from a non-homogeneous exponential process (stub).
+
+**Example Usage:**
+```r
+# Example (pseudo-code, see vignettes for real usage):
+model <- list(pars = c(lambda0 = 0.1, betaN = 0.01, betaP = 0.01))
+sim_tree <- simulate_evolution(model)
+```
+
+## Estimation Methods
+
+emphasis supports several estimation approaches for model fitting:
+
+### MCEM Estimation
+- **Function:** `estimation_mcem()`
+- **Description:** Fits a diversification model to a phylogenetic tree using the Monte Carlo Expectation-Maximization algorithm.
+- **Example:**
+```r
+result <- estimation_mcem(phylo, model)
+```
+
+### MLE Estimation
+- **Function:** `estimation_mle()`
+- **Description:** Fits a diversification model using Maximum Likelihood Estimation.
+- **Example:**
+```r
+result <- estimation_mle(phylo, model)
+```
+
+### (Future) Bayesian Estimation
+- **Function:** `estimation_bayes()` (planned)
+- **Description:** Bayesian inference for diversification models (to be implemented).
 
 ## Vignettes & Examples
 
-- [Simulation](vignettes/Simulation.html): Introduction to simulating non-homogeneous Poisson processes and diversification models.
-- [Estimation](vignettes/documentation_estimation.html): Parameter estimation in phylogenetic diversification models.
+- **Simulation vignette:** Introduction to simulating non-homogeneous Poisson processes and diversification models.
+- **Estimation vignettes:** Parameter estimation in phylogenetic diversification models using MCEM and MLE.
 
-Run the vignettes in RStudio or with:
+Run in R:
 ```r
 browseVignettes("emphasis")
 ```
+
+## Development Roadmap
+
+- [x] Clean up NAMESPACE and code structure
+- [x] Split code into simulation and estimation modules
+- [ ] Implement simulation and estimation stubs
+- [ ] Expand vignettes for each method
+- [ ] Add Bayesian estimation
+- [ ] Improve testing and CI
+
+**How to contribute:**
+- Fork the repo and submit pull requests
+- Open issues for bugs or feature requests
+- Add new models, methods, or vignettes!
 
 ## Citing emphasis
 If you use `emphasis` in your research, please cite:
