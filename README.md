@@ -42,6 +42,8 @@ print(result)
 
 ## Main Functions
 - `emphasis()`: Main interface for fitting diversification models using EM.
+- `simulate_evolution()`: Simulate phylogenetic trees under various models.
+- `loglikelihood()`, `augmentPD()`, `generateNonHomogeneousExp()`, `nhExpRand()`: Utility and simulation functions.
 
 ## Simulation Methods
 
@@ -78,23 +80,20 @@ result <- estimation_mcem(phylo, model)
 result <- estimation_mle(phylo, model)
 ```
 
-
 ## Vignettes & Examples
 
-- **Simulation vignette:** Introduction to simulating non-homogeneous Poisson processes and diversification models.
-- **Estimation vignettes:** Parameter estimation in phylogenetic diversification models using MCEM and MLE.
+- [Simulation](vignettes/Simulation.html): Introduction to simulating non-homogeneous Poisson processes and diversification models.
+- [Estimation](vignettes/documentation_estimation.html): Parameter estimation in phylogenetic diversification models.
 
-Run in R:
+Run the vignettes in RStudio or with:
 ```r
 browseVignettes("emphasis")
 ```
-
 
 **How to contribute:**
 - Fork the repo and submit pull requests
 - Open issues for bugs or feature requests
 - Add new models, methods, or vignettes!
-
 ## Citing emphasis
 If you use `emphasis` in your research, please cite:
 
