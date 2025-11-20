@@ -78,9 +78,6 @@ result <- estimation_mcem(phylo, model)
 result <- estimation_mle(phylo, model)
 ```
 
-### (Future) Bayesian Estimation
-- **Function:** `estimation_bayes()` (planned)
-- **Description:** Bayesian inference for diversification models (to be implemented).
 
 ## Vignettes & Examples
 
@@ -92,14 +89,6 @@ Run in R:
 browseVignettes("emphasis")
 ```
 
-## Development Roadmap
-
-- [x] Clean up NAMESPACE and code structure
-- [x] Split code into simulation and estimation modules
-- [ ] Implement simulation and estimation stubs
-- [ ] Expand vignettes for each method
-- [ ] Add Bayesian estimation
-- [ ] Improve testing and CI
 
 **How to contribute:**
 - Fork the repo and submit pull requests
