@@ -1,63 +1,59 @@
-#' Train a Generalized Additive Model on Simulation Data
+#' Augment Phylogenetic Diversity using MCEM
 #'
-#' This function fits a Generalized Additive Model (GAM) to the provided simulation
-#' results. It models the log-likelihood of simulation success (`loglik`) as a function
-#' of the simulation parameters, using smooth terms for each parameter. Only simulations
-#' that completed successfully are used for the model fitting.
-#' 
-#' @param results A list containing simulation results with the following components:
-#'   - `loglik_estimation`: A list of log-likelihood values or `try-error` objects.
-#'   - `trees`: A list of data frames, each containing tree data.
-#'   - `param`: A list of named vectors containing the simulation parameters `mu`,
-#'     `lambda`, `betaN`, and `betaP`.
-#' 
-#' @return A `gam` object representing the fitted model.
-#' @export
+#' This function performs augmentation of phylogenetic diversity (PD) on a given phylogenetic tree using the Monte Carlo Expectation-Maximization (MCEM) algorithm. It aims to estimate the maximum likelihood parameters for the given phylo object based on the provided parameters and constraints.
+#'
+#' @param phylo A phylogenetic tree of class 'phylo'.
+#' @param pars A numeric vector of initial parameters for the MCEM algorithm.
+#' @param maxN The maximum number of iterations for the MCEM algorithm.
+#' @param max_missing The maximum amount of missing data allowed.
+#' @param lower_bound The lower bound constraint for parameter optimization.
+#' @param upper_bound The upper bound constraint for parameter optimization.
+#' @param num_threads The number of threads to be used for parallel computation. Defaults to 1.
+#' @param sample_size The size of the sample to be used in the MCEM algorithm. Defaults to 1.
+#' @param soc The second order correction for the MCEM algorithm. Defaults to 2.
+#' @param xtol_rel The relative tolerance for convergence in the optimization algorithm. Defaults to 0.00001.
+#' @param verbose A logical value indicating if progress messages should be printed. Defaults to FALSE.
+#'
+#' @details The function uses the \code{\link[ape:branching.times]{branching.times}} function from the 'ape' package to calculate the branching times of the phylogenetic tree. It then calls a C++ function through the .Call interface for the MCEM algorithm. The parameters `max_lambda`, `brts`, and `result` are used internally within the function.
+#'
+#' @return The result of the MCEM algorithm, which could be parameters estimates, log-likelihood values, or other relevant metrics depending on the implementation of the C++ function `_emphasis_rcpp_mce`.
 #'
 #' @examples
 #' \dontrun{
-#' # Assuming 'results' is your list of simulation results:
-#' gam_model <- train_GAM(results)
-#' summary(gam_model)
+#'   data(bird.orders) # assuming bird.orders is a phylo object
+#'   initial_pars <- c(0.1, 0.1)
+#'   result <- augmentPD(phylo = bird.orders, pars = initial_pars,
+#'                       maxN = 1000, max_missing = 0.1,
+#'                       lower_bound = 0.001, upper_bound = 10)
 #' }
 #'
-train_GAM <- function(results){
-  
-  completed_indices <- which(!sapply(results$loglik_estimation, inherits, "try-error"))
-  trees = results$trees[completed_indices]
-  num_extinct_per_tree <- sapply(trees, count_extinct_species)
-  
-  sim_data <- data.frame(mu = results$param$mu,
-                         lambda = results$param$lambda,
-                         betaN = results$param$betaN,
-                         betaP = results$param$betaP,
-                         loglik = unlist(results$loglik_estimation[completed_indices]),
-                         nspecies =  num_extinct_per_tree
-  )
-  
-  
-  cat("Training GAM...")
-  gam_loglik = mgcv::gam(loglik~s(mu)+s(lambda)+s(betaN)+s(betaP),data=sim_data,family= mgcv::scat(link="identity"))
-  
-  # Check if all parameters are significant
-  pvals <- summary(gam_loglik)$p.values
-  significant <- pvals < 0.05
-  if(all(significant)) {
-    cat("All parameters are significant.\n")
-  } else {
-    cat("Not all parameters are significant.\n")
+#' @export
+augmentPD <- function(phylo, pars, maxN, max_missing, lower_bound, upper_bound,
+                      num_threads = 1, sample_size = 1, soc = 2, xtol_rel = 0.00001,
+                      verbose = FALSE) {
+  if(!inherits(phylo, "phylo")) stop("The 'phylo' argument must be of class 'phylo'.")
+
+  if(!all(sapply(list(maxN, max_missing, lower_bound, upper_bound, num_threads, sample_size, soc, xtol_rel), is.numeric))) {
+    stop("All parameters defining numerical values must be of type numeric.")
   }
-  
-  
-  return(gam_loglik)
+
+  max_lambda = max_missing * 100
+  brts = ape::branching.times(phylo)
+
+  result <- .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars,
+                  sample_size, maxN, soc, max_missing, max_lambda,
+                  lower_bound, upper_bound, xtol_rel, num_threads)
+
+  if(verbose) {
+    cat("Augmentation completed.\n")
+  }
+
+  return(result)
 }
-
-
-
 
 #' Augment Multiple Phylogenetic Trees with Parameter Diversity
 #'
-#' This function simulates and augments phylogenetic data across multiple trees 
+#' This function simulates and augments phylogenetic data across multiple trees
 #' using parameter sampling and the augmentPD function.
 #'
 #' @param phylo A phylogenetic tree object.
@@ -84,7 +80,6 @@ AugmentMultiplePhyloPD <- function(phylo,
                            max_lin = 1e+6,
                            max_tries = 1){
 
-  # Preallocate lists
   trees <- vector("list", n_trees)
   rejected_overruns <- vector("list", n_trees)
   rejected_lambda <- vector("list", n_trees)
@@ -93,20 +88,19 @@ AugmentMultiplePhyloPD <- function(phylo,
   loglik_estimation <- vector("list", n_trees)
   logf <- vector("list", n_trees)
   logg <- vector("list", n_trees)
-  
+
   name.param <- c("mu","lambda", "betaN","betaP")
   true.param <- vector(mode='list', length=4)
   names(true.param) <- name.param
-  
+
   for(j in 1:n_trees){
-    
-    # Randomly sample parameter values
+
     lambda_sample <- runif(1, lambda_interval[1], lambda_interval[2])
     mu_sample <- runif(1, mu_interval[1], mu_interval[2])
     betaN_sample <- runif(1, betaN_interval[1], betaN_interval[2])
     betaP_sample <- runif(1, betaP_interval[1], betaP_interval[2])
     sim.param <- c(mu_sample, lambda_sample, betaN_sample, betaP_sample)
-    
+
     outputs <- try({
       augmentPD(phylo = phylo,
             pars = sim.param,
@@ -117,8 +111,8 @@ AugmentMultiplePhyloPD <- function(phylo,
             upper_bound = 1+c(lambda_interval[2],mu_interval[2],betaN_interval[2],
                             betaP_interval[2]))
     },silent = TRUE)
-    
-    if (class(outputs) != "try-error") {
+
+    if (!inherits(outputs, "try-error")) {
       trees[[j]] <- outputs$trees
       rejected_overruns[[j]] <- outputs$rejected_overruns
       rejected_lambda[[j]] <- outputs$rejected_lambda
@@ -127,7 +121,7 @@ AugmentMultiplePhyloPD <- function(phylo,
       loglik_estimation[[j]] <- outputs$fhat
       logf[[j]] <- outputs$logf
       logg[[j]] <- outputs$logg
-        
+
       for (i in 1:4) {
         true.param[[i]] <- c(true.param[[i]], sim.param[i])
       }
@@ -141,15 +135,13 @@ AugmentMultiplePhyloPD <- function(phylo,
       logf[[j]] <- outputs
       logg[[j]] <- outputs
     }
-    
-    # Print progress
-    svMisc::progress(j, n_trees, progress.bar = TRUE, init = (j == 1))
+
+    message(sprintf("Progress: %d/%d", j, n_trees))
   }
-  
-  # Package and return results
+
   results = list(
-    trees = trees, 
-    param = true.param, 
+    trees = trees,
+    param = true.param,
     rejected_overruns = rejected_overruns,
     rejected_lambda = rejected_lambda,
     rejected_zero_weights = rejected_zero_weights,

@@ -15,9 +15,17 @@ Depends: R (>= 3.5.0),
          RcppParallel
 Imports: nloptr,
          ape,
-         progress
-LinkingTo: Rcpp, 
-           RcppParallel, 
+         progress,
+         MASS,
+         DDD
+Suggests: ggplot2,
+          patchwork,
+          mgcv,
+          tibble,
+          dplyr,
+          tidyr
+LinkingTo: Rcpp,
+           RcppParallel,
            nloptr,
            BH
 SystemRequirements: C++14
