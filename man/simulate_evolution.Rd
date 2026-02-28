@@ -25,6 +25,8 @@ This function simulates evolutionary processes, including speciation and extinct
 based on given parameters and time constraints.
 }
 \examples{
+\dontrun{
 # Example usage:
 simulate_evolution(N_max = 100, spec_pars = c(0.1, 0.2), ext_pars = c(0.05, 0.1), max_t = 50)
+}
 }

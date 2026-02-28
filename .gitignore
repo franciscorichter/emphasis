@@ -36,3 +36,7 @@ vignettes/*.pdf
 rsconnect/
 *.o
 *.so
+
+# Miscellaneous / generated files
+.DS_Store
+src/symbols.rds

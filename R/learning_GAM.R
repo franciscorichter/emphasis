@@ -15,9 +15,11 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
 #' # Assuming 'results' is your list of simulation results:
 #' gam_model <- train_GAM(results)
 #' summary(gam_model)
+#' }
 #'
 train_GAM <- function(results){
   

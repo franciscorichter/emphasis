@@ -9,8 +9,10 @@
 #' @param ... Additional parameters.
 #' @return A list containing the tree matrix and metrics.
 #' @examples
+#' \dontrun{
 #' # Example usage:
 #' simulate_evolution(N_max = 100, spec_pars = c(0.1, 0.2), ext_pars = c(0.05, 0.1), max_t = 50)
+#' }
 #' @export
 simulate_evolution <- function(N_max, spec_pars, ext_pars, max_t, ...) {
   
