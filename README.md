@@ -5,14 +5,23 @@
 
 ## Overview
 
-`emphasis` is an R package providing statistical tools for the study of diversification of species and the ecological drivers of macro-evolution. It implements advanced simulation and inference methods for phylogenetic analysis, including non-homogeneous Poisson processes, importance sampling, and expectation-maximization (EM) algorithms for model fitting.
+`emphasis` is an R package for studying diversification of species and the ecological drivers of macro-evolution. It combines fast C++ back-ends with R-friendly interfaces for:
 
-## Features
-- Simulation of phylogenetic trees under various diversification models
-- Estimation of model parameters using EM approaches
-- Support for non-homogeneous Poisson processes
-- Parallel computation via RcppParallel
-- Integration with the `ape` package for phylogenetic data structures
+- stochastic simulation of phylogenies with density and PD dependence,
+- Monte Carlo expectation-maximisation (MCEM) parameter estimation,
+- differential-evolution (DE) searches for good starting values, and
+- tooling to explore non-homogeneous Poisson/exponential processes.
+
+The package is organised around a small set of verbs — **simulate**, **augment**, **estimate**, **diagnose** — each backed by an R helper in `R/` and a matching Rd page.
+
+## Feature highlights
+
+- **Simulation**: `sim_tree_pd_*`, `generatePhyloPD()` and friends quickly explore scenarios.
+- **Augmentation**: `augmentPD()` and `AugmentMultiplePhyloPD()` produce augmented trees for downstream inference.
+- **Estimation**: `emphasis_de()` / `emphasis_de_factorial()` and `mcEM_step()` implement robust inference workflows.
+- **Utilities**: Non-homogeneous exponential samplers (`generateNonHomogeneousExp()`, `nhExpRand()`), gradient helpers, GAM-based diagnostics, and plotting utilities.
+
+Each high-level routine accepts plain R objects (e.g. `phylo`, numeric vectors) and delegates heavy lifting to `Rcpp` / `RcppParallel` code paths.
 
 ## Installation
 
@@ -25,9 +34,54 @@
 devtools::install_github("franciscorichter/emphasis")
 ```
 
-## Getting Started
+## Quick start
 
-Load the package and check out the main function:
+```r
+library(emphasis)
+
+data(bird.orders, package = "ape")
+
+# 1. Generate MCEM-ready branching times
+brts <- ape::branching.times(bird.orders)
+
+# 2. Seed the optimisation with differential evolution
+de_seed <- emphasis_de(
+  brts = brts,
+  num_iterations = 5,
+  num_points = 50,
+  max_missing = 1e4,
+  sd_vec = rep(0.4, 4),
+  lower_bound = c(0, 0, -0.5, -0.5),
+  upper_bound = c(1, 2, 0.5, 0.5),
+  max_lambda = 500
+)
+
+# 3. Run MCEM using the best DE iterate
+seed_pars <- colMeans(de_seed$min_pars)
+fit <- mcEM_step(
+  brts = brts,
+  pars = seed_pars,
+  sample_size = 250,
+  soc = 2,
+  max_missing = 1e4,
+  max_lambda = 500,
+  lower_bound = c(-Inf, -Inf, -Inf, -Inf),
+  upper_bound = c(Inf, Inf, Inf, Inf),
+  xtol = 1e-3,
+  tol = 0.1,
+  burnin = 20,
+  num_threads = 0,
+  verbose = TRUE
+)
+
+str(fit)
+```
+
+The snippet highlights the recommended workflow: start with DE to obtain stable seeds, then call `mcEM_step()` (or your own wrapper) for final refinement.
+
+## Getting started guides
+
+Load the package and explore the main entry points:
 
 ```r
 library(emphasis)
@@ -40,60 +94,70 @@ result <- emphasis(bird.orders, model)
 print(result)
 ```
 
-## Main Functions
-- `emphasis()`: Main interface for fitting diversification models using EM.
-- `simulate_evolution()`: Simulate phylogenetic trees under various models.
-- `loglikelihood()`, `augmentPD()`, `generateNonHomogeneousExp()`, `nhExpRand()`: Utility and simulation functions.
+## Core modules
 
-## Simulation Methods
+| Module | Purpose | Key functions |
+|--------|---------|---------------|
+| `simulate.R` | Sample PD-dependent phylogenies or extinction outcomes | `sim_tree_pd_R()`, `sim_tree_pd_cpp()`, `sim_tree_is_extinct_pd()`, `sim_tree_pd_grid()` |
+| `generate.R` | Convenience wrappers for building training sets or non-homogeneous processes | `generatePhyloPD()`, `generateNonHomogeneousExp()`, `nhExpRand()`, `rate_t()`, `ExponentialRate()` |
+| `augment.R` | Augment trees with missing lineages | `augmentPD()`, `AugmentMultiplePhyloPD()` |
+| `de.R` | Differential-evolution samplers for initial parameter search | `emphasis_de()`, `emphasis_de_factorial()` |
+| `gam.R` | GAM-based diagnostics of simulation sweeps | `train_GAM()` |
+| `utils.R` | Helper utilities used across the package | plotting helpers, safe wrappers |
 
-The emphasis package provides several simulation tools for evolutionary and phylogenetic modeling:
+See `man/` for in-depth documentation on each function.
 
-- `simulate_evolution()`: Simulate phylogenetic trees under a variety of diversification models (stub; see vignettes for examples).
-- `generateNonHomogeneousExp()`: Simulate events from a non-homogeneous Poisson process (stub).
-- `nhExpRand()`: Sample event times from a non-homogeneous exponential process (stub).
+## Simulation & estimation workflows
 
-**Example Usage:**
+### Simulation sweeps
+
 ```r
-# Example (pseudo-code, see vignettes for real usage):
-model <- list(pars = c(lambda0 = 0.1, betaN = 0.01, betaP = 0.01))
-sim_tree <- simulate_evolution(model)
+grid <- sim_tree_pd_grid(
+  mu_vec = seq(0.05, 0.2, length.out = 4),
+  lambda_vec = seq(0.1, 0.5, length.out = 4),
+  b_n_vec = c(-0.4, -0.2),
+  b_p_vec = c(-0.1, 0),
+  max_t = 10,
+  num_repl = 50,
+  max_N = 1e4
+)
+
+head(grid)
 ```
 
-## Estimation Methods
+### GAM diagnostics
 
-emphasis supports several estimation approaches for model fitting:
-
-### MCEM Estimation
-- **Function:** `estimation_mcem()`
-- **Description:** Fits a diversification model to a phylogenetic tree using the Monte Carlo Expectation-Maximization algorithm.
-- **Example:**
 ```r
-result <- estimation_mcem(phylo, model)
+results <- AugmentMultiplePhyloPD(
+  phylo = bird.orders,
+  n_trees = 20,
+  mu_interval = c(0.05, 0.2),
+  lambda_interval = c(0.1, 0.6),
+  betaN_interval = c(-0.5, 0.1),
+  betaP_interval = c(-0.2, 0.2)
+)
+
+gam_fit <- train_GAM(results)
+summary(gam_fit)
 ```
 
-### MLE Estimation
-- **Function:** `estimation_mle()`
-- **Description:** Fits a diversification model using Maximum Likelihood Estimation.
-- **Example:**
-```r
-result <- estimation_mle(phylo, model)
-```
+### MCEM loop control helpers
 
-## Vignettes & Examples
+`mcEM_step()` returns a list with the MCEM trace, latest parameter estimates, iteration count, and standard error of the log-likelihood estimate. Combine it with `get_required_sampling_size()` to adaptively increase sample sizes.
 
-- [Simulation](vignettes/Simulation.html): Introduction to simulating non-homogeneous Poisson processes and diversification models.
-- [Estimation](vignettes/documentation_estimation.html): Parameter estimation in phylogenetic diversification models.
+## Documentation & vignettes
 
-Run the vignettes in RStudio or with:
-```r
-browseVignettes("emphasis")
-```
+- Function docs live in `man/*.Rd` (generated via roxygen). Start with `?emphasis-package` for a package overview.
+- Worked examples are available via `browseVignettes("emphasis")` after installing the package. They cover simulation set-ups, MCEM tuning, and diagnostics.
+- The `Documentation/` directory contains PDF summaries of internal research experiments for additional context.
 
-**How to contribute:**
-- Fork the repo and submit pull requests
-- Open issues for bugs or feature requests
-- Add new models, methods, or vignettes!
+## Contributing
+
+Pull requests and issues are welcome! A good contribution typically includes:
+
+1. A reproducible example or failing test.
+2. Updated documentation (`roxygen2` comments + README snippets).
+3. Benchmark notes if the change affects performance-critical code.
 ## Citing emphasis
 If you use `emphasis` in your research, please cite:
 
