@@ -1,4 +1,10 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^doc$
-^Meta$
+^\.DS_Store$
+^\.RData$
+^\.Rhistory$
+^\.git$
+^\.github$
+^\.\.Rcheck$
+^results$
+^Documentation$

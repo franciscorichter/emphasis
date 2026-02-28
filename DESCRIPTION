@@ -5,6 +5,8 @@ Version: 0.4
 Authors@R: c(person("Francisco","Richter", email = "richtf@usi.ch", role = c("aut", "cre")),
                 person("Thijs","Janzen", email = "t.janzen@rug.nl", role=c("ctb")),
                 person("Hanno","Hildenbrandt", email = "h.hildenbrandt@rug.nl", role = c("ctb")))
+Author: Francisco Richter [aut, cre], Thijs Janzen [ctb], Hanno Hildenbrandt [ctb]
+Maintainer: Francisco Richter <richtf@usi.ch>
 Description: Set of statistical tools for the study of diversification of species and ecological drivers of macro-evolution.
 License: file LICENSE
 Encoding: UTF-8
@@ -13,14 +15,18 @@ Depends: R (>= 3.5.0),
          RcppParallel
 Imports: nloptr,
          ape,
-         progress
-LinkingTo: Rcpp, 
-           RcppParallel, 
+         progress,
+         MASS,
+         DDD
+Suggests: ggplot2,
+          patchwork,
+          mgcv,
+          tibble,
+          dplyr,
+          tidyr
+LinkingTo: Rcpp,
+           RcppParallel,
            nloptr,
            BH
 SystemRequirements: C++14
 RoxygenNote: 7.3.1
-Suggests: 
-    knitr,
-    rmarkdown
-VignetteBuilder: knitr
