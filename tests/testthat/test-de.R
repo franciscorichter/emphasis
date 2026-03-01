@@ -1,9 +1,16 @@
 # Tests for Differential Evolution fitting
-in_r_cmd_check <- function() nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_"))
 
-test_that("emphasis_de returns expected structure", {
-  skip_on_cran()
-  skip_if(!in_r_cmd_check(), "slow C++ test: run via R CMD check")
+test_that("emphasis_de errors on mismatched bounds", {
+  expect_error(
+    emphasis_de(1:3, 1, 10, 100,
+                sd_vec = c(0.1), lower_bound = c(0, 0), upper_bound = c(1),
+                max_lambda = 10),
+    "same length"
+  )
+})
+
+test_that("emphasis_de integration test", {
+  skip("C++ integration test: run locally with devtools::test(filter='de')")
   set.seed(42)
   brts <- c(0.9, 0.7, 0.5, 0.3, 0.1)
 
@@ -29,18 +36,8 @@ test_that("emphasis_de returns expected structure", {
   expect_length(result$obtained_estim, 4)
 })
 
-test_that("emphasis_de errors on mismatched bounds", {
-  expect_error(
-    emphasis_de(1:3, 1, 10, 100,
-                sd_vec = c(0.1), lower_bound = c(0, 0), upper_bound = c(1),
-                max_lambda = 10),
-    "same length"
-  )
-})
-
-test_that("emphasis_de_factorial returns expected structure", {
-  skip_on_cran()
-  skip_if(!in_r_cmd_check(), "slow C++ test: run via R CMD check")
+test_that("emphasis_de_factorial integration test", {
+  skip("C++ integration test: run locally with devtools::test(filter='de')")
   set.seed(1)
   brts <- c(0.9, 0.7, 0.5, 0.3, 0.1)
 

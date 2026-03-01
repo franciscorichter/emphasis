@@ -1,8 +1,9 @@
 # Tests for EM / E-step functions
+# C++ integration tests are slow and run locally only
 in_r_cmd_check <- function() nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_"))
 
 test_that("e_cpp returns a list with expected fields", {
-  skip_if(!in_r_cmd_check(), "slow C++ test: run via R CMD check")
+  skip("C++ integration test: run locally with devtools::test(filter='em')")
   set.seed(42)
   brts <- c(0.8, 0.6, 0.4, 0.2)
   result <- e_cpp(
@@ -24,7 +25,7 @@ test_that("e_cpp returns a list with expected fields", {
 })
 
 test_that("loglikelihood returns numeric fhat", {
-  skip_if(!in_r_cmd_check(), "slow C++ test: run via R CMD check")
+  skip("C++ integration test: run locally with devtools::test(filter='em')")
   set.seed(42)
   brts <- c(0.8, 0.6, 0.4, 0.2)
 

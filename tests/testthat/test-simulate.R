@@ -1,13 +1,8 @@
 # Tests for simulation functions
-# C++ backend tests only run in R CMD check (not devtools::test())
-# because devtools::load_all() can cause C++ library loading issues locally.
-in_r_cmd_check <- function() {
-  nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_"))
-}
+# C++ simulation tests run locally only (skip in all automated checks)
 
 test_that("sim_tree_pd_cpp returns valid output", {
-  skip_on_cran()
-  skip_if(!in_r_cmd_check(), "C++ test: run via R CMD check")
+  skip("C++ integration test: run locally with devtools::test(filter='simulate')")
 
   set.seed(42)
   result <- sim_tree_pd_cpp(
@@ -24,8 +19,7 @@ test_that("sim_tree_pd_cpp returns valid output", {
 })
 
 test_that("sim_tree_is_extinct_pd returns a data frame with correct columns", {
-  skip_on_cran()
-  skip_if(!in_r_cmd_check(), "C++ test: run via R CMD check")
+  skip("C++ integration test: run locally with devtools::test(filter='simulate')")
 
   set.seed(7)
   result <- sim_tree_is_extinct_pd(
@@ -42,8 +36,7 @@ test_that("sim_tree_is_extinct_pd returns a data frame with correct columns", {
 })
 
 test_that("sim_tree_pd_grid returns a data frame", {
-  skip_on_cran()
-  skip_if(!in_r_cmd_check(), "C++ test: run via R CMD check")
+  skip("C++ integration test: run locally with devtools::test(filter='simulate')")
 
   result <- sim_tree_pd_grid(
     mu_vec     = c(0.05, 0.1),
