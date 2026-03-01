@@ -6,7 +6,7 @@
 simulate_tree(
   pars,
   max_t,
-  model = c("pd", "dd", "cr"),
+  model = c("pd", "dd", "cr", "ep"),
   fast = TRUE,
   max_lin = 1e+06,
   max_tries = 100,
@@ -26,17 +26,22 @@ simulate_tree(
   \item{\code{"cr"}}{2 values: \code{c(mu, lambda0)}.
     Constant-rate birth-death (special case of \code{"pd"} with
     \code{betaN = betaP = 0}).}
+  \item{\code{"ep"}}{5 values: \code{c(mu, lambda0, betaN, betaP, betaE)}.
+    Per-lineage speciation rate = \code{max(0, lambda0 + betaN*N + betaP*(P/N) + betaE*d_i)};
+    extinction rate = \code{mu}. Here \code{d_i = t - start_date_i} is the pendant
+    edge length of lineage i (time since it last diverged).}
 }}
 
 \item{max_t}{Crown age (simulation time).}
 
 \item{model}{Diversification model: \code{"pd"} (phylogenetic diversity
-dependence), \code{"dd"} (diversity dependence, exponential rates), or
-\code{"cr"} (constant rate). Default \code{"pd"}.}
+dependence), \code{"dd"} (diversity dependence, exponential rates),
+\code{"cr"} (constant rate), or \code{"ep"} (evolutionary pendant).
+Default \code{"pd"}.}
 
 \item{fast}{Logical. Use the fast C++ implementation (\code{TRUE}, default)
-or the slower pure-R implementation (\code{FALSE}). The \code{"dd"} model
-has no R implementation and always uses C++.}
+or the slower pure-R implementation (\code{FALSE}). The \code{"dd"} and
+\code{"ep"} models have no R implementation and always use C++.}
 
 \item{max_lin}{Maximum number of lineages before the simulation is
 considered non-extinct. Default \code{1e6}.}
@@ -80,5 +85,8 @@ tree <- simulate_tree(c(0.1, -0.01, 0, -2.5, 0, 0), max_t = 5, model = "dd")
 
 # CR model — slow pure R
 tree <- simulate_tree(c(0.1, 0.5), max_t = 5, model = "cr", fast = FALSE)
+
+# EP model — fast C++ only
+tree <- simulate_tree(c(0.1, 0.5, -0.02, 0.01, 0.05), max_t = 5, model = "ep")
 }
 }

@@ -59,17 +59,18 @@
 #' }
 #' @export
 simulate_tree <- function(pars, max_t,
-                          model    = c("pd", "dd", "cr"),
+                          model    = c("pd", "dd", "cr", "ep"),
                           fast     = TRUE,
                           max_lin  = 1e6,
                           max_tries = 100,
                           useDDD   = TRUE) {
   model <- match.arg(model)
 
-  expected_n  <- c(pd = 4L, dd = 6L, cr = 2L)
+  expected_n  <- c(pd = 4L, dd = 6L, cr = 2L, ep = 5L)
   param_names <- c(pd = "c(mu, lambda0, betaN, betaP)",
                    dd = "c(A0, An, Ap, B0, Bn, Bp)",
-                   cr = "c(mu, lambda0)")
+                   cr = "c(mu, lambda0)",
+                   ep = "c(mu, lambda0, betaN, betaP, betaE)")
   if (length(pars) != expected_n[[model]]) {
     stop(sprintf("'%s' model requires %d parameters: %s",
                  model, expected_n[[model]], param_names[[model]]))
@@ -77,6 +78,11 @@ simulate_tree <- function(pars, max_t,
 
   if (!fast && model == "dd") {
     message("No R implementation for 'dd' model; using fast C++ instead.")
+    fast <- TRUE
+  }
+
+  if (!fast && model == "ep") {
+    message("No R implementation for 'ep' model; using fast C++ instead.")
     fast <- TRUE
   }
 
@@ -109,6 +115,10 @@ simulate_tree <- function(pars, max_t,
       list(tes = tes, tas = tas, L = L, brts = brts, status = raw$status)
     },
     cr = sim_tree_pd_cpp(c(pars[1], pars[2], 0, 0), max_t,
+                         max_lin   = max_lin,
+                         max_tries = max_tries,
+                         useDDD    = useDDD),
+    ep = sim_tree_ep_cpp(pars, max_t,
                          max_lin   = max_lin,
                          max_tries = max_tries,
                          useDDD    = useDDD)
@@ -322,6 +332,36 @@ sim_tree_pd_cpp <- function(pars,
              status = result$status)
 
   return(out)
+}
+
+
+#' Simulate a single phylogenetic tree under the EP (evolutionary pendant) model
+#' @description Fast C++ Gillespie direct simulation where each lineage's
+#' speciation rate depends on its own pendant edge length (time since last
+#' divergence).
+#' @param pars parameter vector with c(mu, lambda0, betaN, betaP, betaE)
+#' @param max_t crown age
+#' @param max_lin number of lineages past which non-extinction is assumed.
+#' @param max_tries maximum number of tries to get a non-extinct tree.
+#' @param useDDD whether to use DDD for tree conversion (default TRUE)
+#' @return list with: 1) tes - reconstructed tree, 2) tas - tree with extinct
+#' lineages, 3) L = Ltable and 4) brts - branching times of the reconstructed
+#' tree and 5) status of simulation, options 1) "extinct", 2) "too_large" or 3)
+#' "done".
+#' @export
+sim_tree_ep_cpp <- function(pars, max_t, max_lin = 1e6, max_tries = 100, useDDD = TRUE) {
+  result <- simulate_single_ep_tree_cpp(pars, max_t, max_lin, max_tries)
+  tes <- tas <- brts <- NULL
+  if (result$status == "extinct")
+    warning("could not simulate tree, all trees went extinct")
+  if (result$status == "too_large")
+    warning("could not simulate tree, all trees were too large")
+  if (result$status == "done" && useDDD) {
+    tes  <- DDD::L2phylo(result$Ltable, dropextinct = TRUE)
+    tas  <- DDD::L2phylo(result$Ltable, dropextinct = FALSE)
+    brts <- DDD::L2brts(result$Ltable, dropextinct = TRUE)
+  }
+  list(tes = tes, tas = tas, L = result$Ltable, brts = brts, status = result$status)
 }
 
 

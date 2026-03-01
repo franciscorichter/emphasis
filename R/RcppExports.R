@@ -39,6 +39,10 @@ simulate_single_pd_tree_cpp <- function(pars, max_t, max_N, max_tries) {
     .Call('_emphasis_simulate_single_pd_tree_cpp', PACKAGE = 'emphasis', pars, max_t, max_N, max_tries)
 }
 
+simulate_single_ep_tree_cpp <- function(pars, max_t, max_N, max_tries) {
+    .Call('_emphasis_simulate_single_ep_tree_cpp', PACKAGE = 'emphasis', pars, max_t, max_N, max_tries)
+}
+
 simulate_pd_trees_cpp <- function(pars, max_t, repl, max_N) {
     .Call('_emphasis_simulate_pd_trees_cpp', PACKAGE = 'emphasis', pars, max_t, repl, max_N)
 }

@@ -51,6 +51,43 @@ Rcpp::List simulate_single_pd_tree_cpp(Rcpp::NumericVector pars,
 
 
 // [[Rcpp::export]]
+Rcpp::List simulate_single_ep_tree_cpp(Rcpp::NumericVector pars,
+                                        float max_t,
+                                        float max_N,
+                                        int max_tries) {
+  sim_tree::pendant_div simulation(max_t,
+    {pars[0], pars[1], pars[2], pars[3], pars[4]}, (size_t)max_N);
+
+  simulation.simulate_tree_ltable();
+  size_t tries = 0;
+  while (simulation.break_type == sim_tree::breaks::extinction ||
+         simulation.break_type == sim_tree::breaks::maxN_exceeded) {
+    simulation.simulate_tree_ltable();
+    if (++tries > (size_t)max_tries) break;
+  }
+
+  auto& tree = simulation.ltable;
+  Rcpp::NumericMatrix out(tree.size(), 4);
+  float crown_age = simulation.t;
+  for (size_t cnt = 0; cnt < tree.size(); ++cnt) {
+    out(cnt, 0) = crown_age - tree[cnt].start_date;
+    out(cnt, 1) = tree[cnt].parent_label;
+    out(cnt, 2) = tree[cnt].label;
+    auto end_date = tree[cnt].end_date;
+    if (end_date >= 0.f) end_date = crown_age - end_date;
+    out(cnt, 3) = end_date;
+  }
+
+  std::string status = "done";
+  if (simulation.break_type == sim_tree::breaks::extinction) status = "extinct";
+  if (simulation.break_type == sim_tree::breaks::maxN_exceeded) status = "too_large";
+
+  return Rcpp::List::create(Rcpp::Named("Ltable") = out,
+                             Rcpp::Named("status") = status);
+}
+
+
+// [[Rcpp::export]]
 Rcpp::NumericMatrix simulate_pd_trees_cpp(Rcpp::NumericVector pars,
                                  float max_t,
                                  size_t repl,

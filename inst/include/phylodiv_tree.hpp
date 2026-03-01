@@ -422,6 +422,89 @@ namespace sim_tree {
     }
     
   };
+
+  struct pendant_div {
+    float max_t, t;
+    size_t max_N, N;
+    std::array<double, 5> pars;  // mu, lambda0, betaN, betaP, betaE
+
+    std::vector<branch> ltable;
+    breaks break_type;
+    rnd_t rndgen;
+
+    pendant_div(float total_time, const std::array<double, 5>& p, size_t maxN)
+      : max_t(total_time), t(0.f), max_N(maxN), N(0), pars(p),
+        break_type(none), rndgen() {}
+
+    bool simulate_tree_ltable() {
+      size_t N1 = 1, N2 = 1;
+      t = 0.f;
+      ltable.clear();
+      ltable.push_back(branch(0.f, 0, -1, -1));
+      ltable.push_back(branch(0.f, -1, 2, -1));
+      int tree_id = 3;
+      break_type = breaks::none;
+
+      while (true) {
+        N = N1 + N2;
+        if (N >= max_N) { break_type = breaks::maxN_exceeded; break; }
+
+        // Collect alive lineages and their pendant edges
+        std::vector<size_t> alive_idx;
+        std::vector<float> d_i;
+        float P = 0.f;
+        for (size_t i = 0; i < ltable.size(); ++i) {
+          if (ltable[i].end_date == -1) {
+            float d = t - ltable[i].start_date;
+            alive_idx.push_back(i);
+            d_i.push_back(d);
+            P += d;
+          }
+        }
+
+        float mu = static_cast<float>(pars[0]);
+        float total_rate = 0.f;
+        std::vector<float> lambda_i(alive_idx.size());
+        for (size_t k = 0; k < alive_idx.size(); ++k) {
+          float lam = static_cast<float>(
+            pars[1] + pars[2]*N + pars[3]*(P/N) + pars[4]*d_i[k]);
+          if (lam < 0.f) lam = 0.f;
+          lambda_i[k] = lam;
+          total_rate += lam + mu;
+        }
+
+        float next_event_time = t + rndgen.expon(total_rate);
+        if (next_event_time >= max_t) { t = max_t; break_type = breaks::finished; break; }
+        t = next_event_time;
+
+        // Select focal lineage proportionally to (lambda_i + mu)
+        float u = std::uniform_real_distribution<float>(0.f, total_rate)(rndgen.rndgen_);
+        float cumsum = 0.f;
+        size_t focal_k = 0;
+        for (size_t k = 0; k < alive_idx.size(); ++k) {
+          cumsum += lambda_i[k] + mu;
+          if (u <= cumsum) { focal_k = k; break; }
+        }
+        size_t focal = alive_idx[focal_k];
+        float lam_focal = lambda_i[focal_k];
+
+        if (rndgen.bernouilli(lam_focal / (lam_focal + mu))) {
+          // speciation: parent row continues as one daughter; one new daughter added
+          int new_id = tree_id++;
+          if (ltable[focal].label < 0) { new_id *= -1; N2++; } else { N1++; }
+          ltable.push_back(branch(t, ltable[focal].label, new_id, -1));
+        } else {
+          // extinction
+          ltable[focal].end_date = t;
+          if (ltable[focal].label < 0) N2--; else N1--;
+        }
+
+        if (N1 < 1 || N2 < 1) { break_type = breaks::extinction; break; }
+      }
+      N = N1 + N2;
+      return break_type == breaks::extinction;
+    }
+  };
 }
 
 

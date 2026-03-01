@@ -7,16 +7,17 @@ suppressPackageStartupMessages({
   library(readr)
   library(purrr)
   library(tidyr)
+  library(patchwork)
 })
 
 set.seed(20250301)
 
-n_iter <- 40
+n_iter <- 12
 max_t_values <- c(3, 6, 9)
 max_lin <- 5e4
 max_tries <- 50
-inner_reps_fast <- 30
-inner_reps_slow <- 3
+inner_reps_fast <- 8
+inner_reps_slow <- 1
 
 out_dir <- file.path("results", "benchmarks")
 if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
@@ -34,7 +35,8 @@ combo_defs <- tibble::tribble(
 combo_defs$combo_label <- factor(combo_defs$combo_label, levels = combo_defs$combo_label)
 
 scenarios <- combo_defs |>
-  tidyr::crossing(fast = c(TRUE, FALSE))
+  tidyr::crossing(fast = c(TRUE, FALSE)) |>
+  dplyr::filter(!(combo_id == "CR-3" & fast == FALSE))
 
 extract_tree_metrics <- function(res, fast_backend) {
   if (inherits(res, "try-error") || is.null(res)) {
@@ -115,6 +117,10 @@ results <- pmap_dfr(
   }
 )
 
+csv_path <- file.path(out_dir, "simulate_tree_speed.csv")
+write_csv(results, csv_path)
+message("Saved raw timings to ", csv_path)
+
 plot_data <- results |>
   filter(status == "done") |>
   mutate(
@@ -158,9 +164,8 @@ combined_plot <- patchwork::wrap_plots(
   box_plot,
   size_plot + theme(legend.position = "none"),
   status_plot,
-  ncol = 3,
-  guides = "collect"
-) & theme(text = element_text(size = 10))
+  ncol = 3
+)
 
 ggsave(file.path(out_dir, "simulate_tree_comparison_grid.png"), combined_plot,
        width = 12, height = 14, dpi = 200)
