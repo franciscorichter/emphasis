@@ -143,6 +143,19 @@ sim_tree_is_extinct_pd <- function(pars, max_t, num_repl = 1, max_lin) {
 #' lineages, 3) L = Ltable and 4) brts - branching times of the reconstructed
 #' tree and 5) status of simulation, options 1) "extinct", 2) "too_large" or 3)
 #' "done".
+#' @examples
+#' set.seed(123)
+#' pars <- c(mu = 0.1, lambda0 = 0.4, betaN = -0.05, betaP = 0.02)
+#' tree_res <- try(sim_tree_pd_cpp(
+#'   pars = pars,
+#'   max_t = 5,
+#'   max_lin = 1e4,
+#'   max_tries = 5,
+#'   useDDD = TRUE
+#' ))
+#' if (!inherits(tree_res, "try-error") && !is.null(tree_res$tes)) {
+#'   head(tree_res$tes$tip.label)
+#' }
 #' @export
 sim_tree_pd_cpp <- function(pars,
                             max_t,
