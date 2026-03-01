@@ -64,39 +64,7 @@ cr_tree <- simulate_tree(c(0.1, 0.4), max_t = 3,
 length(cr_tree$tas$tip.label)
 ```
 
-If you need direct access to the lower-level helpers, `sim_tree_pd_cpp()` (fast) and `sim_tree_pd_R()` (slow) remain available.
-
-### Extinction summaries
-
-```r
-trajectories <- sim_tree_is_extinct_pd(
-  pars = pars,
-  max_t = 12,
-  num_repl = 100,
-  max_lin = 1e4
-)
-
-subset(trajectories, break_condition != "none")
-```
-
-The tibble reports extinction flags, extinction times, phylogenetic diversity, and stopping reasons for each replicate.
-
-### Scenario grids
-
-```r
-grid <- sim_tree_pd_grid(
-  mu_vec = seq(0.05, 0.2, length.out = 3),
-  lambda_vec = seq(0.2, 0.6, length.out = 3),
-  b_n_vec = c(-0.3, 0),
-  b_p_vec = c(-0.1, 0.1),
-  max_t = 8,
-  num_repl = 25,
-  max_N = 5e4
-)
-head(grid)
-```
-
-Use grids to map parameter regions that hit extinction, explode, or stay in feasible regimes.
+If you need direct access to specialized diagnostics (extinction sweeps, scenario grids), use the lower-level helpers documented in the reference manual; the high-level interface remains `simulate_tree()`.
 
 ### Dataset factories & non-homogeneous processes
 
@@ -167,7 +135,7 @@ Use `get_required_sampling_size()` to adapt MCEM sample sizes, and `AugmentMulti
 
 | Module | Purpose | Key functions |
 |--------|---------|---------------|
-| `simulate.R` | Core simulators for PD-dependent diversification | `sim_tree_pd_R()`, `sim_tree_pd_cpp()`, `sim_tree_is_extinct_pd()`, `sim_tree_pd_grid()` |
+| `simulate.R` | Unified simulator entry point | `simulate_tree()` |
 | `generate.R` | Dataset factories & non-homogeneous processes | `generatePhyloPD()`, `generateNonHomogeneousExp()`, `nhExpRand()`, `rate_t()`, `ExponentialRate()` |
 | `augment.R` | Augmentation of missing lineages | `augmentPD()`, `AugmentMultiplePhyloPD()` |
 | `de.R` | Differential-evolution seed searches | `emphasis_de()`, `emphasis_de_factorial()` |
