@@ -50,8 +50,8 @@ be equal in length to the vector of init_pars}
 \item{rconditional}{R function that evaluates the GAM function.}
 }
 \value{
-a list with the following components: 
-\itemize{
+a list with the following components:
+\describe{
  \item{trees}{list of trees}
  \item{rejected}{number of rejected trees}
  \item{rejected_overruns}{number of trees rejected due to too large size}

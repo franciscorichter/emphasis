@@ -1,9 +1,10 @@
 ---
-title: "Estimation"
-output:
-  html_notebook:
-    toc: true
-    toc_float: true
+title: "Estimation with emphasis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Estimation with emphasis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include=FALSE}

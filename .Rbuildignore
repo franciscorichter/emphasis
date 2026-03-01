@@ -8,3 +8,10 @@
 ^\.\.Rcheck$
 ^results$
 ^Documentation$
+^\.gitignore$
+^\.gitattributes$
+^\.claude$
+^Rcheck-log\.txt$
+^src/.*\.o$
+^src/.*\.so$
+^vignettes/.*\.html$

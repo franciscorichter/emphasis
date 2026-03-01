@@ -57,9 +57,7 @@ get_required_sampling_size(M, tol = 0.05)
 
 \item{...}{Reserved for future extensions.}
 
-\item{M}{Data frame of MCEM traces (with columns `fhat` and `sample_size`).}
-
-\item{tol}{Target tolerance for the required sampling size helper.}
+\item{M}{Data frame of MCEM traces (with columns \code{fhat} and \code{sample_size}).}
 }
 \value{
 `mcEM_step()` returns a list with:

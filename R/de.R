@@ -278,15 +278,15 @@ emphasis_de <- function(brts,
       cat(sprintf("Minimum Log-Likelihood: %f\n", min_loglik[length(min_loglik)]))
       cat(sprintf("Mean Log-Likelihood: %f\n", mean_loglik[length(mean_loglik)]))
 
-      if (length(rejl_count) > 0 && tail(rejl_count, n=1) == k) {
+      if (length(rejl_count) > 0 && utils::tail(rejl_count, n=1) == k) {
         cat(sprintf("Increased max_lambda to %f\n", input$max_lambda))
       }
-      if (length(rejo_count) > 0 && tail(rejo_count, n=1) == k) {
+      if (length(rejo_count) > 0 && utils::tail(rejo_count, n=1) == k) {
         cat(sprintf("Increased max_missing to %f\n", input$max_missing))
       }
 
       cat(sprintf("Time for iteration: %f seconds\n", difftime(Sys.time(), times[length(times)], units="secs")))
-      flush.console()
+      utils::flush.console()
     }
 
   times  <- c(times,Sys.time())

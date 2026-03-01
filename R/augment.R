@@ -95,10 +95,10 @@ AugmentMultiplePhyloPD <- function(phylo,
 
   for(j in 1:n_trees){
 
-    lambda_sample <- runif(1, lambda_interval[1], lambda_interval[2])
-    mu_sample <- runif(1, mu_interval[1], mu_interval[2])
-    betaN_sample <- runif(1, betaN_interval[1], betaN_interval[2])
-    betaP_sample <- runif(1, betaP_interval[1], betaP_interval[2])
+    lambda_sample <- stats::runif(1, lambda_interval[1], lambda_interval[2])
+    mu_sample <- stats::runif(1, mu_interval[1], mu_interval[2])
+    betaN_sample <- stats::runif(1, betaN_interval[1], betaN_interval[2])
+    betaP_sample <- stats::runif(1, betaP_interval[1], betaP_interval[2])
     sim.param <- c(mu_sample, lambda_sample, betaN_sample, betaP_sample)
 
     outputs <- try({

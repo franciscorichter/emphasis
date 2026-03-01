@@ -94,12 +94,12 @@ generateNonHomogeneousExp <- function(num_variates, rate_func, start_time, max_t
     rate_values <- sapply(time_points, function(t) rate_func(t))
     max_rate <- max(rate_values)
 
-    candidate_time <- start_time + rexp(1, max_rate)
+    candidate_time <- start_time + stats::rexp(1, max_rate)
 
     if (candidate_time < max_time) {
       true_rate <- rate_func(candidate_time)
 
-      if (runif(1) < true_rate / max_rate) {
+      if (stats::runif(1) < true_rate / max_rate) {
         variates <- c(variates, candidate_time)
       }
     }
@@ -137,12 +137,12 @@ nhExpRand <- function(n, rate_func, now = 0, tMax = Inf) {
   vars <- numeric(n)
 
   for (i in 1:n) {
-    p <- runif(1)
+    p <- stats::runif(1)
     f <- Vectorize(function(t) {
-      1 - p - exp(-integrate(Vectorize(function(x) rate_func(x)), lower = now, upper = t,
+      1 - p - exp(-stats::integrate(Vectorize(function(x) rate_func(x)), lower = now, upper = t,
                              subdivisions = 2000, stop.on.error = FALSE)$value)
     })
-    vars[i] <- suppressWarnings(uniroot(f, c(now, tMax), extendInt = "yes", tol = 0.0001)$root)
+    vars[i] <- suppressWarnings(stats::uniroot(f, c(now, tMax), extendInt = "yes", tol = 0.0001)$root)
   }
 
   return(vars)

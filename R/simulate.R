@@ -165,9 +165,9 @@ sim_tree_pd_cpp <- function(pars,
     warning("could not simulate tree, all trees were too large, try increasing max_lin")
   }
   if (result$status == "done" & useDDD) {
-    tes <- DDD:::L2phylo(result$Ltable, dropextinct = TRUE)
-    tas <- DDD:::L2phylo(result$Ltable, dropextinct = FALSE)
-    brts = DDD:::L2brts(result$Ltable, dropextinct = TRUE)
+    tes <- DDD::L2phylo(result$Ltable, dropextinct = TRUE)
+    tas <- DDD::L2phylo(result$Ltable, dropextinct = FALSE)
+    brts = DDD::L2brts(result$Ltable, dropextinct = TRUE)
   }
 
   out = list(tes = tes, tas = tas, L = result$Ltable, brts = brts,
