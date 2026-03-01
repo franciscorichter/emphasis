@@ -99,7 +99,7 @@ struct phylodiv {
   rnd_t rndgen;
   
   phylodiv(float total_time, const std::array<double, 6>& p, size_t maxN)
-    : max_t(total_time), max_N(maxN), pars(p), P(0.f), t(0.f), rndgen(), break_type(none) {}
+    : max_t(total_time), P(0.f), t(0.f), max_N(maxN), pars(p), break_type(none), rndgen() {}
   
   float calculate_full_phylodiv() {
     float ph = 0.f;
