@@ -83,7 +83,7 @@ simulate_tree <- function(pars, max_t,
   result <- if (fast) {
     .sim_tree_fast(pars, max_t, model, max_lin, max_tries, useDDD)
   } else {
-    .sim_tree_slow(pars, max_t, model)
+    .sim_tree_slow(pars, max_t, model, max_tries)
   }
 
   result$model <- model
@@ -115,14 +115,22 @@ simulate_tree <- function(pars, max_t,
   )
 }
 
-.sim_tree_slow <- function(pars, max_t, model) {
+.sim_tree_slow <- function(pars, max_t, model, max_tries) {
   pd_pars <- switch(model,
     pd = pars,
     cr = c(pars[1], pars[2], 0, 0)
   )
-  raw <- sim_tree_pd_R(pd_pars, max_t)
-  # sim_tree_pd_R returns list(phy = <full phylo>, result = c(N, t, P))
-  list(tes = NULL, tas = raw$phy, L = NULL, brts = NULL, status = "done")
+  raw    <- NULL
+  status <- "extinct"
+  for (attempt in seq_len(max_tries)) {
+    raw <- sim_tree_pd_R(pd_pars, max_t)
+    # result = c(N, t, P); non-extinct iff N >= 2 and t reached max_t
+    if (raw$result[1] >= 2 && abs(raw$result[2] - max_t) < sqrt(.Machine$double.eps)) {
+      status <- "done"
+      break
+    }
+  }
+  list(tes = NULL, tas = raw$phy, L = NULL, brts = NULL, status = status)
 }
 
 #' @keywords internal
