@@ -40,28 +40,36 @@ The `simulate.R` and `generate.R` helpers cover everything from single-tree draw
 
 ### Single-tree draws
 
-Use `simulate_tree()` for a unified entry point across PD, diversity-dependent (DD), and constant-rate (CR) models. It automatically dispatches to the fast C++ backend (default) or the pure-R fallback when requested.
+Use `simulate_tree()` for a unified entry point across four models: PD (phylogenetic diversity dependence), DD (exponential diversity dependence), CR (constant rate), and EP (evolutionary pendant — per-lineage rates driven by each species' own pendant edge length). It automatically dispatches to the fast C++ backend (default) or the pure-R fallback when requested.
 
 ```r
 library(emphasis)
 
 set.seed(123)
 
-# PD model (fast C++)
+# PD model (fast C++): pars = c(mu, lambda0, betaN, betaP)
 pd_tree <- simulate_tree(c(0.1, 0.4, -0.05, 0.02), max_t = 5,
                          model = "pd", fast = TRUE,
                          max_lin = 1e4, max_tries = 10)
 pd_tree$status
 
-# DD model (fast C++ only)
+# DD model (fast C++ only): pars = c(A0, An, Ap, B0, Bn, Bp)
 dd_tree <- simulate_tree(c(0.1, -0.01, 0, -2.5, 0, 0), max_t = 5,
                          model = "dd")
 dd_tree$status
 
-# CR model (pure-R fallback)
+# CR model (pure-R fallback): pars = c(mu, lambda0)
 cr_tree <- simulate_tree(c(0.1, 0.4), max_t = 3,
                          model = "cr", fast = FALSE)
 length(cr_tree$tas$tip.label)
+
+# EP model (fast C++ only): pars = c(mu, lambda0, betaN, betaP, betaE)
+# Per-lineage speciation: lambda_i = max(0, lambda0 + betaN*N + betaP*(P/N) + betaE*d_i)
+# where d_i = time since lineage i last diverged (its pendant edge length)
+ep_tree <- simulate_tree(c(0.1, 0.5, -0.02, 0.01, 0.05), max_t = 5,
+                         model = "ep")
+ep_tree$status
+length(ep_tree$tes$tip.label)
 ```
 
 If you need direct access to specialized diagnostics (extinction sweeps, scenario grids), use the lower-level helpers documented in the reference manual; the high-level interface remains `simulate_tree()`.
