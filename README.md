@@ -38,36 +38,49 @@ devtools::install_github("franciscorichter/emphasis")
 
 The `simulate.R` and `generate.R` helpers cover everything from single-tree draws to large training sets. Use them to explore parameter spaces before moving on to augmentation/estimation.
 
+### Model hierarchy
+
+All models in `emphasis` are special cases of a single general per-lineage speciation rate:
+
+```
+lambda_i = max(0, lambda0 + betaN*N + betaP*(P/N) + betaE*d_i)
+```
+
+where **N** is species richness, **P = Σ d_j** is total phylogenetic diversity, and **d_i = t − start_date_i** is the pendant edge of lineage *i* (time since it last diverged). The extinction rate **μ** is uniform across lineages. Models are nested by progressively zeroing coefficients:
+
+| Model | `betaN` | `betaP` | `betaE` | Mechanism |
+|-------|---------|---------|---------|-----------|
+| **CR** — constant rate | 0 | 0 | 0 | no dependence |
+| **DD** — diversity dependent | free | 0 | 0 | clade-level richness |
+| **PD** — phylogenetic diversity | free | free | 0 | richness + clade-level PD |
+| **EP** — evolutionary pendant | free | free | free | richness + clade PD + per-lineage pendant |
+
+CR ⊂ DD ⊂ PD ⊂ EP: each row is a special case of the one below it.
+
 ### Single-tree draws
 
-Use `simulate_tree()` for a unified entry point across four models: PD (phylogenetic diversity dependence), DD (exponential diversity dependence), CR (constant rate), and EP (evolutionary pendant — per-lineage rates driven by each species' own pendant edge length). It automatically dispatches to the fast C++ backend (default) or the pure-R fallback when requested.
+`simulate_tree()` is the unified entry point for all four models.
 
 ```r
 library(emphasis)
 
 set.seed(123)
 
-# PD model (fast C++): pars = c(mu, lambda0, betaN, betaP)
-pd_tree <- simulate_tree(c(0.1, 0.4, -0.05, 0.02), max_t = 5,
-                         model = "pd", fast = TRUE,
-                         max_lin = 1e4, max_tries = 10)
-pd_tree$status
+# CR — constant rate (betaN = betaP = betaE = 0)
+cr_tree <- simulate_tree(c(0.1, 0.4), max_t = 3, model = "cr")
+cr_tree$status
 
-# DD model (fast C++ only): pars = c(A0, An, Ap, B0, Bn, Bp)
-dd_tree <- simulate_tree(c(0.1, -0.01, 0, -2.5, 0, 0), max_t = 5,
-                         model = "dd")
+# DD — diversity dependent (betaP = betaE = 0): richness N drives speciation
+dd_tree <- simulate_tree(c(0.1, 0.4, -0.05, 0), max_t = 5, model = "pd",
+                         max_lin = 1e4, max_tries = 10)
 dd_tree$status
 
-# CR model (pure-R fallback): pars = c(mu, lambda0)
-cr_tree <- simulate_tree(c(0.1, 0.4), max_t = 3,
-                         model = "cr", fast = FALSE)
-length(cr_tree$tas$tip.label)
+# PD — phylogenetic diversity (betaE = 0): richness + clade-level PD
+pd_tree <- simulate_tree(c(0.1, 0.4, -0.05, 0.02), max_t = 5, model = "pd")
+pd_tree$status
 
-# EP model (fast C++ only): pars = c(mu, lambda0, betaN, betaP, betaE)
-# Per-lineage speciation: lambda_i = max(0, lambda0 + betaN*N + betaP*(P/N) + betaE*d_i)
-# where d_i = time since lineage i last diverged (its pendant edge length)
-ep_tree <- simulate_tree(c(0.1, 0.5, -0.02, 0.01, 0.05), max_t = 5,
-                         model = "ep")
+# EP — evolutionary pendant: full model, per-lineage rates via d_i
+ep_tree <- simulate_tree(c(0.1, 0.5, -0.02, 0.01, 0.05), max_t = 5, model = "ep")
 ep_tree$status
 length(ep_tree$tes$tip.label)
 ```
