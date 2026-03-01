@@ -23,42 +23,40 @@ augmentPD(
 
 \item{pars}{A numeric vector of initial parameters for the MCEM algorithm.}
 
-\item{maxN}{Maximum number of augmentation iterations.}
+\item{maxN}{The maximum number of iterations for the MCEM algorithm.}
 
-\item{max_missing}{Maximum number of missing lineages allowed.}
+\item{max_missing}{The maximum amount of missing data allowed.}
 
-\item{lower_bound}{Lower bound vector for parameter optimization.}
+\item{lower_bound}{The lower bound constraint for parameter optimization.}
 
-\item{upper_bound}{Upper bound vector for parameter optimization.}
+\item{upper_bound}{The upper bound constraint for parameter optimization.}
 
-\item{num_threads}{Number of parallel threads. Defaults to 1.}
+\item{num_threads}{The number of threads to be used for parallel computation. Defaults to 1.}
 
-\item{sample_size}{Sample size for MCEM. Defaults to 1.}
+\item{sample_size}{The size of the sample to be used in the MCEM algorithm. Defaults to 1.}
 
-\item{soc}{Number of lineages at crown (2) or stem (1). Defaults to 2.}
+\item{soc}{The second order correction for the MCEM algorithm. Defaults to 2.}
 
-\item{xtol_rel}{Relative convergence tolerance. Defaults to 1e-5.}
+\item{xtol_rel}{The relative tolerance for convergence in the optimization algorithm. Defaults to 0.00001.}
 
-\item{verbose}{If TRUE, print progress messages. Defaults to FALSE.}
+\item{verbose}{A logical value indicating if progress messages should be printed. Defaults to FALSE.}
 }
 \value{
-A list with augmented tree samples, importance weights, and log-likelihood estimate.
+The result of the MCEM algorithm, which could be parameters estimates, log-likelihood values, or other relevant metrics depending on the implementation of the C++ function `_emphasis_rcpp_mce`.
 }
 \description{
-Augments a phylogenetic tree using Monte Carlo Expectation-Maximization
-(MCEM), sampling missing lineages and estimating model parameters.
+This function performs augmentation of phylogenetic diversity (PD) on a given phylogenetic tree using the Monte Carlo Expectation-Maximization (MCEM) algorithm. It aims to estimate the maximum likelihood parameters for the given phylo object based on the provided parameters and constraints.
+}
+\details{
+The function uses the \code{\link[ape:branching.times]{branching.times}} function from the 'ape' package to calculate the branching times of the phylogenetic tree. It then calls a C++ function through the .Call interface for the MCEM algorithm. The parameters `max_lambda`, `brts`, and `result` are used internally within the function.
 }
 \examples{
 \dontrun{
-  library(ape)
-  tree <- rphylo(10, 0.5, 0)
-  result <- augmentPD(
-    phylo = tree,
-    pars = c(0.1, 0.5, -0.01, 0.01),
-    maxN = 100,
-    max_missing = 1000,
-    lower_bound = c(-0.1, 0, -0.1, -0.1),
-    upper_bound = c(0.5, 2, 0.1, 0.1)
-  )
+  data(bird.orders) # assuming bird.orders is a phylo object
+  initial_pars <- c(0.1, 0.1)
+  result <- augmentPD(phylo = bird.orders, pars = initial_pars,
+                      maxN = 1000, max_missing = 0.1,
+                      lower_bound = 0.001, upper_bound = 10)
 }
+
 }

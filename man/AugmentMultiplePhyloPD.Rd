@@ -2,7 +2,7 @@
 % Please edit documentation in R/augment.R
 \name{AugmentMultiplePhyloPD}
 \alias{AugmentMultiplePhyloPD}
-\title{Augment multiple phylogenetic trees with sampled parameters}
+\title{Augment Multiple Phylogenetic Trees with Parameter Diversity}
 \usage{
 AugmentMultiplePhyloPD(
   phylo,
@@ -16,49 +16,32 @@ AugmentMultiplePhyloPD(
 )
 }
 \arguments{
-\item{phylo}{A phylogenetic tree of class \code{"phylo"}.}
+\item{phylo}{A phylogenetic tree object.}
 
-\item{n_trees}{Number of parameter/augmentation replicates to generate.}
+\item{n_trees}{Number of trees to simulate.}
 
-\item{mu_interval}{Numeric vector of length 2: \code{c(min, max)} for sampling \code{mu}.}
+\item{mu_interval}{Interval for sampling mu parameter.}
 
-\item{lambda_interval}{Numeric vector of length 2: \code{c(min, max)} for sampling \code{lambda}.}
+\item{lambda_interval}{Interval for sampling lambda parameter.}
 
-\item{betaN_interval}{Numeric vector of length 2: \code{c(min, max)} for sampling \code{betaN}.}
+\item{betaN_interval}{Interval for sampling betaN parameter.}
 
-\item{betaP_interval}{Numeric vector of length 2: \code{c(min, max)} for sampling \code{betaP}.}
+\item{betaP_interval}{Interval for sampling betaP parameter.}
 
-\item{max_lin}{Maximum number of lineages for augmentation. Defaults to 1e6.}
+\item{max_lin}{Maximum number of lineages (default 1e+6).}
 
-\item{max_tries}{Maximum augmentation attempts per replicate. Defaults to 1.}
+\item{max_tries}{Maximum number of tries for augmentation (default 1).}
 }
 \value{
-A list with elements:
-\itemize{
-  \item \code{trees} augmented tree samples (one per replicate);
-  \item \code{param} list of sampled parameter values (\code{mu}, \code{lambda}, \code{betaN}, \code{betaP});
-  \item \code{rejected_overruns}, \code{rejected_lambda}, \code{rejected_zero_weights} rejection counts;
-  \item \code{times} per-replicate computation times;
-  \item \code{loglik_estimation} log-likelihood estimates (or \code{try-error} on failure);
-  \item \code{logf}, \code{logg} log importance weights.
-}
+A list containing the generated trees, parameters, rejection reasons,
+        timings, and log-likelihood estimations.
 }
 \description{
-For each of \code{n_trees} replicates, randomly samples a parameter vector
-from the supplied intervals and calls \code{\link{augmentPD}} to augment the
-given phylogenetic tree. Collects results across all replicates.
+This function simulates and augments phylogenetic data across multiple trees
+using parameter sampling and the augmentPD function.
 }
 \examples{
-\dontrun{
-  library(ape)
-  tree <- rphylo(15, 0.5, 0)
-  results <- AugmentMultiplePhyloPD(
-    phylo = tree,
-    n_trees = 20,
-    mu_interval = c(0, 0.5),
-    lambda_interval = c(0.5, 2),
-    betaN_interval = c(-0.02, 0.02),
-    betaP_interval = c(-0.02, 0.02)
-  )
-}
+# Example usage
+result <- AugmentMultiplePhyloPD(my_phylo, 10, c(0.1, 0.5), c(0.2, 0.6),
+                                 c(0.3, 0.7), c(0.4, 0.8))
 }

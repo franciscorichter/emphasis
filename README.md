@@ -40,27 +40,31 @@ The `simulate.R` and `generate.R` helpers cover everything from single-tree draw
 
 ### Single-tree draws
 
+Use `simulate_tree()` for a unified entry point across PD, diversity-dependent (DD), and constant-rate (CR) models. It automatically dispatches to the fast C++ backend (default) or the pure-R fallback when requested.
+
 ```r
 library(emphasis)
 
 set.seed(123)
-pars <- c(mu = 0.1, lambda0 = 0.4, betaN = -0.05, betaP = 0.02)
-single_tree <- sim_tree_pd_cpp(
-  pars = pars,
-  max_t = 5,
-  max_lin = 1e4,
-  max_tries = 5,
-  useDDD = TRUE
-)
 
-single_tree$status   # "done", "extinct", or "too_large"
-if (!is.null(single_tree$tes)) {
-  tip_ids <- seq_len(min(5, length(single_tree$tes$tip.label)))
-  print(single_tree$tes$tip.label[tip_ids])
-}
+# PD model (fast C++)
+pd_tree <- simulate_tree(c(0.1, 0.4, -0.05, 0.02), max_t = 5,
+                         model = "pd", fast = TRUE,
+                         max_lin = 1e4, max_tries = 10)
+pd_tree$status
+
+# DD model (fast C++ only)
+dd_tree <- simulate_tree(c(0.1, -0.01, 0, -2.5, 0, 0), max_t = 5,
+                         model = "dd")
+dd_tree$status
+
+# CR model (pure-R fallback)
+cr_tree <- simulate_tree(c(0.1, 0.4), max_t = 3,
+                         model = "cr", fast = FALSE)
+length(cr_tree$tas$tip.label)
 ```
 
-Prefer a pure-R fallback? Swap to `sim_tree_pd_R(pars, max_t)` for quick debugging or pedagogical purposes.
+If you need direct access to the lower-level helpers, `sim_tree_pd_cpp()` (fast) and `sim_tree_pd_R()` (slow) remain available.
 
 ### Extinction summaries
 
@@ -213,9 +217,8 @@ Francisco Richter, Thijs Janzen, Hanno Hildenbrandt. emphasis: Evolutionary Mode
 ```
 
 ## Authors & Contact
-- Francisco Richter (<richtf@usi.ch>)
-- Thijs Janzen (<t.janzen@rug.nl>)
-- Hanno Hildenbrandt (<h.hildenbrandt@rug.nl>)
+- Author & Maintainer: Francisco Richter (<richtf@usi.ch>)
+- Contributors: Thijs Janzen (<t.janzen@rug.nl>), Hanno Hildenbrandt (<h.hildenbrandt@rug.nl>)
 
 ## License
 GPL-3. See [LICENSE](LICENSE) for details.

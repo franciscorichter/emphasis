@@ -2,43 +2,42 @@
 % Please edit documentation in R/simulate.R
 \name{sim_tree_pd_cpp}
 \alias{sim_tree_pd_cpp}
-\title{Simulate a phylogenetic tree under the PD model (C++ backend)}
+\title{simulation function to simulate a tree under the pd model}
 \usage{
 sim_tree_pd_cpp(pars, max_t, max_lin = 1e+06, max_tries = 100, useDDD = TRUE)
 }
 \arguments{
-\item{pars}{Parameter vector \code{c(mu, lambda_0, beta_N, beta_P)}.}
+\item{pars}{parameter vector with c(mu, lambda_0, beta_N, beta_P)}
 
-\item{max_t}{Crown age (maximum simulation time).}
+\item{max_t}{crown age}
 
-\item{max_lin}{Maximum number of lineages before simulation is stopped. Defaults to 1e6.}
+\item{max_lin}{number of lineages past which non-extinction is assumed.}
 
-\item{max_tries}{Maximum number of attempts to obtain a non-extinct tree. Defaults to 100.}
+\item{max_tries}{maximum number of tries to get a non-extinct tree.}
 
-\item{useDDD}{If TRUE (default), convert the L-table to phylo objects via DDD.}
+\item{useDDD}{whether to use DDD for tree conversion (default TRUE)}
 }
 \value{
-A list with:
-\itemize{
-  \item \code{tes} reconstructed (extant-only) phylogeny
-  \item \code{tas} full phylogeny including extinct lineages
-  \item \code{L} L-table (birth-death event table)
-  \item \code{brts} branching times of the reconstructed tree
-  \item \code{status} simulation outcome: \code{"done"}, \code{"extinct"}, or \code{"too_large"}
-}
+list with: 1) tes - reconstructed tree, 2) tas - tree with extinct
+lineages, 3) L = Ltable and 4) brts - branching times of the reconstructed
+tree and 5) status of simulation, options 1) "extinct", 2) "too_large" or 3)
+"done".
 }
 \description{
-Simulates diversification with diversity dependence and phylogenetic
-diversity dependence using a fast C++ backend.
+super fast function to simulate the process of diversification
+with diversity dependence and phylogenetic diversity dependence
 }
 \examples{
-\dontrun{
-  tree <- sim_tree_pd_cpp(
-    pars = c(0.1, 0.5, -0.01, 0.01),
-    max_t = 1,
-    max_lin = 1e4,
-    max_tries = 10
-  )
-  tree$status
+set.seed(123)
+pars <- c(mu = 0.1, lambda0 = 0.4, betaN = -0.05, betaP = 0.02)
+tree_res <- try(sim_tree_pd_cpp(
+  pars = pars,
+  max_t = 5,
+  max_lin = 1e4,
+  max_tries = 5,
+  useDDD = TRUE
+))
+if (!inherits(tree_res, "try-error") && !is.null(tree_res$tes)) {
+  head(tree_res$tes$tip.label)
 }
 }

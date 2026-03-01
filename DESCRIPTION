@@ -33,5 +33,5 @@ LinkingTo: Rcpp,
            nloptr,
            BH
 SystemRequirements: C++14
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.3
 Config/testthat/edition: 3

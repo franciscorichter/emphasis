@@ -18,8 +18,8 @@ loglikelihood(pars, trees, logg, plugin, num_rejected)
 \item{num_rejected}{number of rejected trees}
 }
 \value{
-list with the following entries:
-\describe{
+list with the following entries: 
+\itemize{
  \item{logf}{logf values}
  \item{log_w}{log of weight}
  \item{fhat}{fhat values}
