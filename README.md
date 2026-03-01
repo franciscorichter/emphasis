@@ -108,46 +108,82 @@ nh_draws <- nhExpRand(10, rate_func = rate, now = 0, tMax = 50)
 
 `generatePhyloPD()` keeps every simulated tree plus the parameters that generated it, making it ideal for benchmarking inference pipelines or fitting surrogate models.
 
-## Estimation module
+## Inference module
 
-Once you have simulated data (or a real phylogeny), the estimation module takes over. A typical workflow is DE seeding followed by MCEM refinement:
+`estimate_rates()` is the unified entry point for parameter inference. It accepts a simulated or empirical tree, prunes it to extant tips if needed, and dispatches to the chosen learning method.
+
+### The `estimate_rates()` workflow
+
+```
+simulate_tree()  →  prune_to_extant()  →  estimate_rates()
+     ↓                    ↓                      ↓
+ full tree          extant-only tree        parameter estimates
+ (sim$tas)          (sim$tes)              (mu, lambda0, betaN, betaP)
+```
+
+`estimate_rates()` accepts any of these inputs directly — a `simulate_tree()` result, a `phylo` object, or a branching-time vector — so the prune step is usually implicit.
+
+### Methods
+
+The `method` argument selects the optimisation back-end:
+
+| Method | Function | When to use |
+|--------|----------|-------------|
+| `"em"` | `mcEM_step()` | Fine-grained refinement; converges to a local optimum |
+| `"de"` | `emphasis_de()` | Broad exploration; good seed for EM |
+
+A robust two-stage workflow uses DE to find the basin and EM to refine:
 
 ```r
 library(emphasis)
+
+set.seed(42)
+sim <- simulate_tree(c(0.1, 0.5, -0.02, 0.01), max_t = 8, model = "pd")
+
+lb <- c(0,   0,  -1, -1)
+ub <- c(1,   2,   1,  1)
+
+# Stage 1 — DE: broad exploration
+fit_de <- estimate_rates(sim, method = "de",
+  lower_bound = lb, upper_bound = ub,
+  control = list(num_iterations = 15, num_points = 50))
+fit_de$pars
+
+# Stage 2 — EM: refine from DE estimate
+fit_em <- estimate_rates(sim, method = "em",
+  lower_bound = lb, upper_bound = ub,
+  init_pars = fit_de$pars,
+  control = list(sample_size = 200, tol = 0.05))
+fit_em$pars
+fit_em$loglik
+```
+
+### Tuning
+
+`estimate_rates_control()` shows all defaults and is the recommended way to build a `control` list:
+
+```r
+estimate_rates_control("em")   # view EM defaults
+estimate_rates_control("de")   # view DE defaults
+
+# Override a subset
+ctl <- estimate_rates_control("em")
+ctl$sample_size <- 500
+ctl$burnin      <- 50
+fit <- estimate_rates(sim, lower_bound = lb, upper_bound = ub, control = ctl)
+```
+
+### Empirical trees
+
+Pass a `phylo` object directly. Use `prune_to_extant()` first if the tree contains extinct lineages:
+
+```r
 data(bird.orders, package = "ape")
-brts <- ape::branching.times(bird.orders)
-
-# 1. Differential-evolution seed search
-de_seed <- emphasis_de(
-  brts = brts,
-  num_iterations = 5,
-  num_points = 50,
-  max_missing = 1e4,
-  sd_vec = rep(0.4, 4),
+extant <- prune_to_extant(bird.orders)   # no-op if already extant-only
+fit <- estimate_rates(extant, method = "de",
   lower_bound = c(0, 0, -0.5, -0.5),
-  upper_bound = c(1, 2, 0.5, 0.5),
-  max_lambda = 500
-)
-
-# 2. MCEM refinement
-seed_pars <- colMeans(de_seed$min_pars)
-fit <- mcEM_step(
-  brts = brts,
-  pars = seed_pars,
-  sample_size = 250,
-  soc = 2,
-  max_missing = 1e4,
-  max_lambda = 500,
-  lower_bound = c(-Inf, -Inf, -Inf, -Inf),
-  upper_bound = c(Inf, Inf, Inf, Inf),
-  xtol = 1e-3,
-  tol = 0.1,
-  burnin = 20,
-  num_threads = 0,
-  verbose = TRUE
-)
-
-str(fit)
+  upper_bound = c(1, 2,  0.5,  0.5))
+fit$pars
 ```
 
 Use `get_required_sampling_size()` to adapt MCEM sample sizes, and `AugmentMultiplePhyloPD()` + `train_GAM()` to diagnose bias across simulated sweeps.
@@ -157,9 +193,11 @@ Use `get_required_sampling_size()` to adapt MCEM sample sizes, and `AugmentMulti
 | Module | Purpose | Key functions |
 |--------|---------|---------------|
 | `simulate.R` | Unified simulator entry point | `simulate_tree()` |
+| `inference.R` | Unified inference entry point | `estimate_rates()`, `estimate_rates_control()`, `prune_to_extant()` |
 | `generate.R` | Dataset factories & non-homogeneous processes | `generatePhyloPD()`, `generateNonHomogeneousExp()`, `nhExpRand()`, `rate_t()`, `ExponentialRate()` |
 | `augment.R` | Augmentation of missing lineages | `augmentPD()`, `AugmentMultiplePhyloPD()` |
-| `de.R` | Differential-evolution seed searches | `emphasis_de()`, `emphasis_de_factorial()` |
+| `de.R` | Differential-evolution back-end | `emphasis_de()`, `emphasis_de_factorial()` |
+| `emphasis.R` | MCEM back-end | `mcEM_step()` |
 | `gam.R` | Diagnostics over simulation sweeps | `train_GAM()` |
 | `utils.R` | Shared helpers & plotting utilities | branching-time helpers, safe wrappers |
 
