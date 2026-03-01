@@ -1,3 +1,130 @@
+#' Simulate a phylogenetic tree under a diversification model
+#'
+#' Unified wrapper for tree simulation, dispatching to a C++ (fast) or pure-R
+#' (slow) implementation and to the appropriate model-specific backend.
+#'
+#' @param pars Numeric parameter vector. Length and meaning depend on
+#'   \code{model}:
+#'   \describe{
+#'     \item{\code{"pd"}}{4 values: \code{c(mu, lambda0, betaN, betaP)}.
+#'       Speciation rate = \code{max(0, lambda0 + betaN*N + betaP*P/N)};
+#'       extinction rate = \code{mu}.}
+#'     \item{\code{"dd"}}{6 values: \code{c(A0, An, Ap, B0, Bn, Bp)}.
+#'       Speciation rate = \code{exp(A0 + An*N + Ap*P)};
+#'       extinction rate = \code{exp(B0 + Bn*N + Bp*P)}.}
+#'     \item{\code{"cr"}}{2 values: \code{c(mu, lambda0)}.
+#'       Constant-rate birth-death (special case of \code{"pd"} with
+#'       \code{betaN = betaP = 0}).}
+#'   }
+#' @param max_t Crown age (simulation time).
+#' @param model Diversification model: \code{"pd"} (phylogenetic diversity
+#'   dependence), \code{"dd"} (diversity dependence, exponential rates), or
+#'   \code{"cr"} (constant rate). Default \code{"pd"}.
+#' @param fast Logical. Use the fast C++ implementation (\code{TRUE}, default)
+#'   or the slower pure-R implementation (\code{FALSE}). The \code{"dd"} model
+#'   has no R implementation and always uses C++.
+#' @param max_lin Maximum number of lineages before the simulation is
+#'   considered non-extinct. Default \code{1e6}.
+#' @param max_tries Maximum attempts to obtain a non-extinct, non-oversized
+#'   tree. Default \code{100}.
+#' @param useDDD Logical. Convert the L-table to \code{phylo} objects via
+#'   \pkg{DDD}. Only applies when \code{fast = TRUE}. Default \code{TRUE}.
+#' @return A named list with elements:
+#'   \describe{
+#'     \item{\code{tes}}{Reconstructed phylogeny (extant tips only);
+#'       \code{NULL} when \code{useDDD = FALSE}, \code{fast = FALSE}, or
+#'       the simulation failed.}
+#'     \item{\code{tas}}{Full phylogeny including extinct lineages;
+#'       \code{NULL} when \code{useDDD = FALSE} or the simulation failed.
+#'       For \code{fast = FALSE} this is the tree returned directly by the
+#'       R simulator.}
+#'     \item{\code{L}}{L-table matrix; \code{NULL} for pure-R runs.}
+#'     \item{\code{brts}}{Branching times of the reconstructed tree;
+#'       \code{NULL} when \code{useDDD = FALSE} or the simulation failed.}
+#'     \item{\code{status}}{\code{"done"}, \code{"extinct"}, or
+#'       \code{"too_large"}.}
+#'     \item{\code{model}}{The model used.}
+#'     \item{\code{pars}}{The parameter vector supplied.}
+#'   }
+#' @examples
+#' \dontrun{
+#' # PD model — fast C++
+#' tree <- simulate_tree(c(0.1, 0.5, -0.01, 0.01), max_t = 5)
+#'
+#' # DD model — fast C++ only
+#' tree <- simulate_tree(c(0.1, -0.01, 0, -2.5, 0, 0), max_t = 5, model = "dd")
+#'
+#' # CR model — slow pure R
+#' tree <- simulate_tree(c(0.1, 0.5), max_t = 5, model = "cr", fast = FALSE)
+#' }
+#' @export
+simulate_tree <- function(pars, max_t,
+                          model    = c("pd", "dd", "cr"),
+                          fast     = TRUE,
+                          max_lin  = 1e6,
+                          max_tries = 100,
+                          useDDD   = TRUE) {
+  model <- match.arg(model)
+
+  expected_n  <- c(pd = 4L, dd = 6L, cr = 2L)
+  param_names <- c(pd = "c(mu, lambda0, betaN, betaP)",
+                   dd = "c(A0, An, Ap, B0, Bn, Bp)",
+                   cr = "c(mu, lambda0)")
+  if (length(pars) != expected_n[[model]]) {
+    stop(sprintf("'%s' model requires %d parameters: %s",
+                 model, expected_n[[model]], param_names[[model]]))
+  }
+
+  if (!fast && model == "dd") {
+    message("No R implementation for 'dd' model; using fast C++ instead.")
+    fast <- TRUE
+  }
+
+  result <- if (fast) {
+    .sim_tree_fast(pars, max_t, model, max_lin, max_tries, useDDD)
+  } else {
+    .sim_tree_slow(pars, max_t, model)
+  }
+
+  result$model <- model
+  result$pars  <- pars
+  result
+}
+
+.sim_tree_fast <- function(pars, max_t, model, max_lin, max_tries, useDDD) {
+  switch(model,
+    pd = sim_tree_pd_cpp(pars, max_t,
+                         max_lin   = max_lin,
+                         max_tries = max_tries,
+                         useDDD    = useDDD),
+    dd = {
+      raw  <- simulate_div_tree_cpp(pars, max_t, max_lin, max_tries)
+      L    <- raw$tree
+      tes  <- tas <- brts <- NULL
+      if (raw$status == "done" && useDDD) {
+        tes  <- DDD::L2phylo(L, dropextinct = TRUE)
+        tas  <- DDD::L2phylo(L, dropextinct = FALSE)
+        brts <- DDD::L2brts(L, dropextinct = TRUE)
+      }
+      list(tes = tes, tas = tas, L = L, brts = brts, status = raw$status)
+    },
+    cr = sim_tree_pd_cpp(c(pars[1], pars[2], 0, 0), max_t,
+                         max_lin   = max_lin,
+                         max_tries = max_tries,
+                         useDDD    = useDDD)
+  )
+}
+
+.sim_tree_slow <- function(pars, max_t, model) {
+  pd_pars <- switch(model,
+    pd = pars,
+    cr = c(pars[1], pars[2], 0, 0)
+  )
+  raw <- sim_tree_pd_R(pd_pars, max_t)
+  # sim_tree_pd_R returns list(phy = <full phylo>, result = c(N, t, P))
+  list(tes = NULL, tas = raw$phy, L = NULL, brts = NULL, status = "done")
+}
+
 #' @keywords internal
 calc_p <- function(l_table, t) {
   l_table[, 1] <- t - l_table[, 1]
