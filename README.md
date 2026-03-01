@@ -185,8 +185,13 @@ Francisco Richter, Thijs Janzen, Hanno Hildenbrandt. emphasis: Evolutionary Mode
 ```
 
 ## Authors & Contact
-- Author & Maintainer: Francisco Richter (<richtf@usi.ch>)
-- Contributors: Thijs Janzen (<t.janzen@rug.nl>), Hanno Hildenbrandt (<h.hildenbrandt@rug.nl>)
+
+**Author & Maintainer**  
+Francisco Richter — <richtf@usi.ch>
+
+**Contributors**  
+Thijs Janzen — <t.janzen@rug.nl>  
+Hanno Hildenbrandt — <h.hildenbrandt@rug.nl>
 
 ## License
 GPL-3. See [LICENSE](LICENSE) for details.
