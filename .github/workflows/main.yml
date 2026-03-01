@@ -53,3 +53,4 @@ jobs:
         with:
           upload-snapshots: true
           args: 'c("--no-manual", "--no-build-vignettes", "--ignore-vignettes")'
+          build-args: 'c("--no-manual", "--no-build-vignettes")'
