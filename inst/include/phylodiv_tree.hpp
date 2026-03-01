@@ -189,8 +189,10 @@ namespace sim_tree {
          float focal_spec = pars[1] +
                             pars[2] * N  +
                             ((P + N * (next_event_time - t) - t) / N) * pars[3];
+         if (focal_spec < 0.f) focal_spec = 0.f;
          float pt = ((focal_spec + mu) * N ) / total_rate;
-         
+         if (pt > 1.f) pt = 1.f;
+
          if (rndgen.bernouilli(pt)) {
            // event is accepted
            if (rndgen.bernouilli(focal_spec / (focal_spec + mu))) {
@@ -341,8 +343,10 @@ namespace sim_tree {
           float focal_spec = pars[1] +
             pars[2] * N  +
             ((P + N * (next_event_time - t) - t) / N) * pars[3];
+          if (focal_spec < 0.f) focal_spec = 0.f;
           float pt = ((focal_spec + mu) * N ) / total_rate;
-          
+          if (pt > 1.f) pt = 1.f;
+
           if (rndgen.bernouilli(pt)) {
             // event is accepted
             if (rndgen.bernouilli(focal_spec / (focal_spec + mu))) {

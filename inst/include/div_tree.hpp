@@ -144,13 +144,12 @@ struct phylodiv {
           if (tree[parent].label < 0) {
             new_id_1 *= -1;
             new_id_2 *= -1;
-            N2 += 2;
+            N2++;
           } else {
-            N1 += 2;
+            N1++;
           }
           
           tree[parent].end_date = next_event_time;
-          ltable[parent].end_date = next_event_time;
           tree.emplace_back(next_event_time, tree[parent].label, new_id_1, -1);
           tree.emplace_back(next_event_time, tree[parent].label, new_id_2, -1);
         } else {

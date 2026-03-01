@@ -30,7 +30,7 @@ Rcpp::List simulate_div_tree_cpp(Rcpp::NumericVector pars,
     out(cnt, 1) = i.parent_label;
     out(cnt, 2) = i.label;
 
-    auto end_date = (i.end_date == -1) ? crown_age : (crown_age - i.end_date);
+    auto end_date = (i.end_date == -1) ? -1.0f : (crown_age - i.end_date);
 
     out(cnt, 3) = end_date;
     cnt++;
