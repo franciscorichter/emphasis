@@ -87,6 +87,28 @@ length(ep_tree$tes$tip.label)
 
 If you need direct access to specialized diagnostics (extinction sweeps, scenario grids), use the lower-level helpers documented in the reference manual; the high-level interface remains `simulate_tree()`.
 
+### Augmenting an extant tree
+
+`augment_tree()` is the conditional-simulation counterpart of `simulate_tree()`. Given an observed extant tree, it stochastically fills in the missing extinct lineages under the model — the E-step of the MCEM inference algorithm.
+
+```r
+set.seed(42)
+sim <- simulate_tree(c(0.1, 0.5, -0.02, 0.01), max_t = 5)
+
+# Draw 20 augmented copies at the true parameters
+aug <- augment_tree(sim, pars = c(0.1, 0.5, -0.02, 0.01), sample_size = 20)
+length(aug$trees)     # 20 augmented trees
+aug$fhat              # Monte Carlo log-likelihood estimate
+head(aug$trees[[1]])  # first augmented tree (brts, n, t_ext, pd columns)
+```
+
+The two simulation modes:
+
+| Function | Input | Produces |
+|----------|-------|----------|
+| `simulate_tree()` | parameters + crown age | full tree (extant + extinct) |
+| `augment_tree()` | extant tree + parameters | missing extinct lineages only |
+
 ### Dataset factories & non-homogeneous processes
 
 ```r

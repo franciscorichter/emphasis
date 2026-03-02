@@ -399,3 +399,76 @@ sim_tree_pd_grid <- function(mu_vec,
   return(result)
 }
 
+#' Augment an extant tree with simulated missing extinct lineages
+#'
+#' Given an observed extant phylogenetic tree, draws one or more augmented
+#' copies in which the missing (extinct) lineages are filled in by stochastic
+#' simulation under the model. This is the "conditional simulation" counterpart
+#' of \code{\link{simulate_tree}}: instead of simulating a complete tree from
+#' scratch, it conditions on the observed extant topology and adds back the
+#' unobserved extinct branches.
+#'
+#' @param tree Observed extant tree. Accepts:
+#'   \itemize{
+#'     \item the list returned by \code{\link{simulate_tree}}
+#'       (uses \code{$brts}),
+#'     \item a \code{phylo} object (extant tips only), or
+#'     \item a numeric vector of branching times (crown age first,
+#'       sorted decreasing).
+#'   }
+#' @param pars Numeric parameter vector \code{c(mu, lambda0, betaN, betaP)}.
+#' @param sample_size Number of independent augmented trees to draw.
+#'   Default \code{1}.
+#' @param max_missing Maximum number of missing (extinct) lineages added per
+#'   augmented tree. Default \code{1e4}.
+#' @param max_lambda Maximum per-lineage speciation rate during augmentation.
+#'   Default \code{500}.
+#' @param soc Stem (1) or crown (2) age condition. Default \code{2}.
+#' @param num_threads Number of threads for parallel augmentation.
+#'   Default \code{1}.
+#' @return A named list with elements:
+#'   \describe{
+#'     \item{\code{trees}}{List of \code{sample_size} augmented trees, each a
+#'       data frame with columns \code{brts} (time), \code{n} (richness),
+#'       \code{t_ext} (extinction time; \code{1e11} = extant tip), \code{pd}.}
+#'     \item{\code{weights}}{Log importance weights for each augmented tree.}
+#'     \item{\code{fhat}}{Monte Carlo log-likelihood estimate.}
+#'     \item{\code{logf}}{Log model likelihood of each augmented tree.}
+#'     \item{\code{logg}}{Log sampling probability of each augmented tree.}
+#'   }
+#' @seealso \code{\link{simulate_tree}} for full forward simulation;
+#'   \code{\link{estimate_rates}} which uses augmentation internally.
+#' @examples
+#' \dontrun{
+#' set.seed(42)
+#' sim <- simulate_tree(c(0.1, 0.5, -0.02, 0.01), max_t = 5)
+#'
+#' # Draw 10 augmented copies of the extant tree
+#' aug <- augment_tree(sim, pars = c(0.1, 0.5, -0.02, 0.01), sample_size = 10)
+#' length(aug$trees)     # 10 augmented trees
+#' aug$fhat              # Monte Carlo log-likelihood estimate
+#' head(aug$trees[[1]])  # first augmented tree as data frame
+#' }
+#' @export
+augment_tree <- function(tree,
+                         pars,
+                         sample_size = 1L,
+                         max_missing = 1e4,
+                         max_lambda  = 500,
+                         soc         = 2L,
+                         num_threads = 1L) {
+  brts   <- .extract_brts(tree)
+  max_n  <- max(100L, as.integer(10L * sample_size))
+  n      <- length(pars)
+  e_cpp(brts        = brts,
+        init_pars   = as.numeric(pars),
+        sample_size = as.integer(sample_size),
+        maxN        = max_n,
+        soc         = as.integer(soc),
+        max_missing = as.integer(max_missing),
+        max_lambda  = as.numeric(max_lambda),
+        lower_bound = rep(-1e6, n),
+        upper_bound = rep(1e6, n),
+        xtol_rel    = 1e-3,
+        num_threads = as.integer(num_threads))
+}
