@@ -19,17 +19,19 @@ namespace emphasis {
 
 
     template <typename IT>
-    inline IT make_node(IT it, double t, double n, double t_ext)
+    inline IT make_node(IT it, double t, double n, double t_ext, int id = -1, int parent_id = -1)
     {
       it->brts = t; it->n = n; it->t_ext = t_ext; it->pd = 0.0;
+      it->clade = 0; it->id = id; it->parent_id = parent_id;
       return it;
     }
 
 
     template <typename IT>
-    inline IT make_extinct_node(IT it, double t, double n)
+    inline IT make_extinct_node(IT it, double t, double n, int id = -1, int parent_id = -1)
     {
       it->brts = t; it->n = n; it->t_ext = t_ext_extinct; it->pd = 0.0;
+      it->clade = 0; it->id = id; it->parent_id = parent_id;
       return it;
     }
 
@@ -78,25 +80,25 @@ namespace emphasis {
     // insert speciation node_t before t_spec,
     // inserts extinction node_t before t_ext
     // and tracks n
-    void insert_species(double t_spec, double t_ext, tree_t& tree)
+    void insert_species(double t_spec, double t_ext, tree_t& tree, int id = -1, int parent_id = -1)
     {
-      auto n_after = [](tree_t::iterator it) { 
+      auto n_after = [](tree_t::iterator it) {
         const auto to = detail::is_extinction(*it) ? -1.0 : 1.0;
-        return it->n + to; 
+        return it->n + to;
       };
       tree.reserve(tree.size() + 2);   // keep iterators valid
       auto first = std::lower_bound(tree.begin(), tree.end(), t_spec, detail::node_less{});
       auto n = (first != tree.begin()) ? n_after(first - 1) : tree.front().n;
-      first = make_node(tree.emplace(first), t_spec, n, t_ext);
+      first = make_node(tree.emplace(first), t_spec, n, t_ext, id, parent_id);
       // recalculate dirty range
       for (++first; first->brts < t_ext; ++first) {
         first->n = n_after(first - 1);
       }
-      make_extinct_node(tree.emplace(first), t_ext, n_after(first - 1));
+      make_extinct_node(tree.emplace(first), t_ext, n_after(first - 1), id, parent_id);
     }
 
 
-    void do_augment_tree(const param_t& pars, tree_t& tree, const Model& model, int max_missing, double max_lambda)
+    void do_augment_tree(const param_t& pars, tree_t& tree, const Model& model, int max_missing, double max_lambda, int& next_id)
     {
       double cbt = 0;
       tree.reserve(5 * tree.size());    // just a guess, should cover most 'normal' cases
@@ -118,7 +120,22 @@ namespace emphasis {
           double pt = std::max(0.0, model.nh_rate(next_speciation_time, pars, tree)) / lambda_max;
           if (u2 < pt) {
             double extinction_time = model.extinction_time(next_speciation_time, pars, tree);
-            insert_species(next_speciation_time, extinction_time, tree);
+            // find lineages alive at next_speciation_time and pick one as parent
+            std::vector<int> alive_ids;
+            for (const auto& node : tree) {
+              if (!detail::is_extinction(node) &&
+                  node.brts < next_speciation_time &&
+                  node.t_ext > next_speciation_time) {
+                alive_ids.push_back(node.id);
+              }
+            }
+            int chosen_parent_id = -1;
+            if (!alive_ids.empty()) {
+              std::uniform_int_distribution<size_t> uid(0, alive_ids.size() - 1);
+              chosen_parent_id = alive_ids[uid(reng)];
+            }
+            int new_id = next_id++;
+            insert_species(next_speciation_time, extinction_time, tree, new_id, chosen_parent_id);
             num_missing_branches++;
             if (num_missing_branches > max_missing) {
               throw augmentation_overrun{};
@@ -133,7 +150,7 @@ namespace emphasis {
     }
 
 
-    void do_augment_tree_cont(const param_t& pars, tree_t& tree, const Model& model, int max_missing, double max_lambda)
+    void do_augment_tree_cont(const param_t& pars, tree_t& tree, const Model& model, int max_missing, double max_lambda, int& next_id)
     {
       double cbt = 0;
       tree.reserve(5 * tree.size());    // just a guess, should cover most 'normal' cases
@@ -158,7 +175,22 @@ namespace emphasis {
           double pt = std::max(0.0, model.nh_rate(next_speciation_time, pars, tree)) / lambda_max;
           if (u2 < pt) {
             double extinction_time = model.extinction_time(next_speciation_time, pars, tree);
-            insert_species(next_speciation_time, extinction_time, tree);
+            // find lineages alive at next_speciation_time and pick one as parent
+            std::vector<int> alive_ids;
+            for (const auto& node : tree) {
+              if (!detail::is_extinction(node) &&
+                  node.brts < next_speciation_time &&
+                  node.t_ext > next_speciation_time) {
+                alive_ids.push_back(node.id);
+              }
+            }
+            int chosen_parent_id = -1;
+            if (!alive_ids.empty()) {
+              std::uniform_int_distribution<size_t> uid(0, alive_ids.size() - 1);
+              chosen_parent_id = alive_ids[uid(reng)];
+            }
+            int new_id = next_id++;
+            insert_species(next_speciation_time, extinction_time, tree, new_id, chosen_parent_id);
             num_missing_branches++;
             if (num_missing_branches > max_missing) {
               throw augmentation_overrun{};
@@ -180,11 +212,22 @@ namespace emphasis {
   {
     pooled.resize(input_tree.size());
     std::copy(input_tree.cbegin(), input_tree.cend(), pooled.begin());
+    // assign sequential IDs to initial tree nodes; augmented nodes get IDs starting after
+    int next_id = 0;
+    for (auto& node : pooled) {
+      if (!detail::is_extinction(node)) {
+        node.id = next_id++;
+        node.parent_id = -1;
+      } else {
+        node.id = -1;
+        node.parent_id = -1;
+      }
+    }
     if (model.numerical_max_lambda()) {
-      do_augment_tree(pars, pooled, model, max_missing, max_lambda);
+      do_augment_tree(pars, pooled, model, max_missing, max_lambda, next_id);
     }
     else {
-      do_augment_tree_cont(pars, pooled, model, max_missing, max_lambda);
+      do_augment_tree_cont(pars, pooled, model, max_missing, max_lambda, next_id);
     }
   }
 
@@ -201,11 +244,21 @@ namespace emphasis {
     tbb::parallel_for(tbb::blocked_range<size_t>(0ull, vpars.size(), grainsize), [&](const tbb::blocked_range<size_t>& r) {
       for (size_t i = r.begin(); i < r.end(); ++i) {
         try {
+          int next_id = 0;
+          for (auto& node : trees[i]) {
+            if (!detail::is_extinction(node)) {
+              node.id = next_id++;
+              node.parent_id = -1;
+            } else {
+              node.id = -1;
+              node.parent_id = -1;
+            }
+          }
           if (model.numerical_max_lambda()) {
-            do_augment_tree(vpars[i], trees[i], model, max_missing, max_lambda);
+            do_augment_tree(vpars[i], trees[i], model, max_missing, max_lambda, next_id);
           }
           else {
-            do_augment_tree_cont(vpars[i], trees[i], model, max_missing, max_lambda);
+            do_augment_tree_cont(vpars[i], trees[i], model, max_missing, max_lambda, next_id);
           }
         } catch (...) {
           trees[i].clear();

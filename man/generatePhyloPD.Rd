@@ -36,11 +36,13 @@ A list containing the simulated trees and parameters.
 This function simulates phylogenetic trees based on given parameters.
 }
 \examples{
-generatePhyloPD(n_trees = 10,
-               mu_interval = c(0.1, 0.5),
-               lambda_interval = c(0.1, 0.5),
-               betaN_interval = c(0.1, 0.5),
-               betaP_interval = c(0.1, 0.5),
-               max_lin = 1e6,
-               max_tries = 1)
+\donttest{
+generatePhyloPD(n_trees = 5,
+               mu_interval = c(0.05, 0.1),
+               lambda_interval = c(0.3, 0.5),
+               betaN_interval = c(-0.05, -0.01),
+               betaP_interval = c(-0.01, 0.01),
+               max_lin = 1e4,
+               max_tries = 10)
+}
 }

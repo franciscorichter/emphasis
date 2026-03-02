@@ -41,7 +41,9 @@ This function simulates and augments phylogenetic data across multiple trees
 using parameter sampling and the augmentPD function.
 }
 \examples{
-# Example usage
+\dontrun{
+my_phylo <- ape::rtree(10)
 result <- AugmentMultiplePhyloPD(my_phylo, 10, c(0.1, 0.5), c(0.2, 0.6),
-                                 c(0.3, 0.7), c(0.4, 0.8))
+                                 c(-0.1, 0.1), c(-0.1, 0.1))
+}
 }

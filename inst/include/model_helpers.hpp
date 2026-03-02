@@ -58,6 +58,8 @@ namespace emphasis {
     double t_ext;     /* emp_t_ext_tip for present-day species;  emp_t_ext_extinct for extinction nodes */
     double pd;
     int clade;        // required for sim_tree
+    int id;           // unique stable lineage ID (assigned at creation); -1 = unset
+    int parent_id;    // id of parent lineage; -1 = root / initial tree
   };
   
   

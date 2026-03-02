@@ -4,16 +4,28 @@
 \title{Simulate a phylogenetic tree under a diversification model}
 \usage{
 simulate_tree(
+  tree      = NULL,
   pars,
-  max_t,
-  model = c("pd", "dd", "cr", "ep"),
-  fast = TRUE,
-  max_lin = 1e+06,
+  max_t     = NULL,
+  model     = c("pd", "dd", "cr", "ep"),
+  fast      = TRUE,
+  max_lin   = 1e+06,
   max_tries = 100,
-  useDDD = TRUE
+  useDDD    = TRUE
 )
 }
 \arguments{
+\item{tree}{Optional. An observed extant tree for conditional simulation.
+Accepts:
+\itemize{
+  \item \code{NULL} (default): forward simulation from scratch.
+  \item the list returned by \code{\link{simulate_tree}} (uses
+    \code{$brts} and \code{$tes}),
+  \item a \code{phylo} object (extant tips only), or
+  \item a numeric vector of branching times (crown age first,
+    sorted decreasing).
+}}
+
 \item{pars}{Numeric parameter vector. Length and meaning depend on
 \code{model}:
 \describe{
@@ -32,12 +44,15 @@ simulate_tree(
     edge length of lineage i (time since it last diverged).}
 }}
 
-\item{max_t}{Crown age (simulation time).}
+\item{max_t}{Crown age (simulation time). Required for forward simulation
+(\code{tree = NULL}); ignored when \code{tree} is provided (crown age is
+extracted from the tree).}
 
 \item{model}{Diversification model: \code{"pd"} (phylogenetic diversity
 dependence), \code{"dd"} (diversity dependence, exponential rates),
 \code{"cr"} (constant rate), or \code{"ep"} (evolutionary pendant).
-Default \code{"pd"}.}
+Default \code{"pd"}. Only \code{"pd"} is supported for conditional
+simulation.}
 
 \item{fast}{Logical. Use the fast C++ implementation (\code{TRUE}, default)
 or the slower pure-R implementation (\code{FALSE}). The \code{"dd"} and
@@ -55,38 +70,50 @@ tree. Default \code{100}.}
 \value{
 A named list with elements:
 \describe{
-  \item{\code{tes}}{Reconstructed phylogeny (extant tips only); \code{NULL}
-    when \code{useDDD = FALSE}, \code{fast = FALSE}, or the simulation
-    failed.}
+  \item{\code{tes}}{Reconstructed phylogeny (extant tips only).}
   \item{\code{tas}}{Full phylogeny including extinct lineages; \code{NULL}
-    when \code{useDDD = FALSE} or the simulation failed. For
-    \code{fast = FALSE} this is the tree returned directly by the R
-    simulator.}
-  \item{\code{L}}{L-table matrix; \code{NULL} for pure-R runs.}
-  \item{\code{brts}}{Branching times of the reconstructed tree; \code{NULL}
+    when topology reconstruction fails or \code{useDDD = FALSE}.}
+  \item{\code{L}}{L-table matrix; \code{NULL} for pure-R runs or
+    conditional simulation.}
+  \item{\code{brts}}{Branching times of the extant tree; \code{NULL}
     when \code{useDDD = FALSE} or the simulation failed.}
-  \item{\code{status}}{\code{"done"}, \code{"extinct"}, or
-    \code{"too_large"}.}
+  \item{\code{status}}{\code{"done"}, \code{"extinct"}, \code{"too_large"},
+    or \code{"failed"}.}
   \item{\code{model}}{The model used.}
   \item{\code{pars}}{The parameter vector supplied.}
 }
 }
 \description{
-Unified wrapper for tree simulation, dispatching to a C++ (fast) or pure-R
-(slow) implementation and to the appropriate model-specific backend.
+Unified wrapper for tree simulation. When \code{tree = NULL} (default),
+simulates a complete tree from scratch (forward simulation). When
+\code{tree} is supplied, performs conditional simulation: augments the
+provided extant tree with stochastically drawn extinct lineages and
+reconstructs a full \code{phylo} object including those extinct branches.
 }
 \examples{
 \dontrun{
-# PD model — fast C++
-tree <- simulate_tree(c(0.1, 0.5, -0.01, 0.01), max_t = 5)
+# Forward simulation (PD model, fast C++)
+tr <- simulate_tree(pars = c(0.1, 0.5, -0.01, 0.01), max_t = 5)
+tr$tes   # extant-only phylo
+tr$tas   # full phylo with extinct branches
 
-# DD model — fast C++ only
-tree <- simulate_tree(c(0.1, -0.01, 0, -2.5, 0, 0), max_t = 5, model = "dd")
+# Conditional simulation — augment an existing tree
+aug <- simulate_tree(tree = tr, pars = c(0.1, 0.5, -0.01, 0.01))
+aug$tas  # phylo with simulated extinct lineages added
 
-# CR model — slow pure R
-tree <- simulate_tree(c(0.1, 0.5), max_t = 5, model = "cr", fast = FALSE)
+# Conditional from a plain phylo object
+aug2 <- simulate_tree(tree = tr$tes, pars = c(0.1, 0.5, -0.01, 0.01))
 
-# EP model — fast C++ only
-tree <- simulate_tree(c(0.1, 0.5, -0.02, 0.01, 0.05), max_t = 5, model = "ep")
+# DD model — fast C++ only (forward only)
+tr2 <- simulate_tree(pars = c(0.1, -0.01, 0, -2.5, 0, 0), max_t = 5,
+                     model = "dd")
+
+# CR model — slow pure R (forward only)
+tr3 <- simulate_tree(pars = c(0.1, 0.5), max_t = 5,
+                     model = "cr", fast = FALSE)
+
+# EP model — fast C++ only (forward only)
+tr4 <- simulate_tree(pars = c(0.1, 0.5, -0.02, 0.01, 0.05), max_t = 5,
+                     model = "ep")
 }
 }

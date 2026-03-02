@@ -23,6 +23,27 @@ The package is organised around a small set of verbs — **simulate**, **augment
 
 Each high-level routine accepts plain R objects (e.g. `phylo`, numeric vectors) and delegates heavy lifting to `Rcpp` / `RcppParallel` code paths.
 
+## Modular architecture
+
+`emphasis` is structured around three modules that mirror a typical diversification analysis pipeline. The README doubles as the landing page for documentation, so each module is summarised below with entry points and canonical workflows.
+
+| Module | Purpose | Key ingredients |
+|--------|---------|-----------------|
+| **Module A — Preprocess** | Clean and enrich trees before inference. Handles data ingestion, tip pruning, crown-age alignment, augmentation of extinct lineages, and generation of synthetic training data. | `prune_to_extant()`, `simulate_tree(tree = ...)`, `generatePhyloPD()`, `AugmentMultiplePhyloPD()`, non-homogeneous samplers |
+| **Module B — Inference** | Estimate diversification parameters with EM or differential evolution. Interfaces directly with Module A outputs. | `estimate_rates()`, `estimate_rates_control()`, `mcEM_step()`, `emphasis_de()` |
+| **Module C — Goodness of fit** | Diagnose fits, compare fast/slow simulators, and run benchmark visualisations plus GAM diagnostics over augmented sweeps. | `train_GAM()`, benchmarking scripts under `analysis/`, summary plots in `results/benchmarks/` |
+
+### Module A focus — preprocessing workflows
+
+Module A is responsible for preparing trees so inference runs smoothly:
+
+1. **Ingest / harmonise** trees: `prune_to_extant(tree)` removes extinct tips to obtain an extant-only backbone. `generatePhyloPD()` creates curated simulation sets with known parameters.
+2. **Augment missing history** when conditioning on empirical data: `simulate_tree(tree = extant_tree, pars = ...)` fills in extinct branches (single draw). Use `AugmentMultiplePhyloPD()` for batches if you plan to fit GAM diagnostics later.
+3. **Standardise metadata**: store outputs in the list format returned by `simulate_tree()` (`tes`, `tas`, `L`, `brts`, `status`) so downstream modules can consume them without extra conversion.
+4. **Export training corpora**: write the `generatePhyloPD()` results to disk (e.g. via `readr::write_csv` or RDS). These corpora drive Module B parameter searches and Module C goodness-of-fit experiments (benchmark scripts already read from `results/benchmarks/`).
+
+The remainder of this README walks through Modules B and C using these preprocessed objects, so the entire documentation story is visible on this GitHub landing page.
+
 ## Installation
 
 ```r
@@ -67,47 +88,54 @@ library(emphasis)
 set.seed(123)
 
 # CR — constant rate (betaN = betaP = betaE = 0)
-cr_tree <- simulate_tree(c(0.1, 0.4), max_t = 3, model = "cr")
+cr_tree <- simulate_tree(pars = c(0.1, 0.4), max_t = 3, model = "cr")
 cr_tree$status
 
 # DD — diversity dependent (betaP = betaE = 0): richness N drives speciation
-dd_tree <- simulate_tree(c(0.1, 0.4, -0.05, 0), max_t = 5, model = "pd",
+dd_tree <- simulate_tree(pars = c(0.1, 0.4, -0.05, 0), max_t = 5, model = "pd",
                          max_lin = 1e4, max_tries = 10)
 dd_tree$status
 
 # PD — phylogenetic diversity (betaE = 0): richness + clade-level PD
-pd_tree <- simulate_tree(c(0.1, 0.4, -0.05, 0.02), max_t = 5, model = "pd")
+pd_tree <- simulate_tree(pars = c(0.1, 0.4, -0.05, 0.02), max_t = 5, model = "pd")
 pd_tree$status
 
 # EP — evolutionary pendant: full model, per-lineage rates via d_i
-ep_tree <- simulate_tree(c(0.1, 0.5, -0.02, 0.01, 0.05), max_t = 5, model = "ep")
+ep_tree <- simulate_tree(pars = c(0.1, 0.5, -0.02, 0.01, 0.05), max_t = 5, model = "ep")
 ep_tree$status
 length(ep_tree$tes$tip.label)
 ```
 
 If you need direct access to specialized diagnostics (extinction sweeps, scenario grids), use the lower-level helpers documented in the reference manual; the high-level interface remains `simulate_tree()`.
 
-### Augmenting an extant tree
+### Conditional simulation — augmenting an extant tree
 
-`augment_tree()` is the conditional-simulation counterpart of `simulate_tree()`. Given an observed extant tree, it stochastically fills in the missing extinct lineages under the model — the E-step of the MCEM inference algorithm.
+`simulate_tree()` also serves as the conditional-simulation entry point. Pass `tree =` an observed extant tree and it stochastically fills in the missing extinct lineages under the PD model, returning a `tas` phylo that includes both the original extant branches and the simulated extinct ones.
 
 ```r
 set.seed(42)
-sim <- simulate_tree(c(0.1, 0.5, -0.02, 0.01), max_t = 5)
+sim <- simulate_tree(pars = c(0.1, 0.5, -0.02, 0.01), max_t = 5)
+sim$status          # "done"
+sim$tes             # extant-only phylo
+sim$tas             # full phylo with extinct branches (from forward sim)
 
-# Draw 20 augmented copies at the true parameters
-aug <- augment_tree(sim, pars = c(0.1, 0.5, -0.02, 0.01), sample_size = 20)
-length(aug$trees)     # 20 augmented trees
-aug$fhat              # Monte Carlo log-likelihood estimate
-head(aug$trees[[1]])  # first augmented tree (brts, n, t_ext, pd columns)
+# Conditional simulation: augment an existing extant tree
+aug <- simulate_tree(tree = sim, pars = c(0.1, 0.5, -0.02, 0.01))
+aug$tes             # same extant-only phylo as sim$tes
+aug$tas             # full phylo with stochastically drawn extinct lineages
+length(aug$tas$tip.label) >= length(aug$tes$tip.label)  # TRUE
+
+# Also works with a plain phylo object as input
+aug2 <- simulate_tree(tree = sim$tes, pars = c(0.1, 0.5, -0.02, 0.01))
+aug2$status
 ```
 
-The two simulation modes:
+The two simulation modes share the same interface and return identical list shapes:
 
-| Function | Input | Produces |
-|----------|-------|----------|
-| `simulate_tree()` | parameters + crown age | full tree (extant + extinct) |
-| `augment_tree()` | extant tree + parameters | missing extinct lineages only |
+| `tree` argument | Mode | Produces |
+|-----------------|------|----------|
+| `NULL` (default) | Forward simulation | new tree from scratch (`tes`, `tas`, `L`, `brts`) |
+| `simulate_tree()` result, `phylo`, or brts vector | Conditional simulation | extant tree + stochastic extinct lineages |
 
 ### Dataset factories & non-homogeneous processes
 
@@ -160,7 +188,7 @@ A robust two-stage workflow uses DE to find the basin and EM to refine:
 library(emphasis)
 
 set.seed(42)
-sim <- simulate_tree(c(0.1, 0.5, -0.02, 0.01), max_t = 8, model = "pd")
+sim <- simulate_tree(pars = c(0.1, 0.5, -0.02, 0.01), max_t = 8, model = "pd")
 
 lb <- c(0.01, 0.01, -1, -1)
 ub <- c(1,    2,    1,  1)
@@ -218,7 +246,7 @@ Use `get_required_sampling_size()` to adapt MCEM sample sizes, and `AugmentMulti
 | `simulate.R` | Unified simulator entry point | `simulate_tree()` |
 | `inference.R` | Unified inference entry point | `estimate_rates()`, `estimate_rates_control()`, `prune_to_extant()` |
 | `generate.R` | Dataset factories & non-homogeneous processes | `generatePhyloPD()`, `generateNonHomogeneousExp()`, `nhExpRand()`, `rate_t()`, `ExponentialRate()` |
-| `augment.R` | Augmentation of missing lineages | `augmentPD()`, `AugmentMultiplePhyloPD()` |
+| `augment.R` | Batch augmentation of missing lineages | `augmentPD()`, `AugmentMultiplePhyloPD()` |
 | `de.R` | Differential-evolution back-end | `emphasis_de()`, `emphasis_de_factorial()` |
 | `emphasis.R` | MCEM back-end | `mcEM_step()` |
 | `gam.R` | Diagnostics over simulation sweeps | `train_GAM()` |

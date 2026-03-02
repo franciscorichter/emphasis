@@ -1,8 +1,20 @@
 #' Simulate a phylogenetic tree under a diversification model
 #'
-#' Unified wrapper for tree simulation, dispatching to a C++ (fast) or pure-R
-#' (slow) implementation and to the appropriate model-specific backend.
+#' Unified wrapper for tree simulation. When \code{tree = NULL} (default),
+#' simulates a complete tree from scratch (forward simulation). When
+#' \code{tree} is supplied, performs conditional simulation: augments the
+#' provided extant tree with stochastically drawn extinct lineages.
 #'
+#' @param tree Optional. An observed extant tree for conditional simulation.
+#'   Accepts:
+#'   \itemize{
+#'     \item \code{NULL} (default): forward simulation from scratch.
+#'     \item the list returned by \code{\link{simulate_tree}} (uses
+#'       \code{$brts} and \code{$tes}),
+#'     \item a \code{phylo} object (extant tips only), or
+#'     \item a numeric vector of branching times (crown age first,
+#'       sorted decreasing).
+#'   }
 #' @param pars Numeric parameter vector. Length and meaning depend on
 #'   \code{model}:
 #'   \describe{
@@ -16,10 +28,13 @@
 #'       Constant-rate birth-death (special case of \code{"pd"} with
 #'       \code{betaN = betaP = 0}).}
 #'   }
-#' @param max_t Crown age (simulation time).
+#' @param max_t Crown age (simulation time). Required for forward simulation
+#'   (\code{tree = NULL}); ignored when \code{tree} is provided (crown age is
+#'   extracted from the tree).
 #' @param model Diversification model: \code{"pd"} (phylogenetic diversity
 #'   dependence), \code{"dd"} (diversity dependence, exponential rates), or
-#'   \code{"cr"} (constant rate). Default \code{"pd"}.
+#'   \code{"cr"} (constant rate). Default \code{"pd"}. Only \code{"pd"} is
+#'   supported for conditional simulation.
 #' @param fast Logical. Use the fast C++ implementation (\code{TRUE}, default)
 #'   or the slower pure-R implementation (\code{FALSE}). The \code{"dd"} model
 #'   has no R implementation and always uses C++.
@@ -31,40 +46,40 @@
 #'   \pkg{DDD}. Only applies when \code{fast = TRUE}. Default \code{TRUE}.
 #' @return A named list with elements:
 #'   \describe{
-#'     \item{\code{tes}}{Reconstructed phylogeny (extant tips only);
-#'       \code{NULL} when \code{useDDD = FALSE}, \code{fast = FALSE}, or
-#'       the simulation failed.}
+#'     \item{\code{tes}}{Reconstructed phylogeny (extant tips only).}
 #'     \item{\code{tas}}{Full phylogeny including extinct lineages;
-#'       \code{NULL} when \code{useDDD = FALSE} or the simulation failed.
-#'       For \code{fast = FALSE} this is the tree returned directly by the
-#'       R simulator.}
-#'     \item{\code{L}}{L-table matrix; \code{NULL} for pure-R runs.}
-#'     \item{\code{brts}}{Branching times of the reconstructed tree;
-#'       \code{NULL} when \code{useDDD = FALSE} or the simulation failed.}
-#'     \item{\code{status}}{\code{"done"}, \code{"extinct"}, or
-#'       \code{"too_large"}.}
+#'       \code{NULL} when topology reconstruction fails.}
+#'     \item{\code{L}}{L-table matrix (forward simulation only).}
+#'     \item{\code{brts}}{Branching times of the extant tree.}
+#'     \item{\code{status}}{\code{"done"} or \code{"failed"}.}
 #'     \item{\code{model}}{The model used.}
 #'     \item{\code{pars}}{The parameter vector supplied.}
 #'   }
 #' @examples
 #' \dontrun{
-#' # PD model — fast C++
-#' tree <- simulate_tree(c(0.1, 0.5, -0.01, 0.01), max_t = 5)
+#' # Forward simulation (PD model, fast C++)
+#' tr <- simulate_tree(pars = c(0.1, 0.5, -0.01, 0.01), max_t = 5)
 #'
-#' # DD model — fast C++ only
-#' tree <- simulate_tree(c(0.1, -0.01, 0, -2.5, 0, 0), max_t = 5, model = "dd")
+#' # Conditional simulation — augment with extinct lineages
+#' aug <- simulate_tree(tree = tr, pars = c(0.1, 0.5, -0.01, 0.01))
+#' aug$tas  # phylo with extinct branches
 #'
-#' # CR model — slow pure R
-#' tree <- simulate_tree(c(0.1, 0.5), max_t = 5, model = "cr", fast = FALSE)
+#' # Conditional from a plain phylo object
+#' aug2 <- simulate_tree(tree = tr$tes, pars = c(0.1, 0.5, -0.01, 0.01))
 #' }
 #' @export
-simulate_tree <- function(pars, max_t,
-                          model    = c("pd", "dd", "cr", "ep"),
-                          fast     = TRUE,
-                          max_lin  = 1e6,
+simulate_tree <- function(tree      = NULL,
+                          pars,
+                          max_t     = NULL,
+                          model     = c("pd", "dd", "cr", "ep"),
+                          fast      = TRUE,
+                          max_lin   = 1e6,
                           max_tries = 100,
-                          useDDD   = TRUE) {
+                          useDDD    = TRUE) {
   model <- match.arg(model)
+  if (!is.null(tree)) return(.sim_tree_conditional(tree, pars, model))
+
+  if (is.null(max_t)) stop("'max_t' is required for forward simulation (tree = NULL).")
 
   expected_n  <- c(pd = 4L, dd = 6L, cr = 2L, ep = 5L)
   param_names <- c(pd = "c(mu, lambda0, betaN, betaP)",
@@ -142,6 +157,176 @@ simulate_tree <- function(pars, max_t,
   }
   list(tes = NULL, tas = raw$phy, L = NULL, brts = NULL, status = status)
 }
+
+
+# --------------------------------------------------------------------------- #
+#  Conditional simulation helpers                                              #
+# --------------------------------------------------------------------------- #
+
+#' @keywords internal
+.sim_tree_conditional <- function(tree, pars, model) {
+  brts  <- .extract_brts(tree)
+  max_t <- brts[1]
+
+  # Resolve tes
+  tes <- if (inherits(tree, "phylo")) {
+    tree
+  } else if (is.list(tree) && !inherits(tree, "phylo") && !is.null(tree$tes)) {
+    tree$tes
+  } else if (is.list(tree) && !inherits(tree, "phylo") && !is.null(tree$tas)) {
+    prune_to_extant(tree$tas)
+  } else {
+    NULL
+  }
+
+  # Extant L-table needed for topology reconstruction of the augmented tree.
+  # Required when tree is a simulate_tree() result; plain phylo inputs are
+  # unsupported (tas will be NULL).
+  L_extant <- if (is.list(tree) && !inherits(tree, "phylo") && !is.null(tree$L)) {
+    tree$L
+  } else if (inherits(tree, "phylo")) {
+    tryCatch(DDD::phylo2L(tree), error = function(e) NULL)
+  } else {
+    NULL
+  }
+
+  # One augmented draw (sample_size = 1)
+  aug <- tryCatch(
+    .augment_tree_internal(tree,
+                           pars        = pars,
+                           sample_size = 1L,
+                           max_missing = 1e4,
+                           max_lambda  = 500,
+                           soc         = 2L,
+                           num_threads = 1L),
+    error = function(e) NULL
+  )
+
+  if (is.null(aug) || length(aug$trees) == 0L) {
+    return(list(tes = tes, tas = NULL, L = NULL, brts = brts,
+                status = "failed", model = model, pars = pars))
+  }
+
+  df <- aug$trees[[1L]]   # data frame: brts, n, t_ext, pd, id, parent_id
+
+  # Build extended L-table and convert to phylo
+  L   <- .aug_to_Ltable(df, max_t, brts, L_extant)
+  tas <- if (!is.null(L)) {
+    tryCatch(DDD::L2phylo(L, dropextinct = FALSE), error = function(e) NULL)
+  } else {
+    NULL
+  }
+
+  list(tes    = tes,
+       tas    = tas,
+       L      = L,
+       brts   = brts,
+       status = if (!is.null(tas)) "done" else "failed",
+       model  = model,
+       pars   = pars)
+}
+
+
+# Convert an augmented-tree data frame (from e_cpp) into a DDD-compatible
+# L-table that includes both the extant tree and the simulated extinct lineages.
+#
+# Design notes:
+#   - `L_extant` (the forward-sim L-table stored in tree$L) provides the base
+#     topology including the two mandatory root rows at backward time = max_t.
+#   - emphasis init-tree node with id=k (C++ 0-indexed, sorted by ascending
+#     forward brts) was born at backward time brts[k+2] (R 1-indexed; brts[1]
+#     = max_t crown age).  We match to L_extant by backward birth time to
+#     retrieve the DDD label for each init-tree node.
+#   - Augmented extinct lineages (parent_id != -1, t_ext < 1e11) are appended
+#     as new rows, inheriting the clade sign of their parent.
+#' @keywords internal
+.aug_to_Ltable <- function(df, max_t, brts, L_extant) {
+  if (is.null(L_extant)) return(NULL)
+
+  t_ext_tip_val <- 1e11
+
+  # Keep only speciation rows (drop t_ext == 0 extinction-event rows)
+  sp <- df[df$t_ext != 0.0, , drop = FALSE]
+
+  # Augmented extinct lineages: have a parent AND go extinct before present
+  aug <- sp[sp$parent_id != -1L & sp$t_ext < t_ext_tip_val, , drop = FALSE]
+
+  if (nrow(aug) == 0L) return(L_extant)  # nothing to add
+
+  # Map emphasis init-tree id (0-indexed) → DDD label in L_extant.
+  # id=k → backward birth = brts[k+2] (brts[1]=max_t, brts[2..n+1] = internal)
+  id_to_label <- function(pid) {
+    if (pid < 0L || (pid + 2L) > length(brts)) return(NA_integer_)
+    bwd   <- brts[pid + 2L]
+    row_k <- which.min(abs(L_extant[, 1L] - bwd))
+    as.integer(L_extant[row_k, 3L])
+  }
+
+  # Next unused label magnitude
+  next_lbl <- as.integer(max(abs(L_extant[, 3L]))) + 1L
+
+  # Process in chronological (ascending forward brts) order so that a node's
+  # parent is always assigned a label before the node itself.
+  aug <- aug[order(aug$brts), , drop = FALSE]
+
+  # Labels assigned to augmented nodes (which may themselves parent later ones)
+  aug_labels <- setNames(integer(0), character(0))
+
+  new_rows <- matrix(0.0, nrow = nrow(aug), ncol = 4L)
+
+  for (k in seq_len(nrow(aug))) {
+    pid     <- aug$parent_id[k]
+    pid_key <- as.character(pid)
+
+    p_lbl <- if (pid_key %in% names(aug_labels)) {
+      aug_labels[[pid_key]]
+    } else {
+      id_to_label(pid)
+    }
+    if (is.na(p_lbl) || length(p_lbl) == 0L) {
+      p_lbl <- as.integer(L_extant[1L, 3L])  # fallback: first root label
+    }
+
+    lbl      <- if (p_lbl < 0L) -next_lbl else next_lbl
+    next_lbl <- next_lbl + 1L
+
+    new_rows[k, 1L] <- max_t - aug$brts[k]    # backward birth time
+    new_rows[k, 2L] <- as.double(p_lbl)        # parent label
+    new_rows[k, 3L] <- as.double(lbl)          # own label
+    new_rows[k, 4L] <- max_t - aug$t_ext[k]   # backward death time
+
+    # Store this node's label so later nodes can look it up as a parent
+    aug_labels[as.character(aug$id[k])] <- lbl
+  }
+
+  rbind(L_extant, new_rows)
+}
+
+
+#' @keywords internal
+.augment_tree_internal <- function(tree,
+                                   pars,
+                                   sample_size = 1L,
+                                   max_missing = 1e4,
+                                   max_lambda  = 500,
+                                   soc         = 2L,
+                                   num_threads = 1L) {
+  brts   <- .extract_brts(tree)
+  max_n  <- max(100L, as.integer(10L * sample_size))
+  n      <- length(pars)
+  e_cpp(brts        = brts,
+        init_pars   = as.numeric(pars),
+        sample_size = as.integer(sample_size),
+        maxN        = max_n,
+        soc         = as.integer(soc),
+        max_missing = as.integer(max_missing),
+        max_lambda  = as.numeric(max_lambda),
+        lower_bound = rep(-1e6, n),
+        upper_bound = rep(1e6, n),
+        xtol_rel    = 1e-3,
+        num_threads = as.integer(num_threads))
+}
+
 
 #' @keywords internal
 calc_p <- function(l_table, t) {
@@ -399,76 +584,3 @@ sim_tree_pd_grid <- function(mu_vec,
   return(result)
 }
 
-#' Augment an extant tree with simulated missing extinct lineages
-#'
-#' Given an observed extant phylogenetic tree, draws one or more augmented
-#' copies in which the missing (extinct) lineages are filled in by stochastic
-#' simulation under the model. This is the "conditional simulation" counterpart
-#' of \code{\link{simulate_tree}}: instead of simulating a complete tree from
-#' scratch, it conditions on the observed extant topology and adds back the
-#' unobserved extinct branches.
-#'
-#' @param tree Observed extant tree. Accepts:
-#'   \itemize{
-#'     \item the list returned by \code{\link{simulate_tree}}
-#'       (uses \code{$brts}),
-#'     \item a \code{phylo} object (extant tips only), or
-#'     \item a numeric vector of branching times (crown age first,
-#'       sorted decreasing).
-#'   }
-#' @param pars Numeric parameter vector \code{c(mu, lambda0, betaN, betaP)}.
-#' @param sample_size Number of independent augmented trees to draw.
-#'   Default \code{1}.
-#' @param max_missing Maximum number of missing (extinct) lineages added per
-#'   augmented tree. Default \code{1e4}.
-#' @param max_lambda Maximum per-lineage speciation rate during augmentation.
-#'   Default \code{500}.
-#' @param soc Stem (1) or crown (2) age condition. Default \code{2}.
-#' @param num_threads Number of threads for parallel augmentation.
-#'   Default \code{1}.
-#' @return A named list with elements:
-#'   \describe{
-#'     \item{\code{trees}}{List of \code{sample_size} augmented trees, each a
-#'       data frame with columns \code{brts} (time), \code{n} (richness),
-#'       \code{t_ext} (extinction time; \code{1e11} = extant tip), \code{pd}.}
-#'     \item{\code{weights}}{Log importance weights for each augmented tree.}
-#'     \item{\code{fhat}}{Monte Carlo log-likelihood estimate.}
-#'     \item{\code{logf}}{Log model likelihood of each augmented tree.}
-#'     \item{\code{logg}}{Log sampling probability of each augmented tree.}
-#'   }
-#' @seealso \code{\link{simulate_tree}} for full forward simulation;
-#'   \code{\link{estimate_rates}} which uses augmentation internally.
-#' @examples
-#' \dontrun{
-#' set.seed(42)
-#' sim <- simulate_tree(c(0.1, 0.5, -0.02, 0.01), max_t = 5)
-#'
-#' # Draw 10 augmented copies of the extant tree
-#' aug <- augment_tree(sim, pars = c(0.1, 0.5, -0.02, 0.01), sample_size = 10)
-#' length(aug$trees)     # 10 augmented trees
-#' aug$fhat              # Monte Carlo log-likelihood estimate
-#' head(aug$trees[[1]])  # first augmented tree as data frame
-#' }
-#' @export
-augment_tree <- function(tree,
-                         pars,
-                         sample_size = 1L,
-                         max_missing = 1e4,
-                         max_lambda  = 500,
-                         soc         = 2L,
-                         num_threads = 1L) {
-  brts   <- .extract_brts(tree)
-  max_n  <- max(100L, as.integer(10L * sample_size))
-  n      <- length(pars)
-  e_cpp(brts        = brts,
-        init_pars   = as.numeric(pars),
-        sample_size = as.integer(sample_size),
-        maxN        = max_n,
-        soc         = as.integer(soc),
-        max_missing = as.integer(max_missing),
-        max_lambda  = as.numeric(max_lambda),
-        lower_bound = rep(-1e6, n),
-        upper_bound = rep(1e6, n),
-        xtol_rel    = 1e-3,
-        num_threads = as.integer(num_threads))
-}
