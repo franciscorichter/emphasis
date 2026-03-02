@@ -103,15 +103,17 @@ estimate_rates_control <- function(method = c("em", "de"), n_pars = 4) {
     return(sort(tree, decreasing = TRUE))
   }
   if (inherits(tree, "phylo")) {
-    return(ape::branching.times(tree))
+    return(sort(ape::branching.times(tree), decreasing = TRUE))
   }
-  # simulate_tree() result — use extant-only phylo ($tes)
+  # simulate_tree() result — prefer $brts (already sorted from DDD::L2brts)
   if (is.list(tree) && !inherits(tree, "phylo")) {
+    if (!is.null(tree$brts) && is.numeric(tree$brts))
+      return(sort(tree$brts, decreasing = TRUE))
     if (!is.null(tree$tes) && inherits(tree$tes, "phylo"))
-      return(ape::branching.times(tree$tes))
+      return(sort(ape::branching.times(tree$tes), decreasing = TRUE))
     if (!is.null(tree$tas) && inherits(tree$tas, "phylo"))
-      return(ape::branching.times(prune_to_extant(tree$tas)))
-    stop("List passed to estimate_rates() must contain a '$tes' or '$tas' phylo component.")
+      return(sort(ape::branching.times(prune_to_extant(tree$tas)), decreasing = TRUE))
+    stop("List passed to estimate_rates() must contain '$brts', '$tes', or '$tas'.")
   }
   stop("'tree' must be a phylo object, a simulate_tree() result, or a numeric branching-time vector.")
 }

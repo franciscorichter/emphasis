@@ -15,7 +15,7 @@ mcEM_step <- function(brts,
                       conditional = NULL,
                       ...) {
   if (inherits(brts, "phylo")) {
-    brts <- ape::branching.times(brts)
+    brts <- sort(ape::branching.times(brts), decreasing = TRUE)
   }
   if (!is.numeric(brts)) {
     stop("`brts` must be numeric or a `phylo` object.")
@@ -36,19 +36,27 @@ mcEM_step <- function(brts,
 
   while (is.infinite(sde) || sde > tol) {
     i <- i + 1
-    results <- em_cpp(brts = brts,
-                      init_pars = pars,
-                      sample_size = sample_size,
-                      maxN = maxN,
-                      soc = soc,
-                      max_missing = max_missing,
-                      max_lambda = max_lambda,
-                      lower_bound = lower_bound,
-                      upper_bound = upper_bound,
-                      xtol_rel = xtol,
-                      num_threads = num_threads,
-                      copy_trees = copy_trees,
-                      rconditional = conditional)
+    results <- tryCatch(
+      em_cpp(brts = brts,
+             init_pars = pars,
+             sample_size = sample_size,
+             maxN = maxN,
+             soc = soc,
+             max_missing = max_missing,
+             max_lambda = max_lambda,
+             lower_bound = lower_bound,
+             upper_bound = upper_bound,
+             xtol_rel = xtol,
+             num_threads = num_threads,
+             copy_trees = copy_trees,
+             rconditional = conditional),
+      error = function(e) {
+        warning("mcEM_step: E-step failed (", conditionMessage(e),
+                "); stopping at iteration ", i, ".")
+        NULL
+      }
+    )
+    if (is.null(results)) break
 
     pars <- results$estimates
     step <- data.frame(

@@ -140,8 +140,8 @@ library(emphasis)
 set.seed(42)
 sim <- simulate_tree(c(0.1, 0.5, -0.02, 0.01), max_t = 8, model = "pd")
 
-lb <- c(0,   0,  -1, -1)
-ub <- c(1,   2,   1,  1)
+lb <- c(0.01, 0.01, -1, -1)
+ub <- c(1,    2,    1,  1)
 
 # Stage 1 — DE: broad exploration
 fit_de <- estimate_rates(sim, method = "de",
@@ -170,7 +170,8 @@ estimate_rates_control("de")   # view DE defaults
 ctl <- estimate_rates_control("em")
 ctl$sample_size <- 500
 ctl$burnin      <- 50
-fit <- estimate_rates(sim, lower_bound = lb, upper_bound = ub, control = ctl)
+fit <- estimate_rates(sim, lower_bound = lb, upper_bound = ub,
+                     init_pars = fit_de$pars, control = ctl)
 ```
 
 ### Empirical trees
@@ -181,8 +182,8 @@ Pass a `phylo` object directly. Use `prune_to_extant()` first if the tree contai
 data(bird.orders, package = "ape")
 extant <- prune_to_extant(bird.orders)   # no-op if already extant-only
 fit <- estimate_rates(extant, method = "de",
-  lower_bound = c(0, 0, -0.5, -0.5),
-  upper_bound = c(1, 2,  0.5,  0.5))
+  lower_bound = c(0.01, 0.01, -0.5, -0.5),
+  upper_bound = c(1,    2,     0.5,  0.5))
 fit$pars
 ```
 

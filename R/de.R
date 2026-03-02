@@ -146,8 +146,8 @@ update_pars <- function(pars,
   for (index in seq_len(nrow(pars_to_add))) {
     for (param in seq_along(upper_bound)) {
       pars_to_add[index, param] <- update_value(pars_to_add[index, param],
-                                               lower_bound[param],
                                                upper_bound[param],
+                                               lower_bound[param],
                                                sd_vec[param],
                                                clamp_value = FALSE)
     }
