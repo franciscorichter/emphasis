@@ -1,0 +1,4 @@
+# Disable HTML tidy validation during R CMD check.
+# Some runners ship an outdated tidy binary that does not understand HTML5 tags
+# such as <main>, which appear in Rd2HTML output for modern R versions.
+_R_CHECK_RD_TIDY_=false
