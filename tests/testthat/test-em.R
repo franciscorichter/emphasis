@@ -2,13 +2,13 @@
 # C++ integration tests are slow and run locally only
 in_r_cmd_check <- function() nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_"))
 
-test_that("e_cpp returns a list with expected fields", {
+test_that("mc_loglik returns a list with expected fields", {
   skip("C++ integration test: run locally with devtools::test(filter='em')")
   set.seed(42)
   brts <- c(0.8, 0.6, 0.4, 0.2)
-  result <- e_cpp(
+  result <- mc_loglik(
     brts        = brts,
-    init_pars   = c(0.1, 0.5, -0.01, 0.01),
+    pars        = c(0.1, 0.5, -0.01, 0.01),
     sample_size = 10,
     maxN        = 100,
     soc         = 2,
@@ -29,9 +29,9 @@ test_that("loglikelihood returns numeric fhat", {
   set.seed(42)
   brts <- c(0.8, 0.6, 0.4, 0.2)
 
-  e_result <- e_cpp(
+  e_result <- mc_loglik(
     brts        = brts,
-    init_pars   = c(0.1, 0.5, -0.01, 0.01),
+    pars        = c(0.1, 0.5, -0.01, 0.01),
     sample_size = 5,
     maxN        = 100,
     soc         = 2,
@@ -44,7 +44,7 @@ test_that("loglikelihood returns numeric fhat", {
   )
 
   skip_if(is.null(e_result$trees) || length(e_result$trees) == 0,
-          "e_cpp returned no trees")
+          "mc_loglik returned no trees")
 
   ll <- loglikelihood(
     pars        = c(0.1, 0.5, -0.01, 0.01),

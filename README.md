@@ -1,13 +1,13 @@
-# emphasis: Evolutionary Modeling on Phylogenetic Applications
+# emphasis — Evolutionary Modeling for Phylogenetic Inference
 
 [![License: GPL-3](https://img.shields.io/badge/license-GPL--3-blue.svg)](./LICENSE)
 ![Lifecycle: Experimental](https://img.shields.io/badge/lifecycle-experimental-orange)
 
 ## Overview
 
-`emphasis` is an R package for studying diversification of species and the ecological drivers of macro-evolution. It combines fast C++ back-ends with R-friendly interfaces for:
+`emphasis` (Evolutionary Modeling Platform for Adaptive Speciation, Inference, and Simulation) is an R package for studying diversification of species and the ecological drivers of macro-evolution. It combines fast C++ back-ends with R-friendly interfaces for:
 
-- stochastic simulation of phylogenies with density and PD dependence,
+- stochastic simulation of phylogenies under general diversification models,
 - Monte Carlo expectation-maximisation (MCEM) parameter estimation,
 - differential-evolution (DE) searches for good starting values, and
 - tooling to explore non-homogeneous Poisson/exponential processes.
@@ -16,33 +16,22 @@ The package is organised around a small set of verbs — **simulate**, **augment
 
 ## Feature highlights
 
-- **Simulation**: `sim_tree_pd_*`, `generatePhyloPD()` and friends quickly explore scenarios.
+- **Simulation**: `simulate_tree()` covers all models from a single entry point, with a binary model vector selecting which covariates are active.
 - **Augmentation**: `augmentPD()` and `AugmentMultiplePhyloPD()` produce augmented trees for downstream inference.
-- **Estimation**: `emphasis_de()` / `emphasis_de_factorial()` and `mcEM_step()` implement robust inference workflows.
-- **Utilities**: Non-homogeneous exponential samplers (`generateNonHomogeneousExp()`, `nhExpRand()`), gradient helpers, GAM-based diagnostics, and plotting utilities.
+- **Estimation**: `emphasis_de()` / `emphasis_de_factorial()` and `estimate_rates()` implement robust inference workflows.
+- **Utilities**: Non-homogeneous exponential samplers (`generateNonHomogeneousExp()`, `nhExpRand()`), gradient helpers, and GAM-based diagnostics.
 
 Each high-level routine accepts plain R objects (e.g. `phylo`, numeric vectors) and delegates heavy lifting to `Rcpp` / `RcppParallel` code paths.
 
 ## Modular architecture
 
-`emphasis` is structured around three modules that mirror a typical diversification analysis pipeline. The README doubles as the landing page for documentation, so each module is summarised below with entry points and canonical workflows.
+`emphasis` is structured around three modules that mirror a typical diversification analysis pipeline.
 
 | Module | Purpose | Key ingredients |
 |--------|---------|-----------------|
-| **Module A — Preprocess** | Clean and enrich trees before inference. Handles data ingestion, tip pruning, crown-age alignment, augmentation of extinct lineages, and generation of synthetic training data. | `prune_to_extant()`, `simulate_tree(tree = ...)`, `generatePhyloPD()`, `AugmentMultiplePhyloPD()`, non-homogeneous samplers |
-| **Module B — Inference** | Estimate diversification parameters with EM or differential evolution. Interfaces directly with Module A outputs. | `estimate_rates()`, `estimate_rates_control()`, `mcEM_step()`, `emphasis_de()` |
-| **Module C — Goodness of fit** | Diagnose fits, compare fast/slow simulators, and run benchmark visualisations plus GAM diagnostics over augmented sweeps. | `train_GAM()`, benchmarking scripts under `analysis/`, summary plots in `results/benchmarks/` |
-
-### Module A focus — preprocessing workflows
-
-Module A is responsible for preparing trees so inference runs smoothly:
-
-1. **Ingest / harmonise** trees: `prune_to_extant(tree)` removes extinct tips to obtain an extant-only backbone. `generatePhyloPD()` creates curated simulation sets with known parameters.
-2. **Augment missing history** when conditioning on empirical data: `simulate_tree(tree = extant_tree, pars = ...)` fills in extinct branches (single draw). Use `AugmentMultiplePhyloPD()` for batches if you plan to fit GAM diagnostics later.
-3. **Standardise metadata**: store outputs in the list format returned by `simulate_tree()` (`tes`, `tas`, `L`, `brts`, `status`) so downstream modules can consume them without extra conversion.
-4. **Export training corpora**: write the `generatePhyloPD()` results to disk (e.g. via `readr::write_csv` or RDS). These corpora drive Module B parameter searches and Module C goodness-of-fit experiments (benchmark scripts already read from `results/benchmarks/`).
-
-The remainder of this README walks through Modules B and C using these preprocessed objects, so the entire documentation story is visible on this GitHub landing page.
+| **Module A — Simulation** | Generate phylogenies and synthetic corpora. Covers forward simulation and conditional augmentation of observed trees. | `simulate_tree()`, `augmentPD()`, `AugmentMultiplePhyloPD()` |
+| **Module B — Inference** | Estimate diversification parameters with EM or differential evolution. | `estimate_rates()`, `estimate_rates_control()`, `emphasis_de()` |
+| **Module C — Diagnostics** | Assess fit and communicate results through GAM diagnostics and summary dashboards. | `train_GAM()` |
 
 ## Installation
 
@@ -57,141 +46,141 @@ devtools::install_github("franciscorichter/emphasis")
 
 ## Simulation module
 
-The `simulate.R` and `generate.R` helpers cover everything from single-tree draws to large training sets. Use them to explore parameter spaces before moving on to augmentation/estimation.
+`simulate_tree()` is the single entry point for all forward and conditional tree simulation.
 
-### Model hierarchy
+### Rate model
 
-All models in `emphasis` are special cases of a single general per-lineage speciation rate:
+All diversification models in `emphasis` are special cases of a single general per-lineage rate formulation:
 
 ```
-lambda_i = max(0, lambda0 + betaN*N + betaP*(P/N) + betaE*d_i)
+lambda(s,t) = max(0, beta_0  + beta_N * N(t) + beta_P * P(t) + beta_E * E(s,t))
+mu(s,t)     = max(0, gamma_0 + gamma_N * N(t) + gamma_P * P(t) + gamma_E * E(s,t))
 ```
 
-where **N** is species richness, **P = Σ d_j** is total phylogenetic diversity, and **d_i = t − start_date_i** is the pendant edge of lineage *i* (time since it last diverged). The extinction rate **μ** is uniform across lineages. Models are nested by progressively zeroing coefficients:
+where:
+- **N(t)** — current species richness
+- **P(t)** — total pendant branch-length of alive lineages (phylogenetic diversity)
+- **E(s,t)** — pendant edge of lineage *s* (time since its last divergence); makes rates **lineage-specific**
 
-| Model | `betaN` | `betaP` | `betaE` | Mechanism |
-|-------|---------|---------|---------|-----------|
-| **CR** — constant rate | 0 | 0 | 0 | no dependence |
-| **DD** — diversity dependent | free | 0 | 0 | clade-level richness |
-| **PD** — phylogenetic diversity | free | free | 0 | richness + clade-level PD |
-| **EP** — evolutionary pendant | free | free | free | richness + clade PD + per-lineage pendant |
+The default link function is identity (clamped to 0); both rates can depend on any combination of N, P, E.
 
-CR ⊂ DD ⊂ PD ⊂ EP: each row is a special case of the one below it.
+### Model specification
+
+The `model` argument controls which covariates are active via a 3-element binary vector `c(use_N, use_P, use_E)`. Named shortcuts are also accepted:
+
+| String | Binary vector | Active covariates |
+|--------|--------------|-------------------|
+| `"cr"` | `c(0, 0, 0)` | none — constant rate |
+| `"dd"` | `c(1, 0, 0)` | N only — diversity dependence |
+| `"pd"` | `c(0, 1, 0)` | P only — phylogenetic diversity dependence |
+| `"ep"` | `c(0, 0, 1)` | E only — evolutionary pendant |
+
+Mixed models such as `c(1, 1, 0)` (N + P) or `c(1, 1, 1)` (full) are fully supported.
+
+Models are nested: CR ⊂ any single-covariate model ⊂ mixed models ⊂ full model.
+
+### Parameter vector
+
+`pars` always follows the order **lambda parameters first, then mu parameters**, each in N–P–E order. Only parameters for active covariates are included:
+
+```
+pars = c(beta_0, [beta_N], [beta_P], [beta_E],
+         gamma_0, [gamma_N], [gamma_P], [gamma_E])
+```
+
+Length is always `2 + 2 * sum(model)`:
+
+| Model | Length | `pars` layout |
+|-------|--------|----------------|
+| `"cr"` — `c(0,0,0)` | 2 | `c(beta_0, gamma_0)` |
+| `"dd"` — `c(1,0,0)` | 4 | `c(beta_0, beta_N, gamma_0, gamma_N)` |
+| `"pd"` — `c(0,1,0)` | 4 | `c(beta_0, beta_P, gamma_0, gamma_P)` |
+| `"ep"` — `c(0,0,1)` | 4 | `c(beta_0, beta_E, gamma_0, gamma_E)` |
+| `c(1,1,0)` | 6 | `c(beta_0, beta_N, beta_P, gamma_0, gamma_N, gamma_P)` |
+| `c(1,1,1)` | 8 | `c(beta_0, beta_N, beta_P, beta_E, gamma_0, gamma_N, gamma_P, gamma_E)` |
 
 ### Single-tree draws
 
-`simulate_tree()` is the unified entry point for all four models.
-
 ```r
 library(emphasis)
-
 set.seed(123)
 
-# CR — constant rate (betaN = betaP = betaE = 0)
-cr_tree <- simulate_tree(pars = c(0.1, 0.4), max_t = 3, model = "cr")
-cr_tree$status
+# CR — constant rate
+cr <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr")
+cr$status   # "done" / "extinct" / "too_large"
 
-# DD — diversity dependent (betaP = betaE = 0): richness N drives speciation
-dd_tree <- simulate_tree(pars = c(0.1, 0.4, -0.05, 0), max_t = 5, model = "pd",
-                         max_lin = 1e4, max_tries = 10)
-dd_tree$status
+# DD — diversity dependence on N
+dd <- simulate_tree(pars = c(0.8, -0.02, 0.2, -0.005), max_t = 5, model = "dd")
 
-# PD — phylogenetic diversity (betaE = 0): richness + clade-level PD
-pd_tree <- simulate_tree(pars = c(0.1, 0.4, -0.05, 0.02), max_t = 5, model = "pd")
-pd_tree$status
+# PD — phylogenetic diversity dependence
+pd <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003), max_t = 5, model = "pd")
 
-# EP — evolutionary pendant: full model, per-lineage rates via d_i
-ep_tree <- simulate_tree(pars = c(0.1, 0.5, -0.02, 0.01, 0.05), max_t = 5, model = "ep")
-ep_tree$status
-length(ep_tree$tes$tip.label)
+# EP — evolutionary pendant (per-lineage rates)
+ep <- simulate_tree(pars = c(0.5, 0.01, 0.1, -0.003), max_t = 5, model = "ep")
+
+# Mixed: N + P dependence  c(1,1,0), 6 parameters
+np <- simulate_tree(pars = c(0.5, -0.01, 0.005, 0.15, -0.002, 0.001),
+                    max_t = 5, model = c(1, 1, 0))
+
+# Full model  c(1,1,1), 8 parameters
+full <- simulate_tree(pars = c(0.5, -0.01, 0.005, 0.02, 0.15, -0.002, 0.001, -0.005),
+                      max_t = 5, model = c(1, 1, 1))
 ```
 
-If you need direct access to specialized diagnostics (extinction sweeps, scenario grids), use the lower-level helpers documented in the reference manual; the high-level interface remains `simulate_tree()`.
+The return value is always a list with:
+
+| Element | Content |
+|---------|---------|
+| `tes`   | Extant-only phylogeny (`phylo`) |
+| `tas`   | Full phylogeny including extinct lineages (`phylo` or `NULL`) |
+| `L`     | L-table matrix in DDD format |
+| `brts`  | Branching times of the extant tree |
+| `status` | `"done"`, `"extinct"`, or `"too_large"` |
+| `model` | Resolved binary vector `c(use_N, use_P, use_E)` |
+| `pars`  | Parameter vector as supplied |
 
 ### Conditional simulation — augmenting an extant tree
 
-`simulate_tree()` also serves as the conditional-simulation entry point. Pass `tree =` an observed extant tree and it stochastically fills in the missing extinct lineages under the PD model, returning a `tas` phylo that includes both the original extant branches and the simulated extinct ones.
+`simulate_tree()` also serves as the conditional-simulation entry point. Pass `tree =` an observed extant tree and it stochastically fills in the missing extinct lineages, returning a `tas` phylo that includes both the original extant branches and the simulated extinct ones.
 
 ```r
 set.seed(42)
-sim <- simulate_tree(pars = c(0.1, 0.5, -0.02, 0.01), max_t = 5)
-sim$status          # "done"
-sim$tes             # extant-only phylo
-sim$tas             # full phylo with extinct branches (from forward sim)
+sim <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003), max_t = 5, model = "pd")
 
 # Conditional simulation: augment an existing extant tree
-aug <- simulate_tree(tree = sim, pars = c(0.1, 0.5, -0.02, 0.01))
-aug$tes             # same extant-only phylo as sim$tes
-aug$tas             # full phylo with stochastically drawn extinct lineages
-length(aug$tas$tip.label) >= length(aug$tes$tip.label)  # TRUE
+aug <- simulate_tree(tree = sim, pars = c(0.6, 0.005, 0.15, -0.003), model = "pd")
+aug$tes    # same extant-only phylo
+aug$tas    # full phylo with stochastically drawn extinct lineages
 
 # Also works with a plain phylo object as input
-aug2 <- simulate_tree(tree = sim$tes, pars = c(0.1, 0.5, -0.02, 0.01))
-aug2$status
+aug2 <- simulate_tree(tree = sim$tes, pars = c(0.6, 0.005, 0.15, -0.003), model = "pd")
 ```
-
-The two simulation modes share the same interface and return identical list shapes:
 
 | `tree` argument | Mode | Produces |
 |-----------------|------|----------|
-| `NULL` (default) | Forward simulation | new tree from scratch (`tes`, `tas`, `L`, `brts`) |
+| `NULL` (default) | Forward simulation | new tree from scratch |
 | `simulate_tree()` result, `phylo`, or brts vector | Conditional simulation | extant tree + stochastic extinct lineages |
-
-### Dataset factories & non-homogeneous processes
-
-```r
-training_set <- generatePhyloPD(
-  n_trees = 30,
-  mu_interval = c(0.05, 0.2),
-  lambda_interval = c(0.2, 0.8),
-  betaN_interval = c(-0.2, 0.1),
-  betaP_interval = c(-0.1, 0.1),
-  max_lin = 1e5,
-  max_tries = 10
-)
-
-# Build a custom non-homogeneous thinning routine
-cov_func <- function(t) 1 + sin(t)
-rate <- function(t) ExponentialRate(matrix(c(cov_func(t)), ncol = 1), c(0.1, 0.5))
-nh_draws <- nhExpRand(10, rate_func = rate, now = 0, tMax = 50)
-```
-
-`generatePhyloPD()` keeps every simulated tree plus the parameters that generated it, making it ideal for benchmarking inference pipelines or fitting surrogate models.
 
 ## Inference module
 
 `estimate_rates()` is the unified entry point for parameter inference. It accepts a simulated or empirical tree, prunes it to extant tips if needed, and dispatches to the chosen learning method.
 
-### The `estimate_rates()` workflow
-
-```
-simulate_tree()  →  prune_to_extant()  →  estimate_rates()
-     ↓                    ↓                      ↓
- full tree          extant-only tree        parameter estimates
- (sim$tas)          (sim$tes)              (mu, lambda0, betaN, betaP)
-```
-
-`estimate_rates()` accepts any of these inputs directly — a `simulate_tree()` result, a `phylo` object, or a branching-time vector — so the prune step is usually implicit.
-
 ### Methods
-
-The `method` argument selects the optimisation back-end:
 
 | Method | Function | When to use |
 |--------|----------|-------------|
-| `"em"` | `mcEM_step()` | Fine-grained refinement; converges to a local optimum |
+| `"em"` | MCEM | Fine-grained refinement; converges to a local optimum |
 | `"de"` | `emphasis_de()` | Broad exploration; good seed for EM |
 
 A robust two-stage workflow uses DE to find the basin and EM to refine:
 
 ```r
 library(emphasis)
-
 set.seed(42)
-sim <- simulate_tree(pars = c(0.1, 0.5, -0.02, 0.01), max_t = 8, model = "pd")
+sim <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003), max_t = 8, model = "pd")
 
-lb <- c(0.01, 0.01, -1, -1)
-ub <- c(1,    2,    1,  1)
+lb <- c(0.01, -1, -1, -1)
+ub <- c(2,     1,  1,  1)
 
 # Stage 1 — DE: broad exploration
 fit_de <- estimate_rates(sim, method = "de",
@@ -216,12 +205,10 @@ fit_em$loglik
 estimate_rates_control("em")   # view EM defaults
 estimate_rates_control("de")   # view DE defaults
 
-# Override a subset
 ctl <- estimate_rates_control("em")
 ctl$sample_size <- 500
-ctl$burnin      <- 50
 fit <- estimate_rates(sim, lower_bound = lb, upper_bound = ub,
-                     init_pars = fit_de$pars, control = ctl)
+                      init_pars = fit_de$pars, control = ctl)
 ```
 
 ### Empirical trees
@@ -230,14 +217,12 @@ Pass a `phylo` object directly. Use `prune_to_extant()` first if the tree contai
 
 ```r
 data(bird.orders, package = "ape")
-extant <- prune_to_extant(bird.orders)   # no-op if already extant-only
+extant <- prune_to_extant(bird.orders)
 fit <- estimate_rates(extant, method = "de",
-  lower_bound = c(0.01, 0.01, -0.5, -0.5),
-  upper_bound = c(1,    2,     0.5,  0.5))
+  lower_bound = c(0.01, -0.5, -0.5, -0.5),
+  upper_bound = c(2,     0.5,  0.5,  0.5))
 fit$pars
 ```
-
-Use `get_required_sampling_size()` to adapt MCEM sample sizes, and `AugmentMultiplePhyloPD()` + `train_GAM()` to diagnose bias across simulated sweeps.
 
 ## Core modules
 
@@ -245,12 +230,11 @@ Use `get_required_sampling_size()` to adapt MCEM sample sizes, and `AugmentMulti
 |--------|---------|---------------|
 | `simulate.R` | Unified simulator entry point | `simulate_tree()` |
 | `inference.R` | Unified inference entry point | `estimate_rates()`, `estimate_rates_control()`, `prune_to_extant()` |
-| `generate.R` | Dataset factories & non-homogeneous processes | `generatePhyloPD()`, `generateNonHomogeneousExp()`, `nhExpRand()`, `rate_t()`, `ExponentialRate()` |
 | `augment.R` | Batch augmentation of missing lineages | `augmentPD()`, `AugmentMultiplePhyloPD()` |
+| `generate.R` | Non-homogeneous process samplers | `generateNonHomogeneousExp()`, `nhExpRand()`, `rate_t()`, `ExponentialRate()` |
 | `de.R` | Differential-evolution back-end | `emphasis_de()`, `emphasis_de_factorial()` |
 | `emphasis.R` | MCEM back-end | `mcEM_step()` |
 | `gam.R` | Diagnostics over simulation sweeps | `train_GAM()` |
-| `utils.R` | Shared helpers & plotting utilities | branching-time helpers, safe wrappers |
 
 See `man/` for in-depth documentation on each function.
 
@@ -268,17 +252,13 @@ results <- AugmentMultiplePhyloPD(
 
 gam_fit <- train_GAM(results)
 summary(gam_fit)
-
-required_n <- get_required_sampling_size(results$loglik_estimation, tol = 0.05)
 ```
-
-Combine diagnostics with simulation sweeps to spot parameter regions that need more intensive MCEM sampling.
 
 ## Documentation & vignettes
 
 - Function docs live in `man/*.Rd` (generated via roxygen). Start with `?emphasis-package` for a package overview.
-- Worked examples are available via `browseVignettes("emphasis")` after installing the package. They cover simulation set-ups, MCEM tuning, and diagnostics.
-- The `Documentation/` directory contains PDF summaries of internal research experiments for additional context.
+- Worked examples are available via `browseVignettes("emphasis")` after installing the package.
+- The `Documentation/` directory contains PDF summaries of internal research experiments.
 
 ## Contributing
 
@@ -287,23 +267,18 @@ Pull requests and issues are welcome! A good contribution typically includes:
 1. A reproducible example or failing test.
 2. Updated documentation (`roxygen2` comments + README snippets).
 3. Benchmark notes if the change affects performance-critical code.
-## Citing emphasis
-If you use `emphasis` in your research, please cite:
-
-```
-Francisco Richter, Thijs Janzen, Hanno Hildenbrandt. emphasis: Evolutionary Modeling on Phylogenetic Applications with Simulations and Importance Sampling. R package version 0.4.
-```
 
 ## Authors & Contact
 
-**Author & Maintainer**  
+**Author & Maintainer**
 Francisco Richter — <richtf@usi.ch>
 
-**Contributors**  
-Thijs Janzen — <t.janzen@rug.nl>  
+**Contributors**
+Thijs Janzen — <t.janzen@rug.nl>
 Hanno Hildenbrandt — <h.hildenbrandt@rug.nl>
 
 ## License
+
 GPL-3. See [LICENSE](LICENSE) for details.
 
 ---

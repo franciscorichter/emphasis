@@ -1,40 +1,24 @@
-# Tests for augmentation functions
+# Tests for mc_loglik (Monte Carlo log-likelihood)
 
-test_that("augmentPD errors on non-phylo input", {
-  expect_error(
-    augmentPD(phylo = list(), pars = c(0.1, 0.5, 0, 0),
-              maxN = 10, max_missing = 100,
-              lower_bound = c(0, 0, -0.1, -0.1),
-              upper_bound = c(0.5, 2, 0.1, 0.1)),
-    "class.*phylo"
-  )
-})
-
-test_that("augmentPD errors on non-numeric parameters", {
-  tree <- ape::rtree(5)
-  expect_error(
-    augmentPD(phylo = tree, pars = c(0.1, 0.5, 0, 0),
-              maxN = "ten", max_missing = 100,
-              lower_bound = c(0, 0, -0.1, -0.1),
-              upper_bound = c(0.5, 2, 0.1, 0.1)),
-    "numeric"
-  )
-})
-
-test_that("augmentPD returns a list on a small tree", {
+test_that("mc_loglik returns a list on a small tree", {
   skip_on_cran()
-  skip("augmentPD integration test skipped locally to avoid long runtime")
+  skip("mc_loglik integration test skipped locally to avoid long runtime")
   set.seed(42)
   tree <- ape::rphylo(8, 0.5, 0)
+  brts <- ape::branching.times(tree)
 
-  result <- augmentPD(
-    phylo        = tree,
-    pars         = c(0.1, 0.5, -0.01, 0.01),
-    maxN         = 50,
-    max_missing  = 500,
-    lower_bound  = c(0, 0, -0.1, -0.1),
-    upper_bound  = c(0.5, 2, 0.1, 0.1),
-    num_threads  = 1
+  result <- mc_loglik(
+    brts        = brts,
+    pars        = c(0.1, 0.5, -0.01, 0.01),
+    sample_size = 1,
+    maxN        = 50,
+    soc         = 2,
+    max_missing = 500,
+    max_lambda  = 50000,
+    lower_bound = c(0, 0, -0.1, -0.1),
+    upper_bound = c(0.5, 2, 0.1, 0.1),
+    xtol_rel    = 1e-5,
+    num_threads = 1
   )
 
   expect_type(result, "list")

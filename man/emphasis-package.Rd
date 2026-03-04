@@ -10,10 +10,10 @@
 \details{
   The package revolves around four workflows:
   \itemize{
-    \item \strong{Simulation}: `sim_tree_pd_*`, `generatePhyloPD()` and helpers.
-    \item \strong{Augmentation}: `augmentPD()` and `AugmentMultiplePhyloPD()`.
-    \item \strong{Estimation}: `emphasis_de()`, `emphasis_de_factorial()`, `mcEM_step()`.
-    \item \strong{Diagnostics}: `train_GAM()` plus plotting utilities in `utils.R`.
+    \item \strong{Simulation}: `simulate_tree()` for forward and conditional simulation.
+    \item \strong{Augmentation}: `mc_loglik()` for Monte Carlo log-likelihood via importance sampling.
+    \item \strong{Estimation}: `estimate_rates()`, `emphasis_de()`, `emphasis_de_factorial()`.
+    \item \strong{Diagnostics}: `train_GAM()` plus plotting utilities.
   }
   Heavy computations are delegated to C++ via `Rcpp` / `RcppParallel` for performance.
 }

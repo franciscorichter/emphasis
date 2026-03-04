@@ -53,9 +53,6 @@ namespace emphasis {
     double elapsed = 0;                 // elapsed runtime [ms]
     double logf = 0;                    // likelihood of simulated tree
     double logg = 0;                    // sampling probability
-    
-    std::vector<double> logf_grid;      // vector of logf for all pars
-    std::vector<double> logg_grid;      // vector of logg for all pars
   };
 
 
@@ -115,26 +112,6 @@ namespace emphasis {
                   double max_lambda = default_max_aug_lambda,
                   int num_threads = 0);
 
-
-  // single threaded, stripped vectors
-  E_step_info_t E_step_info(int N,      // sample size
-                            int maxN,   // max number of augmented trees (incl. invalid)
-                            const param_t& pars,
-                            const brts_t& brts,
-                            const Model& model,
-                            int soc = 2,
-                            int max_missing = default_max_missing_branches,
-                            double max_lambda = default_max_aug_lambda);
-  
-  // single threaded, stripped vectors
-  E_step_info_t E_step_info_grid(int maxN,   // max number of augmented trees (incl. invalid)
-                                 const param_t& focal_pars,
-                                 const std::vector<param_t>& all_pars,
-                                 const brts_t& brts,
-                                 const Model& model,
-                                 int soc = 2,
-                                 int max_missing = default_max_missing_branches,
-                                 double max_lambda = default_max_aug_lambda);
 
   // results from m
   struct M_step_t

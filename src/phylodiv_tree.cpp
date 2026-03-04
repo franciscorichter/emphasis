@@ -2,7 +2,6 @@
 
 #include <Rcpp.h>
 
-// [[Rcpp::export]]
 Rcpp::List simulate_single_pd_tree_cpp(Rcpp::NumericVector pars,
                             float max_t,
                             float max_N,
@@ -50,7 +49,6 @@ Rcpp::List simulate_single_pd_tree_cpp(Rcpp::NumericVector pars,
 }
 
 
-// [[Rcpp::export]]
 Rcpp::List simulate_single_ep_tree_cpp(Rcpp::NumericVector pars,
                                         float max_t,
                                         float max_N,
@@ -87,7 +85,6 @@ Rcpp::List simulate_single_ep_tree_cpp(Rcpp::NumericVector pars,
 }
 
 
-// [[Rcpp::export]]
 Rcpp::NumericMatrix simulate_pd_trees_cpp(Rcpp::NumericVector pars,
                                  float max_t,
                                  size_t repl,
@@ -107,7 +104,6 @@ Rcpp::NumericMatrix simulate_pd_trees_cpp(Rcpp::NumericVector pars,
   return results;
 }
 
-// [[Rcpp::export]]
 Rcpp::NumericMatrix explore_grid_cpp(Rcpp::NumericVector par1,
                                      Rcpp::NumericVector par2,
                                      Rcpp::NumericVector par3,

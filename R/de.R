@@ -19,17 +19,34 @@ get_random_grid <- function(num_points,
 
 #' @keywords internal
 get_results <- function(pars, input, num_threads, num_points) {
-  dmval <- rcpp_mce_grid(as.matrix(pars),
-                         brts = input$brts,
-                         sample_size = input$sample_size,
-                         maxN = input$maxN,
-                         soc = 2,
-                         max_missing = input$max_missing,
-                         max_lambda = input$max_lambda,
-                         lower_bound = input$lower_bound,
-                         upper_bound = input$upper_bound,
-                         xtol_rel = 0.1,
-                         num_threads = num_threads)
+  pars_mat <- as.matrix(pars)
+  # Result matrix: fhat, rejected_lambda, rejected_overruns, rejected_zero_weights, logf, logg
+  dmval <- matrix(NA_real_, nrow = nrow(pars_mat), ncol = 6)
+
+  for (i in seq_len(nrow(pars_mat))) {
+    res <- tryCatch(
+      mc_loglik(brts        = input$brts,
+                pars        = as.numeric(pars_mat[i, ]),
+                sample_size = input$sample_size,
+                maxN        = input$maxN,
+                soc         = 2L,
+                max_missing = as.integer(input$max_missing),
+                max_lambda  = input$max_lambda,
+                lower_bound = input$lower_bound,
+                upper_bound = input$upper_bound,
+                xtol_rel    = 0.1,
+                num_threads = num_threads),
+      error = function(e) NULL
+    )
+    if (!is.null(res)) {
+      dmval[i, 1] <- res$fhat
+      dmval[i, 2] <- res$rejected_lambda
+      dmval[i, 3] <- res$rejected_overruns
+      dmval[i, 4] <- res$rejected_zero_weights
+      dmval[i, 5] <- if (length(res$logf) > 0) res$logf[1] else NA_real_
+      dmval[i, 6] <- if (length(res$logg) > 0) res$logg[1] else NA_real_
+    }
+  }
 
   local_max_miss <- input$max_missing
   local_max_lambda <- input$max_lambda
@@ -41,58 +58,108 @@ get_results <- function(pars, input, num_threads, num_points) {
     if (local_max_N > 10000) {
       stop("exceeded maxN")
     }
-    dmval <- rcpp_mce_grid(as.matrix(pars),
-                           brts = input$brts,
-                           sample_size = input$sample_size,
-                           maxN = local_max_N,
-                           soc = 2,
-                           max_missing = local_max_miss,
-                           max_lambda = local_max_lambda,
-                           lower_bound = input$lower_bound,
-                           upper_bound = input$upper_bound,
-                           xtol_rel = 0.1,
-                           num_threads = num_threads)
+    for (i in seq_len(nrow(pars_mat))) {
+      if (!is.na(dmval[i, 1])) next
+      res <- tryCatch(
+        mc_loglik(brts        = input$brts,
+                  pars        = as.numeric(pars_mat[i, ]),
+                  sample_size = input$sample_size,
+                  maxN        = local_max_N,
+                  soc         = 2L,
+                  max_missing = as.integer(local_max_miss),
+                  max_lambda  = local_max_lambda,
+                  lower_bound = input$lower_bound,
+                  upper_bound = input$upper_bound,
+                  xtol_rel    = 0.1,
+                  num_threads = num_threads),
+        error = function(e) NULL
+      )
+      if (!is.null(res)) {
+        dmval[i, 1] <- res$fhat
+        dmval[i, 2] <- res$rejected_lambda
+        dmval[i, 3] <- res$rejected_overruns
+        dmval[i, 4] <- res$rejected_zero_weights
+        dmval[i, 5] <- if (length(res$logf) > 0) res$logf[1] else NA_real_
+        dmval[i, 6] <- if (length(res$logg) > 0) res$logg[1] else NA_real_
+      }
+    }
   }
   return(dmval)
 }
 
 #' @keywords internal
 get_results_factorial <- function(pars, input, num_threads, num_points) {
-  dmval <- rcpp_mce_grid_factorial(as.matrix(pars),
-                                   brts = input$brts,
-                                   sample_size = input$sample_size,
-                                   maxN = input$maxN,
-                                   soc = 2,
-                                   max_missing = input$max_missing,
-                                   max_lambda = input$max_lambda,
-                                   lower_bound = input$lower_bound,
-                                   upper_bound = input$upper_bound,
-                                   xtol_rel = 0.1,
-                                   num_threads = num_threads)
+  pars_mat <- as.matrix(pars)
+  results <- matrix(NA_real_, nrow = nrow(pars_mat), ncol = 6)
+  logf_list <- vector("list", nrow(pars_mat))
+  logg_list <- vector("list", nrow(pars_mat))
+
+  for (i in seq_len(nrow(pars_mat))) {
+    res <- tryCatch(
+      mc_loglik(brts        = input$brts,
+                pars        = as.numeric(pars_mat[i, ]),
+                sample_size = input$sample_size,
+                maxN        = input$maxN,
+                soc         = 2L,
+                max_missing = as.integer(input$max_missing),
+                max_lambda  = input$max_lambda,
+                lower_bound = input$lower_bound,
+                upper_bound = input$upper_bound,
+                xtol_rel    = 0.1,
+                num_threads = num_threads),
+      error = function(e) NULL
+    )
+    if (!is.null(res)) {
+      results[i, 1] <- res$fhat
+      results[i, 2] <- res$rejected_lambda
+      results[i, 3] <- res$rejected_overruns
+      results[i, 4] <- res$rejected_zero_weights
+      results[i, 5] <- if (length(res$logf) > 0) res$logf[1] else NA_real_
+      results[i, 6] <- if (length(res$logg) > 0) res$logg[1] else NA_real_
+      logf_list[[i]] <- res$logf
+      logg_list[[i]] <- res$logg
+    }
+  }
 
   local_max_miss <- input$max_missing
   local_max_lambda <- input$max_lambda
   local_max_N <- input$maxN
-  while (sum(is.na(dmval$results[, 1])) == num_points) {
+  while (sum(is.na(results[, 1])) == num_points) {
     local_max_miss <- local_max_miss * 10
     local_max_lambda <- local_max_lambda * 10
     local_max_N <- local_max_N * 10
     if (local_max_N > 10000) {
       stop("exceeded maxN")
     }
-    dmval <- rcpp_mce_grid_factorial(as.matrix(pars),
-                                     brts = input$brts,
-                                     sample_size = input$sample_size,
-                                     maxN = local_max_N,
-                                     soc = 2,
-                                     max_missing = local_max_miss,
-                                     max_lambda = local_max_lambda,
-                                     lower_bound = input$lower_bound,
-                                     upper_bound = input$upper_bound,
-                                     xtol_rel = 0.1,
-                                     num_threads = num_threads)
+    for (i in seq_len(nrow(pars_mat))) {
+      if (!is.na(results[i, 1])) next
+      res <- tryCatch(
+        mc_loglik(brts        = input$brts,
+                  pars        = as.numeric(pars_mat[i, ]),
+                  sample_size = input$sample_size,
+                  maxN        = local_max_N,
+                  soc         = 2L,
+                  max_missing = as.integer(local_max_miss),
+                  max_lambda  = local_max_lambda,
+                  lower_bound = input$lower_bound,
+                  upper_bound = input$upper_bound,
+                  xtol_rel    = 0.1,
+                  num_threads = num_threads),
+        error = function(e) NULL
+      )
+      if (!is.null(res)) {
+        results[i, 1] <- res$fhat
+        results[i, 2] <- res$rejected_lambda
+        results[i, 3] <- res$rejected_overruns
+        results[i, 4] <- res$rejected_zero_weights
+        results[i, 5] <- if (length(res$logf) > 0) res$logf[1] else NA_real_
+        results[i, 6] <- if (length(res$logg) > 0) res$logg[1] else NA_real_
+        logf_list[[i]] <- res$logf
+        logg_list[[i]] <- res$logg
+      }
+    }
   }
-  return(dmval)
+  return(list(results = results, logf = logf_list, logg = logg_list))
 }
 
 #' @keywords internal

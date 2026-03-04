@@ -1,126 +1,62 @@
-#include "div_tree.hpp"
+#include "general_tree.hpp"
 
 #include <Rcpp.h>
 
+//' Simulate a single phylogenetic tree under the general diversification model
+//'
+//' @param pars Numeric vector of length 8:
+//'   \code{c(beta_0, beta_N, beta_P, beta_E, gamma_0, gamma_N, gamma_P, gamma_E)}.
+//'   Inactive parameters (those not selected by \code{model}) should be set to 0.
+//' @param model Integer vector of length 3: \code{c(use_N, use_P, use_E)} (each 0 or 1).
+//' @param max_t Crown age (forward simulation end time).
+//' @param max_N Maximum number of lineages before simulation is declared too large.
+//' @param max_tries Maximum retries after extinction or overflow.
+//' @return A named list with \code{Ltable} (4-column numeric matrix in DDD format)
+//'   and \code{status} (one of \code{"done"}, \code{"extinct"}, \code{"too_large"}).
 // [[Rcpp::export]]
-Rcpp::List simulate_div_tree_cpp(Rcpp::NumericVector pars,
-                                 float max_t,
-                                 size_t max_N,
-                                 int max_tries) {
+Rcpp::List simulate_div_tree_cpp(Rcpp::NumericVector  pars,
+                                  Rcpp::IntegerVector  model,
+                                  double               max_t,
+                                  int                  max_N,
+                                  int                  max_tries) {
+  std::array<double, 8> p = {
+    pars[0], pars[1], pars[2], pars[3],
+    pars[4], pars[5], pars[6], pars[7]
+  };
+  std::array<int, 3> m = { model[0], model[1], model[2] };
 
-  sim_tree::phylodiv simulation(max_t, {pars[0], pars[1], pars[2], pars[3], pars[4], pars[5]}, max_N);
+  sim_tree::general_div sim(max_t, p, m, static_cast<size_t>(max_N));
+  sim.simulate_tree_ltable();
 
-  bool is_extinct = simulation.simulate_tree();
-  size_t tries = 0;
-  while (simulation.break_type == sim_tree::breaks::extinction ||
-         simulation.break_type == sim_tree::breaks::maxN_exceeded) {
-    is_extinct = simulation.simulate_tree();
-    tries++;
-    if (tries > max_tries) break;
+  int tries = 0;
+  while ((sim.break_type == sim_tree::extinction ||
+          sim.break_type == sim_tree::maxN_exceeded) &&
+         tries < max_tries) {
+    sim.simulate_tree_ltable();
+    ++tries;
   }
 
-  auto tree = simulation.tree;
-  Rcpp::NumericMatrix out(tree.size(), 4);
-  size_t cnt = 0;
+  // Build L-table in DDD backward-time convention:
+  //   col 0: backward birth time  = max_t - start_date
+  //   col 1: parent label
+  //   col 2: own label
+  //   col 3: backward death time  = max_t - end_date  (-1 if alive)
+  const auto& tree = sim.ltable;
+  Rcpp::NumericMatrix out(static_cast<int>(tree.size()), 4);
+  const double crown_age = sim.max_t;
 
-  auto crown_age = simulation.t;
-
-  for (const auto& i : tree) {
-    out(cnt, 0) = crown_age - i.start_date;
-    out(cnt, 1) = i.parent_label;
-    out(cnt, 2) = i.label;
-
-    auto end_date = (i.end_date == -1) ? -1.0f : (crown_age - i.end_date);
-
-    out(cnt, 3) = end_date;
-    cnt++;
+  for (size_t i = 0; i < tree.size(); ++i) {
+    out(static_cast<int>(i), 0) = crown_age - static_cast<double>(tree[i].start_date);
+    out(static_cast<int>(i), 1) = tree[i].parent_label;
+    out(static_cast<int>(i), 2) = tree[i].label;
+    const double ed = static_cast<double>(tree[i].end_date);
+    out(static_cast<int>(i), 3) = (ed >= 0.0) ? (crown_age - ed) : -1.0;
   }
 
   std::string status = "done";
-  if (simulation.break_type == sim_tree::breaks::extinction) status = "extinct";
-  if (simulation.break_type == sim_tree::breaks::maxN_exceeded) status = "too_large";
+  if (sim.break_type == sim_tree::extinction)    status = "extinct";
+  if (sim.break_type == sim_tree::maxN_exceeded) status = "too_large";
 
-  Rcpp::List res;
-  res["tree"] = out;
-  res["status"] = status;
-
-  return res;
-}
-
-// [[Rcpp::export]]
-Rcpp::NumericMatrix simulate_div_trees_cpp(Rcpp::NumericVector pars,
-                                           float max_t,
-                                           size_t repl,
-                                           size_t max_N) {
-
-  Rcpp::NumericMatrix results(repl, 5);
-  for (size_t r = 0; r < repl; ++r) {
-    sim_tree::phylodiv sim_tree(max_t, {pars[0], pars[1], pars[2], pars[3], pars[4], pars[5]}, max_N);
-    bool is_extinct = sim_tree.simulate_tree();
-    results(r, 0) = is_extinct;
-    results(r, 1) = sim_tree.t;
-    results(r, 2) = sim_tree.N;
-    results(r, 3) = sim_tree.P;
-    results(r, 4) = sim_tree.break_type;
-  }
-
-  return results;
-}
-
-// [[Rcpp::export]]
-Rcpp::NumericMatrix explore_div_grid_cpp(Rcpp::NumericVector par1,
-                                         Rcpp::NumericVector par2,
-                                         Rcpp::NumericVector par3,
-                                         Rcpp::NumericVector par4,
-                                         Rcpp::NumericVector par5,
-                                         Rcpp::NumericVector par6,
-                                         float max_t,
-                                         int num_repl,
-                                         int max_N) {
-
-  size_t total_number_simulations = par1.size() * par2.size() *
-                                    par3.size() * par4.size() *
-                                    par5.size() * par6.size() * num_repl;
-
-  Rcpp::NumericMatrix output(total_number_simulations, 11);
-  int row = 0;
-  for (auto a : par1) {
-    for (auto b : par2) {
-      for (auto c : par3) {
-        for (auto d : par4) {
-          for (auto e : par5) {
-            for (auto f : par6) {
-              sim_tree::phylodiv sim_tree(max_t, {static_cast<double>(a),
-                                                  static_cast<double>(b),
-                                                  static_cast<double>(c),
-                                                  static_cast<double>(d),
-                                                  static_cast<double>(e),
-                                                  static_cast<double>(f)},
-                                          max_N);
-
-              for (int r = 0; r < num_repl; ++r) {
-                bool is_extinct = sim_tree.simulate_tree();
-
-                output(row, 0) = a;
-                output(row, 1) = b;
-                output(row, 2) = c;
-                output(row, 3) = d;
-                output(row, 4) = e;
-                output(row, 5) = f;
-
-                output(row, 6) = is_extinct;
-                output(row, 7) = sim_tree.t;
-                output(row, 8) = sim_tree.N;
-                output(row, 9) = sim_tree.P;
-                output(row, 10) = sim_tree.break_type;
-                row++;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return output;
+  return Rcpp::List::create(Rcpp::Named("Ltable") = out,
+                             Rcpp::Named("status") = status);
 }
