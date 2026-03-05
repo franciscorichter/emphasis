@@ -32,9 +32,16 @@ devtools::install_github("franciscorichter/emphasis")
 All models are special cases of a single general per-lineage rate formulation:
 
 ```
-lambda(s,t) = max(0, beta_0  + beta_N * N(t) + beta_P * P(t) + beta_E * E(s,t))
-mu(s,t)     = max(0, gamma_0 + gamma_N * N(t) + gamma_P * P(t) + gamma_E * E(s,t))
+lambda(s,t) = f(beta_0  + beta_N * N(t) + beta_P * P(t) + beta_E * E(s,t))
+mu(s,t)     = f(gamma_0 + gamma_N * N(t) + gamma_P * P(t) + gamma_E * E(s,t))
 ```
+
+Two **link functions** are available via the `link` argument:
+
+| Link | `f(eta)` | When to use |
+|------|----------|-------------|
+| `"linear"` (default) | `max(0, eta)` | Rates are linear in covariates; clipped to non-negative |
+| `"exponential"` | `exp(eta)` | Always positive; log-linear relationship |
 
 | Covariate | Meaning |
 |-----------|---------|
@@ -44,16 +51,29 @@ mu(s,t)     = max(0, gamma_0 + gamma_N * N(t) + gamma_P * P(t) + gamma_E * E(s,t
 
 ### Model specification
 
-The `model` argument selects active covariates via a 3-element binary vector `c(use_N, use_P, use_E)`. Named shortcuts are also accepted:
+The `model` argument selects active covariates. Three equivalent formats are accepted:
 
-| String | Binary vector | Active covariates |
-|--------|--------------|-------------------|
-| `"cr"` | `c(0, 0, 0)` | none — constant rate |
-| `"dd"` | `c(1, 0, 0)` | N only — diversity dependence |
-| `"pd"` | `c(0, 1, 0)` | P only — phylogenetic diversity dependence |
-| `"ep"` | `c(0, 0, 1)` | E only — evolutionary pendant |
+**R formula** (recommended for mixed models):
 
-Mixed models such as `c(1, 1, 0)` (N + P) or `c(1, 1, 1)` (full) are fully supported.
+```r
+model = ~ 1           # constant rate (intercept only)
+model = ~ N           # diversity dependence
+model = ~ PD          # phylogenetic diversity dependence
+model = ~ EP          # evolutionary pendant
+model = ~ N + PD      # mixed: diversity + phylogenetic diversity
+model = ~ N + PD + EP # full model
+```
+
+**String shortcut** (convenience):
+
+| String | Formula equivalent | Active covariates |
+|--------|-------------------|-------------------|
+| `"cr"` | `~ 1` | none — constant rate |
+| `"dd"` | `~ N` | N only — diversity dependence |
+| `"pd"` | `~ PD` | P only — phylogenetic diversity dependence |
+| `"ep"` | `~ EP` | E only — evolutionary pendant |
+
+**Binary vector** (direct control): `c(use_N, use_P, use_E)`, e.g. `c(1, 1, 0)` for N + P.
 
 ### Parameter vector
 
@@ -89,9 +109,13 @@ dd <- simulate_tree(pars = c(0.8, -0.02, 0.2, -0.005), max_t = 5, model = "dd")
 # PD — phylogenetic diversity dependence
 pd <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003), max_t = 5, model = "pd")
 
-# Mixed N+P model  c(1,1,0), 6 parameters
+# Mixed N+P model via formula, 6 parameters
 np <- simulate_tree(pars = c(0.5, -0.01, 0.005, 0.15, -0.002, 0.001),
-                    max_t = 5, model = c(1, 1, 0))
+                    max_t = 5, model = ~ N + PD)
+
+# Exponential link: rates = exp(linear predictor)
+cr_exp <- simulate_tree(pars = c(-0.7, -2.3), max_t = 5,
+                         model = "cr", link = "exponential")
 ```
 
 Each call returns:
@@ -238,13 +262,13 @@ sim <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003), max_t = 8, model = "pd"
 lb <- c(0.01, -1, -1, -1)
 ub <- c(2,     1,  1,  1)
 
-# Stage 1 — DE: broad exploration
-fit_de <- estimate_rates(sim$tes, method = "de",
+# Stage 1 — MCDE: broad exploration
+fit_de <- estimate_rates(sim$tes, method = "mcde",
   lower_bound = lb, upper_bound = ub,
   control = list(num_iterations = 15, num_points = 50))
 
-# Stage 2 — EM: refine from DE estimate
-fit_em <- estimate_rates(sim$tes, method = "em",
+# Stage 2 — MCEM: refine from MCDE estimate
+fit_em <- estimate_rates(sim$tes, method = "mcem",
   lower_bound = lb, upper_bound = ub,
   init_pars = fit_de$pars,
   control = list(sample_size = 200, tol = 0.05))
@@ -252,14 +276,28 @@ fit_em$pars
 fit_em$loglik
 ```
 
+### Formula-based model and link function in inference
+
+```r
+# Diversity-dependent model via formula
+fit_dd <- estimate_rates(sim$tes, method = "mcem", model = ~ N,
+  lower_bound = c(0.1, -0.1, 0, -0.01),
+  upper_bound = c(2, 0.01, 0.5, 0.01))
+
+# Exponential link function
+fit_exp <- estimate_rates(sim$tes, method = "mcem", model = "cr",
+  link = "exponential",
+  lower_bound = c(-5, -5), upper_bound = c(2, 2))
+```
+
 ### Empirical trees
 
 ```r
 data(bird.orders, package = "ape")
 extant <- prune_to_extant(bird.orders)
-fit <- estimate_rates(extant, method = "de",
-  lower_bound = c(0.01, -0.5, -0.5, -0.5),
-  upper_bound = c(2,     0.5,  0.5,  0.5))
+fit <- estimate_rates(extant, method = "mcde", model = ~ N,
+  lower_bound = c(0.01, -0.5, 0, -0.5),
+  upper_bound = c(2,     0.5, 0.5, 0.5))
 fit$pars
 ```
 

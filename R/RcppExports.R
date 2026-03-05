@@ -10,10 +10,11 @@
 #' @param max_t Crown age (forward simulation end time).
 #' @param max_N Maximum number of lineages before simulation is declared too large.
 #' @param max_tries Maximum retries after extinction or overflow.
+#' @param link Link function: 0 = linear (max(0,...)), 1 = exponential.
 #' @return A named list with \code{Ltable} (4-column numeric matrix in DDD format)
 #'   and \code{status} (one of \code{"done"}, \code{"extinct"}, \code{"too_large"}).
-simulate_div_tree_cpp <- function(pars, model, max_t, max_N, max_tries) {
-    .Call('_emphasis_simulate_div_tree_cpp', PACKAGE = 'emphasis', pars, model, max_t, max_N, max_tries)
+simulate_div_tree_cpp <- function(pars, model, max_t, max_N, max_tries, link = 0L) {
+    .Call('_emphasis_simulate_div_tree_cpp', PACKAGE = 'emphasis', pars, model, max_t, max_N, max_tries, link)
 }
 
 generateNonHomogeneousExpCpp <- function(num_variates, covariates, parameters, start_time, max_time) {
@@ -56,6 +57,8 @@ loglikelihood <- function(pars, trees, logg, plugin, num_rejected) {
 #' @param upper_bound Upper bounds for parameter optimisation.
 #' @param xtol_rel Relative tolerance for internal optimisation.
 #' @param num_threads Number of threads for parallel augmentation.
+#' @param model Integer vector of length 3: c(use_N, use_P, use_E).
+#' @param link Link function: 0 = linear (max(0,...)), 1 = exponential.
 #' @return A named list:
 #' \describe{
 #'   \item{trees}{List of augmented-tree data frames (brts, n, t_ext, pd,
@@ -72,8 +75,8 @@ loglikelihood <- function(pars, trees, logg, plugin, num_rejected) {
 #'   \item{time}{Elapsed time in milliseconds.}
 #' }
 #' @export
-mc_loglik <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads) {
-    .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads)
+mc_loglik <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, model = as.integer( c(0, 0, 0)), link = 0L) {
+    .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, model, link)
 }
 
 #' function to perform one step of the E-M algorithm
@@ -90,8 +93,10 @@ mc_loglik <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, lo
 #' @param xtol_rel relative tolerance for optimization
 #' @param num_threads number of threads used.
 #' @param copy_trees if set to true, the trees generated are returned as well
+#' @param model integer vector of length 3: c(use_N, use_P, use_E)
+#' @param link link function: 0 = linear (max(0,...)), 1 = exponential
 #' @param rconditional R function that evaluates the GAM function.
-#' @return a list with the following components: 
+#' @return a list with the following components:
 #' \itemize{
 #'  \item{trees}{list of trees}
 #'  \item{rejected}{number of rejected trees}
@@ -105,8 +110,8 @@ mc_loglik <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, lo
 #'  \item{weights}{vector of weights}
 #' }
 #' @export
-em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, rconditional = NULL) {
-    .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, rconditional)
+em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model = as.integer( c(0, 0, 0)), link = 0L, rconditional = NULL) {
+    .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model, link, rconditional)
 }
 
 #' function to perform one step of the E-M algorithm
@@ -117,18 +122,20 @@ em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, 
 #' @param lower_bound vector of lower bound values for optimization, should
 #' be equal in length to the vector of init_pars
 #' @param upper_bound vector of upper bound values for optimization, should
-#' be equal in length to the vector of init_pars 
+#' be equal in length to the vector of init_pars
 #' @param xtol_rel relative tolerance for optimization
 #' @param num_threads number of threads used.
+#' @param model integer vector of length 3: c(use_N, use_P, use_E)
+#' @param link link function: 0 = linear (max(0,...)), 1 = exponential
 #' @param rconditional R function that evaluates the GAM function.
 #' @return list with the following entries:
 #' \itemize{
 #'  \item{estimates}{vector of estimates}
 #'  \item{nlopt}{nlopt status}
-#'  \item{time}{used computation time} 
+#'  \item{time}{used computation time}
 #' }
 #' @export
-m_cpp <- function(e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, rconditional = NULL) {
-    .Call('_emphasis_rcpp_mcm', PACKAGE = 'emphasis', e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, rconditional)
+m_cpp <- function(e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, model = as.integer( c(0, 0, 0)), link = 0L, rconditional = NULL) {
+    .Call('_emphasis_rcpp_mcm', PACKAGE = 'emphasis', e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, model, link, rconditional)
 }
 

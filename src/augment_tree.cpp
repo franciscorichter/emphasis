@@ -6,6 +6,7 @@
 #include <tuple>
 #include <memory>
 #include <thread>
+#include <unordered_map>
 #include <tbb/tbb.h>
 #include "model.hpp"
 #include "augment_tree.hpp"
@@ -22,7 +23,7 @@ namespace emphasis {
     inline IT make_node(IT it, double t, double n, double t_ext, int id = -1, int parent_id = -1)
     {
       it->brts = t; it->n = n; it->t_ext = t_ext; it->pd = 0.0;
-      it->clade = 0; it->id = id; it->parent_id = parent_id;
+      it->tip_start = t; it->clade = 0; it->id = id; it->parent_id = parent_id;
       return it;
     }
 
@@ -31,7 +32,7 @@ namespace emphasis {
     inline IT make_extinct_node(IT it, double t, double n, int id = -1, int parent_id = -1)
     {
       it->brts = t; it->n = n; it->t_ext = t_ext_extinct; it->pd = 0.0;
-      it->clade = 0; it->id = id; it->parent_id = parent_id;
+      it->tip_start = 0.0; it->clade = 0; it->id = id; it->parent_id = parent_id;
       return it;
     }
 
@@ -68,6 +69,32 @@ namespace emphasis {
 
     auto thread_local reng = detail::make_random_engine<std::default_random_engine>();
     maximize_lambda thread_local tlml;
+
+
+    // After augmentation, assign tip_start for each speciation node and
+    // compute pendant PD per node.
+    // tip_start of a lineage = its birth time (brts of its speciation event).
+    // For initial tree nodes (no parent), tip_start = 0 (crown age start).
+    void compute_pendant_pd(tree_t& tree)
+    {
+      // First pass: set tip_start for speciation nodes.
+      // Speciation nodes are those that are NOT extinction nodes.
+      // tip_start = brts (birth time of the lineage).
+      // For initial tree nodes (parent_id == -1), tip_start = 0.
+      for (auto& node : tree) {
+        if (!detail::is_extinction(node)) {
+          node.tip_start = (node.parent_id == -1) ? 0.0 : node.brts;
+        } else {
+          node.tip_start = 0.0;
+        }
+      }
+
+      // Second pass: compute pendant PD for each node using
+      // calculate_pendant_pd which sums (brts - tip_start_i) for alive lineages.
+      for (auto& node : tree) {
+        node.pd = detail::calculate_pendant_pd(node.brts, tree);
+      }
+    }
 
 
     double get_next_bt(const tree_t& tree, double cbt)
@@ -144,9 +171,7 @@ namespace emphasis {
         }
         cbt = std::min(next_speciation_time, next_bt);
       }
-      for (auto& node : tree) {
-        node.pd = detail::calculate_pd(node.brts, static_cast<unsigned>(tree.size()), tree.data());
-      }
+      compute_pendant_pd(tree);
     }
 
 
@@ -200,9 +225,7 @@ namespace emphasis {
         }
         cbt = std::min(next_speciation_time, next_bt);
       }
-      for (auto& node : tree) {
-        node.pd = detail::calculate_pd(node.brts, static_cast<unsigned>(tree.size()), tree.data());
-      }
+      compute_pendant_pd(tree);
     }
 
   } // namespace augment

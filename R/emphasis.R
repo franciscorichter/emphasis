@@ -1,4 +1,4 @@
-mcEM_step <- function(brts,
+.mcem_dynamic_fresh <- function(brts,
                       pars,
                       sample_size,
                       max_missing,
@@ -12,6 +12,8 @@ mcEM_step <- function(brts,
                       return_trees = FALSE,
                       verbose = FALSE,
                       conditional = NULL,
+                      model = c(0L, 0L, 0L),
+                      link = 0L,
                       ...) {
   if (inherits(brts, "phylo")) {
     brts <- sort(ape::branching.times(brts), decreasing = TRUE)
@@ -47,9 +49,11 @@ mcEM_step <- function(brts,
              xtol_rel = xtol,
              num_threads = num_threads,
              copy_trees = copy_trees,
+             model = as.integer(model),
+             link = as.integer(link),
              rconditional = conditional),
       error = function(e) {
-        warning("mcEM_step: E-step failed (", conditionMessage(e),
+        warning(".mcem_dynamic_fresh: E-step failed (", conditionMessage(e),
                 "); stopping at iteration ", i, ".")
         NULL
       }
@@ -57,15 +61,12 @@ mcEM_step <- function(brts,
     if (is.null(results)) break
 
     pars <- results$estimates
-    step <- data.frame(
-      par1 = pars[1],
-      par2 = pars[2],
-      par3 = pars[3],
-      par4 = pars[4],
+    par_df <- as.data.frame(as.list(stats::setNames(pars, paste0("par", seq_along(pars)))))
+    step <- cbind(par_df, data.frame(
       fhat = results$fhat,
       sample_size = sample_size,
       time = results$time
-    )
+    ))
     mcem <- rbind(mcem, step)
 
     if (verbose) {
@@ -76,7 +77,7 @@ mcEM_step <- function(brts,
       mcem_est <- mcem[max(1, floor(nrow(mcem) / 2)):nrow(mcem), , drop = FALSE]
       mcem_est <- mcem_est[is.finite(mcem_est$fhat), , drop = FALSE]
       if (nrow(mcem_est) == 0) {
-        warning("No finite log-likelihood estimates after burn-in; stopping mcEM_step().")
+        warning("No finite log-likelihood estimates after burn-in; stopping .mcem_dynamic_fresh().")
         break
       }
       sde <- stats::sd(mcem_est$fhat) / sqrt(nrow(mcem_est))
@@ -88,7 +89,7 @@ mcEM_step <- function(brts,
     }
 
     if (i >= 1000) {
-      warning("mcEM_step reached 1000 iterations without meeting tolerance.")
+      warning(".mcem_dynamic_fresh reached 1000 iterations without meeting tolerance.")
       break
     }
   }

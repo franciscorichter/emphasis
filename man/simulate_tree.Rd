@@ -11,7 +11,8 @@ simulate_tree(
   max_lin = 1e+06,
   max_tries = 100,
   useDDD = TRUE,
-  n_trees = 1L
+  n_trees = 1L,
+  link = "linear"
 )
 }
 \arguments{
@@ -25,8 +26,9 @@ of a single vector = \code{2 + 2 * sum(model)}.}
 
 \item{max_t}{Crown age. Required for forward simulation (\code{tree = NULL}).}
 
-\item{model}{String (\code{"cr"}, \code{"dd"}, \code{"pd"}, \code{"ep"})
-or length-3 binary integer vector \code{c(use_N, use_P, use_E)}.
+\item{model}{Model specification: a formula (e.g. \code{~ N + PD}),
+a string (\code{"cr"}, \code{"dd"}, \code{"pd"}, \code{"ep"}),
+or a length-3 binary integer vector \code{c(use_N, use_P, use_E)}.
 Default \code{"cr"}.}
 
 \item{max_lin}{Maximum lineages before declaring the tree too large.
@@ -41,6 +43,9 @@ Default \code{TRUE}.}
 
 \item{n_trees}{Number of augmented trees to draw (conditional simulation
 only). Default \code{1L}.}
+
+\item{link}{Link function for rate computation: \code{"linear"} (default)
+uses \code{max(0, eta)}; \code{"exponential"} uses \code{exp(eta)}.}
 }
 \value{
 For forward simulation, a named list with elements \code{tes},

@@ -12,6 +12,8 @@ m_cpp(
   upper_bound,
   xtol_rel,
   num_threads,
+  model = as.integer(c(0, 0, 0)),
+  link = 0L,
   rconditional = NULL
 )
 }
@@ -33,6 +35,10 @@ be equal in length to the vector of init_pars}
 
 \item{num_threads}{number of threads used.}
 
+\item{model}{integer vector of length 3: c(use_N, use_P, use_E)}
+
+\item{link}{link function: 0 = linear (max(0,...)), 1 = exponential}
+
 \item{rconditional}{R function that evaluates the GAM function.}
 }
 \value{
@@ -40,7 +46,7 @@ list with the following entries:
 \itemize{
  \item{estimates}{vector of estimates}
  \item{nlopt}{nlopt status}
- \item{time}{used computation time} 
+ \item{time}{used computation time}
 }
 }
 \description{

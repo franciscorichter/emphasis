@@ -85,6 +85,7 @@ struct general_div {
   size_t max_N, N;
   std::array<double, 8> pars;   // beta_0..beta_E, gamma_0..gamma_E
   std::array<int, 3>    model;  // {use_N, use_P, use_E}
+  int    link;                  // 0 = linear (max(0,...)), 1 = exponential
 
   std::vector<gbranch> ltable;
   breaks break_type;
@@ -93,20 +94,27 @@ struct general_div {
   general_div(double total_time,
               const std::array<double, 8>& p,
               const std::array<int, 3>&    m,
-              size_t maxN)
+              size_t maxN,
+              int link_type = 0)
     : max_t(total_time), t(0.f), max_N(maxN), N(0),
-      pars(p), model(m), break_type(none), rndgen() {}
+      pars(p), model(m), link(link_type), break_type(none), rndgen() {}
 
-  // Per-lineage speciation rate (identity link, clamped to 0)
-  double compute_lambda(double Nval, double Pval, double Eval) const {
-    double v = pars[0] + pars[1] * Nval + pars[2] * Pval + pars[3] * Eval;
-    return v < 0.0 ? 0.0 : v;
+  // Apply link function to linear predictor
+  double apply_link(double eta) const {
+    if (link == 1) return std::exp(eta);
+    return eta < 0.0 ? 0.0 : eta;
   }
 
-  // Per-lineage extinction rate (identity link, clamped to 0)
+  // Per-lineage speciation rate
+  double compute_lambda(double Nval, double Pval, double Eval) const {
+    double eta = pars[0] + pars[1] * Nval + pars[2] * Pval + pars[3] * Eval;
+    return apply_link(eta);
+  }
+
+  // Per-lineage extinction rate
   double compute_mu(double Nval, double Pval, double Eval) const {
-    double v = pars[4] + pars[5] * Nval + pars[6] * Pval + pars[7] * Eval;
-    return v < 0.0 ? 0.0 : v;
+    double eta = pars[4] + pars[5] * Nval + pars[6] * Pval + pars[7] * Eval;
+    return apply_link(eta);
   }
 
   // Uniform random alive lineage (rejection sampling)

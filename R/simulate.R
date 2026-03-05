@@ -64,8 +64,14 @@
 #' @param pars Numeric parameter vector or matrix. When a matrix, each row
 #'   is one simulation and the function returns a list of results.
 #' @param max_t Crown age. Required for forward simulation.
-#' @param model String (\code{"cr"}, \code{"dd"}, \code{"pd"}, \code{"ep"})
-#'   or length-3 binary integer vector. Default \code{"cr"}.
+#' @param model Model specification. Accepts:
+#'   \itemize{
+#'     \item a formula such as \code{~ N}, \code{~ N + PD}, \code{~ PD + EP},
+#'     \item a string shortcut (\code{"cr"}, \code{"dd"}, \code{"pd"},
+#'       \code{"ep"}), or
+#'     \item a length-3 binary integer vector \code{c(use_N, use_P, use_E)}.
+#'   }
+#'   Default \code{"cr"} (constant rate).
 #' @param max_lin Maximum lineages before declaring the tree too large.
 #'   Default \code{1e6}.
 #' @param max_tries Maximum retries after extinction or overflow.
@@ -75,6 +81,8 @@
 #' @param n_trees Number of augmented trees to draw (conditional simulation
 #'   only). Default \code{1L}. When \code{> 1} the output structure changes
 #'   to include importance-sampling statistics across all draws.
+#' @param link Link function for rate computation: \code{"linear"} (default)
+#'   uses \code{max(0, eta)}; \code{"exponential"} uses \code{exp(eta)}.
 #' @examples
 #' \dontrun{
 #' # --- Forward simulation ---
@@ -111,9 +119,11 @@ simulate_tree <- function(tree      = NULL,
                           max_lin   = 1e6,
                           max_tries = 100,
                           useDDD    = TRUE,
-                          n_trees   = 1L) {
+                          n_trees   = 1L,
+                          link      = "linear") {
 
   model_bin <- .resolve_model(model)
+  link_int  <- .resolve_link(link)
 
   # Batch: pars is a matrix — one simulation per row
   if (is.matrix(pars)) {
@@ -121,7 +131,7 @@ simulate_tree <- function(tree      = NULL,
       stop("'pars' must be a non-empty numeric matrix.")
     return(lapply(seq_len(nrow(pars)), function(i)
       simulate_tree(tree, pars[i, ], max_t, model_bin,
-                    max_lin, max_tries, useDDD, n_trees)))
+                    max_lin, max_tries, useDDD, n_trees, link_int)))
   }
 
   if (!is.numeric(pars) || length(pars) == 0L)
@@ -130,7 +140,7 @@ simulate_tree <- function(tree      = NULL,
   # Conditional simulation (augmentation)
   if (!is.null(tree)) {
     return(.sim_tree_conditional(tree, pars, model_bin,
-                                 as.integer(n_trees), useDDD))
+                                 as.integer(n_trees), useDDD, link_int))
   }
 
   # Forward simulation
@@ -145,7 +155,7 @@ simulate_tree <- function(tree      = NULL,
 
   raw <- simulate_div_tree_cpp(
     .expand_pars(pars, model_bin), model_bin,
-    max_t, as.integer(max_lin), as.integer(max_tries)
+    max_t, as.integer(max_lin), as.integer(max_tries), link_int
   )
 
   tes <- tas <- brts <- NULL
@@ -168,18 +178,46 @@ simulate_tree <- function(tree      = NULL,
 # --------------------------------------------------------------------------- #
 
 #' @keywords internal
+.resolve_link <- function(link) {
+  if (is.numeric(link)) return(as.integer(link))
+  link <- match.arg(link, c("linear", "exponential"))
+  switch(link, linear = 0L, exponential = 1L)
+}
+
+#' @keywords internal
 .resolve_model <- function(model) {
   shortcuts <- list(cr = c(0L, 0L, 0L), dd = c(1L, 0L, 0L),
                     pd = c(0L, 1L, 0L), ep = c(0L, 0L, 1L))
   if (is.character(model)) {
     return(shortcuts[[match.arg(model, names(shortcuts))]])
   }
+  if (inherits(model, "formula")) {
+    return(.parse_model_formula(model))
+  }
   model <- as.integer(model)
   if (length(model) != 3L || !all(model %in% 0:1)) {
-    stop(paste0("'model' must be \"cr\", \"dd\", \"pd\", \"ep\", ",
-                "or a length-3 binary integer vector."))
+    stop(paste0("'model' must be a formula (e.g. ~ N + PD), a string ",
+                "(\"cr\", \"dd\", \"pd\", \"ep\"), or a length-3 binary ",
+                "integer vector."))
   }
   model
+}
+
+#' @keywords internal
+.parse_model_formula <- function(formula) {
+  terms <- attr(stats::terms(formula), "term.labels")
+  # Canonical covariate names (case-insensitive)
+  known <- c(N = 1L, PD = 2L, EP = 3L, E = 3L)
+  terms_upper <- toupper(terms)
+  model_bin <- c(0L, 0L, 0L)
+  for (tm in terms_upper) {
+    idx <- known[tm]
+    if (is.na(idx)) {
+      stop(sprintf("Unknown covariate '%s' in model formula. Use N, PD, and/or EP.", tm))
+    }
+    model_bin[idx] <- 1L
+  }
+  model_bin
 }
 
 # Expand compact pars to full 8-element vector for C++.
@@ -220,7 +258,8 @@ simulate_tree <- function(tree      = NULL,
 
 #' @keywords internal
 .sim_tree_conditional <- function(tree, pars, model_bin,
-                                  n_trees = 1L, useDDD = TRUE) {
+                                  n_trees = 1L, useDDD = TRUE,
+                                  link = 0L) {
   brts  <- .extract_brts(tree)
   max_t <- brts[1L]
 
@@ -231,9 +270,10 @@ simulate_tree <- function(tree      = NULL,
   L_extant <- .extract_Ltable(tree)
 
   aug <- tryCatch(
-    .augment_tree_internal(tree, pars = pars, sample_size = n_trees,
+    .augment_tree_internal(tree, pars = pars, model_bin = model_bin,
+                           sample_size = n_trees,
                            max_missing = 1e4, max_lambda = 500,
-                           num_threads = 1L),
+                           num_threads = 1L, link = link),
     error = function(e) NULL
   )
 
@@ -355,21 +395,26 @@ simulate_tree <- function(tree      = NULL,
 #' @keywords internal
 .augment_tree_internal <- function(tree,
                                    pars,
+                                   model_bin = c(0L, 0L, 0L),
                                    sample_size = 1L,
                                    max_missing = 1e4,
                                    max_lambda  = 500,
-                                   num_threads = 1L) {
+                                   num_threads = 1L,
+                                   link = 0L) {
   brts <- .extract_brts(tree)
+  pars8 <- .expand_pars(pars, model_bin)
   mc_loglik(
     brts        = brts,
-    pars        = as.numeric(pars),
+    pars        = as.numeric(pars8),
     sample_size = as.integer(sample_size),
     maxN        = max(2000L, 200L * as.integer(sample_size)),
     max_missing = as.integer(max_missing),
     max_lambda  = as.numeric(max_lambda),
-    lower_bound = rep(-1e6, length(pars)),
-    upper_bound = rep( 1e6, length(pars)),
+    lower_bound = rep(-1e6, 8L),
+    upper_bound = rep( 1e6, 8L),
     xtol_rel    = 1e-3,
-    num_threads = as.integer(num_threads)
+    num_threads = as.integer(num_threads),
+    model       = as.integer(model_bin),
+    link        = as.integer(link)
   )
 }

@@ -11,6 +11,7 @@
 //' @param max_t Crown age (forward simulation end time).
 //' @param max_N Maximum number of lineages before simulation is declared too large.
 //' @param max_tries Maximum retries after extinction or overflow.
+//' @param link Link function: 0 = linear (max(0,...)), 1 = exponential.
 //' @return A named list with \code{Ltable} (4-column numeric matrix in DDD format)
 //'   and \code{status} (one of \code{"done"}, \code{"extinct"}, \code{"too_large"}).
 // [[Rcpp::export]]
@@ -18,14 +19,15 @@ Rcpp::List simulate_div_tree_cpp(Rcpp::NumericVector  pars,
                                   Rcpp::IntegerVector  model,
                                   double               max_t,
                                   int                  max_N,
-                                  int                  max_tries) {
+                                  int                  max_tries,
+                                  int                  link = 0) {
   std::array<double, 8> p = {
     pars[0], pars[1], pars[2], pars[3],
     pars[4], pars[5], pars[6], pars[7]
   };
   std::array<int, 3> m = { model[0], model[1], model[2] };
 
-  sim_tree::general_div sim(max_t, p, m, static_cast<size_t>(max_N));
+  sim_tree::general_div sim(max_t, p, m, static_cast<size_t>(max_N), link);
   sim.simulate_tree_ltable();
 
   int tries = 0;
@@ -36,11 +38,6 @@ Rcpp::List simulate_div_tree_cpp(Rcpp::NumericVector  pars,
     ++tries;
   }
 
-  // Build L-table in DDD backward-time convention:
-  //   col 0: backward birth time  = max_t - start_date
-  //   col 1: parent label
-  //   col 2: own label
-  //   col 3: backward death time  = max_t - end_date  (-1 if alive)
   const auto& tree = sim.ltable;
   Rcpp::NumericMatrix out(static_cast<int>(tree.size()), 4);
   const double crown_age = sim.max_t;

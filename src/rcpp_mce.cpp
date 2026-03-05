@@ -29,6 +29,8 @@ using namespace Rcpp;
 //' @param upper_bound Upper bounds for parameter optimisation.
 //' @param xtol_rel Relative tolerance for internal optimisation.
 //' @param num_threads Number of threads for parallel augmentation.
+//' @param model Integer vector of length 3: c(use_N, use_P, use_E).
+//' @param link Link function: 0 = linear (max(0,...)), 1 = exponential.
 //' @return A named list:
 //' \describe{
 //'   \item{trees}{List of augmented-tree data frames (brts, n, t_ext, pd,
@@ -55,15 +57,18 @@ List rcpp_mce(const std::vector<double>& brts,
               const std::vector<double>& lower_bound,
               const std::vector<double>& upper_bound,
               double xtol_rel,
-              int num_threads)
+              int num_threads,
+              Rcpp::IntegerVector model = Rcpp::IntegerVector::create(0, 0, 0),
+              int link = 0)
 {
-  auto model = emphasis::Model(lower_bound, upper_bound);
+  std::vector<int> model_bin = {model[0], model[1], model[2]};
+  auto mdl = emphasis::Model(lower_bound, upper_bound, model_bin, link);
 
   auto E = emphasis::E_step(sample_size,
                             maxN,
                             pars,
                             brts,
-                            model,
+                            mdl,
                             max_missing,
                             max_lambda,
                             num_threads);

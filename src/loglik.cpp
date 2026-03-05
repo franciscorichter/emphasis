@@ -20,13 +20,20 @@ emphasis::tree_t pack(const Rcpp::DataFrame& r_tree) {
   Rcpp::NumericVector n     = r_tree["n"];
   Rcpp::NumericVector t_ext = r_tree["t_ext"];
   Rcpp::NumericVector pd    = r_tree["pd"];
-  
+  Rcpp::NumericVector tip_start_v;
+  bool has_tip_start = r_tree.containsElementNamed("tip_start");
+  if (has_tip_start) tip_start_v = r_tree["tip_start"];
+
   for (int i = 0; i < r_tree.nrow(); ++i) {
     emphasis::node_t entry;
     entry.brts = brts[i];
     entry.n    = n[i];
     entry.t_ext = t_ext[i];
     entry.pd    = pd[i];
+    entry.tip_start = has_tip_start ? tip_start_v[i] : 0.0;
+    entry.clade = 0;
+    entry.id = -1;
+    entry.parent_id = -1;
     new_tree.push_back(entry);
   }
   return new_tree;
@@ -55,7 +62,9 @@ Rcpp::List loglikelihood(const std::vector<double>& pars,
                          const std::string& plugin,
                          const int num_rejected) {
   
-  auto model = emphasis::Model();  
+  // Use default 8-param bounds; loglik only uses the pars vector directly
+  emphasis::param_t lb8(8, -1e6), ub8(8, 1e6);
+  auto model = emphasis::Model(lb8, ub8, {0, 0, 0});
   
   std::vector<double> logf(trees.size());
   std::vector<double> log_w(trees.size());

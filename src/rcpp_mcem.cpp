@@ -36,8 +36,10 @@ namespace {
 //' @param xtol_rel relative tolerance for optimization
 //' @param num_threads number of threads used.
 //' @param copy_trees if set to true, the trees generated are returned as well
+//' @param model integer vector of length 3: c(use_N, use_P, use_E)
+//' @param link link function: 0 = linear (max(0,...)), 1 = exponential
 //' @param rconditional R function that evaluates the GAM function.
-//' @return a list with the following components: 
+//' @return a list with the following components:
 //' \itemize{
 //'  \item{trees}{list of trees}
 //'  \item{rejected}{number of rejected trees}
@@ -63,9 +65,12 @@ List rcpp_mcem(const std::vector<double>& brts,
                double xtol_rel,
                int num_threads,
                bool copy_trees,
+               Rcpp::IntegerVector model = Rcpp::IntegerVector::create(0, 0, 0),
+               int link = 0,
                Nullable<Function> rconditional = R_NilValue)
 {
-  auto model = emphasis::Model(lower_bound, upper_bound);
+  std::vector<int> model_bin = {model[0], model[1], model[2]};
+  auto mdl = emphasis::Model(lower_bound, upper_bound, model_bin, link);
 
   emphasis::conditional_fun_t conditional{};
   if (rconditional.isNotNull()) {
@@ -77,7 +82,7 @@ List rcpp_mcem(const std::vector<double>& brts,
                              maxN,
                              init_pars,
                              brts,
-                             model,
+                             mdl,
                              max_missing,
                              max_lambda,
                              lower_bound,

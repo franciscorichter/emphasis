@@ -28,9 +28,9 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #' Override individual elements and pass the modified list via the
 #' \code{control} argument.
 #'
-#' @param method Which method's defaults to return: \code{"em"} or \code{"de"}.
+#' @param method Which method's defaults to return: \code{"mcem"} or \code{"mcde"}.
 #' @param n_pars Number of parameters (used to set the default \code{sd_vec}
-#'   for DE when \code{NULL}).
+#'   for MCDE when \code{NULL}).
 #' @return A named list of control parameters.
 #'
 #' Shared parameters (both methods):
@@ -43,18 +43,20 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     \code{1}.}
 #' }
 #'
-#' EM-specific parameters:
+#' MCEM-specific parameters:
 #' \describe{
+#'   \item{\code{sampling}}{Sampling scheme. Currently only
+#'     \code{"dynamic_fresh"} is implemented.}
 #'   \item{\code{sample_size}}{MC sample size per iteration. Default \code{200}.}
 #'   \item{\code{xtol}}{Relative tolerance for the M-step optimiser.
 #'     Default \code{1e-3}.}
-#'   \item{\code{tol}}{Standard error of log-likelihood below which EM
+#'   \item{\code{tol}}{Standard error of log-likelihood below which MCEM
 #'     is considered converged. Default \code{0.1}.}
 #'   \item{\code{burnin}}{Number of burn-in iterations before convergence
 #'     is tested. Default \code{20}.}
 #' }
 #'
-#' DE-specific parameters:
+#' MCDE-specific parameters:
 #' \describe{
 #'   \item{\code{num_iterations}}{Number of DE iterations. Default \code{20}.}
 #'   \item{\code{num_points}}{Particle population size. Default \code{50}.}
@@ -66,15 +68,16 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     iteration. Default \code{0.5}.}
 #' }
 #' @export
-estimate_rates_control <- function(method = c("em", "de"), n_pars = 4) {
+estimate_rates_control <- function(method = c("mcem", "mcde"), n_pars = 4) {
   method <- match.arg(method)
   common <- list(
     max_missing = 1e4,
     max_lambda  = 500,
     num_threads = 1L
   )
-  if (method == "em") {
+  if (method == "mcem") {
     c(common, list(
+      sampling    = "dynamic_fresh",
       sample_size = 200L,
       xtol        = 1e-3,
       tol         = 0.1,
@@ -117,26 +120,48 @@ estimate_rates_control <- function(method = c("em", "de"), n_pars = 4) {
 }
 
 #' @keywords internal
-.par_names <- function(n) {
-  nms <- c("mu", "lambda0", "betaN", "betaP", "betaE")
-  if (n <= length(nms)) nms[seq_len(n)] else paste0("par", seq_len(n))
+.par_names <- function(model_bin) {
+  lam <- c("beta_0",
+           if (model_bin[1]) "beta_N",
+           if (model_bin[2]) "beta_P",
+           if (model_bin[3]) "beta_E")
+  mu <- c("gamma_0",
+          if (model_bin[1]) "gamma_N",
+          if (model_bin[2]) "gamma_P",
+          if (model_bin[3]) "gamma_E")
+  c(lam, mu)
 }
 
 #' @keywords internal
-.run_em <- function(brts, init_pars, lower_bound, upper_bound, ctrl) {
-  raw <- mcEM_step(
-    brts        = brts,
-    pars        = init_pars,
-    sample_size = ctrl$sample_size,
-    max_missing = ctrl$max_missing,
-    max_lambda  = ctrl$max_lambda,
-    lower_bound = lower_bound,
-    upper_bound = upper_bound,
-    xtol        = ctrl$xtol,
-    tol         = ctrl$tol,
-    burnin      = ctrl$burnin,
-    num_threads = ctrl$num_threads,
-    verbose     = ctrl$verbose
+.contract_pars <- function(pars8, model_bin) {
+  active <- which(model_bin == 1L)
+  lam <- c(pars8[1L], pars8[active + 1L])
+  mu  <- c(pars8[5L], pars8[active + 5L])
+  c(lam, mu)
+}
+
+#' @keywords internal
+.run_mcem <- function(brts, init_pars, lower_bound, upper_bound, ctrl, model = c(0L, 0L, 0L), link = 0L) {
+  raw <- switch(ctrl$sampling,
+    dynamic_fresh   = .mcem_dynamic_fresh(
+      brts        = brts,
+      pars        = init_pars,
+      sample_size = ctrl$sample_size,
+      max_missing = ctrl$max_missing,
+      max_lambda  = ctrl$max_lambda,
+      lower_bound = lower_bound,
+      upper_bound = upper_bound,
+      xtol        = ctrl$xtol,
+      tol         = ctrl$tol,
+      burnin      = ctrl$burnin,
+      num_threads = ctrl$num_threads,
+      verbose     = ctrl$verbose,
+      model       = model,
+      link        = link
+    ),
+    dynamic_recycle = stop("'dynamic_recycle' sampling not yet implemented."),
+    dynamic_mixed   = stop("'dynamic_mixed' sampling not yet implemented."),
+    stop("Unknown sampling scheme: ", ctrl$sampling)
   )
   fhat_vec <- raw$mcem$fhat
   loglik   <- if (any(is.finite(fhat_vec)))
@@ -145,7 +170,7 @@ estimate_rates_control <- function(method = c("em", "de"), n_pars = 4) {
 }
 
 #' @keywords internal
-.run_de <- function(brts, lower_bound, upper_bound, ctrl) {
+.run_mcde <- function(brts, lower_bound, upper_bound, ctrl, model = c(0L, 0L, 0L), link = 0L) {
   sd_vec <- ctrl$sd_vec
   if (is.null(sd_vec)) sd_vec <- (upper_bound - lower_bound) / 4
   raw <- emphasis_de(
@@ -160,7 +185,9 @@ estimate_rates_control <- function(method = c("em", "de"), n_pars = 4) {
     max_lambda     = ctrl$max_lambda,
     disc_prop      = ctrl$disc_prop,
     verbose        = ctrl$verbose,
-    num_threads    = ctrl$num_threads
+    num_threads    = ctrl$num_threads,
+    model          = model,
+    link           = link
   )
   # min_loglik stores -fhat of best particle (vals = -fhat in emphasis_de)
   loglik <- if (length(raw$minloglik) > 0)
@@ -174,10 +201,10 @@ estimate_rates_control <- function(method = c("em", "de"), n_pars = 4) {
 
 #' Estimate diversification rates from a phylogenetic tree
 #'
-#' Unified entry point for parameter inference under PD-dependent
-#' diversification. Accepts a simulated or empirical tree, extracts branching
-#' times (pruning to extant tips if needed), and dispatches to the chosen
-#' optimisation back-end.
+#' Unified entry point for parameter inference under the general
+#' diversification model. Accepts a simulated or empirical tree, extracts
+#' branching times (pruning to extant tips if needed), and dispatches to
+#' the chosen optimisation back-end.
 #'
 #' @param tree One of:
 #'   \itemize{
@@ -188,79 +215,105 @@ estimate_rates_control <- function(method = c("em", "de"), n_pars = 4) {
 #'   }
 #' @param method Optimisation method:
 #'   \describe{
-#'     \item{\code{"em"}}{Monte Carlo Expectation-Maximisation (default).
+#'     \item{\code{"mcem"}}{Monte Carlo Expectation-Maximisation (default).
 #'       Iterates E- and M-steps until the log-likelihood standard error
 #'       falls below \code{control$tol}. Requires \code{init_pars}.}
-#'     \item{\code{"de"}}{Differential Evolution. Initialises a particle
-#'       population randomly within the bounds and evolves it over
+#'     \item{\code{"mcde"}}{Monte Carlo Differential Evolution. Initialises a
+#'       particle population randomly within the bounds and evolves it over
 #'       \code{control$num_iterations} iterations. Does not need
 #'       \code{init_pars}.}
 #'   }
-#' @param lower_bound Numeric vector of lower parameter bounds
-#'   (\code{c(mu, lambda0, betaN, betaP)} for the PD model).
+#' @param model Model specification. Accepts:
+#'   \itemize{
+#'     \item a formula such as \code{~ N}, \code{~ N + PD}, \code{~ PD + EP},
+#'     \item a string shortcut (\code{"cr"}, \code{"dd"}, \code{"pd"},
+#'       \code{"ep"}), or
+#'     \item a length-3 binary integer vector \code{c(use_N, use_P, use_E)}.
+#'   }
+#'   Default \code{"cr"} (constant rate).
+#' @param lower_bound Numeric vector of lower parameter bounds.
+#'   Length must be \code{2 + 2*sum(model)}.
+#'   Order: \code{c(beta_0, [beta_N], [beta_P], [beta_E],
+#'   gamma_0, [gamma_N], [gamma_P], [gamma_E])}.
 #' @param upper_bound Numeric vector of upper parameter bounds (same order).
-#' @param init_pars Starting parameter vector. Required for \code{"em"};
-#'   ignored for \code{"de"}. If \code{NULL} with \code{"em"}, the midpoint
-#'   of the bounds is used.
+#' @param init_pars Starting parameter vector. Required for \code{"mcem"};
+#'   ignored for \code{"mcde"}. If \code{NULL} with \code{"mcem"}, the
+#'   midpoint of the bounds is used.
 #' @param control Named list of tuning parameters. Use
 #'   \code{\link{estimate_rates_control}} to inspect and modify defaults.
+#' @param link Link function for rate computation: \code{"linear"} (default)
+#'   uses \code{max(0, eta)}; \code{"exponential"} uses \code{exp(eta)}.
 #' @param verbose Print progress messages (\code{TRUE}/\code{FALSE}).
 #' @return A list with:
 #'   \describe{
 #'     \item{\code{pars}}{Named numeric vector of parameter estimates.}
 #'     \item{\code{loglik}}{Final log-likelihood estimate.}
-#'     \item{\code{method}}{Method used (\code{"em"} or \code{"de"}).}
+#'     \item{\code{method}}{Method used (\code{"mcem"} or \code{"mcde"}).}
+#'     \item{\code{model}}{Resolved binary model vector.}
 #'     \item{\code{details}}{Full output from the back-end function
-#'       (\code{mcEM_step} or \code{emphasis_de}).}
+#'       (\code{.mcem_dynamic_fresh} or \code{emphasis_de}).}
 #'   }
 #' @examples
 #' \dontrun{
 #' set.seed(42)
-#' sim <- simulate_tree(c(0.1, 0.5, -0.02, 0.01), max_t = 5, model = "pd")
+#' # Constant-rate model
+#' sim <- simulate_tree(c(0.5, 0.1), max_t = 5, model = "cr")
+#' fit <- estimate_rates(sim, method = "mcem", model = "cr",
+#'   lower_bound = c(0, 0), upper_bound = c(2, 1))
+#' fit$pars
 #'
-#' # EM estimation (starts from parameter midpoint)
-#' fit_em <- estimate_rates(sim, method = "em",
-#'   lower_bound = c(0, 0, -1, -1),
-#'   upper_bound = c(1, 2,  1,  1))
-#' fit_em$pars
-#'
-#' # DE estimation (no init_pars needed)
-#' fit_de <- estimate_rates(sim, method = "de",
-#'   lower_bound = c(0, 0, -1, -1),
-#'   upper_bound = c(1, 2,  1,  1),
-#'   control = list(num_iterations = 10, num_points = 30))
-#' fit_de$pars
+#' # Diversity-dependent model
+#' sim_dd <- simulate_tree(c(0.5, -0.005, 0.1, 0), max_t = 8, model = "dd")
+#' fit_dd <- estimate_rates(sim_dd, method = "mcem", model = "dd",
+#'   lower_bound = c(0.1, -0.1, 0, -0.01),
+#'   upper_bound = c(2, 0.01, 0.5, 0.01))
+#' fit_dd$pars
 #' }
 #' @export
 estimate_rates <- function(tree,
-                           method      = c("em", "de"),
+                           method      = c("mcem", "mcde"),
+                           model       = "cr",
                            lower_bound,
                            upper_bound,
                            init_pars   = NULL,
                            control     = list(),
+                           link        = "linear",
                            verbose     = FALSE) {
-  method <- match.arg(method)
+  method    <- match.arg(method)
+  model_bin <- .resolve_model(model)
+  link_int  <- .resolve_link(link)
 
   if (!is.numeric(lower_bound) || !is.numeric(upper_bound))
     stop("'lower_bound' and 'upper_bound' must be numeric vectors.")
   if (length(lower_bound) != length(upper_bound))
     stop("'lower_bound' and 'upper_bound' must have the same length.")
 
+  expected_n <- 2L + 2L * sum(model_bin)
+  if (length(lower_bound) != expected_n)
+    stop(.pars_error_msg(model_bin, expected_n))
+
   brts <- .extract_brts(tree)
 
-  if (is.null(init_pars) && method == "em")
+  if (is.null(init_pars) && method == "mcem")
     init_pars <- (lower_bound + upper_bound) / 2
 
-  defaults <- estimate_rates_control(method, n_pars = length(lower_bound))
+  # Expand compact pars/bounds to full 8-element layout for C++
+  lb8 <- .expand_pars(lower_bound, model_bin)
+  ub8 <- .expand_pars(upper_bound, model_bin)
+  ip8 <- if (!is.null(init_pars)) .expand_pars(init_pars, model_bin) else NULL
+
+  defaults <- estimate_rates_control(method, n_pars = expected_n)
   ctrl     <- utils::modifyList(defaults, control)
   ctrl$verbose <- isTRUE(verbose) || isTRUE(ctrl$verbose)
 
   raw <- switch(method,
-    em = .run_em(brts, init_pars, lower_bound, upper_bound, ctrl),
-    de = .run_de(brts, lower_bound, upper_bound, ctrl)
+    mcem = .run_mcem(brts, ip8, lb8, ub8, ctrl, model = model_bin, link = link_int),
+    mcde = .run_mcde(brts, lb8, ub8, ctrl, model = model_bin, link = link_int)
   )
 
-  pars <- stats::setNames(as.numeric(raw$pars),
-                          .par_names(length(lower_bound)))
-  list(pars = pars, loglik = raw$loglik, method = method, details = raw$details)
+  # Contract 8-element result back to compact
+  compact_pars <- .contract_pars(as.numeric(raw$pars), model_bin)
+  pars <- stats::setNames(compact_pars, .par_names(model_bin))
+  list(pars = pars, loglik = raw$loglik, method = method,
+       model = model_bin, details = raw$details)
 }

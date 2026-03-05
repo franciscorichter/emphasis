@@ -19,13 +19,13 @@ namespace {
       auto n = as<NumericVector>(df["n"]);
       auto t_ext = as<NumericVector>(df["t_ext"]);
       for (auto i = 0; i < brts.size(); ++i) {
-        tree.push_back(emphasis::node_t{brts[i], n[i], t_ext[i], 0.0});
+        tree.push_back(emphasis::node_t{brts[i], n[i], t_ext[i], 0.0, 0.0, 0, -1, -1});
       }
       trees.emplace_back(std::move(tree));
     }
     return trees;
   }
- 
+
 }
 
 //' function to perform one step of the E-M algorithm
@@ -36,25 +36,29 @@ namespace {
 //' @param lower_bound vector of lower bound values for optimization, should
 //' be equal in length to the vector of init_pars
 //' @param upper_bound vector of upper bound values for optimization, should
-//' be equal in length to the vector of init_pars 
+//' be equal in length to the vector of init_pars
 //' @param xtol_rel relative tolerance for optimization
 //' @param num_threads number of threads used.
+//' @param model integer vector of length 3: c(use_N, use_P, use_E)
+//' @param link link function: 0 = linear (max(0,...)), 1 = exponential
 //' @param rconditional R function that evaluates the GAM function.
 //' @return list with the following entries:
 //' \itemize{
 //'  \item{estimates}{vector of estimates}
 //'  \item{nlopt}{nlopt status}
-//'  \item{time}{used computation time} 
+//'  \item{time}{used computation time}
 //' }
 //' @export
 // [[Rcpp::export(name = "m_cpp")]]
-List rcpp_mcm(List e_step,       
-              const std::vector<double>& init_pars,      
-              const std::string& plugin,             
-              const std::vector<double>& lower_bound,  
-              const std::vector<double>& upper_bound,  
-              double xtol_rel,                     
+List rcpp_mcm(List e_step,
+              const std::vector<double>& init_pars,
+              const std::string& plugin,
+              const std::vector<double>& lower_bound,
+              const std::vector<double>& upper_bound,
+              double xtol_rel,
               int num_threads,
+              Rcpp::IntegerVector model = Rcpp::IntegerVector::create(0, 0, 0),
+              int link = 0,
               Nullable<Function> rconditional = R_NilValue)
 {
   auto E = emphasis::E_step_t{};
@@ -71,21 +75,22 @@ List rcpp_mcm(List e_step,
   if (E.trees.empty()) {
     throw std::runtime_error("no trees, no optimization");
   }
-  auto model = emphasis::Model(lower_bound, upper_bound);
+  std::vector<int> model_bin = {model[0], model[1], model[2]};
+  auto mdl = emphasis::Model(lower_bound, upper_bound, model_bin, link);
   emphasis::conditional_fun_t conditional{};
   if (rconditional.isNotNull()) {
     conditional = [cond= Function(rconditional)](const emphasis::param_t& pars) {
       return as<double>( cond(NumericVector(pars.cbegin(), pars.cend())) );
     };
   }
-  auto M = emphasis::M_step(init_pars, 
-                            E.trees, 
-                            E.weights, 
-                            model, 
-                            lower_bound, 
-                            upper_bound, 
-                            xtol_rel, 
-                            num_threads, 
+  auto M = emphasis::M_step(init_pars,
+                            E.trees,
+                            E.weights,
+                            mdl,
+                            lower_bound,
+                            upper_bound,
+                            xtol_rel,
+                            num_threads,
                             conditional ? &conditional : nullptr);
   List ret;
   ret["estimates"] = NumericVector(M.estimates.begin(), M.estimates.end());

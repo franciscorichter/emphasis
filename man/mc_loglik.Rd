@@ -14,7 +14,9 @@ mc_loglik(
   lower_bound,
   upper_bound,
   xtol_rel,
-  num_threads
+  num_threads,
+  model = as.integer(c(0, 0, 0)),
+  link = 0L
 )
 }
 \arguments{
@@ -39,6 +41,10 @@ as \code{pars}).}
 \item{xtol_rel}{Relative tolerance for internal optimisation.}
 
 \item{num_threads}{Number of threads for parallel augmentation.}
+
+\item{model}{Integer vector of length 3: c(use_N, use_P, use_E).}
+
+\item{link}{Link function: 0 = linear (max(0,...)), 1 = exponential.}
 }
 \value{
 A named list:

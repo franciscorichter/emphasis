@@ -16,7 +16,9 @@ emphasis_de_factorial(
   max_lambda,
   disc_prop = 0.5,
   verbose = FALSE,
-  num_threads = 1
+  num_threads = 1,
+  model = c(0L, 0L, 0L),
+  link = 0L
 )
 }
 \arguments{
@@ -46,6 +48,10 @@ up}
 \item{verbose}{verbose output if TRUE}
 
 \item{num_threads}{number of threads}
+
+\item{model}{integer vector of length 3: c(use_N, use_P, use_E)}
+
+\item{link}{link function: 0 = linear, 1 = exponential}
 }
 \description{
 perform emphasis analysis using DE method

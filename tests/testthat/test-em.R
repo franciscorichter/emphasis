@@ -1,59 +1,62 @@
 # Tests for EM / E-step functions
 # C++ integration tests are slow and run locally only
-in_r_cmd_check <- function() nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_"))
 
 test_that("mc_loglik returns a list with expected fields", {
   skip("C++ integration test: run locally with devtools::test(filter='em')")
   set.seed(42)
   brts <- c(0.8, 0.6, 0.4, 0.2)
+  # 8-param layout: beta_0, beta_N, beta_P, beta_E, gamma_0, gamma_N, gamma_P, gamma_E
+  pars8 <- c(0.5, -0.01, 0.01, 0, 0.1, 0, 0, 0)
+  lb8 <- c(0, -0.1, -0.1, 0, 0, 0, 0, 0)
+  ub8 <- c(2, 0.1, 0.1, 0, 0.5, 0, 0, 0)
   result <- mc_loglik(
     brts        = brts,
-    pars        = c(0.1, 0.5, -0.01, 0.01),
+    pars        = pars8,
     sample_size = 10,
     maxN        = 100,
-
     max_missing = 1000,
     max_lambda  = 500,
-    lower_bound = c(0, 0, -0.1, -0.1),
-    upper_bound = c(0.5, 2, 0.1, 0.1),
+    lower_bound = lb8,
+    upper_bound = ub8,
     xtol_rel    = 1e-3,
-    num_threads = 1
+    num_threads = 1,
+    model       = c(1L, 1L, 0L)
   )
 
   expect_type(result, "list")
   expect_true("fhat" %in% names(result))
 })
 
-test_that("loglikelihood returns numeric fhat", {
+test_that("estimate_rates CR smoke test", {
   skip("C++ integration test: run locally with devtools::test(filter='em')")
   set.seed(42)
-  brts <- c(0.8, 0.6, 0.4, 0.2)
+  tr <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr")
+  fit <- estimate_rates(tr, method = "mcem", model = "cr",
+    lower_bound = c(0, 0), upper_bound = c(2, 1),
+    control = list(sample_size = 20, tol = 0.5, burnin = 2))
+  expect_named(fit$pars, c("beta_0", "gamma_0"))
+  expect_length(fit$pars, 2)
+  expect_true(is.numeric(fit$loglik))
+})
 
-  e_result <- mc_loglik(
-    brts        = brts,
-    pars        = c(0.1, 0.5, -0.01, 0.01),
-    sample_size = 5,
-    maxN        = 100,
+test_that("estimate_rates DD smoke test", {
+  skip("C++ integration test: run locally with devtools::test(filter='em')")
+  set.seed(42)
+  tr <- simulate_tree(pars = c(0.5, -0.005, 0.1, 0), max_t = 8, model = "dd")
+  fit <- estimate_rates(tr, method = "mcem", model = "dd",
+    lower_bound = c(0.1, -0.1, 0, -0.01),
+    upper_bound = c(2, 0.01, 0.5, 0.01),
+    control = list(sample_size = 50, tol = 0.5, burnin = 5))
+  expect_named(fit$pars, c("beta_0", "beta_N", "gamma_0", "gamma_N"))
+  expect_length(fit$pars, 4)
+})
 
-    max_missing = 1000,
-    max_lambda  = 500,
-    lower_bound = c(0, 0, -0.1, -0.1),
-    upper_bound = c(0.5, 2, 0.1, 0.1),
-    xtol_rel    = 1e-3,
-    num_threads = 1
+test_that("estimate_rates EP errors", {
+  skip("C++ integration test: run locally with devtools::test(filter='em')")
+  expect_error(
+    estimate_rates(c(1, 0.5), method = "mcem", model = "ep",
+      lower_bound = c(0, 0, 0, 0),
+      upper_bound = c(2, 1, 1, 1)),
+    "E-dependence not yet implemented"
   )
-
-  skip_if(is.null(e_result$trees) || length(e_result$trees) == 0,
-          "mc_loglik returned no trees")
-
-  ll <- loglikelihood(
-    pars        = c(0.1, 0.5, -0.01, 0.01),
-    trees       = e_result$trees,
-    logg        = e_result$logg,
-    plugin      = "rpd5c",
-    num_rejected = e_result$rejected
-  )
-
-  expect_type(ll, "list")
-  expect_true(is.numeric(ll$fhat))
 })

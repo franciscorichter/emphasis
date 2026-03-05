@@ -16,6 +16,8 @@ em_cpp(
   xtol_rel,
   num_threads,
   copy_trees,
+  model = as.integer(c(0, 0, 0)),
+  link = 0L,
   rconditional = NULL
 )
 }
@@ -44,10 +46,14 @@ be equal in length to the vector of init_pars}
 
 \item{copy_trees}{if set to true, the trees generated are returned as well}
 
+\item{model}{integer vector of length 3: c(use_N, use_P, use_E)}
+
+\item{link}{link function: 0 = linear (max(0,...)), 1 = exponential}
+
 \item{rconditional}{R function that evaluates the GAM function.}
 }
 \value{
-a list with the following components: 
+a list with the following components:
 \itemize{
  \item{trees}{list of trees}
  \item{rejected}{number of rejected trees}

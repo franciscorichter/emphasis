@@ -20,6 +20,8 @@ get_random_grid <- function(num_points,
 #' @keywords internal
 get_results <- function(pars, input, num_threads, num_points) {
   pars_mat <- as.matrix(pars)
+  model <- input$model
+  link <- input$link
   # Result matrix: fhat, rejected_lambda, rejected_overruns, rejected_zero_weights, logf, logg
   dmval <- matrix(NA_real_, nrow = nrow(pars_mat), ncol = 6)
 
@@ -35,7 +37,9 @@ get_results <- function(pars, input, num_threads, num_points) {
                 lower_bound = input$lower_bound,
                 upper_bound = input$upper_bound,
                 xtol_rel    = 0.1,
-                num_threads = num_threads),
+                num_threads = num_threads,
+                model       = as.integer(model),
+                link        = as.integer(link)),
       error = function(e) NULL
     )
     if (!is.null(res)) {
@@ -65,13 +69,15 @@ get_results <- function(pars, input, num_threads, num_points) {
                   pars        = as.numeric(pars_mat[i, ]),
                   sample_size = input$sample_size,
                   maxN        = local_max_N,
-  
+
                   max_missing = as.integer(local_max_miss),
                   max_lambda  = local_max_lambda,
                   lower_bound = input$lower_bound,
                   upper_bound = input$upper_bound,
                   xtol_rel    = 0.1,
-                  num_threads = num_threads),
+                  num_threads = num_threads,
+                  model       = as.integer(model),
+                link        = as.integer(link)),
         error = function(e) NULL
       )
       if (!is.null(res)) {
@@ -90,6 +96,8 @@ get_results <- function(pars, input, num_threads, num_points) {
 #' @keywords internal
 get_results_factorial <- function(pars, input, num_threads, num_points) {
   pars_mat <- as.matrix(pars)
+  model <- input$model
+  link <- input$link
   results <- matrix(NA_real_, nrow = nrow(pars_mat), ncol = 6)
   logf_list <- vector("list", nrow(pars_mat))
   logg_list <- vector("list", nrow(pars_mat))
@@ -106,7 +114,9 @@ get_results_factorial <- function(pars, input, num_threads, num_points) {
                 lower_bound = input$lower_bound,
                 upper_bound = input$upper_bound,
                 xtol_rel    = 0.1,
-                num_threads = num_threads),
+                num_threads = num_threads,
+                model       = as.integer(model),
+                link        = as.integer(link)),
       error = function(e) NULL
     )
     if (!is.null(res)) {
@@ -138,13 +148,15 @@ get_results_factorial <- function(pars, input, num_threads, num_points) {
                   pars        = as.numeric(pars_mat[i, ]),
                   sample_size = input$sample_size,
                   maxN        = local_max_N,
-  
+
                   max_missing = as.integer(local_max_miss),
                   max_lambda  = local_max_lambda,
                   lower_bound = input$lower_bound,
                   upper_bound = input$upper_bound,
                   xtol_rel    = 0.1,
-                  num_threads = num_threads),
+                  num_threads = num_threads,
+                  model       = as.integer(model),
+                link        = as.integer(link)),
         error = function(e) NULL
       )
       if (!is.null(res)) {
@@ -240,7 +252,8 @@ update_pars <- function(pars,
 #' @param disc_prop proportion of particles retained per iteration
 #' @param verbose verbose output if TRUE
 #' @param num_threads number of threads
-#' @export
+#' @param model integer vector of length 3: c(use_N, use_P, use_E)
+#' @param link link function: 0 = linear, 1 = exponential
 #' @rawNamespace useDynLib(emphasis)
 #' @rawNamespace import(nloptr)
 #' @rawNamespace import(Rcpp)
@@ -256,7 +269,9 @@ emphasis_de <- function(brts,
                         max_lambda,
                         disc_prop = 0.5,
                         verbose = FALSE,
-                        num_threads = 1) {
+                        num_threads = 1,
+                        model = c(0L, 0L, 0L),
+                        link = 0L) {
 
   if (!is.numeric(lower_bound) || !is.numeric(upper_bound)) {
     stop("lower_bound and upper_bound must be numeric vectors.")
@@ -281,19 +296,22 @@ emphasis_de <- function(brts,
                 sample_size = 1,
                 maxN = maxN,
                 max_lambda = max_lambda,
-                disc_prop = disc_prop)
+                disc_prop = disc_prop,
+                model = model,
+                link = link)
   pars <- get_random_grid(num_points,
                           lower_bound = lower_bound,
                           upper_bound = upper_bound)
 
+  num_pars <- length(lower_bound)
   pv <- list()
   rejl_count <- rejo_count <- NULL
 
   min_loglik <- c()
   mean_loglik <- c()
 
-  min_pars <- matrix(nrow=num_iterations, ncol=length(lower_bound))
-  mean_pars <- matrix(nrow=num_iterations, ncol=length(lower_bound))
+  min_pars <- matrix(nrow=num_iterations, ncol=num_pars)
+  mean_pars <- matrix(nrow=num_iterations, ncol=num_pars)
 
   fhatdiff <- c()
   times <- Sys.time()
@@ -302,7 +320,8 @@ emphasis_de <- function(brts,
     dmval <- get_results(pars, input, num_threads, num_points)
 
     to_store <- cbind(pars, dmval[, 5], dmval[, 6], dmval[, 1])
-    colnames(to_store) <- c("par1", "par2", "par3", "par4", "logf", "logg", "fhat")
+    par_nms <- paste0("par", seq_len(num_pars))
+    colnames(to_store) <- c(par_nms, "logf", "logg", "fhat")
     pv[[k]] <- to_store
 
     vals <- dmval[, 1]
@@ -331,7 +350,7 @@ emphasis_de <- function(brts,
     min_pars[k,] <- as.numeric(pars[minval, ])
 
     mean_loglik <- c(mean_loglik, mean(vals))
-    mean_pars[k,] <- colMeans(pars[1:4])
+    mean_pars[k,] <- colMeans(pars[seq_len(num_pars)])
 
     fhatdiff <- c(fhatdiff, stats::sd(vals))
 
@@ -390,7 +409,8 @@ emphasis_de <- function(brts,
 #' @param disc_prop proportion of particles retained per iteration
 #' @param verbose verbose output if TRUE
 #' @param num_threads number of threads
-#' @export
+#' @param model integer vector of length 3: c(use_N, use_P, use_E)
+#' @param link link function: 0 = linear, 1 = exponential
 emphasis_de_factorial <- function(brts,
                                   num_iterations,
                                   num_points,
@@ -402,7 +422,9 @@ emphasis_de_factorial <- function(brts,
                                   max_lambda,
                                   disc_prop = 0.5,
                                   verbose = FALSE,
-                                  num_threads = 1) {
+                                  num_threads = 1,
+                                  model = c(0L, 0L, 0L),
+                                  link = 0L) {
 
   if (length(upper_bound) != length(lower_bound)) {
     stop("lower bound and upper bound vectors need to be same length")
@@ -423,7 +445,10 @@ emphasis_de_factorial <- function(brts,
                 sample_size = 1,
                 maxN = maxN,
                 max_lambda = max_lambda,
-                disc_prop = disc_prop)
+                disc_prop = disc_prop,
+                model = model,
+                link = link)
+  num_pars <- length(lower_bound)
   pars <- get_random_grid(num_points,
                           lower_bound = lower_bound,
                           upper_bound = upper_bound)
@@ -451,8 +476,8 @@ emphasis_de_factorial <- function(brts,
     dmval <- dmval$results
 
     to_store <- cbind(pars, dmval[, 5], dmval[, 6], dmval[, 1])
-    colnames(to_store) <- c("par1", "par2", "par3", "par4",
-                            "logf", "logg", "fhat")
+    par_nms <- paste0("par", seq_len(num_pars))
+    colnames(to_store) <- c(par_nms, "logf", "logg", "fhat")
     pv[[k]] <- to_store
 
     vals <- dmval[, 1]
@@ -479,7 +504,7 @@ emphasis_de_factorial <- function(brts,
     min_pars <- rbind(min_pars, as.numeric(pars[minval, ]))
 
     mean_loglik <- c(mean_loglik, mean(vals))
-    mean_pars <- rbind(mean_pars, colMeans(pars[1:4]))
+    mean_pars <- rbind(mean_pars, colMeans(pars[seq_len(num_pars)]))
 
     fhatdiff <- c(fhatdiff, stats::sd(vals))
 

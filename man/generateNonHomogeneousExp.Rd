@@ -21,12 +21,6 @@ generateNonHomogeneousExp(
 \item{start_time}{The start time for the generation of variates.}
 
 \item{max_time}{The maximum time limit for the generation of variates.}
-
-\item{grid_size}{Number of grid points used to bound the rate function for
-thinning. Default \code{200L}.}
-
-\item{max_iter}{Maximum number of thinning iterations before giving up.
-Default \code{1e6}.}
 }
 \value{
 A numeric vector of generated variates.

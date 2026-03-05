@@ -57,6 +57,7 @@ namespace emphasis {
     double n;         /* n[i] = number of species in [time_i-1, time_i) */
     double t_ext;     /* emp_t_ext_tip for present-day species;  emp_t_ext_extinct for extinction nodes */
     double pd;
+    double tip_start; // birth time of this lineage (for pendant PD); 0.0 = unset
     int clade;        // required for sim_tree
     int id;           // unique stable lineage ID (assigned at creation); -1 = unset
     int parent_id;    // id of parent lineage; -1 = root / initial tree
@@ -205,6 +206,23 @@ namespace emphasis {
     inline double calculate_pd2(double tm, const std::vector<node_t>& tree)
     {
       return calculate_pd(tm, static_cast<unsigned>(tree.size()), tree.data());
+    }
+
+    // Pendant PD: sum of pendant edge lengths of alive lineages at time tm.
+    // Each alive lineage i contributes (tm - tip_start_i).
+    inline double calculate_pendant_pd(double tm, const std::vector<node_t>& tree)
+    {
+      double ppd = 0.0;
+      for (const auto& node : tree) {
+        if (node.brts > tm) break;  // tree is sorted by brts
+        // A lineage is "alive" at tm if it is not an extinction node and
+        // its t_ext > tm (either a tip surviving to present or an extinction
+        // that happens after tm).
+        if (!is_extinction(node) && node.t_ext > tm) {
+          ppd += (tm - node.tip_start);
+        }
+      }
+      return ppd;
     }
 
   }

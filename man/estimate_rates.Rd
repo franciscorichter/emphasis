@@ -5,11 +5,13 @@
 \usage{
 estimate_rates(
   tree,
-  method = c("em", "de"),
+  method = c("mcem", "mcde"),
+  model = "cr",
   lower_bound,
   upper_bound,
   init_pars = NULL,
   control = list(),
+  link = "linear",
   verbose = FALSE
 )
 }
@@ -22,26 +24,36 @@ recommended), (b) the list returned by \code{\link{simulate_tree}}
 
 \item{method}{Optimisation method:
 \describe{
-  \item{\code{"em"}}{Monte Carlo Expectation-Maximisation (default).
+  \item{\code{"mcem"}}{Monte Carlo Expectation-Maximisation (default).
     Iterates E- and M-steps until the log-likelihood standard error
     falls below \code{control$tol}. Requires \code{init_pars}.}
-  \item{\code{"de"}}{Differential Evolution. Initialises a particle
-    population randomly within the bounds and evolves it over
+  \item{\code{"mcde"}}{Monte Carlo Differential Evolution. Initialises a
+    particle population randomly within the bounds and evolves it over
     \code{control$num_iterations} iterations. Does not need
     \code{init_pars}.}
 }}
 
-\item{lower_bound}{Numeric vector of lower parameter bounds
-(\code{c(mu, lambda0, betaN, betaP)} for the PD model).}
+\item{model}{Model specification: a formula (e.g. \code{~ N + PD}),
+a string (\code{"cr"}, \code{"dd"}, \code{"pd"}, \code{"ep"}),
+or a length-3 binary integer vector \code{c(use_N, use_P, use_E)}.
+Default \code{"cr"} (constant rate).}
+
+\item{lower_bound}{Numeric vector of lower parameter bounds.
+Length must be \code{2 + 2*sum(model)}.
+Order: \code{c(beta_0, [beta_N], [beta_P], [beta_E],
+gamma_0, [gamma_N], [gamma_P], [gamma_E])}.}
 
 \item{upper_bound}{Numeric vector of upper parameter bounds (same order).}
 
-\item{init_pars}{Starting parameter vector. Required for \code{"em"};
-ignored for \code{"de"}. If \code{NULL} with \code{"em"}, the midpoint
-of the bounds is used.}
+\item{init_pars}{Starting parameter vector. Required for \code{"mcem"};
+ignored for \code{"mcde"}. If \code{NULL} with \code{"mcem"}, the
+midpoint of the bounds is used.}
 
 \item{control}{Named list of tuning parameters. Use
 \code{\link{estimate_rates_control}} to inspect and modify defaults.}
+
+\item{link}{Link function for rate computation: \code{"linear"} (default)
+uses \code{max(0, eta)}; \code{"exponential"} uses \code{exp(eta)}.}
 
 \item{verbose}{Print progress messages (\code{TRUE}/\code{FALSE}).}
 }
@@ -50,33 +62,32 @@ A list with:
 \describe{
   \item{\code{pars}}{Named numeric vector of parameter estimates.}
   \item{\code{loglik}}{Final log-likelihood estimate.}
-  \item{\code{method}}{Method used (\code{"em"} or \code{"de"}).}
+  \item{\code{method}}{Method used (\code{"mcem"} or \code{"mcde"}).}
+  \item{\code{model}}{Resolved binary model vector.}
   \item{\code{details}}{Full output from the back-end function
-    (\code{mcEM_step} or \code{emphasis_de}).}
+    (\code{.mcem_dynamic_fresh} or \code{emphasis_de}).}
 }
 }
 \description{
-Unified entry point for parameter inference under PD-dependent
-diversification. Accepts a simulated or empirical tree, extracts branching
-times (pruning to extant tips if needed), and dispatches to the chosen
-optimisation back-end.
+Unified entry point for parameter inference under the general
+diversification model. Accepts a simulated or empirical tree, extracts
+branching times (pruning to extant tips if needed), and dispatches to
+the chosen optimisation back-end.
 }
 \examples{
 \dontrun{
 set.seed(42)
-sim <- simulate_tree(c(0.1, 0.5, -0.02, 0.01), max_t = 5, model = "pd")
+# Constant-rate model
+sim <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr")
+fit <- estimate_rates(sim, method = "mcem", model = "cr",
+  lower_bound = c(0, 0), upper_bound = c(2, 1))
+fit$pars
 
-# EM estimation (starts from parameter midpoint)
-fit_em <- estimate_rates(sim, method = "em",
-  lower_bound = c(0, 0, -1, -1),
-  upper_bound = c(1, 2,  1,  1))
-fit_em$pars
-
-# DE estimation (no init_pars needed)
-fit_de <- estimate_rates(sim, method = "de",
-  lower_bound = c(0, 0, -1, -1),
-  upper_bound = c(1, 2,  1,  1),
-  control = list(num_iterations = 10, num_points = 30))
-fit_de$pars
+# Diversity-dependent model
+sim_dd <- simulate_tree(pars = c(0.5, -0.005, 0.1, 0), max_t = 8, model = "dd")
+fit_dd <- estimate_rates(sim_dd, method = "mcem", model = "dd",
+  lower_bound = c(0.1, -0.1, 0, -0.01),
+  upper_bound = c(2, 0.01, 0.5, 0.01))
+fit_dd$pars
 }
 }

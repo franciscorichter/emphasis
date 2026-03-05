@@ -3,10 +3,10 @@
 \alias{estimate_rates_control}
 \title{Default control parameters for estimate_rates}
 \usage{
-estimate_rates_control(method = c("em", "de"), n_pars = 4)
+estimate_rates_control(method = c("mcem", "mcde"), n_pars = 4)
 }
 \arguments{
-\item{method}{Which method's defaults to return: \code{"em"} or \code{"de"}.}
+\item{method}{Which method's defaults to return: \code{"mcem"} or \code{"mcde"}.}
 
 \item{n_pars}{Number of parameters (used to set the default \code{sd_vec}
 for DE when \code{NULL}).}
@@ -19,19 +19,19 @@ Returns a list of default tuning parameters for \code{\link{estimate_rates}}.
 Override individual elements and pass the modified list via the
 \code{control} argument.
 
-Shared parameters (both methods): \code{soc} (stem/crown age condition,
-default 2), \code{max_missing} (default 1e4), \code{max_lambda} (default
-500), \code{num_threads} (default 1).
+Shared parameters (both methods): \code{max_missing} (default 1e4),
+\code{max_lambda} (default 500), \code{num_threads} (default 1).
 
-EM-specific: \code{sample_size} (default 200), \code{xtol} (default 1e-3),
+MCEM-specific: \code{sampling} (default \code{"dynamic_fresh"}),
+\code{sample_size} (default 200), \code{xtol} (default 1e-3),
 \code{tol} (log-likelihood SE convergence threshold, default 0.1),
 \code{burnin} (default 20).
 
-DE-specific: \code{num_iterations} (default 20), \code{num_points}
+MCDE-specific: \code{num_iterations} (default 20), \code{num_points}
 (default 50), \code{sd_vec} (NULL = (upper-lower)/4), \code{maxN}
 (default 10), \code{disc_prop} (default 0.5).
 }
 \examples{
-estimate_rates_control("em")
-estimate_rates_control("de")
+estimate_rates_control("mcem")
+estimate_rates_control("mcde")
 }

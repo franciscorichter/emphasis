@@ -4,7 +4,7 @@
 \alias{simulate_div_tree_cpp}
 \title{Simulate a single phylogenetic tree under the general diversification model}
 \usage{
-simulate_div_tree_cpp(pars, model, max_t, max_N, max_tries)
+simulate_div_tree_cpp(pars, model, max_t, max_N, max_tries, link = 0L)
 }
 \arguments{
 \item{pars}{Numeric vector of length 8:
@@ -18,6 +18,8 @@ Inactive parameters (those not selected by \code{model}) should be set to 0.}
 \item{max_N}{Maximum number of lineages before simulation is declared too large.}
 
 \item{max_tries}{Maximum retries after extinction or overflow.}
+
+\item{link}{Link function: 0 = linear (max(0,...)), 1 = exponential.}
 }
 \value{
 A named list with \code{Ltable} (4-column numeric matrix in DDD format)
