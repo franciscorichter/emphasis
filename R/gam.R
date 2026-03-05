@@ -82,19 +82,4 @@ predict_survival <- function(gam_fit, newpars) {
 }
 
 
-# --------------------------------------------------------------------------- #
-#  Internal helpers                                                            #
-# --------------------------------------------------------------------------- #
-
-# Return parameter names for a given model binary vector.
-#' @keywords internal
-.par_names <- function(model_bin) {
-  c("beta_0",
-    if (model_bin[1L]) "beta_N",
-    if (model_bin[2L]) "beta_P",
-    if (model_bin[3L]) "beta_E",
-    "gamma_0",
-    if (model_bin[1L]) "gamma_N",
-    if (model_bin[2L]) "gamma_P",
-    if (model_bin[3L]) "gamma_E")
-}
+# .par_names() is defined in inference.R — shared by both modules

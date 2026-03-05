@@ -244,10 +244,12 @@ estimate_rates_control <- function(method = c("mcem", "mcde"), n_pars = 4) {
 #' @param link Link function for rate computation: \code{"linear"} (default)
 #'   uses \code{max(0, eta)}; \code{"exponential"} uses \code{exp(eta)}.
 #' @param verbose Print progress messages (\code{TRUE}/\code{FALSE}).
-#' @return A list with:
+#' @return A list with class \code{"emphasis_fit"} containing:
 #'   \describe{
 #'     \item{\code{pars}}{Named numeric vector of parameter estimates.}
 #'     \item{\code{loglik}}{Final log-likelihood estimate.}
+#'     \item{\code{n_pars}}{Number of free parameters (used for AIC).}
+#'     \item{\code{AIC}}{Akaike Information Criterion: \code{-2 * loglik + 2 * n_pars}.}
 #'     \item{\code{method}}{Method used (\code{"mcem"} or \code{"mcde"}).}
 #'     \item{\code{model}}{Resolved binary model vector.}
 #'     \item{\code{details}}{Full output from the back-end function
@@ -314,6 +316,80 @@ estimate_rates <- function(tree,
   # Contract 8-element result back to compact
   compact_pars <- .contract_pars(as.numeric(raw$pars), model_bin)
   pars <- stats::setNames(compact_pars, .par_names(model_bin))
-  list(pars = pars, loglik = raw$loglik, method = method,
-       model = model_bin, details = raw$details)
+  n_pars <- length(pars)
+  aic <- if (is.finite(raw$loglik)) -2 * raw$loglik + 2 * n_pars else NA_real_
+  result <- list(pars = pars, loglik = raw$loglik, n_pars = n_pars, AIC = aic,
+                 method = method, model = model_bin, details = raw$details)
+  class(result) <- "emphasis_fit"
+  result
+}
+
+
+#' Print method for emphasis_fit objects
+#'
+#' @param x An \code{emphasis_fit} object returned by \code{\link{estimate_rates}}.
+#' @param ... Additional arguments (ignored).
+#' @export
+print.emphasis_fit <- function(x, ...) {
+  model_str <- .model_label(x$model)
+  cat("emphasis fit (", x$method, ", model = ", model_str, ")\n\n", sep = "")
+  cat("Parameters:\n")
+  print(round(x$pars, 6))
+  cat("\nLog-likelihood:", round(x$loglik, 4), "\n")
+  cat("AIC:           ", round(x$AIC, 4), "\n")
+  cat("n_pars:        ", x$n_pars, "\n")
+  invisible(x)
+}
+
+
+#' Compare fitted emphasis models via AIC
+#'
+#' Given two or more \code{\link{estimate_rates}} results, returns a summary
+#' table sorted by AIC. The model with the lowest AIC is preferred.
+#'
+#' @param ... Two or more \code{emphasis_fit} objects (results of
+#'   \code{\link{estimate_rates}}). Optionally named; unnamed fits are
+#'   auto-labelled from their model specification.
+#' @return A data frame with columns \code{model}, \code{n_pars},
+#'   \code{loglik}, \code{AIC}, and \code{delta_AIC}, sorted by AIC.
+#' @examples
+#' \dontrun{
+#' fit_cr <- estimate_rates(tree, model = "cr",
+#'   lower_bound = c(0, 0), upper_bound = c(2, 1))
+#' fit_dd <- estimate_rates(tree, model = "dd",
+#'   lower_bound = c(0, -0.1, 0, -0.01),
+#'   upper_bound = c(2, 0.01, 0.5, 0.01))
+#' compare_models(CR = fit_cr, DD = fit_dd)
+#' }
+#' @export
+compare_models <- function(...) {
+  fits <- list(...)
+  if (length(fits) < 2L)
+    stop("compare_models() requires at least two fitted models.")
+
+  nms <- names(fits)
+  if (is.null(nms)) nms <- rep("", length(fits))
+  for (i in seq_along(fits)) {
+    if (nms[i] == "") nms[i] <- .model_label(fits[[i]]$model)
+  }
+
+  tab <- data.frame(
+    model     = nms,
+    n_pars    = vapply(fits, `[[`, 0L, "n_pars"),
+    loglik    = vapply(fits, `[[`, 0.0, "loglik"),
+    AIC       = vapply(fits, `[[`, 0.0, "AIC"),
+    stringsAsFactors = FALSE
+  )
+  tab <- tab[order(tab$AIC), ]
+  tab$delta_AIC <- tab$AIC - min(tab$AIC, na.rm = TRUE)
+  rownames(tab) <- NULL
+  tab
+}
+
+
+#' @keywords internal
+.model_label <- function(model_bin) {
+  covs <- c("N", "PD", "EP")[which(model_bin == 1L)]
+  if (length(covs) == 0L) return("CR")
+  paste(covs, collapse = " + ")
 }

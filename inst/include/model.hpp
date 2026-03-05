@@ -74,8 +74,9 @@ namespace emphasis {
         link_(static_cast<LinkType>(link))
     {
       if (model_bin_.size() != 3) model_bin_ = {0, 0, 0};
-      if (model_bin_[2] == 1) {
-        throw std::runtime_error("E-dependence not yet implemented in inference");
+      if (model_bin_[2] == 1 && link_ == LinkType::exponential) {
+        throw std::runtime_error(
+          "EP model with exponential link not yet supported in inference");
       }
     }
 
@@ -123,6 +124,26 @@ namespace emphasis {
       return apply_link(eta);
     }
 
+    // EP covariate E_s: exact for extinction nodes (stored t_spec), mean-field for others
+    double e_s(const node_t& node) const {
+      if (detail::is_extinction(node)) {
+        return node.brts - node.tip_start;  // exact: stored t_spec
+      }
+      return (node.n > 0.0) ? (node.pd / node.n) : 0.0;  // mean-field: P/N
+    }
+
+    // EP-aware speciation rate (mean-field E for non-extinction nodes)
+    double speciation_rate_ep(const param_t& pars, const node_t& node) const {
+      const double E = e_s(node);
+      return apply_link(pars[0] + pars[1] * node.n + pars[2] * node.pd + pars[3] * E);
+    }
+
+    // EP-aware extinction rate (exact E for extinction nodes, mean-field otherwise)
+    double extinction_rate_ep(const param_t& pars, const node_t& node) const {
+      const double E = e_s(node);
+      return apply_link(pars[4] + pars[5] * node.n + pars[6] * node.pd + pars[7] * E);
+    }
+
     // Draw extinction time from truncated exponential with rate = mu at speciation time
     double extinction_time(double t_speciation, const param_t& pars, const tree_t& tree) const {
       static thread_local reng_t reng_ = make_random_engine<reng_t>();
@@ -141,8 +162,10 @@ namespace emphasis {
       const double pd = calculate_pendant_pd(t, tree);
       node_t cur = *it;
       cur.pd = pd;
-      const double lambda = speciation_rate(pars, cur);
-      const double mu = extinction_rate(pars, cur);
+      const double lambda = model_bin_[2] ? speciation_rate_ep(pars, cur)
+                                          : speciation_rate(pars, cur);
+      const double mu     = model_bin_[2] ? extinction_rate_ep(pars, cur)
+                                          : extinction_rate(pars, cur);
       const double T = tree.back().brts;
       const double mu_eff = std::max(mu, 1e-10);
       return lambda * it->n * (1.0 - std::exp(-mu_eff * (T - t)));
@@ -158,8 +181,10 @@ namespace emphasis {
       const double T = tree.back().brts;
       for (unsigned i = 0; i < tree.size(); ++i) {
         const auto& node = tree[i];
-        const double lambda = speciation_rate(pars, node);
-        const double mu = std::max(extinction_rate(pars, node), 1e-10);
+        const double lambda = model_bin_[2] ? speciation_rate_ep(pars, node)
+                                            : speciation_rate(pars, node);
+        const double mu = std::max(model_bin_[2] ? extinction_rate_ep(pars, node)
+                                                 : extinction_rate(pars, node), 1e-10);
         {
           double dt = node.brts - prev_brts;
           double int_segment = dt - (1.0/mu) * (std::exp(-mu*(T - node.brts)) - std::exp(-mu*(T - prev_brts)));
@@ -183,8 +208,10 @@ namespace emphasis {
       double prev_brts = 0.0;
       for (unsigned i = 0; i < tree.size(); ++i) {
         const auto& node = tree[i];
-        const double lambda = speciation_rate(pars, node);
-        const double mu = extinction_rate(pars, node);
+        const double lambda = model_bin_[2] ? speciation_rate_ep(pars, node)
+                                            : speciation_rate(pars, node);
+        const double mu     = model_bin_[2] ? extinction_rate_ep(pars, node)
+                                            : extinction_rate(pars, node);
         if (is_extinction(node)) {
           log_mu_sum += std::log(std::max(mu, 1e-300));
         }

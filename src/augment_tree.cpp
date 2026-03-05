@@ -29,10 +29,11 @@ namespace emphasis {
 
 
     template <typename IT>
-    inline IT make_extinct_node(IT it, double t, double n, int id = -1, int parent_id = -1)
+    inline IT make_extinct_node(IT it, double t, double n, double t_spec, int id = -1, int parent_id = -1)
     {
       it->brts = t; it->n = n; it->t_ext = t_ext_extinct; it->pd = 0.0;
-      it->tip_start = 0.0; it->clade = 0; it->id = id; it->parent_id = parent_id;
+      it->tip_start = t_spec;  // E_s = brts - tip_start at extinction time
+      it->clade = 0; it->id = id; it->parent_id = parent_id;
       return it;
     }
 
@@ -84,9 +85,8 @@ namespace emphasis {
       for (auto& node : tree) {
         if (!detail::is_extinction(node)) {
           node.tip_start = (node.parent_id == -1) ? 0.0 : node.brts;
-        } else {
-          node.tip_start = 0.0;
         }
+        // extinction nodes: tip_start already set to t_spec by make_extinct_node — don't reset
       }
 
       // Second pass: compute pendant PD for each node using
@@ -121,7 +121,7 @@ namespace emphasis {
       for (++first; first->brts < t_ext; ++first) {
         first->n = n_after(first - 1);
       }
-      make_extinct_node(tree.emplace(first), t_ext, n_after(first - 1), id, parent_id);
+      make_extinct_node(tree.emplace(first), t_ext, n_after(first - 1), t_spec, id, parent_id);
     }
 
 

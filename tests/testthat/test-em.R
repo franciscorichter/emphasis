@@ -51,12 +51,27 @@ test_that("estimate_rates DD smoke test", {
   expect_length(fit$pars, 4)
 })
 
-test_that("estimate_rates EP errors", {
+test_that("estimate_rates EP smoke test", {
   skip("C++ integration test: run locally with devtools::test(filter='em')")
+  set.seed(1)
+  tr <- simulate_tree(pars = c(0.5, 0.05, 0.1, 0.01), max_t = 5, model = "ep")
+  expect_equal(tr$status, "done")
+  fit <- estimate_rates(tr, method = "mcem", model = "ep",
+    lower_bound = c(0.1, -0.5, 0,  -0.5),
+    upper_bound = c(2,    0.5, 0.5, 0.5),
+    control = list(sample_size = 50, tol = 0.5, burnin = 3))
+  expect_named(fit$pars, c("beta_0", "beta_E", "gamma_0", "gamma_E"))
+  expect_true(is.numeric(fit$loglik))
+})
+
+test_that("estimate_rates EP + exponential link errors", {
+  skip("C++ integration test: run locally with devtools::test(filter='em')")
+  set.seed(1)
+  tr <- simulate_tree(pars = c(0.5, 0.05, 0.1, 0.01), max_t = 5, model = "ep")
   expect_error(
-    estimate_rates(c(1, 0.5), method = "mcem", model = "ep",
-      lower_bound = c(0, 0, 0, 0),
-      upper_bound = c(2, 1, 1, 1)),
-    "E-dependence not yet implemented"
+    estimate_rates(tr, method = "mcem", model = "ep", link = "exponential",
+      lower_bound = c(-5, -5, -5, -5),
+      upper_bound = c(2, 2, 2, 2)),
+    "EP model with exponential link not yet supported"
   )
 })
