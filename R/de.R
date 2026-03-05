@@ -329,13 +329,13 @@ emphasis_de <- function(brts,
     rejl <- dmval[, 2]
     rejo <- dmval[, 3]
 
-    if (sum(rejl[fails]) > 0) {
+    if (isTRUE(sum(rejl[fails], na.rm = TRUE) > 0)) {
       increase_factor_lambda <- 1.1
       input$max_lambda <- input$max_lambda * increase_factor_lambda
       rejl_count <- c(rejl_count, k)
     }
 
-    if (sum(rejo[fails]) > 0) {
+    if (isTRUE(sum(rejo[fails], na.rm = TRUE) > 0)) {
       increase_factor_missing <- 1.1
       input$max_missing <- input$max_missing * increase_factor_missing
       rejo_count <- c(rejo_count, k)

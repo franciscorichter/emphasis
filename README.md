@@ -3,13 +3,10 @@
 [![License: GPL-3](https://img.shields.io/badge/license-GPL--3-blue.svg)](./LICENSE)
 ![Lifecycle: Experimental](https://img.shields.io/badge/lifecycle-experimental-orange)
 
-## Overview
+`emphasis` is an R package for studying species diversification and its ecological
+drivers. It provides:
 
-`emphasis` is an R package for studying species diversification and its
-ecological drivers. It combines fast C++ back-ends with R-friendly interfaces
-for:
-
-- **Simulation** — stochastic phylogenies under general diversification models
+- **Simulation** — stochastic phylogenies under flexible diversification models
 - **Inference** — parameter estimation via MCEM and differential evolution
 - **Model selection** — AIC-based comparison across competing models
 - **Diagnostics** — survival-probability estimation via GAM
@@ -22,266 +19,169 @@ devtools::install_github("franciscorichter/emphasis")
 
 ---
 
-## Quick start
+## The rate model
 
-```r
-library(emphasis)
-
-# 1. Simulate a tree under diversity dependence
-set.seed(42)
-sim <- simulate_tree(pars = c(0.8, -0.02, 0.2, 0), max_t = 8, model = "dd")
-
-# 2. Estimate parameters (two-stage workflow)
-lb <- c(0.1, -0.1, 0, -0.01)
-ub <- c(2,    0.01, 0.5, 0.01)
-
-fit_de <- estimate_rates(sim, method = "mcde", model = "dd",
-  lower_bound = lb, upper_bound = ub,
-  control = list(num_iterations = 10, num_points = 30))
-
-fit_em <- estimate_rates(sim, method = "mcem", model = "dd",
-  lower_bound = lb, upper_bound = ub,
-  init_pars = fit_de$pars,
-  control = list(sample_size = 200, tol = 0.1, burnin = 10))
-
-fit_em
-# emphasis fit (mcem, model = N)
-#
-# Parameters:
-#   beta_0   beta_N  gamma_0  gamma_N
-#   0.7890  -0.0195   0.1980   0.0005
-#
-# Log-likelihood: -12.34
-# AIC:            32.68
-# n_pars:         4
-
-# 3. Compare models
-fit_cr <- estimate_rates(sim, method = "mcem", model = "cr",
-  lower_bound = c(0, 0), upper_bound = c(2, 1))
-
-compare_models(CR = fit_cr, DD = fit_em)
-#   model n_pars   loglik    AIC delta_AIC
-# 1    N      4  -12.34  32.68      0.00
-# 2   CR      2  -18.90  41.80      9.12
-```
-
----
-
-## Rate model
-
-All models are special cases of a general per-lineage rate formulation:
+All models are special cases of a general per-lineage rate:
 
 ```
-lambda(s,t) = f(beta_0  + beta_N * N(t) + beta_P * P(t) + beta_E * E(s,t))
-mu(s,t)     = f(gamma_0 + gamma_N * N(t) + gamma_P * P(t) + gamma_E * E(s,t))
+lambda(s,t) = f(beta_0  + beta_N*N(t) + beta_P*P(t) + beta_E*E(s,t))
+mu(s,t)     = f(gamma_0 + gamma_N*N(t) + gamma_P*P(t) + gamma_E*E(s,t))
 ```
 
 | Covariate | Meaning |
 |-----------|---------|
-| `N(t)` | Current species richness (diversity) |
-| `P(t)` | Total pendant branch-length of alive lineages (phylogenetic diversity) |
-| `E(s,t)` | Pendant edge of lineage *s* — time since its last divergence (lineage-specific) |
+| `N(t)` | Current species richness |
+| `P(t)` | Total pendant branch-length (phylogenetic diversity) |
+| `E(s,t)` | Time since lineage *s* last diverged (lineage-specific) |
 
-Two **link functions** are available via the `link` argument:
+The `link` argument controls `f`:
 
-| Link | `f(eta)` | When to use |
-|------|----------|-------------|
-| `"linear"` (default) | `max(0, eta)` | Rates linear in covariates; clipped to non-negative |
-| `"exponential"` | `exp(eta)` | Always positive; log-linear relationship |
+| `link` | `f(eta)` |
+|--------|----------|
+| `"linear"` (default) | `max(0, eta)` |
+| `"exponential"` | `exp(eta)` |
 
-## Model specification
+### Model shortcuts
 
-The `model` argument selects active covariates. Three equivalent formats:
+The `model` argument selects active covariates. Use a string, formula, or binary vector:
 
-**R formula** (recommended for mixed models):
+| String | Formula | Active covariates | Parameters |
+|--------|---------|-------------------|------------|
+| `"cr"` | `~ 1` | none | `c(beta_0, gamma_0)` |
+| `"dd"` | `~ N` | N | `c(beta_0, beta_N, gamma_0, gamma_N)` |
+| `"pd"` | `~ PD` | P | `c(beta_0, beta_P, gamma_0, gamma_P)` |
+| `"ep"` | `~ EP` | E | `c(beta_0, beta_E, gamma_0, gamma_E)` |
+| — | `~ N + PD` | N, P | `c(beta_0, beta_N, beta_P, gamma_0, gamma_N, gamma_P)` |
+| — | `~ N + PD + EP` | N, P, E | all 8 parameters |
 
-```r
-model = ~ 1           # constant rate (intercept only)
-model = ~ N           # diversity dependence
-model = ~ PD          # phylogenetic diversity dependence
-model = ~ EP          # evolutionary pendant
-model = ~ N + PD      # mixed: diversity + phylogenetic diversity
-model = ~ N + PD + EP # full model
-```
+The binary vector `c(use_N, use_P, use_E)` is also accepted. Parameter length is
+always `2 + 2 * (number of active covariates)`.
 
-**String shortcut:**
-
-| String | Formula | Active covariates |
-|--------|---------|-------------------|
-| `"cr"` | `~ 1` | none — constant rate |
-| `"dd"` | `~ N` | N only — diversity dependence |
-| `"pd"` | `~ PD` | P only — phylogenetic diversity |
-| `"ep"` | `~ EP` | E only — evolutionary pendant |
-
-**Binary vector:** `c(use_N, use_P, use_E)`, e.g. `c(1, 1, 0)` for N + P.
-
-## Parameter vector
-
-Parameters follow **lambda first, then mu**, each in N–P–E order. Only active
-covariates are included; length = `2 + 2 * sum(model)`:
-
-| Model | Length | Layout |
-|-------|--------|--------|
-| `"cr"` | 2 | `c(beta_0, gamma_0)` |
-| `"dd"` | 4 | `c(beta_0, beta_N, gamma_0, gamma_N)` |
-| `"pd"` | 4 | `c(beta_0, beta_P, gamma_0, gamma_P)` |
-| `"ep"` | 4 | `c(beta_0, beta_E, gamma_0, gamma_E)` |
-| `c(1,1,0)` | 6 | `c(beta_0, beta_N, beta_P, gamma_0, gamma_N, gamma_P)` |
-| `c(1,1,1)` | 8 | full 8-parameter model |
+> **EP note:** the evolutionary pendant model is supported in both simulation and
+> inference (linear link only). The exponential link with EP has no closed-form
+> integral and is not supported.
 
 ---
 
 ## Simulation
 
-`simulate_tree()` is the single entry point — both forward simulation (generating new
-trees) and conditional simulation (augmenting observed trees with extinct lineages).
+`simulate_tree()` handles both forward simulation and conditional simulation
+(augmenting an observed tree with extinct lineages).
 
 ### Forward simulation
 
 ```r
+library(emphasis)
 set.seed(123)
 
-# Constant rate
-cr <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr")
-cr$status   # "done" / "extinct" / "too_large"
-
-# Diversity dependence
-dd <- simulate_tree(pars = c(0.8, -0.02, 0.2, -0.005), max_t = 5, model = "dd")
-
-# Phylogenetic diversity dependence
-pd <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003), max_t = 5, model = "pd")
-
-# Evolutionary pendant
-ep <- simulate_tree(pars = c(0.5, 0.05, 0.1, 0.01), max_t = 5, model = "ep")
-
-# Mixed N + PD model via formula
+cr <- simulate_tree(pars = c(0.5, 0.1),                         model = "cr", max_t = 5)
+dd <- simulate_tree(pars = c(0.8, -0.02, 0.2, -0.005),          model = "dd", max_t = 5)
+pd <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003),         model = "pd", max_t = 5)
+ep <- simulate_tree(pars = c(0.5, 0.05, 0.1, 0.01),             model = "ep", max_t = 5)
 np <- simulate_tree(pars = c(0.5, -0.01, 0.005, 0.15, -0.002, 0.001),
-                    max_t = 5, model = ~ N + PD)
+                    model = ~ N + PD, max_t = 5)
 
-# Exponential link
-cr_exp <- simulate_tree(pars = c(-0.7, -2.3), max_t = 5,
-                         model = "cr", link = "exponential")
+dd$status   # "done", "extinct", or "too_large"
+dd$tes      # extant-only phylo
+dd$brts     # branching times
 ```
 
-Each call returns:
-
-| Element | Content |
-|---------|---------|
-| `tes`   | Extant-only phylogeny (`phylo`) |
-| `tas`   | Full phylogeny with extinct lineages (`phylo`) |
-| `L`     | L-table matrix (DDD format) |
-| `brts`  | Branching times of the extant tree |
-| `status` | `"done"`, `"extinct"`, or `"too_large"` |
-| `model` | Resolved binary vector `c(use_N, use_P, use_E)` |
-| `pars`  | Parameter vector as supplied |
+Each result contains: `tes` (extant phylo), `tas` (full phylo with extinct lineages),
+`L` (L-table), `brts`, `status`, `model`, `pars`.
 
 ### Batch simulation
 
-When `pars` is a matrix, each row is a separate simulation:
+Pass a matrix to `pars` — one simulation per row:
 
 ```r
-pars_mat <- cbind(beta_0  = runif(100, 0.2, 1.0),
-                  gamma_0 = runif(100, 0.0, 0.3))
-sims <- simulate_tree(pars = pars_mat, max_t = 5, model = "cr")
-length(sims)          # 100
-sims[[1]]$status
+set.seed(1)
+pars_mat <- cbind(beta_0  = runif(200, 0.3, 1.2),
+                  gamma_0 = runif(200, 0.05, 0.5))
+sims <- simulate_tree(pars = pars_mat, max_t = 8, model = "cr", max_tries = 0)
+mean(sapply(sims, function(s) s$status == "done"))  # survival rate
 ```
 
 ### Conditional simulation (augmentation)
 
-Pass `tree =` to augment an observed extant tree with stochastically drawn
-extinct lineages. Returns importance-sampling statistics needed for inference.
+Provide `tree =` to augment an observed extant tree with stochastically drawn
+extinct lineages. The result includes importance-sampling statistics used by the
+inference engine.
 
 ```r
-obs <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003), max_t = 5, model = "pd")
+set.seed(42)
+obs <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003), model = "pd", max_t = 5)
 
 # Single augmented tree
-aug1 <- simulate_tree(tree = obs, pars = c(0.6, 0.005, 0.15, -0.003),
-                      model = "pd", n_trees = 1L)
-aug1$tas      # augmented phylo (extant + stochastic extinct lineages)
-aug1$logf     # log p(augmented tree | pars)
-aug1$logg     # log q(augmented tree | extant tree, pars)
-aug1$log_w    # logf - logg  (importance weight)
-aug1$fhat     # MC estimate of log p(extant tree | pars)
+aug <- simulate_tree(tree = obs, pars = c(0.6, 0.005, 0.15, -0.003),
+                     model = "pd", n_trees = 1L)
+aug$tas    # augmented phylo (extant + stochastic extinct lineages)
+aug$logf   # log p(augmented tree | pars)
+aug$logg   # log q(augmented tree | extant tree, pars)
+aug$log_w  # importance weight = logf - logg
+aug$fhat   # MC log-likelihood estimate of the extant tree
 
-# Many augmented trees (for E-step)
+# Many augmented trees — useful for exploring the importance distribution
 augN <- simulate_tree(tree = obs, pars = c(0.6, 0.005, 0.15, -0.003),
-                      model = "pd", n_trees = 200L)
-augN$fhat             # MC log-likelihood (scalar)
-augN$log_w            # importance weights, length 200
-augN$trees[[1]]$tas   # first augmented phylo
+                      model = "pd", n_trees = 100L)
+augN$fhat          # scalar MC log-likelihood
+augN$log_w         # importance weights (length 100)
+augN$trees[[1]]$tas  # first augmented phylo
 ```
 
 ---
 
 ## Inference
 
-`estimate_rates()` is the unified entry point for parameter estimation.
+`estimate_rates()` estimates parameters from a phylogenetic tree. It accepts a
+`simulate_tree()` result, a `phylo` object, or a numeric branching-time vector.
 
-### Methods
+Two methods are available:
 
-| Method | Algorithm | When to use |
-|--------|-----------|-------------|
-| `"mcde"` | Monte Carlo Differential Evolution | Broad exploration; find good starting values |
-| `"mcem"` | Monte Carlo Expectation-Maximisation | Refine from a starting point; converges to local optimum |
+| Method | Description |
+|--------|-------------|
+| `"mcde"` | Monte Carlo Differential Evolution — broad search, no starting values needed |
+| `"mcem"` | Monte Carlo EM — local refinement, converges to a (local) optimum |
 
-### Recommended workflow: MCDE then MCEM
+The recommended workflow runs MCDE first to find a good region, then MCEM to
+refine:
 
 ```r
 set.seed(42)
-sim <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003), max_t = 8, model = "pd")
+sim <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003), model = "pd", max_t = 8)
 
 lb <- c(0.01, -1, 0, -1)
 ub <- c(2,     1, 1,  1)
 
-# Stage 1 — MCDE: broad exploration
+# Stage 1: broad search
 fit_de <- estimate_rates(sim, method = "mcde", model = "pd",
   lower_bound = lb, upper_bound = ub,
   control = list(num_iterations = 15, num_points = 50))
 
-# Stage 2 — MCEM: refine from MCDE estimate
+# Stage 2: refine
 fit_em <- estimate_rates(sim, method = "mcem", model = "pd",
   lower_bound = lb, upper_bound = ub,
-  init_pars = fit_de$pars,
-  control = list(sample_size = 200, tol = 0.05))
+  init_pars   = fit_de$pars,
+  control     = list(sample_size = 200, tol = 0.05))
 
-fit_em$pars     # named parameter estimates
-fit_em$loglik   # final log-likelihood
-fit_em$AIC      # Akaike Information Criterion
+fit_em          # prints pars, loglik, AIC
+fit_em$pars     # named estimates: beta_0, beta_P, gamma_0, gamma_P
+fit_em$loglik
+fit_em$AIC
 ```
 
-### Supported models
-
-All models work with both simulation and inference:
+### Control parameters
 
 ```r
-# Constant rate
-fit_cr <- estimate_rates(tree, model = "cr",
-  lower_bound = c(0, 0), upper_bound = c(2, 1))
+estimate_rates_control("mcem")   # sample_size=200, tol=0.1, burnin=20, ...
+estimate_rates_control("mcde")   # num_iterations=20, num_points=50, disc_prop=0.5, ...
+```
 
-# Diversity dependence
-fit_dd <- estimate_rates(tree, model = "dd",
-  lower_bound = c(0.1, -0.1, 0, -0.01),
-  upper_bound = c(2, 0.01, 0.5, 0.01))
+Override any default by passing a named list to `control`:
 
-# Phylogenetic diversity dependence
-fit_pd <- estimate_rates(tree, model = "pd",
-  lower_bound = c(0.01, -1, 0, -1),
-  upper_bound = c(2, 1, 1, 1))
-
-# Evolutionary pendant (linear link only)
-fit_ep <- estimate_rates(tree, model = "ep",
-  lower_bound = c(0.1, -0.5, 0, -0.5),
-  upper_bound = c(2, 0.5, 0.5, 0.5))
-
-# Mixed models via formula
-fit_np <- estimate_rates(tree, model = ~ N + PD,
-  lower_bound = c(0.01, -0.5, -0.5, 0, -0.5, -0.5),
-  upper_bound = c(2, 0.5, 0.5, 1, 0.5, 0.5))
-
-# Exponential link
-fit_exp <- estimate_rates(tree, model = "cr", link = "exponential",
-  lower_bound = c(-5, -5), upper_bound = c(2, 2))
+```r
+estimate_rates(sim, method = "mcem", model = "pd",
+  lower_bound = lb, upper_bound = ub,
+  control = list(sample_size = 500, tol = 0.01, num_threads = 4))
 ```
 
 ### Empirical trees
@@ -289,56 +189,32 @@ fit_exp <- estimate_rates(tree, model = "cr", link = "exponential",
 ```r
 data(bird.orders, package = "ape")
 extant <- prune_to_extant(bird.orders)
+
 fit <- estimate_rates(extant, method = "mcde", model = "dd",
   lower_bound = c(0.01, -0.5, 0, -0.5),
-  upper_bound = c(2, 0.5, 0.5, 0.5))
+  upper_bound = c(2,     0.5, 1,  0.5))
 fit$pars
-```
-
-### Control parameters
-
-Use `estimate_rates_control()` to inspect defaults:
-
-```r
-estimate_rates_control("mcem")
-# $max_missing  1e4
-# $max_lambda   500
-# $num_threads  1
-# $sampling     "dynamic_fresh"
-# $sample_size  200
-# $xtol         1e-3
-# $tol          0.1
-# $burnin       20
-
-estimate_rates_control("mcde")
-# $max_missing  1e4
-# $max_lambda   500
-# $num_threads  1
-# $num_iterations  20
-# $num_points      50
-# $disc_prop       0.5
 ```
 
 ---
 
 ## Model selection
 
-`compare_models()` ranks fitted models by AIC. The model with the lowest AIC
-is preferred; `delta_AIC` shows the gap from the best model.
+`compare_models()` takes two or more fitted models and returns a table sorted by
+AIC. The model with the lowest AIC is preferred; `delta_AIC` shows the gap.
 
 ```r
 set.seed(42)
-sim <- simulate_tree(pars = c(0.8, -0.02, 0.2, 0), max_t = 8, model = "dd")
-lb_cr <- c(0, 0);        ub_cr <- c(2, 1)
-lb_dd <- c(0.1, -0.1, 0, -0.01); ub_dd <- c(2, 0.01, 0.5, 0.01)
-lb_pd <- c(0.01, -1, 0, -1);     ub_pd <- c(2, 1, 1, 1)
+sim <- simulate_tree(pars = c(0.8, -0.02, 0.2, 0), model = "dd", max_t = 8)
 
-fit_cr <- estimate_rates(sim, model = "cr",
-  lower_bound = lb_cr, upper_bound = ub_cr)
-fit_dd <- estimate_rates(sim, model = "dd",
-  lower_bound = lb_dd, upper_bound = ub_dd)
-fit_pd <- estimate_rates(sim, model = "pd",
-  lower_bound = lb_pd, upper_bound = ub_pd)
+ctrl <- list(num_iterations = 15, num_points = 40)
+
+fit_cr <- estimate_rates(sim, method = "mcde", model = "cr",
+  lower_bound = c(0,    0),              upper_bound = c(2,    1),    control = ctrl)
+fit_dd <- estimate_rates(sim, method = "mcde", model = "dd",
+  lower_bound = c(0.1, -0.1, 0, -0.01), upper_bound = c(2, 0.01, 0.5, 0.01), control = ctrl)
+fit_pd <- estimate_rates(sim, method = "mcde", model = "pd",
+  lower_bound = c(0.01, -1,  0, -1),    upper_bound = c(2,   1,   1,  1),    control = ctrl)
 
 compare_models(CR = fit_cr, DD = fit_dd, PD = fit_pd)
 #   model n_pars  loglik    AIC delta_AIC
@@ -349,78 +225,33 @@ compare_models(CR = fit_cr, DD = fit_dd, PD = fit_pd)
 
 ---
 
-## Monte Carlo log-likelihood
-
-`mc_loglik()` augments an observed extant tree and returns a Monte Carlo
-estimate of the log-likelihood via importance sampling. This is the core
-engine used by `estimate_rates()` internally.
-
-```r
-set.seed(1)
-tr <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr")
-
-ll <- mc_loglik(
-  brts        = tr$brts,
-  pars        = c(0.5, 0, 0, 0, 0.1, 0, 0, 0),   # full 8-element layout
-  sample_size = 25,
-  maxN        = 250,
-  max_missing = 1e4,
-  max_lambda  = 500,
-  lower_bound = rep(-1e6, 8),
-  upper_bound = rep( 1e6, 8),
-  xtol_rel    = 1e-3,
-  num_threads = 1,
-  model       = c(0L, 0L, 0L)
-)
-ll$fhat      # Monte Carlo log-likelihood estimate
-ll$weights   # log importance weights (logf - logg)
-```
-
----
-
 ## Diagnostics — survival probability via GAM
 
-`train_GAM()` estimates P(survival | parameters) by fitting a binomial GAM to
-forward simulations run with `max_tries = 0` (extinct outcomes retained).
+`train_GAM()` estimates P(clade survives to present | parameters) by fitting a
+binomial GAM to batch forward simulations. Run with `max_tries = 0` to keep
+extinct realisations alongside successful ones.
 
 ```r
 set.seed(1)
-pars_mat <- cbind(beta_0  = runif(500, 0.3, 1.5),
+pars_mat <- cbind(beta_0  = runif(300, 0.3, 1.5),
                   beta_N  = -0.02,
-                  gamma_0 = runif(500, 0.05, 0.6),
+                  gamma_0 = runif(300, 0.05, 0.6),
                   gamma_N =  0.0)
 sims <- simulate_tree(pars = pars_mat, max_t = 10,
                       model = "dd", max_tries = 0, useDDD = FALSE)
 
 gam_fit <- train_GAM(sims, pars_mat, model = "dd")
-summary(gam_fit)
 
 newpars <- data.frame(beta_0 = 0.8, beta_N = -0.02,
                       gamma_0 = 0.2, gamma_N = 0.0)
-predict_survival(gam_fit, newpars)
+predict_survival(gam_fit, newpars)  # estimated survival probability
 ```
 
 ---
 
-## EP model notes
+## Authors
 
-The evolutionary pendant (EP) model makes rates lineage-specific: each
-lineage's rate depends on how long it has been since it last speciated.
-In inference, a **mean-field approximation** is used: speciation event terms
-and the integral use `E_avg = P/N` (average pendant length per lineage),
-while extinction event terms use the exact `E_s` for each augmented lineage.
-
-EP inference currently supports the **linear link only**. The exponential link
-with EP is guarded (the integral has no closed-form solution).
-
----
-
-## Authors & Contact
-
-**Author & Maintainer**
-Francisco Richter — <richtf@usi.ch>
-
-**Contributors**
+**Francisco Richter** (author & maintainer) — <richtf@usi.ch>
 Thijs Janzen — <t.janzen@rug.nl>
 Hanno Hildenbrandt — <h.hildenbrandt@rug.nl>
 

@@ -366,7 +366,7 @@ simulate_tree <- function(tree      = NULL,
 
   next_lbl   <- as.integer(max(abs(L_extant[, 3L]))) + 1L
   aug        <- aug[order(aug$brts), , drop = FALSE]
-  aug_labels <- setNames(integer(0), character(0))
+  aug_labels <- list()  # list so [[missing_key]] returns NULL, not error
   new_rows   <- matrix(0.0, nrow = nrow(aug), ncol = 4L)
 
   for (k in seq_len(nrow(aug))) {
