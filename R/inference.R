@@ -380,8 +380,10 @@ compare_models <- function(...) {
     AIC       = vapply(fits, `[[`, 0.0, "AIC"),
     stringsAsFactors = FALSE
   )
-  tab <- tab[order(tab$AIC), ]
+  tab <- tab[order(tab$AIC, na.last = TRUE), ]
   tab$delta_AIC <- tab$AIC - min(tab$AIC, na.rm = TRUE)
+  w <- exp(-0.5 * tab$delta_AIC)
+  tab$AICw <- w / sum(w, na.rm = TRUE)   # NA rows get NA weight automatically
   rownames(tab) <- NULL
   tab
 }
@@ -392,4 +394,149 @@ compare_models <- function(...) {
   covs <- c("N", "PD", "EP")[which(model_bin == 1L)]
   if (length(covs) == 0L) return("CR")
   paste(covs, collapse = " + ")
+}
+
+
+# --------------------------------------------------------------------------- #
+#  Three-model covariate comparison                                            #
+# --------------------------------------------------------------------------- #
+
+#' Fit and compare the three single-covariate diversification models
+#'
+#' Fits three 4-parameter models — diversity dependence (DD, covariate N),
+#' phylogenetic diversity dependence (PD, covariate P), and evolutionary
+#' pendant (EP, covariate E) — to the same tree using a two-stage
+#' MCDE → MCEM workflow, then ranks them by AIC and computes AIC weights.
+#'
+#' All three models share the same parameter layout:
+#' \code{c(beta_0, beta_X, gamma_0, gamma_X)}, so a single pair of bounds
+#' applies to all three.
+#'
+#' @param tree Ultrametric tree. Accepts a \code{phylo} object, a
+#'   \code{\link{simulate_tree}} result, or a numeric branching-time vector.
+#' @param lower_bound Length-4 numeric vector of lower parameter bounds:
+#'   \code{c(beta_0, beta_X, gamma_0, gamma_X)}. Default
+#'   \code{c(0.1, -0.5, 0, -0.5)}.
+#' @param upper_bound Length-4 numeric vector of upper parameter bounds.
+#'   Default \code{c(3, 0.5, 1, 0.5)}.
+#' @param link Link function: \code{"linear"} (default) or
+#'   \code{"exponential"} (EP not supported with exponential).
+#' @param control Named list with optional sub-lists \code{mcde} and
+#'   \code{mcem} to override defaults for each stage. Example:
+#'   \code{list(mcde = list(num_iterations = 20, num_points = 50),
+#'              mcem = list(sample_size = 300, tol = 0.05))}.
+#' @param verbose Print progress messages. Default \code{FALSE}.
+#' @return A list of class \code{"model_selection"} with:
+#'   \describe{
+#'     \item{\code{summary}}{Data frame with columns \code{model},
+#'       \code{n_pars}, \code{loglik}, \code{AIC}, \code{delta_AIC},
+#'       \code{AICw}, sorted by AIC.}
+#'     \item{\code{best_model}}{Name of the best-supported model
+#'       (\code{"dd"}, \code{"pd"}, or \code{"ep"}).}
+#'     \item{\code{best_pars}}{Named parameter estimates of the best model.}
+#'     \item{\code{fits}}{Named list of the three \code{emphasis_fit}
+#'       objects (\code{$dd}, \code{$pd}, \code{$ep}).}
+#'   }
+#' @seealso \code{\link{estimate_rates}}, \code{\link{compare_models}}
+#' @examples
+#' \dontrun{
+#' set.seed(42)
+#' sim <- simulate_tree(pars = c(0.8, -0.02, 0.2, 0), model = "dd", max_t = 8)
+#' sel <- select_diversification_model(sim,
+#'   lower_bound = c(0.1, -0.5, 0, -0.5),
+#'   upper_bound = c(3,    0.5, 1,  0.5))
+#' sel
+#' sel$best_model   # "dd"
+#' sel$best_pars
+#' }
+#' @export
+select_diversification_model <- function(tree,
+                                         lower_bound = c(0.1, -0.5, 0, -0.5),
+                                         upper_bound = c(3,    0.5, 1,  0.5),
+                                         link        = "linear",
+                                         control     = list(),
+                                         verbose     = FALSE) {
+  if (length(lower_bound) != 4L || length(upper_bound) != 4L)
+    stop("'lower_bound' and 'upper_bound' must each have length 4: ",
+         "c(beta_0, beta_X, gamma_0, gamma_X).")
+
+  defaults <- list(
+    mcde = list(num_iterations = 15, num_points = 40),
+    mcem = list(sample_size = 200, tol = 0.1, burnin = 10)
+  )
+  ctrl <- utils::modifyList(defaults, control)
+
+  model_names <- c("dd", "pd", "ep")
+  fits <- vector("list", 3L)
+  names(fits) <- model_names
+
+  for (m in model_names) {
+    if (verbose) message("Fitting model: ", toupper(m), " ...")
+
+    fit_de <- tryCatch(
+      estimate_rates(tree, method = "mcde", model = m,
+                     lower_bound = lower_bound, upper_bound = upper_bound,
+                     link = link, control = ctrl$mcde),
+      error = function(e) {
+        warning("MCDE failed for model '", m, "': ", conditionMessage(e))
+        NULL
+      }
+    )
+
+    init <- if (!is.null(fit_de)) fit_de$pars else (lower_bound + upper_bound) / 2
+
+    fits[[m]] <- tryCatch(
+      estimate_rates(tree, method = "mcem", model = m,
+                     lower_bound = lower_bound, upper_bound = upper_bound,
+                     init_pars = init, link = link, control = ctrl$mcem),
+      error = function(e) {
+        warning("MCEM failed for model '", m, "': ", conditionMessage(e))
+        NULL
+      }
+    )
+  }
+
+  # Drop any models that failed entirely
+  fits <- Filter(Negate(is.null), fits)
+  if (length(fits) < 2L)
+    stop("Fewer than two models converged; cannot perform model selection.")
+
+  tab <- do.call(compare_models, fits)
+
+  # Map display label back to model shortcut (compare_models uses .model_label)
+  label_to_key <- c(N = "dd", PD = "pd", EP = "ep")
+  best_label   <- tab$model[tab$delta_AIC == 0 & !is.na(tab$delta_AIC)][1L]
+  best_key     <- label_to_key[best_label]
+  if (is.na(best_key)) best_key <- names(fits)[1L]
+
+  result <- list(
+    summary    = tab,
+    best_model = unname(best_key),
+    best_pars  = fits[[best_key]]$pars,
+    fits       = fits
+  )
+  class(result) <- "model_selection"
+  result
+}
+
+
+#' Print method for model_selection objects
+#'
+#' @param x A \code{model_selection} object from
+#'   \code{\link{select_diversification_model}}.
+#' @param ... Additional arguments (ignored).
+#' @export
+print.model_selection <- function(x, ...) {
+  cat("Diversification model selection\n")
+  cat("================================\n\n")
+  tab <- x$summary
+  tab$loglik    <- round(tab$loglik,    3)
+  tab$AIC       <- round(tab$AIC,       3)
+  tab$delta_AIC <- round(tab$delta_AIC, 3)
+  tab$AICw      <- round(tab$AICw,      4)
+  print(tab, row.names = FALSE)
+  cat("\nBest model:", toupper(x$best_model), "\n")
+  cat("Parameters:\n")
+  print(round(x$best_pars, 6))
+  invisible(x)
 }
