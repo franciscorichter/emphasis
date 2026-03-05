@@ -23,7 +23,9 @@ This function generates random variables from a non-homogeneous exponential
 distribution based on a provided rate function.
 }
 \examples{
-rate_function_example <- function(t) { 1 + sin(t) }
+rate_function_example <- function(t) {
+  1 + sin(t)
+}
 nh_exp_vars <- nhExpRand(10, rate_function_example, now = 0, tMax = 20)
 print(nh_exp_vars)
 }

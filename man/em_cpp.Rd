@@ -9,7 +9,6 @@ em_cpp(
   init_pars,
   sample_size,
   maxN,
-  soc,
   max_missing,
   max_lambda,
   lower_bound,
@@ -28,8 +27,6 @@ em_cpp(
 \item{sample_size}{number of samples}
 
 \item{maxN}{maximum number of failed trees}
-
-\item{soc}{number of lineages at the root/crown (1/2)}
 
 \item{max_missing}{maximum number of species missing}
 

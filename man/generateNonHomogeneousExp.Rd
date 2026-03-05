@@ -4,7 +4,14 @@
 \alias{generateNonHomogeneousExp}
 \title{Generate Variates for a Non-Homogeneous Exponential Process}
 \usage{
-generateNonHomogeneousExp(num_variates, rate_func, start_time, max_time)
+generateNonHomogeneousExp(
+  num_variates,
+  rate_func,
+  start_time,
+  max_time,
+  grid_size = 200L,
+  max_iter = 1e+06
+)
 }
 \arguments{
 \item{num_variates}{The number of variates to generate.}
@@ -14,6 +21,12 @@ generateNonHomogeneousExp(num_variates, rate_func, start_time, max_time)
 \item{start_time}{The start time for the generation of variates.}
 
 \item{max_time}{The maximum time limit for the generation of variates.}
+
+\item{grid_size}{Number of grid points used to bound the rate function for
+thinning. Default \code{200L}.}
+
+\item{max_iter}{Maximum number of thinning iterations before giving up.
+Default \code{1e6}.}
 }
 \value{
 A numeric vector of generated variates.
@@ -23,7 +36,9 @@ This function generates random variates for a non-homogeneous exponential
 distribution using a thinning algorithm.
 }
 \examples{
-rate_function_example <- function(t) { 2 * t }
+rate_function_example <- function(t) {
+  2 * t
+}
 variates <- generateNonHomogeneousExp(5, rate_function_example, 0, 10)
 print(variates)
 }

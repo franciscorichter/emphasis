@@ -2,31 +2,53 @@
 % Please edit documentation in R/gam.R
 \name{train_GAM}
 \alias{train_GAM}
-\title{Train a Generalized Additive Model on Simulation Data}
+\title{Train a survival-probability GAM on forward simulation results}
 \usage{
-train_GAM(results)
+train_GAM(
+  simulations,
+  pars_mat,
+  model = "cr",
+  spline_type = c("univariate", "bivariate")
+)
 }
 \arguments{
-\item{results}{A list containing simulation results with the following components:
-- `loglik_estimation`: A list of log-likelihood values or `try-error` objects.
-- `trees`: A list of data frames, each containing tree data.
-- `param`: A list of named vectors containing the simulation parameters `mu`,
-  `lambda`, `betaN`, and `betaP`.}
+\item{simulations}{List of \code{simulate_tree()} outputs (one per row of
+\code{pars_mat}), produced with \code{max_tries = 0}.}
+
+\item{pars_mat}{Numeric matrix whose rows are the parameter vectors used to
+generate \code{simulations}.  Column names are used as predictor names; if
+absent, names are auto-generated from \code{model}.}
+
+\item{model}{String or length-3 binary integer vector matching the model
+used in simulation.  Used only when \code{pars_mat} has no column names.
+Default \code{"cr"}.}
+
+\item{spline_type}{\code{"univariate"} (default) fits independent smooth
+terms \code{s(x)} for each varying predictor.  \code{"bivariate"} fits
+tensor-product smooths \code{te(x, y)} for every pair of varying
+predictors, which can capture interaction effects.}
 }
 \value{
-A `gam` object representing the fitted model.
+A \code{gam} object (binomial family) representing
+  \eqn{P(\text{survival} \mid \theta)}.
 }
 \description{
-This function fits a Generalized Additive Model (GAM) to the provided simulation
-results. It models the log-likelihood of simulation success (`loglik`) as a function
-of the simulation parameters, using smooth terms for each parameter. Only simulations
-that completed successfully are used for the model fitting.
+Fits a binomial GAM to estimate P(survival | parameters) from forward
+simulations run with \code{max_tries = 0}.  Each simulation row has a
+binary outcome: 1 if \code{status == "done"}, 0 if \code{status ==
+"extinct"} or \code{"too_large"}.
 }
 \examples{
 \dontrun{
-# Assuming 'results' is your list of simulation results:
-gam_model <- train_GAM(results)
-summary(gam_model)
+set.seed(1)
+pars_mat <- cbind(beta_0  = runif(200, 0.3, 1.2),
+                  gamma_0 = runif(200, 0.05, 0.5))
+sims <- simulate_tree(pars = pars_mat, max_t = 8,
+                      model = "cr", max_tries = 0, useDDD = FALSE)
+gam_uni <- train_GAM(sims, pars_mat, model = "cr")
+gam_biv <- train_GAM(sims, pars_mat, model = "cr", spline_type = "bivariate")
 }
-
+}
+\seealso{
+\code{\link{simulate_tree}}, \code{\link{predict_survival}}
 }

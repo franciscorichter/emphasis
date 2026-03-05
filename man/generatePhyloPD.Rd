@@ -10,39 +10,50 @@ generatePhyloPD(
   lambda_interval,
   betaN_interval,
   betaP_interval,
+  max_t = 1,
   max_lin = 1e+06,
-  max_tries = 1
+  max_tries = 1,
+  seed = NULL
 )
 }
 \arguments{
 \item{n_trees}{Number of trees to simulate.}
 
-\item{mu_interval}{Interval for mu parameter.}
+\item{mu_interval}{Length-2 numeric vector: lower and upper bounds for the
+extinction rate (\code{mu}).  Lower must be \eqn{\le} upper.}
 
-\item{lambda_interval}{Interval for lambda parameter.}
+\item{lambda_interval}{Interval for the baseline speciation rate.}
 
-\item{betaN_interval}{Interval for betaN parameter.}
+\item{betaN_interval}{Interval for the diversity-dependence coefficient.}
 
-\item{betaP_interval}{Interval for betaP parameter.}
+\item{betaP_interval}{Interval for the PD-dependence coefficient.}
 
-\item{max_lin}{Maximum number of lineages.}
+\item{max_t}{Crown age for simulated trees.  Default \code{1}.}
 
-\item{max_tries}{Maximum number of tries for simulation.}
+\item{max_lin}{Maximum number of lineages.  Default \code{1e6}.}
+
+\item{max_tries}{Maximum number of retries per tree.  Default \code{1}.}
+
+\item{seed}{Optional integer seed for reproducibility.}
 }
 \value{
-A list containing the simulated trees and parameters.
+A list with elements \code{trees}, \code{param}, \code{tas},
+  \code{L}, \code{brts}.  Failed trees are filtered out; all vectors have
+  the same (possibly shorter) length.
 }
 \description{
-This function simulates phylogenetic trees based on given parameters.
+Simulates multiple phylogenetic trees under a PD-dependent diversification
+model.  Parameters are drawn uniformly from user-supplied intervals.
 }
 \examples{
-\donttest{
-generatePhyloPD(n_trees = 5,
-               mu_interval = c(0.05, 0.1),
-               lambda_interval = c(0.3, 0.5),
-               betaN_interval = c(-0.05, -0.01),
-               betaP_interval = c(-0.01, 0.01),
-               max_lin = 1e4,
-               max_tries = 10)
+\dontrun{
+generatePhyloPD(
+  n_trees = 10,
+  mu_interval = c(0.1, 0.5),
+  lambda_interval = c(0.1, 0.5),
+  betaN_interval = c(0.1, 0.5),
+  betaP_interval = c(0.1, 0.5),
+  max_t = 5
+)
 }
 }

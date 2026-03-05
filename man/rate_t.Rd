@@ -27,16 +27,22 @@ as an exponential of this linear combination.
 }
 \examples{
 # Define example covariate functions
-cov_func1 <- function(t) { sin(t) }
-cov_func2 <- function(t) { cos(t) }
+cov_func1 <- function(t) {
+  sin(t)
+}
+cov_func2 <- function(t) {
+  cos(t)
+}
 
 # Example parameters (baseline and coefficients for covariates)
 params <- c(0.5, 1.2, -0.8)
 
 # Compute the rate at a specific time
-rate_at_time_5 <- rate_t(t = 5, params = params,
-                         cov_funcs = list(cov_func1, cov_func2),
-                         use_exponential = TRUE)
+rate_at_time_5 <- rate_t(
+  t = 5, params = params,
+  cov_funcs = list(cov_func1, cov_func2),
+  use_exponential = TRUE
+)
 print(rate_at_time_5)
 
 }
