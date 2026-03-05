@@ -29,7 +29,7 @@ get_results <- function(pars, input, num_threads, num_points) {
                 pars        = as.numeric(pars_mat[i, ]),
                 sample_size = input$sample_size,
                 maxN        = input$maxN,
-                soc         = 2L,
+
                 max_missing = as.integer(input$max_missing),
                 max_lambda  = input$max_lambda,
                 lower_bound = input$lower_bound,
@@ -65,7 +65,7 @@ get_results <- function(pars, input, num_threads, num_points) {
                   pars        = as.numeric(pars_mat[i, ]),
                   sample_size = input$sample_size,
                   maxN        = local_max_N,
-                  soc         = 2L,
+  
                   max_missing = as.integer(local_max_miss),
                   max_lambda  = local_max_lambda,
                   lower_bound = input$lower_bound,
@@ -100,7 +100,7 @@ get_results_factorial <- function(pars, input, num_threads, num_points) {
                 pars        = as.numeric(pars_mat[i, ]),
                 sample_size = input$sample_size,
                 maxN        = input$maxN,
-                soc         = 2L,
+
                 max_missing = as.integer(input$max_missing),
                 max_lambda  = input$max_lambda,
                 lower_bound = input$lower_bound,
@@ -138,7 +138,7 @@ get_results_factorial <- function(pars, input, num_threads, num_points) {
                   pars        = as.numeric(pars_mat[i, ]),
                   sample_size = input$sample_size,
                   maxN        = local_max_N,
-                  soc         = 2L,
+  
                   max_missing = as.integer(local_max_miss),
                   max_lambda  = local_max_lambda,
                   lower_bound = input$lower_bound,

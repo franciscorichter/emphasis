@@ -55,10 +55,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-
 // rcpp_mce
-List rcpp_mce(const std::vector<double>& brts, const std::vector<double>& pars, int sample_size, int maxN, int soc, int max_missing, double max_lambda, const std::vector<double>& lower_bound, const std::vector<double>& upper_bound, double xtol_rel, int num_threads);
-RcppExport SEXP _emphasis_rcpp_mce(SEXP brtsSEXP, SEXP parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP socSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP lower_boundSEXP, SEXP upper_boundSEXP, SEXP xtol_relSEXP, SEXP num_threadsSEXP) {
+List rcpp_mce(const std::vector<double>& brts, const std::vector<double>& pars, int sample_size, int maxN, int max_missing, double max_lambda, const std::vector<double>& lower_bound, const std::vector<double>& upper_bound, double xtol_rel, int num_threads);
+RcppExport SEXP _emphasis_rcpp_mce(SEXP brtsSEXP, SEXP parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP lower_boundSEXP, SEXP upper_boundSEXP, SEXP xtol_relSEXP, SEXP num_threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -66,20 +65,19 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const std::vector<double>& >::type pars(parsSEXP);
     Rcpp::traits::input_parameter< int >::type sample_size(sample_sizeSEXP);
     Rcpp::traits::input_parameter< int >::type maxN(maxNSEXP);
-    Rcpp::traits::input_parameter< int >::type soc(socSEXP);
     Rcpp::traits::input_parameter< int >::type max_missing(max_missingSEXP);
     Rcpp::traits::input_parameter< double >::type max_lambda(max_lambdaSEXP);
     Rcpp::traits::input_parameter< const std::vector<double>& >::type lower_bound(lower_boundSEXP);
     Rcpp::traits::input_parameter< const std::vector<double>& >::type upper_bound(upper_boundSEXP);
     Rcpp::traits::input_parameter< double >::type xtol_rel(xtol_relSEXP);
     Rcpp::traits::input_parameter< int >::type num_threads(num_threadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(rcpp_mce(brts, pars, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads));
+    rcpp_result_gen = Rcpp::wrap(rcpp_mce(brts, pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads));
     return rcpp_result_gen;
 END_RCPP
 }
 // rcpp_mcem
-List rcpp_mcem(const std::vector<double>& brts, const std::vector<double>& init_pars, int sample_size, int maxN, int soc, int max_missing, double max_lambda, const std::vector<double>& lower_bound, const std::vector<double>& upper_bound, double xtol_rel, int num_threads, bool copy_trees, Nullable<Function> rconditional);
-RcppExport SEXP _emphasis_rcpp_mcem(SEXP brtsSEXP, SEXP init_parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP socSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP lower_boundSEXP, SEXP upper_boundSEXP, SEXP xtol_relSEXP, SEXP num_threadsSEXP, SEXP copy_treesSEXP, SEXP rconditionalSEXP) {
+List rcpp_mcem(const std::vector<double>& brts, const std::vector<double>& init_pars, int sample_size, int maxN, int max_missing, double max_lambda, const std::vector<double>& lower_bound, const std::vector<double>& upper_bound, double xtol_rel, int num_threads, bool copy_trees, Nullable<Function> rconditional);
+RcppExport SEXP _emphasis_rcpp_mcem(SEXP brtsSEXP, SEXP init_parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP lower_boundSEXP, SEXP upper_boundSEXP, SEXP xtol_relSEXP, SEXP num_threadsSEXP, SEXP copy_treesSEXP, SEXP rconditionalSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -87,7 +85,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const std::vector<double>& >::type init_pars(init_parsSEXP);
     Rcpp::traits::input_parameter< int >::type sample_size(sample_sizeSEXP);
     Rcpp::traits::input_parameter< int >::type maxN(maxNSEXP);
-    Rcpp::traits::input_parameter< int >::type soc(socSEXP);
     Rcpp::traits::input_parameter< int >::type max_missing(max_missingSEXP);
     Rcpp::traits::input_parameter< double >::type max_lambda(max_lambdaSEXP);
     Rcpp::traits::input_parameter< const std::vector<double>& >::type lower_bound(lower_boundSEXP);
@@ -96,7 +93,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type num_threads(num_threadsSEXP);
     Rcpp::traits::input_parameter< bool >::type copy_trees(copy_treesSEXP);
     Rcpp::traits::input_parameter< Nullable<Function> >::type rconditional(rconditionalSEXP);
-    rcpp_result_gen = Rcpp::wrap(rcpp_mcem(brts, init_pars, sample_size, maxN, soc, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, rconditional));
+    rcpp_result_gen = Rcpp::wrap(rcpp_mcem(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, rconditional));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -123,8 +120,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_emphasis_simulate_div_tree_cpp", (DL_FUNC) &_emphasis_simulate_div_tree_cpp, 5},
     {"_emphasis_generateNonHomogeneousExpCpp", (DL_FUNC) &_emphasis_generateNonHomogeneousExpCpp, 5},
     {"_emphasis_loglikelihood", (DL_FUNC) &_emphasis_loglikelihood, 5},
-    {"_emphasis_rcpp_mce", (DL_FUNC) &_emphasis_rcpp_mce, 11},
-    {"_emphasis_rcpp_mcem", (DL_FUNC) &_emphasis_rcpp_mcem, 13},
+    {"_emphasis_rcpp_mce", (DL_FUNC) &_emphasis_rcpp_mce, 10},
+    {"_emphasis_rcpp_mcem", (DL_FUNC) &_emphasis_rcpp_mcem, 12},
     {"_emphasis_rcpp_mcm", (DL_FUNC) &_emphasis_rcpp_mcm, 8},
     {NULL, NULL, 0}
 };

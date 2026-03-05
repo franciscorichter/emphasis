@@ -12,7 +12,7 @@ test_that("mc_loglik returns a list on a small tree", {
     pars        = c(0.1, 0.5, -0.01, 0.01),
     sample_size = 1,
     maxN        = 50,
-    soc         = 2,
+
     max_missing = 500,
     max_lambda  = 50000,
     lower_bound = c(0, 0, -0.1, -0.1),

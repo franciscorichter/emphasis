@@ -1,53 +1,118 @@
 # Tests for simulation functions
-# C++ simulation tests run locally only (skip in all automated checks)
 
-test_that("sim_tree_pd_cpp returns valid output", {
-  skip("C++ integration test: run locally with devtools::test(filter='simulate')")
+# ---------- Input validation for simulate_tree ----------
 
-  set.seed(42)
-  result <- sim_tree_pd_cpp(
-    pars     = c(0.05, 0.8, 0, 0),
-    max_t    = 1,
-    max_lin  = 1e4,
-    max_tries = 50,
-    useDDD   = FALSE
+test_that("simulate_tree errors on invalid pars", {
+  expect_error(
+    simulate_tree(pars = "x", max_t = 5),
+    "non-empty numeric"
   )
+  expect_error(
+    simulate_tree(pars = numeric(0), max_t = 5),
+    "non-empty numeric"
+  )
+})
 
-  expect_type(result, "list")
-  expect_named(result, c("tes", "tas", "L", "brts", "status"))
+test_that("simulate_tree errors on invalid max_t", {
+  expect_error(
+    simulate_tree(pars = c(0.5, 0.1), max_t = -1),
+    "positive number"
+  )
+  expect_error(
+    simulate_tree(pars = c(0.5, 0.1), max_t = 0),
+    "positive number"
+  )
+})
+
+test_that("simulate_tree errors on invalid max_lin", {
+  expect_error(
+    simulate_tree(pars = c(0.5, 0.1), max_t = 5, max_lin = 0),
+    "positive number"
+  )
+})
+
+test_that("simulate_tree accepts max_tries = 0 (no retries)", {
+  skip("C++ integration test: run locally with devtools::test(filter='simulate')")
+  set.seed(1)
+  # max_tries = 0 is valid: extinct runs are not retried (used for GAM training)
+  result <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, max_tries = 0,
+                          useDDD = FALSE)
   expect_true(result$status %in% c("done", "extinct", "too_large"))
 })
 
-test_that("sim_tree_is_extinct_pd returns a data frame with correct columns", {
-  skip("C++ integration test: run locally with devtools::test(filter='simulate')")
-
-  set.seed(7)
-  result <- sim_tree_is_extinct_pd(
-    pars     = c(0.05, 0.8, 0, 0),
-    max_t    = 1,
-    num_repl = 3,
-    max_lin  = 1e4
+test_that("simulate_tree errors on wrong pars length for model", {
+  # "dd" = c(1,0,0) needs 4 pars, supplying 2 should error
+  expect_error(
+    simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "dd"),
+    "requires 4 parameters"
   )
-
-  expect_s3_class(result, "data.frame")
-  expect_named(result, c("is_extinct", "t", "N", "P", "break_condition"))
-  expect_equal(nrow(result), 3)
-  expect_true(all(result$break_condition %in% c("none", "max_t", "extinction", "max_lin")))
 })
 
-test_that("sim_tree_pd_grid returns a data frame", {
+test_that("simulate_tree requires max_t for forward sim", {
+  expect_error(
+    simulate_tree(pars = c(0.5, 0.1)),
+    "max_t.*is required"
+  )
+})
+
+test_that(".resolve_model handles shortcuts and binary vectors", {
+  expect_equal(emphasis:::.resolve_model("cr"), c(0L, 0L, 0L))
+  expect_equal(emphasis:::.resolve_model("dd"), c(1L, 0L, 0L))
+  expect_equal(emphasis:::.resolve_model("pd"), c(0L, 1L, 0L))
+  expect_equal(emphasis:::.resolve_model("ep"), c(0L, 0L, 1L))
+  expect_equal(emphasis:::.resolve_model(c(1, 1, 0)), c(1L, 1L, 0L))
+  expect_error(
+    emphasis:::.resolve_model(c(1, 2, 0)),
+    "length-3 binary integer vector"
+  )
+})
+
+test_that(".expand_pars errors on wrong length", {
+  expect_error(
+    emphasis:::.expand_pars(c(1, 2), c(1L, 0L, 0L)),
+    "requires 4 parameters"
+  )
+})
+
+# ---------- C++ simulation tests (run locally) ----------
+
+test_that("simulate_tree cr model returns valid output", {
   skip("C++ integration test: run locally with devtools::test(filter='simulate')")
 
-  result <- sim_tree_pd_grid(
-    mu_vec     = c(0.05, 0.1),
-    lambda_vec = c(0.5, 0.8),
-    b_n_vec    = c(0, 0),
-    b_p_vec    = c(0, 0),
-    max_t      = 1,
-    num_repl   = 2,
-    max_N      = 1e4
+  set.seed(42)
+  result <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr")
+
+  expect_type(result, "list")
+  expect_named(result, c("tes", "tas", "L", "brts", "status", "model", "pars"))
+  expect_true(result$status %in% c("done", "extinct", "too_large"))
+})
+
+test_that("simulate_tree dd model returns valid output", {
+  skip("C++ integration test: run locally with devtools::test(filter='simulate')")
+
+  set.seed(42)
+  result <- simulate_tree(
+    pars = c(0.8, -0.02, 0.2, -0.01),
+    max_t = 5, model = "dd"
   )
 
-  expect_s3_class(result, "data.frame")
-  expect_named(result, c("is_extinct", "t", "N", "P"))
+  expect_type(result, "list")
+  expect_true(result$status %in% c("done", "extinct", "too_large"))
+})
+
+test_that("simulate_tree verbose prints a message", {
+  skip("C++ integration test: run locally with devtools::test(filter='simulate')")
+
+  expect_message(
+    simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr", verbose = TRUE),
+    "simulate_tree"
+  )
+})
+
+test_that("simulate_tree seed produces deterministic output", {
+  skip("C++ integration test: run locally with devtools::test(filter='simulate')")
+
+  r1 <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr", seed = 123)
+  r2 <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr", seed = 123)
+  expect_equal(r1$L, r2$L)
 })

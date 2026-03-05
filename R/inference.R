@@ -35,7 +35,6 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'
 #' Shared parameters (both methods):
 #' \describe{
-#'   \item{\code{soc}}{Stem (1) or crown (2) age condition. Default \code{2}.}
 #'   \item{\code{max_missing}}{Max missing lineages tolerated during
 #'     augmentation. Default \code{1e4}.}
 #'   \item{\code{max_lambda}}{Max speciation rate for augmentation.
@@ -70,7 +69,6 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 estimate_rates_control <- function(method = c("em", "de"), n_pars = 4) {
   method <- match.arg(method)
   common <- list(
-    soc         = 2L,
     max_missing = 1e4,
     max_lambda  = 500,
     num_threads = 1L
@@ -130,7 +128,6 @@ estimate_rates_control <- function(method = c("em", "de"), n_pars = 4) {
     brts        = brts,
     pars        = init_pars,
     sample_size = ctrl$sample_size,
-    soc         = ctrl$soc,
     max_missing = ctrl$max_missing,
     max_lambda  = ctrl$max_lambda,
     lower_bound = lower_bound,

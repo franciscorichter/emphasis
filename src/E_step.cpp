@@ -26,12 +26,12 @@ namespace emphasis {
     }
 
 
-    tree_t create_tree(brts_t brts, double soc)
+    tree_t create_tree(brts_t brts)
     {
       inplace_cumsum_of_diff(brts);
       tree_t tree;
       for (size_t i = 0; i < brts.size(); ++i) {
-        tree.push_back({ brts[i], soc + i, t_ext_tip });
+        tree.push_back({ brts[i], 2.0 + i, t_ext_tip });
       }
       std::sort(tree.begin(), tree.end(), detail::node_less{});
       return(tree);
@@ -40,12 +40,11 @@ namespace emphasis {
   }
 
 
-  E_step_t E_step(int N,               
+  E_step_t E_step(int N,
                   int maxN,
                   const param_t& pars,
                   const brts_t& brts,
                   const Model& model,
-                  int soc,
                   int max_missing,
                   double max_lambda,
                   int num_threads)
@@ -55,7 +54,7 @@ namespace emphasis {
     std::mutex mutex;
     std::atomic<bool> stop{ false };
 
-    tree_t init_tree = detail::create_tree(brts, static_cast<double>(soc));
+    tree_t init_tree = detail::create_tree(brts);
     auto E = E_step_t{};
     auto T0 = std::chrono::high_resolution_clock::now();
 

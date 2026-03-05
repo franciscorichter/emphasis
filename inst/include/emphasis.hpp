@@ -107,7 +107,6 @@ namespace emphasis {
                   const param_t& pars,
                   const brts_t& brts,
                   const Model& model,
-                  int soc = 2,
                   int max_missing = default_max_missing_branches,
                   double max_lambda = default_max_aug_lambda,
                   int num_threads = 0);
@@ -157,7 +156,6 @@ namespace emphasis {
               const param_t& pars,
               const brts_t& brts,
               const Model& model,
-              int soc = 2,
               int max_missing = default_max_missing_branches,
               double max_lambda = default_max_aug_lambda,
               const param_t& lower_bound = {}, // overrides model.lower_bound

@@ -27,7 +27,6 @@ namespace {
 //' @param init_pars vector of initial parameter files
 //' @param sample_size number of samples
 //' @param maxN maximum number of failed trees
-//' @param soc number of lineages at the root/crown (1/2)
 //' @param max_missing maximum number of species missing
 //' @param max_lambda maximum speciation rate
 //' @param lower_bound vector of lower bound values for optimization, should
@@ -53,22 +52,21 @@ namespace {
 //' }
 //' @export
 // [[Rcpp::export(name = "em_cpp")]]
-List rcpp_mcem(const std::vector<double>& brts,       
-               const std::vector<double>& init_pars,      
+List rcpp_mcem(const std::vector<double>& brts,
+               const std::vector<double>& init_pars,
                int sample_size,
                int maxN,
-               int soc,
-               int max_missing,               
-               double max_lambda,             
-               const std::vector<double>& lower_bound,  
-               const std::vector<double>& upper_bound,  
-               double xtol_rel,                     
+               int max_missing,
+               double max_lambda,
+               const std::vector<double>& lower_bound,
+               const std::vector<double>& upper_bound,
+               double xtol_rel,
                int num_threads,
                bool copy_trees,
-               Nullable<Function> rconditional = R_NilValue) 
+               Nullable<Function> rconditional = R_NilValue)
 {
   auto model = emphasis::Model(lower_bound, upper_bound);
-  
+
   emphasis::conditional_fun_t conditional{};
   if (rconditional.isNotNull()) {
     conditional = [cond= Function(rconditional)](const emphasis::param_t& pars) {
@@ -80,7 +78,6 @@ List rcpp_mcem(const std::vector<double>& brts,
                              init_pars,
                              brts,
                              model,
-                             soc,
                              max_missing,
                              max_lambda,
                              lower_bound,

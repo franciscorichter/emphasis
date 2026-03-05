@@ -22,7 +22,6 @@ using namespace Rcpp;
 //' @param pars Numeric vector of model parameters.
 //' @param sample_size Number of valid augmented trees to collect.
 //' @param maxN Maximum total augmentation attempts (including failures).
-//' @param soc Number of lineages at the root: 1 (stem) or 2 (crown).
 //' @param max_missing Maximum number of extinct lineages per tree.
 //' @param max_lambda Upper bound on the speciation rate (thinning bound).
 //' @param lower_bound Lower bounds for parameter optimisation (same length
@@ -51,7 +50,6 @@ List rcpp_mce(const std::vector<double>& brts,
               const std::vector<double>& pars,
               int sample_size,
               int maxN,
-              int soc,
               int max_missing,
               double max_lambda,
               const std::vector<double>& lower_bound,
@@ -66,7 +64,6 @@ List rcpp_mce(const std::vector<double>& brts,
                             pars,
                             brts,
                             model,
-                            soc,
                             max_missing,
                             max_lambda,
                             num_threads);

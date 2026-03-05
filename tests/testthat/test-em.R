@@ -11,7 +11,7 @@ test_that("mc_loglik returns a list with expected fields", {
     pars        = c(0.1, 0.5, -0.01, 0.01),
     sample_size = 10,
     maxN        = 100,
-    soc         = 2,
+
     max_missing = 1000,
     max_lambda  = 500,
     lower_bound = c(0, 0, -0.1, -0.1),
@@ -34,7 +34,7 @@ test_that("loglikelihood returns numeric fhat", {
     pars        = c(0.1, 0.5, -0.01, 0.01),
     sample_size = 5,
     maxN        = 100,
-    soc         = 2,
+
     max_missing = 1000,
     max_lambda  = 500,
     lower_bound = c(0, 0, -0.1, -0.1),
