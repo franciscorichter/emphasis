@@ -124,6 +124,8 @@ generatePhyloPD <- function(n_trees,
 #' @param rate_func A function representing the rate of the non-homogeneous process.
 #' @param start_time The start time for the generation of variates.
 #' @param max_time The maximum time limit for the generation of variates.
+#' @param grid_size Number of grid points for rate integration. Default \code{200L}.
+#' @param max_iter Maximum thinning iterations before stopping. Default \code{1e6}.
 #' @return A numeric vector of generated variates.
 #' @examples
 #' rate_function_example <- function(t) {
