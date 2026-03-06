@@ -183,9 +183,9 @@ sim <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003), model = "pd", max_t = 8
 lb <- c(0.01, -1, 0, -1)
 ub <- c(2,     1, 1,  1)
 
-# Stage 1: broad search with bootstrap UQ
+# Stage 1: broad search
 fit_cem <- estimate_rates(sim, method = "cem", model = "pd",
-  lower_bound = lb, upper_bound = ub,
+  lower_bound = lb, upper_bound = ub, verbose = TRUE,
   control = list(max_iter = 20, num_points = 50, n_boot = 200))
 
 fit_cem$converged    # stopping reason: "annealing", "plateau", or "max_iter"
@@ -211,20 +211,50 @@ The CEM stops at the first of:
 2. **Plateau** — best fhat has not improved by `> tol` for `patience` consecutive iterations
 3. **Hard cap** — `max_iter` reached
 
-### Control parameters
+### CEM control parameters
+
+All parameters are passed via `control = list(...)`. Inspect defaults with
+`estimate_rates_control("cem")`.
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `max_iter` | 20 | Hard iteration cap |
+| `num_points` | 50 | Particles (parameter vectors) per iteration |
+| `sample_size` | 1 | Augmented trees simulated per particle per iteration |
+| `shared_trees` | FALSE | Pool trees across all particles (`TRUE` = lower variance, slower) |
+| `disc_prop` | 0.5 | Elite fraction of particles kept for resampling |
+| `sd_vec` | NULL | Initial perturbation SDs; auto = `(upper - lower) / 4` |
+| `maxN` | 10 | Max augmented-tree attempts before a particle is rejected |
+| `max_missing` | 1e4 | Max missing lineages tolerated during augmentation |
+| `max_lambda` | 500 | Max speciation rate during augmentation |
+| `tol` | 1e-4 | Minimum fhat improvement to reset the plateau counter |
+| `patience` | 5 | Consecutive plateau iterations before early stop |
+| `bias_correct` | FALSE | Moment-based IS bias correction (experimental) |
+| `n_boot` | 0 | Bootstrap replicates for `loglik_var`; 0 = disabled |
+| `num_threads` | 1 | Parallel threads for particle evaluation |
+
+**Total augmented trees per iteration** = `num_points × sample_size`.
+Each particle's `fhat` is the IS log-likelihood estimate from its own `sample_size`
+trees (Mode 1, default) or from the full pooled set when `shared_trees = TRUE` (Mode 2).
 
 ```r
-estimate_rates_control("mcem")  # sample_size=200, tol=0.1, burnin=20, ...
-estimate_rates_control("cem")   # max_iter=20, num_points=50, tol=1e-4, patience=5, ...
-```
-
-Override any default by passing a named list to `control`:
-
-```r
+# Higher-quality run: 100 particles, 5 trees each => 500 trees/iter
 estimate_rates(sim, method = "cem", model = "pd",
-  lower_bound = lb, upper_bound = ub,
-  control = list(max_iter = 30, num_points = 100, patience = 10, n_boot = 200))
+  lower_bound = lb, upper_bound = ub, verbose = TRUE,
+  control = list(max_iter = 30, num_points = 100, sample_size = 5,
+                 patience = 8, n_boot = 200))
 ```
+
+### MCEM control parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `sample_size` | 200 | Augmented trees per EM iteration |
+| `tol` | 0.1 | Convergence tolerance on loglik improvement |
+| `burnin` | 20 | Burn-in iterations before convergence is checked |
+| `max_missing` | 1e4 | Max missing lineages during augmentation |
+| `max_lambda` | 500 | Max speciation rate during augmentation |
+| `num_threads` | 1 | Parallel threads |
 
 ### Empirical trees
 
@@ -267,11 +297,93 @@ compare_models(CR = fit_cr, DD = fit_dd, PD = fit_pd)
 
 ---
 
+## Simulation study — estimation power
+
+The following self-contained script simulates 100 trees under a PD model, fits CEM
+to each, and summarises estimation accuracy via bias, RMSE, and coverage.
+
+```r
+library(emphasis)
+
+# True parameters
+true_pars <- c(beta_0 = 0.6, beta_P = 0.005, gamma_0 = 0.15, gamma_P = -0.003)
+model     <- "pd"
+max_t     <- 8
+n_rep     <- 100
+
+lb <- c(0.01, -0.1, 0,  -0.1)
+ub <- c(2,     0.1, 1,   0.1)
+ctrl <- list(max_iter = 20, num_points = 100, sample_size = 1, n_boot = 0)
+
+# ── 1. Simulate 100 trees ──────────────────────────────────────────────────
+set.seed(1)
+trees <- vector("list", n_rep)
+for (i in seq_len(n_rep)) {
+  repeat {
+    sim <- simulate_tree(pars = true_pars, model = model, max_t = max_t)
+    if (sim$status == "done") { trees[[i]] <- sim; break }
+  }
+}
+
+# ── 2. Estimate on each tree ───────────────────────────────────────────────
+results <- vector("list", n_rep)
+for (i in seq_len(n_rep)) {
+  cat(sprintf("Rep %d/%d\n", i, n_rep))
+  fit <- tryCatch(
+    estimate_rates(trees[[i]], method = "cem", model = model,
+                   lower_bound = lb, upper_bound = ub, control = ctrl),
+    warning = function(w) NULL,
+    error   = function(e) NULL
+  )
+  if (!is.null(fit) && all(is.finite(fit$pars)))
+    results[[i]] <- as.list(fit$pars)
+}
+
+# ── 3. Summarise ───────────────────────────────────────────────────────────
+ok  <- !sapply(results, is.null)
+cat(sprintf("\nConverged: %d / %d\n\n", sum(ok), n_rep))
+
+est_mat <- do.call(rbind, lapply(results[ok], as.numeric))
+colnames(est_mat) <- names(true_pars)
+
+bias <- colMeans(est_mat) - true_pars
+rmse <- sqrt(colMeans((est_mat - rep(true_pars, each = nrow(est_mat)))^2))
+
+summary_df <- data.frame(
+  true = true_pars,
+  mean_est = colMeans(est_mat),
+  bias = bias,
+  rmse = rmse,
+  row.names = names(true_pars)
+)
+print(round(summary_df, 5))
+
+# ── 4. Optional: box plots ─────────────────────────────────────────────────
+par(mfrow = c(1, length(true_pars)), mar = c(4, 4, 3, 1))
+for (j in seq_along(true_pars)) {
+  nm <- names(true_pars)[j]
+  boxplot(est_mat[, j], main = nm, ylab = "estimate",
+          col = "steelblue", border = "navy")
+  abline(h = true_pars[j], col = "red", lty = 2, lwd = 2)
+}
+```
+
+The output `summary_df` contains, for each parameter:
+
+| Column | Meaning |
+|--------|---------|
+| `true` | True value used to simulate |
+| `mean_est` | Mean estimate across successful replicates |
+| `bias` | `mean_est - true` |
+| `rmse` | Root mean squared error |
+
+---
+
 ## Diagnostics — CEM inference quality
 
 `diagnose_cem()` takes a fitted `"cem"` model and returns convergence
 statistics, IS quality metrics, and the full particle cloud at the final
-iteration. Optionally produces three diagnostic plots.
+iteration. It produces four types of diagnostic plots by default.
 
 ```r
 fit <- estimate_rates(sim, method = "cem", model = "pd",
@@ -298,9 +410,10 @@ diag$best_IS$lw            # IS log-weights for all trees
 
 | Plot | What it shows |
 |------|--------------|
-| Convergence | Best `fhat` per iteration with stop reason |
+| Log-likelihood | Best `fhat` per iteration with stop reason |
+| Parameter traces | One plot per parameter: best particle's value across iterations |
 | Population spread | Median ± IQR of all valid `fhat` values per iteration |
-| IS weight distribution | Histogram of `logf - log_q` at the best particle; red dashed line = mean; title shows ESS |
+| IS weight distribution | Histogram of `logf - log_q` at the best particle; ESS in title |
 
 ---
 
