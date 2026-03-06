@@ -313,10 +313,10 @@ compare_models(CR = fit_cr, DD = fit_dd, PD = fit_pd)
 
 ---
 
-## Simulation study — estimation power
+## Simulation study 1 — estimation power
 
-The following self-contained script simulates 100 trees under a PD model, fits CEM
-to each, and summarises estimation accuracy via bias, RMSE, and coverage.
+Simulate 100 trees under a PD model, estimate parameters from each, and
+evaluate accuracy via bias, RMSE, and tree-size effects.
 
 ```r
 library(emphasis)
@@ -327,8 +327,8 @@ model     <- "pd"
 max_t     <- 8
 n_rep     <- 100
 
-lb <- c(0.01, -0.1, 0,  -0.1)
-ub <- c(2,     0.1, 1,   0.1)
+lb   <- c(0.01, -0.1, 0,  -0.1)
+ub   <- c(2,     0.1, 1,   0.1)
 ctrl <- list(max_iter = 20, num_points = 100, sample_size = 1, n_boot = 0)
 
 # ── 1. Simulate 100 trees ──────────────────────────────────────────────────
@@ -342,9 +342,11 @@ for (i in seq_len(n_rep)) {
 }
 
 # ── 2. Estimate on each tree ───────────────────────────────────────────────
-results <- vector("list", n_rep)
+results  <- vector("list", n_rep)
+n_tips   <- integer(n_rep)
 for (i in seq_len(n_rep)) {
   cat(sprintf("Rep %d/%d\n", i, n_rep))
+  n_tips[i] <- length(trees[[i]]$tes$tip.label)
   fit <- tryCatch(
     estimate_rates(trees[[i]], method = "cem", model = model,
                    lower_bound = lb, upper_bound = ub, control = ctrl),
@@ -355,33 +357,47 @@ for (i in seq_len(n_rep)) {
     results[[i]] <- as.list(fit$pars)
 }
 
-# ── 3. Summarise ───────────────────────────────────────────────────────────
-ok  <- !sapply(results, is.null)
+# ── 3. Accuracy summary ────────────────────────────────────────────────────
+ok      <- !sapply(results, is.null)
 cat(sprintf("\nConverged: %d / %d\n\n", sum(ok), n_rep))
 
 est_mat <- do.call(rbind, lapply(results[ok], as.numeric))
 colnames(est_mat) <- names(true_pars)
+tips_ok <- n_tips[ok]
 
 bias <- colMeans(est_mat) - true_pars
 rmse <- sqrt(colMeans((est_mat - rep(true_pars, each = nrow(est_mat)))^2))
 
 summary_df <- data.frame(
-  true = true_pars,
+  true     = true_pars,
   mean_est = colMeans(est_mat),
-  bias = bias,
-  rmse = rmse,
+  bias     = bias,
+  rmse     = rmse,
   row.names = names(true_pars)
 )
 print(round(summary_df, 5))
 
-# ── 4. Optional: box plots ─────────────────────────────────────────────────
-par(mfrow = c(1, length(true_pars)), mar = c(4, 4, 3, 1))
+# ── 4. Box plots: estimate distribution per parameter ─────────────────────
+op <- par(mfrow = c(1, length(true_pars)), mar = c(4, 4, 3, 1))
 for (j in seq_along(true_pars)) {
   nm <- names(true_pars)[j]
   boxplot(est_mat[, j], main = nm, ylab = "estimate",
           col = "steelblue", border = "navy")
   abline(h = true_pars[j], col = "red", lty = 2, lwd = 2)
 }
+par(op)
+
+# ── 5. Tree size vs absolute error per parameter ──────────────────────────
+err_mat <- abs(est_mat - rep(true_pars, each = nrow(est_mat)))
+op <- par(mfrow = c(1, length(true_pars)), mar = c(4, 4, 3, 1))
+for (j in seq_along(true_pars)) {
+  nm <- names(true_pars)[j]
+  plot(tips_ok, err_mat[, j],
+       xlab = "Extant tips (tree size)", ylab = "|error|",
+       main = nm, pch = 16, col = grDevices::adjustcolor("steelblue", 0.6))
+  lines(lowess(tips_ok, err_mat[, j]), col = "red", lwd = 2)
+}
+par(op)
 ```
 
 The output `summary_df` contains, for each parameter:
@@ -392,6 +408,143 @@ The output `summary_df` contains, for each parameter:
 | `mean_est` | Mean estimate across successful replicates |
 | `bias` | `mean_est - true` |
 | `rmse` | Root mean squared error |
+
+The tree-size plot shows whether larger trees (more extant tips) yield
+more accurate estimates — expected if the IS estimator is consistent.
+
+---
+
+## Simulation study 2 — model selection power
+
+Simulate 25 trees from each of the four pure models (CR, DD, PD, EP), fit all four
+models to every tree via CEM, select the best by AIC, and evaluate how often the
+correct model is recovered.
+
+```r
+library(emphasis)
+
+set.seed(42)
+n_per_model <- 25
+max_t       <- 8
+ctrl        <- list(max_iter = 20, num_points = 80, sample_size = 1, n_boot = 0)
+
+# True parameters and bounds for each model
+configs <- list(
+  CR = list(
+    pars = c(0.6, 0.15),
+    lb   = c(0.01,  0),
+    ub   = c(2,     1)
+  ),
+  DD = list(
+    pars = c(0.8, -0.02, 0.2, 0.0),
+    lb   = c(0.01, -0.1,  0,  -0.1),
+    ub   = c(2,     0.0,  1,   0.1)
+  ),
+  PD = list(
+    pars = c(0.6,  0.005, 0.15, -0.003),
+    lb   = c(0.01, -0.1,  0,    -0.1),
+    ub   = c(2,     0.1,  1,     0.1)
+  ),
+  EP = list(
+    pars = c(0.5, 0.05, 0.1, 0.01),
+    lb   = c(0.01, -0.1, 0,  -0.1),
+    ub   = c(2,     0.2, 1,   0.2)
+  )
+)
+model_names <- names(configs)
+
+# ── 1. Simulate trees ──────────────────────────────────────────────────────
+all_trees   <- list()
+true_models <- character()
+for (m in model_names) {
+  cat("Simulating", m, "trees...\n")
+  count <- 0L
+  while (count < n_per_model) {
+    sim <- simulate_tree(pars = configs[[m]]$pars, model = tolower(m), max_t = max_t)
+    if (sim$status == "done") {
+      count <- count + 1L
+      all_trees   <- c(all_trees,   list(sim))
+      true_models <- c(true_models, m)
+    }
+  }
+}
+
+# ── 2. Fit all four models to every tree ───────────────────────────────────
+n_trees    <- length(all_trees)
+selected   <- character(n_trees)
+
+for (i in seq_len(n_trees)) {
+  cat(sprintf("Tree %d/%d (true: %s)\n", i, n_trees, true_models[i]))
+  fits <- list()
+  for (m in model_names) {
+    fits[[m]] <- tryCatch(
+      estimate_rates(all_trees[[i]], method = "cem", model = tolower(m),
+                     lower_bound = configs[[m]]$lb,
+                     upper_bound = configs[[m]]$ub,
+                     control = ctrl),
+      warning = function(w) NULL,
+      error   = function(e) NULL
+    )
+  }
+  # Select by lowest AIC among models that converged
+  aics <- sapply(fits, function(f) if (!is.null(f)) f$AIC else NA_real_)
+  if (any(is.finite(aics))) {
+    selected[i] <- model_names[which.min(aics)]
+  } else {
+    selected[i] <- NA_character_
+  }
+}
+
+# ── 3. Confusion matrix ────────────────────────────────────────────────────
+ok      <- !is.na(selected)
+conf    <- table(True = true_models[ok], Selected = selected[ok])
+# reorder rows/cols to canonical order
+conf <- conf[model_names, model_names]
+cat("\nModel selection confusion matrix (rows=true, cols=selected):\n")
+print(conf)
+
+# Overall accuracy
+accuracy <- sum(diag(conf)) / sum(conf)
+cat(sprintf("Overall accuracy: %.1f%%\n", 100 * accuracy))
+
+# Per-model recall (% correctly identified)
+recall <- diag(conf) / rowSums(conf)
+cat("\nPer-model recall:\n")
+print(round(recall, 2))
+
+# ── 4. Confusion matrix heatmap ───────────────────────────────────────────
+conf_pct <- sweep(conf, 1, rowSums(conf), "/")  # row-normalise to recall
+image(t(conf_pct[nrow(conf_pct):1, ]),
+      axes = FALSE, col = grDevices::colorRampPalette(c("white", "steelblue"))(20),
+      main = sprintf("Model selection confusion\n(row-normalised, accuracy=%.0f%%)",
+                     100 * accuracy))
+axis(1, at = seq(0, 1, length.out = 4), labels = model_names)
+axis(2, at = seq(1, 0, length.out = 4), labels = model_names, las = 1)
+mtext("Selected", side = 1, line = 3)
+mtext("True", side = 2, line = 3)
+for (i in seq_len(nrow(conf_pct)))
+  for (j in seq_len(ncol(conf_pct)))
+    text((j - 1) / 3, 1 - (i - 1) / 3,
+         sprintf("%.0f%%", 100 * conf_pct[i, j]), cex = 0.9)
+
+# ── 5. Bar chart: selection frequency per true model ─────────────────────
+op <- par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
+cols <- c(CR = "grey70", DD = "steelblue", PD = "darkorange", EP = "forestgreen")
+for (m in model_names) {
+  idx   <- true_models[ok] == m
+  votes <- table(factor(selected[ok][idx], levels = model_names))
+  barplot(as.numeric(votes), names.arg = model_names, col = cols,
+          main = sprintf("True model: %s", m),
+          ylab = "# trees selected", ylim = c(0, n_per_model))
+  abline(h = sum(idx) * 0.5, lty = 2, col = "red")
+}
+par(op)
+```
+
+The confusion matrix rows are true models, columns are selected models. A perfect
+classifier has all mass on the diagonal. The bar charts show, for each true model,
+how often each candidate was chosen — useful for diagnosing systematic confusions
+(e.g. CR often mistaken for DD when the density-dependence signal is weak).
 
 ---
 
