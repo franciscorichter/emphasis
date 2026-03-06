@@ -5,8 +5,8 @@
 \usepackage[utf8]{inputenc}
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{amsmath,amssymb,amsthm}
-\usepackage{mathtools}          % dcases, prescript
-\usepackage{bm}                 % bold math
+\usepackage{mathtools}
+\usepackage{bm}
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{xcolor}
@@ -28,26 +28,24 @@
 \newtheorem{definition}{Definition}
 
 % ── Notation macros ───────────────────────────────────────────────────────────
-\newcommand{\obs}{\mathcal{T}}          % observed extant tree
-\newcommand{\aug}{\mathcal{T}^+}        % augmented tree (obs + extinct)
-\newcommand{\brts}{\mathbf{t}}          % vector of branching times
-\newcommand{\pars}{\bm{\theta}}         % parameter vector
-\newcommand{\lb}{\bm{\ell}}             % lower bound
-\newcommand{\ub}{\mathbf{u}}            % upper bound
-\newcommand{\fhat}{\widehat{f}}         % IS log-likelihood estimate
-\newcommand{\Lhat}{\widehat{L}}         % IS likelihood estimate
+\newcommand{\obs}{\mathcal{T}}
+\newcommand{\aug}{\mathcal{T}^+}
+\newcommand{\brts}{\mathbf{t}}
+\newcommand{\pars}{\bm{\theta}}
+\newcommand{\lb}{\bm{\ell}}
+\newcommand{\ub}{\mathbf{u}}
+\newcommand{\fhat}{\widehat{f}}
+\newcommand{\Lhat}{\widehat{L}}
 \newcommand{\E}{\mathbb{E}}
 \newcommand{\R}{\mathbb{R}}
-\newcommand{\N}{\mathbb{N}}
-\newcommand{\logf}{\ell^{(f)}}          % log p(obs,z|theta)
-\newcommand{\logq}{\ell^{(q)}}          % log q(z|obs,theta)
-\newcommand{\lw}{w}                     % IS log-weight
+\newcommand{\logf}{\ell^{(f)}}
+\newcommand{\logq}{\ell^{(q)}}
+\newcommand{\lw}{w}
 \newcommand{\ESS}{\mathrm{ESS}}
 \newcommand{\AIC}{\mathrm{AIC}}
 \newcommand{\KL}{\mathrm{KL}}
 \DeclareMathOperator*{\argmax}{arg\,max}
 \DeclareMathOperator{\Var}{Var}
-\DeclareMathOperator{\Cov}{Cov}
 \newcommand{\dd}{\,\mathrm{d}}
 
 % ── Title ─────────────────────────────────────────────────────────────────────
@@ -73,18 +71,21 @@
 \noindent
 \textsf{emphasis} is an \textsf{R} package for studying species diversification
 and its ecological drivers. It implements a general birth--death model in which
-per-lineage speciation and extinction rates depend on arbitrary state covariates
---- current species richness, total phylogenetic diversity, and lineage-specific
+per-lineage speciation and extinction rates depend on arbitrary state covariates:
+current species richness, total phylogenetic diversity, and lineage-specific
 evolutionary time. Because the marginal likelihood over the unobserved extinct
 lineages is analytically intractable, the package uses \emph{importance sampling
 on augmented trees}: a proposal distribution augments the observed extant tree
 with stochastically drawn extinct lineages, and the resulting Monte Carlo
-estimate of the marginal log-likelihood serves as the objective for two
-complementary optimisers --- a Monte Carlo Cross-Entropy Method (CEM) for
-global search and a Monte Carlo EM (MCEM) algorithm for local refinement.
-Model selection uses the Akaike Information Criterion computed from the IS
-log-likelihood estimate at the optimum.
-This document gives a self-contained mathematical derivation of every component.
+estimator of the marginal log-likelihood serves as the objective for two
+complementary optimisers -- a Monte Carlo Cross-Entropy Method with simulated
+annealing (CEM-SA) for global search and a Monte Carlo EM (MCEM) algorithm
+for local refinement. Model selection uses the Akaike Information Criterion
+computed from the IS log-likelihood at the optimum. All heavy computations are
+parallelised at the particle level using shared-memory multithreading via
+\textsf{RcppParallel}.
+This document provides a self-contained mathematical derivation of every
+component.
 \end{abstract}
 
 % ══════════════════════════════════════════════════════════════════════════════
@@ -92,7 +93,7 @@ This document gives a self-contained mathematical derivation of every component.
 
 Table~\ref{tab:notation} summarises the principal symbols used throughout.
 
-\begin{table}[h]
+\begin{table}[ht]
 \centering
 \caption{Principal notation.}\label{tab:notation}
 \renewcommand{\arraystretch}{1.25}
@@ -100,24 +101,30 @@ Table~\ref{tab:notation} summarises the principal symbols used throughout.
 \toprule
 Symbol & Meaning \\
 \midrule
-$\obs$ & Observed extant tree (phylo object / branching-time vector) \\
-$\aug = (\obs, z)$ & Augmented tree: $\obs$ together with stochastically drawn extinct lineages $z$ \\
-$\brts = (t_1 > t_2 > \cdots > t_n > 0)$ & Ordered branching times of the extant tree \\
-$\pars \in \R^p$ & Parameter vector of the diversification model \\
+$\obs$ & Observed extant tree (phylo object or branching-time vector) \\
+$z$ & Unobserved extinct lineages \\
+$\aug = (\obs, z)$ & Augmented tree: $\obs$ together with extinct lineages $z$ \\
+$\brts = (t_1 > \cdots > t_n > 0)$ & Ordered branching times of the extant tree \\
+$\pars \in \R^8$ & Full model parameter vector \\
 $\lambda(s,t;\pars)$ & Instantaneous speciation rate of lineage $s$ at time $t$ \\
 $\mu(s,t;\pars)$ & Instantaneous extinction rate of lineage $s$ at time $t$ \\
 $N(t)$ & Number of extant lineages at time $t$ \\
-$P(t)$ & Total pendant branch-length (sum of time since last split) at $t$ \\
-$E(s,t)$ & Evolutionary pendant time of lineage $s$: time since its last speciation \\
-$p(\obs,\aug\mid\pars)$ & Complete-data likelihood \\
-$q(z\mid\obs,\pars)$ & Proposal density for the extinct lineages \\
-$\logf_i$ & $\log p(\obs, z_i \mid \pars)$ --- model log-joint \\
-$\logq_i$ & $\log q(z_i \mid \obs, \pars)$ --- proposal log-density \\
+$P(t)$ & Total pendant branch-length at time $t$ \\
+$E(s,t)$ & Evolutionary pendant time of lineage $s$ \\
+$p(\obs, z \mid \pars)$ & Complete-data likelihood \\
+$p(\obs \mid \pars)$ & Marginal (observed-data) likelihood \\
+$q(z \mid \obs, \pars)$ & Proposal density for extinct lineages \\
+$\logf_i$ & $\log p(\obs, z_i \mid \pars)$ \\
+$\logq_i$ & $\log q(z_i \mid \obs, \pars)$ \\
 $\lw_i$ & IS log-weight: $\lw_i = \logf_i - \logq_i$ \\
 $S$ & IS sample size (augmented trees per particle) \\
 $M$ & CEM population size (particles per iteration) \\
 $\fhat(\pars)$ & IS estimate of $\log p(\obs \mid \pars)$ \\
 $\ESS$ & Effective sample size \\
+$\rho$ & Elite fraction retained per CEM iteration \\
+$T$ & Maximum number of CEM iterations \\
+$\bm{\sigma}^{(k)}$ & Per-parameter perturbation SD at CEM iteration $k$ \\
+$\alpha$ & Annealing decrement per iteration \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -132,38 +139,29 @@ birth--death processes \citep{etienne2012prolonged,janzen2015diversity}.
 Every lineage $s$ alive at time $t$ (measured forward from the crown) is
 subject to a per-lineage speciation rate and extinction rate that depend on
 the current macroecological state of the clade:
-
 \begin{align}\label{eq:rates}
   \lambda(s,t;\pars) &= f\!\left(\beta_0 + \beta_N N(t)
                          + \beta_P P(t) + \beta_E E(s,t)\right), \nonumber\\
   \mu(s,t;\pars)     &= f\!\left(\gamma_0 + \gamma_N N(t)
                          + \gamma_P P(t) + \gamma_E E(s,t)\right),
 \end{align}
-
 where the full parameter vector is
 $\pars = (\beta_0, \beta_N, \beta_P, \beta_E,
           \gamma_0, \gamma_N, \gamma_P, \gamma_E)^\top \in \R^8$.
 
 \paragraph{State covariates.}
-The three covariates in \eqref{eq:rates} capture distinct ecological signals:
-
 \begin{description}
-  \item[$N(t)$] \emph{Species richness.} The number of lineages currently alive.
-    Negative $\beta_N$ produces diversity-dependent suppression of speciation
-    (ecological saturation), while positive $\beta_N$ encodes positive
-    diversity feedbacks.
-  \item[$P(t)$] \emph{Phylogenetic diversity (PD).} The sum of pendant
-    branch-lengths at time $t$:
-    \begin{equation}
-      P(t) = \sum_{s:\text{alive at }t} E(s,t).
-    \end{equation}
-    PD measures the ecological breadth available to the clade; high PD
-    with low $N$ may permit faster diversification.
+  \item[$N(t)$] \emph{Species richness.} The number of lineages currently
+    alive. Negative $\beta_N$ produces diversity-dependent suppression of
+    speciation (ecological carrying capacity), while positive $\beta_N$
+    encodes positive diversity feedbacks.
+  \item[$P(t)$] \emph{Phylogenetic diversity (PD).} The sum of all pendant
+    branch-lengths:
+    $P(t) = \sum_{s:\,\text{alive at }t} E(s,t)$.
+    PD measures the ecological disparity available to the clade.
   \item[$E(s,t)$] \emph{Evolutionary pendant time.} The time elapsed since
-    the lineage $s$ last diverged. Lineages with large $E$ have had longer
-    to accumulate reproductive isolation, making them more likely to speciate
-    (positive $\beta_E$) or, if the environment has changed, to go extinct
-    (positive $\gamma_E$).
+    lineage $s$ last diverged. Long $E$ may indicate accumulated reproductive
+    isolation (higher $\lambda$) or competitive displacement (higher $\mu$).
 \end{description}
 
 \paragraph{Link function.}
@@ -175,44 +173,126 @@ The link function $f:\R\to[0,\infty)$ ensures non-negative rates:
     \exp(\eta)    & \text{exponential link}.
   \end{dcases}
 \end{equation}
-The linear link is piecewise-linear and allows rates to reach exactly zero;
-the exponential link guarantees strictly positive rates at the cost of less
-interpretable coefficients.
+The linear link allows rates to reach exactly zero and is piecewise-linear
+in $\pars$; the exponential link guarantees strictly positive rates. The
+exponential link is not supported for the EP covariate because no closed-form
+integral exists for $\int \exp(\gamma_0 + \gamma_E(t-a_s))\dd t$ combined
+with other covariates.
 
-\subsection{Special cases (model shortcuts)}\label{sec:models}
+\subsection{Model shortcuts}\label{sec:models}
 
-By setting subsets of $\{\beta_N, \beta_P, \beta_E, \gamma_N, \gamma_P,
-\gamma_E\}$ to zero, equation \eqref{eq:rates} reduces to well-known models
-(Table~\ref{tab:models}).
+Setting subsets of $\{\beta_N, \beta_P, \beta_E, \gamma_N, \gamma_P,
+\gamma_E\}$ to zero yields the four canonical models (Table~\ref{tab:models}).
 
-\begin{table}[h]
+\begin{table}[ht]
 \centering
 \caption{Model shortcuts and their free parameters.}\label{tab:models}
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{lllp{7.5cm}}
+\begin{tabular}{lllp{7cm}}
 \toprule
 String & Formula & Active covariates & Free parameters \\
 \midrule
 \texttt{"cr"} & $\sim 1$ & none
-  & $(\beta_0, \gamma_0)$ \\
+  & $(\beta_0,\; \gamma_0)$ \\
 \texttt{"dd"} & $\sim N$ & $N(t)$
-  & $(\beta_0, \beta_N, \gamma_0, \gamma_N)$ \\
+  & $(\beta_0,\; \beta_N,\; \gamma_0,\; \gamma_N)$ \\
 \texttt{"pd"} & $\sim \mathrm{PD}$ & $P(t)$
-  & $(\beta_0, \beta_P, \gamma_0, \gamma_P)$ \\
+  & $(\beta_0,\; \beta_P,\; \gamma_0,\; \gamma_P)$ \\
 \texttt{"ep"} & $\sim \mathrm{EP}$ & $E(s,t)$
-  & $(\beta_0, \beta_E, \gamma_0, \gamma_E)$ \\
---- & $\sim N + \mathrm{PD}$ & $N(t), P(t)$
-  & $(\beta_0, \beta_N, \beta_P, \gamma_0, \gamma_N, \gamma_P)$ \\
---- & $\sim N + \mathrm{PD} + \mathrm{EP}$ & $N(t), P(t), E(s,t)$
+  & $(\beta_0,\; \beta_E,\; \gamma_0,\; \gamma_E)$ \\
+--- & $\sim N + \mathrm{PD}$ & $N(t),P(t)$
+  & $(\beta_0,\beta_N,\beta_P,\gamma_0,\gamma_N,\gamma_P)$ \\
+--- & $\sim N + \mathrm{PD} + \mathrm{EP}$ & all
   & all 8 parameters \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The number of free parameters is always $p = 2 + 2k$ where $k \in \{0,1,2,3\}$
-is the number of active covariates. The exponential link is not supported for
-the EP covariate because the resulting integrals lack a closed form (see
-Section~\ref{sec:likelihood}).
+The number of free parameters is always $p = 2 + 2k$, where $k\in\{0,1,2,3\}$
+is the number of active covariates.
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Stochastic Simulation of Phylogenies}\label{sec:sim}
+
+\subsection{Forward simulation}
+
+Forward simulation of the state-dependent birth--death process proceeds via
+Gillespie's direct method \citep{gillespie1977exact}. At each step the
+algorithm:
+\begin{enumerate}
+  \item Computes the total event rate
+    $R(t) = \sum_{s:\,\text{alive}} [\lambda(s,t;\pars) + \mu(s,t;\pars)]$.
+  \item Draws the waiting time to the next event,
+    $\Delta t \sim \mathrm{Exp}(R(t))$.
+  \item Selects which lineage and event type (speciation or extinction)
+    with probability proportional to individual rates.
+  \item Updates the state $(N, P, \{E_s\})$ and the lineage set.
+\end{enumerate}
+Because $N(t)$, $P(t)$, and each $E(s,t)$ change only at events, $R(t)$
+is piecewise-constant between events and the Gillespie step is exact.
+For the EP covariate, where $E(s,t)$ grows continuously, the waiting time
+no longer has a closed-form distribution and is drawn instead via
+\emph{thinning} (Lewis--Shedler algorithm
+\citep{lewis1979simulation}): candidate times are drawn from a
+homogeneous Poisson process at rate $\lambda_{\max} \geq \sup_t R(t)$, and
+each candidate is accepted with probability $R(t^*)/\lambda_{\max}$.
+
+\subsection{Conditional simulation (augmentation)}\label{sec:proposal}
+
+Given the observed extant tree $\obs$, the package draws the unobserved
+extinct lineages $z$ from the proposal distribution $q(z \mid \obs, \pars)$,
+which conditions on $\obs$ being the extant subtree. The algorithm operates
+interval by interval between consecutive branching times
+$(t_1 > t_2 > \cdots > t_n)$ of $\obs$:
+\begin{enumerate}
+  \item Within each interval $[t_{i+1}, t_i]$, candidate extinction events
+    are generated by thinning a Poisson process at rate $\lambda_{\max}$.
+  \item Each candidate time $t^*$ is accepted as an extinction event with
+    probability $\lambda(t^*;\pars) / \lambda_{\max}$.
+  \item An accepted extinction at $t^*$ spawns a new lineage, which is
+    then forward-simulated from $t^*$ until it goes extinct before $t = 0$
+    (the present); if it does not go extinct it is discarded and redrawn.
+  \item The procedure recurses on the extinct branches.
+\end{enumerate}
+The log-proposal probability
+\begin{equation}\label{eq:logq}
+  \logq_i = \log q(z_i \mid \obs, \pars)
+\end{equation}
+is accumulated analytically during each simulation pass and returned
+alongside $z_i$ and $\logf_i$, so that importance-sampling reweighting
+can be applied immediately without re-running any simulation.
+
+\subsection{Batch simulation and survival probability}
+
+Passing a parameter matrix to \texttt{simulate\_tree()} triggers batch mode:
+each row $\pars_r$ is simulated independently, with failed runs
+(clade extinction or size overflow) retained. The fraction of simulations
+that produce a surviving clade estimates the probability of non-extinction:
+\begin{equation}
+  \hat{\pi}(\pars) = \frac{1}{R}\sum_{r=1}^R
+  \mathbf{1}[\text{simulation }r\text{ survived}].
+\end{equation}
+This quantity can be used to correct the likelihood for conditioning on
+non-extinction. For diversity-dependent models, \texttt{train\_GAM()} fits a
+binomial generalised additive model to the outcomes of a batch run, producing
+a smooth estimate of $\pi(\pars)$ over the parameter space that can be
+evaluated at any $\pars$ without further simulation.
+
+\subsection{Parallel simulation}
+
+The C++ simulation kernel is parallelised using \textsf{RcppParallel}, which
+provides a portable thread pool backed by Intel TBB on supported platforms and
+a fallback \texttt{std::thread} implementation elsewhere. Each particle (i.e.\
+each augmented tree draw) is independent: particle $i$ runs its own
+thinning loop, accumulates its own $(\logf_i, \logq_i)$ pair, and writes to
+a pre-allocated per-particle slot with no shared mutable state. The
+thread pool divides the $S$ particles across \texttt{num\_threads} workers.
+Concretely, the C++ function \texttt{augment\_trees()} accepts an integer
+\texttt{num\_threads} argument; setting \texttt{num\_threads = 1} (default)
+runs everything sequentially, while any value $>1$ activates the parallel
+worker pool. The number of threads should not exceed the number of physical
+cores, and diminishing returns are expected when the per-particle compute
+time is small relative to thread-scheduling overhead.
 
 % ══════════════════════════════════════════════════════════════════════════════
 \section{The Phylogenetic Likelihood}\label{sec:likelihood}
@@ -220,80 +300,51 @@ Section~\ref{sec:likelihood}).
 \subsection{Observed versus augmented data}
 
 The observed data $\obs$ consists of the extant tree: branching times
-$\brts$ and the number of surviving lineages $n$. Because the birth--death
-process generates extinct lineages that are not observed, the
-\emph{marginal} likelihood
+$\brts$ and tip count $n$. The unobserved complete data is the augmented
+tree $\aug = (\obs, z)$, where $z$ denotes all extinct lineages. The
+marginal likelihood integrates over all possible extinct histories:
 \begin{equation}\label{eq:marginal}
-  p(\obs \mid \pars) = \int p(\obs, z \mid \pars) \, \dd\nu(z)
+  p(\obs \mid \pars) = \int p(\obs, z \mid \pars) \, \dd\nu(z),
 \end{equation}
-integrates over the space of all possible extinct-lineage histories $z$,
-with $\nu$ a dominating measure on augmented-tree space. This integral is
-analytically tractable only for the constant-rate (CR) and some
-diversity-dependent (DD) models; for EP and general covariate models it is
-intractable.
+where $\nu$ is the natural dominating measure on augmented-tree space
+(counting measure over the combinatorial structure times Lebesgue measure
+over the continuous event times). This integral is analytically tractable
+for the CR and DD models \citep{etienne2012prolonged} but is intractable
+for EP and any model with lineage-specific covariates.
 
 \subsection{Complete-data log-likelihood}\label{sec:loglik}
 
-Given an augmented tree $\aug = (\obs, z)$ with $K$ total lineages (extant
-and extinct), lineage $k$ alive on the interval $[a_k, d_k]$ where $a_k$ is
-its birth time and $d_k$ its death time (or the crown age for extant lineages),
-the complete-data log-likelihood of the birth--death process is
-
+Let the augmented tree $\aug$ have $K$ total lineages, lineage $k$ alive on
+the time interval $[a_k, d_k]$ where $a_k$ is its birth time and $d_k$ its
+death (or the crown age for extant lineages). The complete-data
+log-likelihood of the birth--death process is:
 \begin{equation}\label{eq:loglik}
   \log p(\obs, z \mid \pars)
-  = \underbrace{\sum_{k=1}^{K}\sum_{\text{events of }k}
-      \log r_k(t_{\text{event}})}_{\text{event contribution}}
-    - \underbrace{\sum_{k=1}^{K}
-      \int_{a_k}^{d_k}
-      \bigl[\lambda(k,t;\pars) + \mu(k,t;\pars)\bigr]\dd t}_{\text{survival contribution}},
+  = \sum_{k=1}^{K} \log r_k(t_k^{\rm ev})
+    - \sum_{k=1}^{K} \int_{a_k}^{d_k}
+      \bigl[\lambda(k,t;\pars) + \mu(k,t;\pars)\bigr]\dd t,
 \end{equation}
+where $r_k(t_k^{\rm ev})$ is the rate of the event terminating lineage $k$
+($\lambda$ for speciation, $\mu$ for extinction), and the integral is the
+cumulative hazard of lineage $k$ over its lifetime. Expanding:
+\begin{align}
+  \log p(\obs, z \mid \pars)
+  &= \sum_{k:\,\text{speciation}} \log \lambda(k, t_k^{\rm ev};\pars)
+   + \sum_{k:\,\text{extinction}} \log \mu(k, t_k^{\rm ev};\pars)
+   \nonumber\\
+  &\quad - \sum_{k=1}^{K}
+    \int_{a_k}^{d_k}
+    \bigl[\lambda(k,t;\pars) + \mu(k,t;\pars)\bigr]\dd t.
+    \label{eq:loglik2}
+\end{align}
 
-where $r_k(t)$ is the rate of whatever event (speciation or extinction)
-terminates lineage $k$ at time $t$. Specifically:
-
-\begin{enumerate}
-  \item Each speciation event of lineage $k$ at time $t$ contributes
-    $\log \lambda(k, t; \pars)$.
-  \item Each extinction event of lineage $k$ at time $t$ contributes
-    $\log \mu(k, t; \pars)$.
-  \item The integrated hazard for lineage $k$ over its lifetime is
-    \begin{equation}\label{eq:hazard}
-      H_k(\pars) = \int_{a_k}^{d_k}
-        \bigl[\lambda(k,t;\pars) + \mu(k,t;\pars)\bigr]\dd t.
-    \end{equation}
-\end{enumerate}
-
-\paragraph{Closed-form integrals.}
-For the linear link, the integral $H_k(\pars)$ has a closed form for all
-supported covariate combinations. For the EP covariate with exponential link,
-the integral $\int \exp(\gamma_0 + \gamma_E E(k,t))\dd t$ requires
-$E(k,t) = t - a_k$, giving $\int_{a_k}^{d_k} e^{\gamma_0 + \gamma_E(t-a_k)}\dd t$
-which is analytically tractable, but combining EP with other exponential-link
-covariates is not currently supported.
-
-\subsection{The proposal distribution}\label{sec:proposal}
-
-The proposal $q(z \mid \obs, \pars)$ draws extinct lineages conditioned on
-the observed extant tree $\obs$ using a \emph{thinning} (rejection sampling)
-approach on a Poisson process with rate bounded by $\lambda_{\max}$:
-
-\begin{enumerate}
-  \item For each inter-event interval of the extant tree, extinct-lineage
-    candidates are generated as events of a homogeneous Poisson process with
-    rate $\lambda_{\max}$.
-  \item Each candidate time $t^*$ is accepted as an actual extinction event
-    with probability $\lambda(t^*;\pars) / \lambda_{\max}$.
-  \item Accepted extinctions initiate new lineages that are recursively
-    simulated until they go extinct before the present.
-\end{enumerate}
-
-The resulting log-proposal probability is
-\begin{equation}\label{eq:logq}
-  \log q(z \mid \obs, \pars) = \log q_{\rm aug}(z \mid \obs)
-  + \text{correction for thinning acceptance probabilities},
-\end{equation}
-and is computed analytically during the simulation so that it is available
-alongside $\logf$ for importance-sampling reweighting.
+\paragraph{Closed-form hazard integrals.}
+For the linear link, $\lambda(k,t;\pars) = \max(0, \eta_k(t))$ and the
+integral $\int_{a_k}^{d_k} \eta_k(t)\dd t$ has a closed form for all
+supported covariate combinations, because $N(t)$, $P(t)$, and $E(k,t)$
+are all piecewise-linear between events. The C++ kernel precomputes the
+integral for each lineage interval analytically, making evaluation of
+\eqref{eq:loglik2} exact and fast.
 
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Importance-Sampling Likelihood Estimation}\label{sec:IS}
@@ -301,205 +352,259 @@ alongside $\logf$ for importance-sampling reweighting.
 \subsection{The IS estimator}
 
 Let $z_1, \ldots, z_S \stackrel{\rm iid}{\sim} q(z \mid \obs, \pars)$.
-The marginal likelihood \eqref{eq:marginal} can be written as the expectation
+The marginal likelihood \eqref{eq:marginal} is the expectation
 \begin{equation}
   p(\obs \mid \pars)
   = \E_{q}\!\left[\frac{p(\obs, z \mid \pars)}{q(z \mid \obs, \pars)}\right],
 \end{equation}
-which is estimated without bias by
+estimated without bias by
 \begin{equation}\label{eq:IS}
   \Lhat_S(\pars) = \frac{1}{S}\sum_{i=1}^{S}
     \exp\!\bigl(\logf_i - \logq_i\bigr)
-    = \frac{1}{S}\sum_{i=1}^{S} \exp(\lw_i),
+    = \frac{1}{S}\sum_{i=1}^{S} \exp(\lw_i).
 \end{equation}
-where $\lw_i = \logf_i - \logq_i$ are the IS log-weights. The IS
-log-likelihood estimate is
+The IS log-likelihood estimate is therefore
 \begin{equation}\label{eq:fhat}
   \fhat(\pars) = \log \Lhat_S(\pars)
-  = \log\!\left(\frac{1}{S}\sum_{i=1}^{S} \exp(\lw_i)\right).
+  = \log\!\left(\frac{1}{S}\sum_{i=1}^{S} \exp(\lw_i)\right),
 \end{equation}
-Equation \eqref{eq:fhat} is evaluated in numerically stable form using the
-log-sum-exp identity:
+evaluated in numerically stable form via the log-sum-exp identity:
 \begin{equation}\label{eq:logsumexp}
   \fhat(\pars) = w_{\max} + \log\!\left(\frac{1}{S}\sum_{i=1}^{S}
     \exp(\lw_i - w_{\max})\right), \quad
   w_{\max} = \max_i \lw_i.
 \end{equation}
 
-\begin{remark}[Jensen's inequality bias]
-Because $\log$ is concave, Jensen's inequality gives
-$\fhat(\pars) = \log \E_q[\exp(\lw)] \leq \E_q[\lw]$.
-The estimator $\fhat$ is therefore a downward-biased estimate of
-$\log p(\obs \mid \pars)$, though the bias vanishes as $S\to\infty$.
+\begin{remark}[Jensen's inequality bias]\label{rem:jensen}
+Because $\log$ is concave, $\fhat(\pars) \leq \E_q[\lw]$ by Jensen's
+inequality, so $\fhat$ underestimates $\log p(\obs\mid\pars)$. The bias
+is $O(1/S)$ and vanishes as $S\to\infty$.
 \end{remark}
 
 \subsection{Bias-corrected estimator}\label{sec:biascorrect}
 
-The exact identity relating $\log\E[X]$ to the cumulants of $\log X$ yields
-a moment-based correction. Let $\ell_{\rm hat} = \frac{1}{S}\sum_i \lw_i$
-and define the central moments
-\begin{equation}
-  m_k = \frac{1}{S}\sum_{i=1}^{S}\bigl(\lw_i - \ell_{\rm hat}\bigr)^k.
-\end{equation}
-Then the bias-corrected estimator truncated at order $K$ is
+A moment-based correction removes the leading-order Jensen bias. Define
+$\ell_{\rm hat} = S^{-1}\sum_i \lw_i$ and the central moments
+$m_k = S^{-1}\sum_i (\lw_i - \ell_{\rm hat})^k$. The exact identity
+relating $\log\E[e^W]$ to the cumulants of $W$ gives:
 \begin{equation}\label{eq:biascorrect}
   \fhat_{\rm BC}(\pars) = \ell_{\rm hat}
     + \log\!\left(1 + \sum_{k=2}^{K}\frac{m_k}{k!}\right).
 \end{equation}
-At $K=2$ this reduces to the log-normal correction
-$\ell_{\rm hat} + \log(1 + m_2/2) \approx \ell_{\rm hat} + m_2/2$
-for small $m_2$. As $K\to\infty$, $\fhat_{\rm BC} \to \fhat$ identically;
-the finite-$K$ truncation is the approximation.
+At $K=2$ this is the log-normal correction $\ell_{\rm hat} + \log(1 + m_2/2)
+\approx \ell_{\rm hat} + m_2/2$ for small $m_2$. The full series
+($K\to\infty$) recovers $\fhat$ exactly; the truncation at finite $K$ is the
+approximation.
 
 \paragraph{Handling rejected trees.}
-A tree is rejected if augmentation exceeds the limit $\lambda_{\max}$ or
-the maximum extinct-lineage count. Rejected trees have likelihood $L_i = 0$
-(i.e.\ $\lw_i = -\infty$) and are excluded from the moment sums but enter
-the denominator:
+Trees that exceed $\lambda_{\max}$ or the maximum extinct-lineage count
+have $L_i = 0$ ($\lw_i = -\infty$). They are excluded from moment sums
+but enter the denominator:
 \begin{equation}
-  \fhat(\pars) = \fhat_{\rm valid}(\pars) + \log\!\left(\frac{S_{\rm valid}}{S}\right),
+  \fhat(\pars) = \fhat_{\rm valid}(\pars)
+    + \log\!\left(\frac{S_{\rm valid}}{S}\right),
 \end{equation}
-where $\fhat_{\rm valid}$ is computed over the $S_{\rm valid}$ non-rejected
-trees only.
+where $\fhat_{\rm valid}$ uses only the $S_{\rm valid}$ non-rejected trees.
 
-\subsection{Effective Sample Size}
+\subsection{Effective sample size}
 
-The IS effective sample size quantifies how many of the $S$ samples
-contribute meaningfully to the estimate:
+The IS effective sample size quantifies IS quality:
 \begin{equation}\label{eq:ESS}
-  \ESS = \frac{\left(\sum_{i=1}^{S} \exp(\lw_i)\right)^2}
-              {\sum_{i=1}^{S} \exp(2\lw_i)}.
+  \ESS = \frac{\left(\displaystyle\sum_{i=1}^{S} e^{\lw_i}\right)^2}
+              {\displaystyle\sum_{i=1}^{S} e^{2\lw_i}}.
 \end{equation}
-$\ESS \approx S$ indicates roughly uniform weights (high IS efficiency);
-$\ESS \approx 1$ indicates one tree dominates (IS collapse). We report
-$\ESS/S \in (0,1]$ as a diagnostic fraction. For reliable estimation,
-$\ESS/S \geq 0.1$ is recommended.
+$\ESS \approx S$ means roughly uniform weights (efficient IS); $\ESS\approx 1$
+means one tree dominates (IS collapse). We report $\ESS/S\in(0,1]$ as a
+diagnostic. For reliable inference, $\ESS/S \geq 0.1$ is recommended.
 
-\subsection{Cross-importance sampling (shared-tree mode)}\label{sec:crossIS}
+\subsection{Cross-importance sampling (Mode~2)}\label{sec:crossIS}
 
-In shared-tree mode (Mode~2), a single pool of $S$ augmented trees
-$\{z_1,\ldots,z_S\}$ is drawn at a reference parameter $\pars_0$, and
-$\fhat$ is evaluated at any $\pars_j$ via
-
+In Mode~2 (\texttt{shared\_trees = TRUE}), a single pool of $S$ augmented
+trees is drawn at a reference parameter $\pars_0$, and $\fhat$ is evaluated
+at any $\pars_j$ by re-scoring the same trees:
 \begin{equation}\label{eq:crossIS}
   \fhat(\pars_j) = \log\!\left(\frac{1}{S}\sum_{i=1}^{S}
     \exp\bigl(\logf(z_i,\pars_j) - \logq_i\bigr)\right),
 \end{equation}
-
 where $\logq_i = \log q(z_i \mid \obs, \pars_0)$ are fixed at simulation
-time and $\logf(z_i,\pars_j)$ is re-evaluated at the new $\pars_j$ via
-\texttt{eval\_logf()}. This avoids re-simulating trees for each particle in
-the population, at the cost of increased variance when $\pars_j$ and
-$\pars_0$ are far apart.
+time and $\logf(z_i,\pars_j)$ is re-evaluated analytically at $\pars_j$
+via \texttt{eval\_logf()}. This reduces the total augmentations from
+$M \times S$ to $S$ per CEM iteration, at the cost of higher variance when
+$\pars_j$ and $\pars_0$ are distant. Mode~2 is parallelised over the $M$
+particles (scoring is cheap), while Mode~1 parallelises the $S$
+augmentation draws.
 
 % ══════════════════════════════════════════════════════════════════════════════
-\section{The Cross-Entropy Method for Parameter Estimation}\label{sec:CEM}
+\section{The Cross-Entropy Method with Simulated Annealing}\label{sec:CEM}
 
-\subsection{Overview}
+\subsection{The optimisation problem}
 
-The Cross-Entropy Method (CEM) \citep{rubinstein1999cross,deBoer2005tutorial}
-solves the optimisation problem
+Parameter estimation reduces to maximising the IS log-likelihood:
 \begin{equation}\label{eq:opt}
-  \hat{\pars} = \argmax_{\pars \in [\lb,\,\ub]} \fhat(\pars)
+  \hat{\pars} = \argmax_{\pars \in [\lb,\,\ub]} \fhat(\pars).
 \end{equation}
-by maintaining a population of $M$ candidate parameter vectors
-(``particles'') and iteratively concentrating them near the optimum. The
-key idea is to minimise the KL divergence between the empirical distribution
-of high-quality particles and the parametric family used to generate them.
+Because $\fhat$ is stochastic (it depends on randomly drawn augmented
+trees) and potentially multimodal, gradient-based methods are unreliable.
+The Cross-Entropy Method (CEM) \citep{rubinstein1999cross,deBoer2005tutorial}
+solves \eqref{eq:opt} by maintaining an evolving population of candidate
+parameter vectors and adaptively concentrating it near the optimum.
+
+\subsection{Cross-entropy population update}
+
+Let $g(\pars; \bm{\mu}, \bm{\Sigma})$ be a parametric family of densities
+over the search box $[\lb, \ub]$. The CEM at each iteration selects the
+member of $g$ that minimises the KL divergence to the ``ideal'' importance
+distribution $g^*$ that places all mass at the global maximiser of
+$\fhat$:
+\begin{equation}
+  (\bm{\mu}^{(k+1)}, \bm{\Sigma}^{(k+1)}) = \argmin_{\bm{\mu},\bm{\Sigma}}
+  \KL\!\left(g^* \;\big\|\; g(\cdot;\bm{\mu},\bm{\Sigma})\right).
+\end{equation}
+In the Gaussian case this CE update reduces to: set $\bm{\mu}^{(k+1)}$ to
+the sample mean of the elite particles and $\bm{\Sigma}^{(k+1)}$ to their
+sample covariance. Because the full covariance update can overfit with
+small elite populations, \textsf{emphasis} uses a diagonal approximation:
+each parameter dimension is updated independently, and the resulting
+perturbation is a product of univariate Gaussians.
+
+\subsection{Simulated annealing schedule}\label{sec:annealing}
+
+To prevent premature convergence, the perturbation variance is not derived
+purely from the elite sample but is controlled by an explicit
+\emph{annealing schedule} analogous to simulated annealing
+\citep{kirkpatrick1983optimization}. Concretely, define the ``temperature''
+vector $\bm{\sigma}^{(k)} \in \R^8_{>0}$ as the per-parameter perturbation
+standard deviation at iteration $k$. New particles are generated as:
+\begin{equation}\label{eq:perturb}
+  \pars_j^{(k+1)} = \mathrm{clip}\!\left(
+    \pars_{\pi(j)}^{(k)} + \bm{\varepsilon}_j,\; \lb,\; \ub\right),
+  \quad
+  \bm{\varepsilon}_j \sim \mathcal{N}\!\left(\mathbf{0},\;
+    \mathrm{diag}\!\left(\bm{\sigma}^{(k)}\right)^2\right),
+\end{equation}
+where $\pi(j)$ selects uniformly from the elite set and
+$\mathrm{clip}(\cdot,\lb,\ub)$ projects back into the feasible box.
+
+The temperature is cooled linearly:
+\begin{equation}\label{eq:anneal}
+  \bm{\sigma}^{(k+1)} = \bm{\sigma}^{(k)} - \alpha\,\mathbf{1},
+  \qquad
+  \alpha = \frac{\bm{\sigma}^{(0)}}{T},
+\end{equation}
+with the initial temperature set to one quarter of the search range:
+\begin{equation}\label{eq:sigma0}
+  \sigma_p^{(0)} = \frac{u_p - \ell_p}{4}, \quad p = 1,\ldots, 8.
+\end{equation}
+With this schedule, $\bm{\sigma}^{(T)} = \mathbf{0}$: the population fully
+collapses at iteration $T$. The linear decay is analogous to the linear
+cooling schedule in classical simulated annealing and guarantees a smooth
+transition from broad exploration (large $\sigma$, wide Gaussian
+perturbations) to fine-grained exploitation (small $\sigma$, narrow
+perturbations near the current elite). Early stopping via the plateau and
+annealing rules (Section~\ref{sec:stopping}) allows termination before
+$T$ is reached.
+
+\paragraph{Connection to simulated annealing.}
+In classical simulated annealing, the Boltzmann acceptance probability at
+temperature $\tau$ is $\exp(-\Delta E / \tau)$: high $\tau$ accepts bad
+moves freely (exploration); low $\tau$ accepts only improvements
+(exploitation). In the CEM-SA framework, $\bm{\sigma}^{(k)}$ plays the role
+of $\tau$: large $\sigma$ generates particles far from the current elite
+(exploration); as $\sigma \to 0$ only particles close to elite copies are
+generated (exploitation). The crucial difference is that CEM-SA evaluates
+the stochastic objective $\fhat$ directly at many candidate points in
+parallel rather than performing a single-chain random walk.
+
+\subsection{Stopping rules}\label{sec:stopping}
+
+Three criteria are checked in order at the end of each iteration:
+\begin{enumerate}
+  \item \textbf{Annealing exhausted.} $\bm{\sigma}^{(k)} \leq \mathbf{0}$
+    element-wise: the population has fully collapsed; further perturbation
+    would be zero.
+  \item \textbf{Plateau.} The improvement
+    $f^{(k)} - f^{(k-1)} < \delta$ (default $\delta = 10^{-4}$) for $P$
+    (default 5) consecutive iterations. This guards against wasting
+    computation when the IS surface is flat near the optimum.
+  \item \textbf{Hard cap.} $k = T$ (default $T = 20$).
+\end{enumerate}
 
 \subsection{Algorithm}\label{sec:CEMalg}
 
-Let $[\lb, \ub] \subset \R^8$ be the search box, $M$ the population size,
-$\rho \in (0,1)$ the elite fraction, and $\bm{\sigma}^{(0)} \in \R^8_{>0}$
-the initial perturbation standard deviations.
+The complete CEM-SA procedure is given in Algorithm~\ref{alg:CEM}.
 
 \begin{algorithm}[H]
-\caption{Monte Carlo CEM (\texttt{emphasis\_cem})}\label{alg:CEM}
+\caption{Monte Carlo CEM with Simulated Annealing (\texttt{emphasis\_cem})}
+\label{alg:CEM}
 \DontPrintSemicolon
+\SetKwComment{Comment}{// }{}
 \KwIn{branching times $\brts$; bounds $[\lb,\ub]$; population size $M$;
-      elite fraction $\rho$; IS sample size $S$; initial SD $\bm{\sigma}^{(0)}$;
-      annealing step $\alpha$; max iterations $T$; plateau tolerance $\delta$;
-      patience $P$}
-\KwOut{best parameter estimate $\hat{\pars}$; convergence history}
+      elite fraction $\rho$; IS sample size $S$; max iterations $T$;
+      annealing step $\alpha$; plateau tolerance $\delta$; patience $P$;
+      \texttt{num\_threads}}
+\KwOut{best parameter estimate $\hat{\pars}$; per-iteration history}
 \BlankLine
+$\bm{\sigma}^{(0)} \leftarrow (u_p - \ell_p)/4$ for each $p$
+  \Comment*[r]{initial temperature \eqref{eq:sigma0}}
 Initialise $\{\pars_j^{(0)}\}_{j=1}^{M}$ uniformly in $[\lb,\ub]$\;
-$k \leftarrow 0$, \textit{plateau\_count} $\leftarrow 0$\;
+$k \leftarrow 0$;\quad \textit{plat} $\leftarrow 0$;\quad
+$f^* \leftarrow -\infty$\;
+\BlankLine
 \While{$k < T$}{
-  \tcc{E-step: evaluate IS log-likelihood for every particle}
-  \For{$j = 1, \ldots, M$}{
+  \lIf{$\bm{\sigma}^{(k)} \leq \mathbf{0}$}{\textbf{stop}
+    (\textit{annealing exhausted})}
+  \BlankLine
+  \Comment{E-step: evaluate $\fhat$ for every particle (in parallel)}
+  \For(\Comment*[f]{\texttt{num\_threads} workers}){$j = 1, \ldots, M$}{
     Draw $z_1^{(j)},\ldots,z_S^{(j)} \sim q(\cdot \mid \obs, \pars_j^{(k)})$\;
-    Compute $\fhat(\pars_j^{(k)})$ via \eqref{eq:fhat}\;
+    $\fhat(\pars_j^{(k)}) \leftarrow$ \eqref{eq:fhat};
+    \quad mark invalid if result is NA\;
   }
-  Mark particle $j$ as invalid if $\fhat(\pars_j^{(k)}) = \mathrm{NA}$\;
   \BlankLine
-  \tcc{Record best particle}
-  $\hat{\pars}^{(k)} \leftarrow \argmax_j \fhat(\pars_j^{(k)})$\;
-  $f^{(k)} \leftarrow \fhat(\hat{\pars}^{(k)})$\;
+  $j^* \leftarrow \argmax_{j:\,\text{valid}} \fhat(\pars_j^{(k)})$;\quad
+  $f^{(k)} \leftarrow \fhat(\pars_{j^*}^{(k)})$\;
   \BlankLine
-  \tcc{Stopping rules}
-  \lIf{$\bm{\sigma}^{(k)} \leq \mathbf{0}$}{\textbf{stop} (\textit{annealing})}
-  \If{$k > 0$ and $f^{(k)} - f^{(k-1)} < \delta$}{
-    \textit{plateau\_count} $\leftarrow$ \textit{plateau\_count} $+ 1$\;
-    \lIf{\textit{plateau\_count} $\geq P$}{\textbf{stop} (\textit{plateau})}
-  }\lElse{\textit{plateau\_count} $\leftarrow 0$}
+  \Comment{Plateau check}
+  \eIf{$k > 0$ \textbf{and} $f^{(k)} - f^{(k-1)} < \delta$}{
+    \textit{plat} $\leftarrow$ \textit{plat} $+ 1$\;
+    \lIf{\textit{plat} $\geq P$}{\textbf{stop} (\textit{plateau})}
+  }{\textit{plat} $\leftarrow 0$}
   \BlankLine
-  \tcc{M-step: resample around elite particles}
-  Sort particles by $\fhat$; retain top $\lfloor\rho M\rfloor$ elite particles\;
-  Resample $M - \lfloor\rho M\rfloor$ new particles by perturbing elite copies:
-  \[
-    \pars_j^{(k+1)} = \mathrm{clip}\!\left(
-      \pars_{\pi(j)}^{(k)} + \bm{\epsilon}_j,\; \lb,\; \ub\right),
-    \quad \bm{\epsilon}_j \sim \mathcal{N}(\mathbf{0},\,
-    \mathrm{diag}(\bm{\sigma}^{(k)})^2)
-  \]
-  where $\pi(j)$ indexes a uniformly drawn elite particle\;
-  Anneal: $\bm{\sigma}^{(k+1)} \leftarrow \bm{\sigma}^{(k)} - \alpha$\;
+  \Comment{M-step: resample around elite particles}
+  Elite $\leftarrow$ top $\lfloor\rho M\rfloor$ valid particles by $\fhat$\;
+  For each non-elite slot $j$: sample $\pi(j) \sim \mathrm{Uniform}(\text{Elite})$
+  and set $\pars_j^{(k+1)}$ via \eqref{eq:perturb}\;
+  Elite particles are copied unchanged:
+  $\pars_j^{(k+1)} \leftarrow \pars_j^{(k)}$ for $j\in\text{Elite}$\;
+  \BlankLine
+  \Comment{Cool the temperature}
+  $\bm{\sigma}^{(k+1)} \leftarrow \bm{\sigma}^{(k)} - \alpha\,\mathbf{1}$\;
   $k \leftarrow k + 1$\;
 }
-$\hat{\pars} \leftarrow \argmax_k \hat{\pars}^{(k)}$ \tcp*{global best across all iterations}
+$\hat{\pars} \leftarrow \argmax_{k} f^{(k)}$
+  \Comment*[r]{global best across all iterations}
 \end{algorithm}
 
-\subsection{Stopping rules}
+\paragraph{Parallelism in the E-step.}
+The inner loop over particles $j = 1,\ldots,M$ is the dominant cost.
+Each augmentation is entirely independent: particle $j$ accesses only its
+own parameter vector $\pars_j^{(k)}$ and writes to its own pre-allocated
+result slot. This embarrassing parallelism is exploited by
+\textsf{RcppParallel}: the $M$ particles are partitioned into
+\texttt{num\_threads} contiguous blocks, each processed by a separate
+thread from the TBB worker pool. Because there is no inter-particle
+communication and each thread writes to a disjoint memory region, no locks
+or atomic operations are needed, and parallel efficiency is near-linear up
+to the number of physical cores.
 
-Three stopping criteria are checked in order at the end of each iteration:
-
-\begin{enumerate}
-  \item \textbf{Annealing exhausted.} $\bm{\sigma}^{(k)} \leq \mathbf{0}$
-    element-wise. The population has fully collapsed onto its current best
-    point; further perturbation would be zero.
-  \item \textbf{Plateau.} The improvement in the best IS log-likelihood,
-    $f^{(k)} - f^{(k-1)}$, has been less than $\delta$ (default $10^{-4}$)
-    for $P$ (default 5) consecutive iterations. This guards against wasting
-    computation when the surface is flat near the optimum.
-  \item \textbf{Hard cap.} $k = T$ (default $T = 20$). Unconditional
-    maximum-iteration limit.
-\end{enumerate}
-
-\subsection{Particle rescue under limit exceedance}
-
-If all $M$ particles return invalid $\fhat$ (every augmented tree rejected),
-the limits are escalated geometrically:
-$\lambda_{\max} \leftarrow 10 \lambda_{\max}$,
+\paragraph{Particle rescue.}
+If every particle in a given iteration produces an invalid $\fhat$ (all
+augmented trees rejected), the per-particle limits are escalated:
+$\lambda_{\max} \leftarrow 10\lambda_{\max}$,
 $N_{\max} \leftarrow 10 N_{\max}$,
-and evaluation is retried. If $N_{\max}$ exceeds $10{,}000$ with all
-particles still invalid, the run is terminated with
-\texttt{stop\_reason = "all\_failed"} and a warning advising the user to
+and the E-step is repeated. If $N_{\max} > 10{,}000$ with all particles
+still invalid, the run terminates with a warning advising the user to
 increase \texttt{num\_points} or widen the bounds.
-
-\subsection{Annealing schedule}
-
-The initial perturbation SD is set to
-\begin{equation}
-  \sigma_p^{(0)} = \frac{u_p - \ell_p}{4}, \quad p = 1, \ldots, 8,
-\end{equation}
-where $u_p$ and $\ell_p$ are the upper and lower bounds for parameter $p$.
-At each iteration the SD is reduced by $\alpha$:
-\begin{equation}
-  \bm{\sigma}^{(k+1)} = \bm{\sigma}^{(k)} - \alpha \mathbf{1},
-  \quad \alpha = \frac{\sigma_p^{(0)}}{T}.
-\end{equation}
-This linear schedule ensures the population collapses smoothly from
-broad exploration to local exploitation over $T$ iterations.
 
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Monte Carlo EM for Local Refinement}\label{sec:MCEM}
@@ -507,224 +612,206 @@ broad exploration to local exploitation over $T$ iterations.
 \subsection{The EM objective}
 
 The Monte Carlo Expectation--Maximisation (MCEM) algorithm
-\citep{wei1990monte,levine2001implementations} iteratively maximises the
-expected complete-data log-likelihood
+\citep{wei1990monte,levine2001implementations} maximises the expected
+complete-data log-likelihood:
 \begin{equation}\label{eq:Qfunc}
-  Q(\pars \mid \pars^{(t)}) = \E_{z \mid \obs, \pars^{(t)}}\!
-    \left[\log p(\obs, z \mid \pars)\right].
+  Q(\pars \mid \pars^{(t)}) = \E_{q(\cdot\mid\obs,\pars^{(t)})}\!
+    \bigl[\log p(\obs, z \mid \pars)\bigr].
 \end{equation}
 
-\subsection{E-step}
+\subsection{IS-weighted E-step}
 
-In the E-step, $S$ augmented trees are drawn from
-$q(z \mid \obs, \pars^{(t)})$ and used to form the IS-weighted approximation:
+At iteration $t$, draw $z_1,\ldots,z_S \sim q(\cdot\mid\obs,\pars^{(t)})$.
+The IS-weighted approximation to $Q$ is:
 \begin{equation}\label{eq:Qhat}
   \hat{Q}(\pars \mid \pars^{(t)})
-  = \frac{\sum_{i=1}^{S} \exp(\lw_i^{(t)}) \cdot
-          \logf(z_i, \pars)}
-         {\sum_{i=1}^{S} \exp(\lw_i^{(t)})},
+  = \frac{\displaystyle\sum_{i=1}^{S}
+          \tilde{w}_i^{(t)} \cdot \logf(z_i, \pars)}
+         {1},
+  \quad
+  \tilde{w}_i^{(t)} = \frac{e^{\lw_i^{(t)}}}{\sum_j e^{\lw_j^{(t)}}},
 \end{equation}
-where $\lw_i^{(t)} = \logf(z_i, \pars^{(t)}) - \logq_i^{(t)}$ are the IS
-log-weights at the current iterate $\pars^{(t)}$, and the denominator
-normalises them to proper weights.
+where $\lw_i^{(t)} = \logf(z_i,\pars^{(t)}) - \logq_i^{(t)}$ and
+$\tilde{w}_i^{(t)}$ are normalised IS weights. This is the self-normalised
+IS estimator of $Q$, which is consistent for any positive proposal
+$q > 0$ wherever $p > 0$.
 
-\subsection{M-step}
+\subsection{M-step and convergence}
 
-The M-step maximises $\hat{Q}(\pars \mid \pars^{(t)})$ over $\pars \in
-[\lb, \ub]$ using the COBYLA (Constrained Optimisation BY Linear
-Approximations) algorithm \citep{powell1994direct} via the
-\texttt{nloptr} interface. Because COBYLA does not require gradient
-information, it is robust to the Monte Carlo noise in $\hat{Q}$.
+The M-step maximises $\hat{Q}(\pars\mid\pars^{(t)})$ over $\pars\in[\lb,\ub]$
+using the derivative-free COBYLA algorithm \citep{powell1994direct} via the
+\texttt{nloptr} interface. COBYLA constructs successive linear approximations
+to the objective from function evaluations, which is appropriate here because
+the IS noise makes numerical gradients unreliable.
 
-\subsection{Convergence}
-
-MCEM convergence is assessed by monitoring the change in the IS
-log-likelihood $\fhat(\pars^{(t)})$ across iterations. The algorithm
-terminates when this change falls below a tolerance $\varepsilon$ (default
-$10^{-1}$) for a specified number of consecutive post-burnin iterations.
-A burn-in phase (default 20 iterations) is excluded from convergence
-monitoring to allow initial transients to decay.
+Convergence is declared when the change in $\fhat(\pars^{(t)})$ across
+consecutive post-burnin iterations falls below a tolerance $\varepsilon$
+(default 0.1). A burn-in phase (default 20 iterations) is excluded from
+the convergence check to allow transients to decay.
 
 \subsection{MCEM as a refinement stage}
 
-Because MCEM converges to a local optimum of $\pars \mapsto
-\log p(\obs \mid \pars)$, it is recommended as a \emph{second stage}
-after the CEM has located a good region of the parameter space:
-
+Because MCEM converges to a local maximum of $\pars \mapsto
+\log p(\obs\mid\pars)$, the recommended workflow is:
 \begin{enumerate}
-  \item Run CEM to obtain $\hat{\pars}_{\rm CEM}$.
-  \item Initialise MCEM at $\hat{\pars}_{\rm CEM}$ and refine.
+  \item Run CEM-SA to locate a good region (global search).
+  \item Warm-start MCEM at $\hat{\pars}_{\rm CEM}$ (local refinement).
 \end{enumerate}
+The MCEM E-step parallelises over the $S$ augmented trees in the same way
+as the CEM E-step, using \texttt{num\_threads} threads.
 
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Model Selection}\label{sec:modelsel}
 
 \subsection{AIC}
 
-For each fitted model $\mathcal{M}_k$ with $p_k$ free parameters and IS
-log-likelihood $\fhat(\hat{\pars}_k)$, the Akaike Information Criterion is
+For fitted model $\mathcal{M}_k$ with $p_k$ free parameters and IS
+log-likelihood $\fhat(\hat{\pars}_k)$:
 \begin{equation}\label{eq:AIC}
   \AIC_k = -2\,\fhat(\hat{\pars}_k) + 2 p_k.
 \end{equation}
-The preferred model minimises $\AIC$. The $\Delta\AIC$ values
-$\AIC_k - \min_j \AIC_j \geq 0$ quantify the evidence against model $k$.
+The preferred model minimises $\AIC$. The gaps
+$\Delta\AIC_k = \AIC_k - \min_j \AIC_j \geq 0$ quantify evidence against
+model $k$: $\Delta\AIC < 2$ is considered negligible,
+$2 \leq \Delta\AIC < 6$ moderate, and $\Delta\AIC \geq 6$ strong.
 
-\begin{remark}[IS bias and AIC]
-Because $\fhat$ is a downward-biased estimate of $\log p(\obs \mid \hat{\pars})$
-(Remark~1), the AIC is upward-biased relative to its true value. When
-comparing models evaluated at the \emph{same} sample of augmented trees this
-bias is constant across models and cancels in $\Delta\AIC$; when trees are
-simulated independently per model (the default), residual Monte Carlo noise
-may affect comparisons with very small $\Delta\AIC$.
+\begin{remark}[IS bias in AIC comparisons]\label{rem:aicbias}
+Because $\fhat$ underestimates $\log p(\obs\mid\hat{\pars})$
+(Remark~\ref{rem:jensen}), the AIC is upward-biased. When models are
+evaluated at independently drawn augmented trees (Mode~1), the bias is
+model-specific and does not cancel in $\Delta\AIC$. This residual Monte
+Carlo noise is quantified by the bootstrap variance
+(Section~\ref{sec:bootvar}) and is reduced by increasing $S$ or using
+Mode~2.
 \end{remark}
 
-\subsection{Bootstrap variance of $\fhat$}
+\subsection{Bootstrap variance of $\fhat$}\label{sec:bootvar}
 
-To quantify IS Monte Carlo uncertainty at the optimum, the package provides
-a leave-half-out (subsampling) bootstrap variance of $\fhat$:
+To quantify IS Monte Carlo uncertainty at the optimum, \textsf{emphasis}
+provides a leave-half-out subsampling bootstrap:
 \begin{equation}\label{eq:bootvar}
   \widehat{\Var}[\fhat(\hat{\pars})] = \frac{1}{B} \sum_{b=1}^{B}
     \bigl(\fhat^{(b)}(\hat{\pars}) - \bar{\fhat}(\hat{\pars})\bigr)^2,
 \end{equation}
-where $\fhat^{(b)}$ uses a randomly drawn half of the $S_{\rm final}$
-augmented trees. A large $\widehat{\Var}$ relative to $|\Delta\AIC|/2$
-indicates that the model comparison is noise-dominated and more trees should
-be used.
+where $\fhat^{(b)}$ is computed on a uniformly drawn half of the
+$S_{\rm final}$ trees and $\bar{\fhat}$ is the mean over $B$ replicates.
+If $\widehat{\Var}^{1/2}[\fhat] \sim |\Delta\AIC|/2$, the model comparison
+is noise-dominated and $S$ should be increased.
 
-\subsection{Three-model automated selection}
+\subsection{Automated three-model selection}
 
-The function \texttt{select\_diversification\_model()} fits the three
-biologically most common models (DD, PD, EP) in a single call, applies
-\eqref{eq:AIC}, and returns the ranked comparison table together with the
-best-fit parameter estimates.
-
-% ══════════════════════════════════════════════════════════════════════════════
-\section{Stochastic Simulation of Phylogenies}\label{sec:sim}
-
-\subsection{Forward simulation}
-
-Forward simulation of the state-dependent birth--death process proceeds by
-Gillespie's direct method \citep{gillespie1977exact}. At each step:
-
-\begin{enumerate}
-  \item Compute the total event rate
-    $R(t) = \sum_s [\lambda(s,t;\pars) + \mu(s,t;\pars)]$.
-  \item Draw the waiting time $\Delta t \sim \mathrm{Exp}(R(t))$.
-  \item Choose the event type proportional to individual rates.
-  \item Update the state $(N, P, \{E_s\})$ and the lineage set.
-\end{enumerate}
-
-Because the rates $\lambda$ and $\mu$ depend on $N(t)$, $P(t)$, and
-individual $E(s,t)$ which change continuously, the Gillespie step requires
-re-computing $R(t)$ at each event. For the linear link with N- and
-P-dependence the waiting-time distribution still has a closed form; for EP
-dependence the waiting time is drawn via thinning.
-
-\subsection{Conditional simulation (augmentation)}
-
-Given an observed extant tree $\obs$, conditional simulation draws the
-extinct lineages $z$ from $q(z \mid \obs, \pars)$ (Section~\ref{sec:proposal}).
-This is the E-step of MCEM and the particle evaluation step of CEM.
-The C++ engine returns both the augmented tree and $\logq$ so that IS
-reweighting can be applied immediately.
-
-\subsection{Batch simulation and survival probability}
-
-Passing a matrix of parameter rows to \texttt{simulate\_tree()} triggers
-batch mode: each row is simulated independently, and the fraction of
-simulations that produce a non-extinct clade estimates the survival
-probability $\Pr(\text{clade survives to present} \mid \pars)$. This
-probability is also used to correct the marginal likelihood for conditioning
-on non-extinction.
+\texttt{select\_diversification\_model()} fits the three biologically most
+relevant models (DD, PD, EP) in a single call, applies \eqref{eq:AIC}, and
+returns a ranked comparison table with AIC weights
+$w_k = e^{-\Delta\AIC_k/2} / \sum_j e^{-\Delta\AIC_j/2}$.
 
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Diagnostics}\label{sec:diagnostics}
 
 \subsection{CEM convergence diagnostics}
 
-The function \texttt{diagnose\_cem()} extracts and plots four diagnostic
-panels from a fitted CEM object:
-
+\texttt{diagnose\_cem()} extracts and plots four diagnostic panels:
 \begin{description}
-  \item[Log-likelihood trace.] $f^{(k)}$ versus iteration $k$, annotated
+  \item[Log-likelihood trace.] $f^{(k)}$ vs.\ iteration $k$, annotated
     with the stopping rule. A monotone increasing curve ending at a plateau
-    indicates good behaviour.
-  \item[Parameter traces.] $\hat{\pars}^{(k)}_p$ versus $k$ for each
-    parameter dimension $p$. Stable late-iteration values indicate that the
-    population has converged.
-  \item[Population spread.] The median and interquartile range of
-    $\fhat(\pars_j^{(k)})$ over all valid particles. Narrowing IQR
-    reflects progressive population collapse.
-  \item[IS weight distribution.] Histogram of $\lw_i$ at the globally best
-    particle, annotated with $\ESS$. A concentrated histogram near the mean
-    indicates healthy IS weights.
+    indicates healthy convergence.
+  \item[Parameter traces.] $\hat{\pars}^{(k)}_p$ vs.\ $k$ for each
+    dimension $p$. Stable late-iteration values confirm convergence.
+  \item[Population spread.] Median and IQR of $\fhat(\pars_j^{(k)})$ over
+    all valid particles. Narrowing IQR reflects progressive collapse.
+  \item[IS weight distribution.] Histogram of $\lw_i$ at the globally
+    best particle, annotated with $\ESS$. A concentrated unimodal
+    histogram near the mean indicates healthy IS weights.
 \end{description}
 
 \subsection{GAM-based survival probability}
 
-For DD models, \texttt{train\_GAM()} fits a binomial generalised additive
-model (GAM) to the outcomes of batch forward simulations, estimating
-$\Pr(\text{survival} \mid \pars)$ as a smooth function of the parameter
-space. \texttt{predict\_survival()} then evaluates this surface at any
-$\pars$ without re-simulating, enabling fast computation of likelihood
-corrections for conditioning on non-extinction.
+\texttt{train\_GAM()} fits a binomial GAM to batch-simulation outcomes,
+estimating $\pi(\pars) = \Pr(\text{clade survives}\mid\pars)$ as a smooth
+surface. \texttt{predict\_survival()} evaluates this surface at any $\pars$
+without re-simulating, enabling fast likelihood corrections for conditioning
+on non-extinction.
 
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Implementation}\label{sec:impl}
 
 \subsection{Software architecture}
 
-\textsf{emphasis} is written in \textsf{R} and \textsf{C++}, with the
-computationally intensive steps delegated to \textsf{C++} via \textsf{Rcpp}
-and parallelised using \textsf{RcppParallel}. The public API consists of
-five primary functions:
-
+\textsf{emphasis} is written in \textsf{R} and \textsf{C++17}, with the
+computationally intensive steps delegated via \textsf{Rcpp}. The public API
+consists of five primary functions:
 \begin{description}
-  \item[\texttt{simulate\_tree()}] Forward and conditional simulation of
-    birth--death trees; dispatches to the C++ engine.
-  \item[\texttt{augment\_trees()}] Raw E-step: draw $S$ augmented trees
-    from $q(z \mid \obs, \pars)$, returning \texttt{trees}, \texttt{logf},
-    and \texttt{logg}.
-  \item[\texttt{eval\_logf()}] Re-score pre-computed augmented trees at any
-    $\pars$, enabling cross-IS (Section~\ref{sec:crossIS}).
-  \item[\texttt{estimate\_rates()}] Unified inference entry point: resolves
-    the model, dispatches to CEM or MCEM, and returns a named
-    \texttt{emphasis\_fit} object.
+  \item[\texttt{simulate\_tree()}] Forward and conditional simulation;
+    dispatches to the C++ Gillespie/thinning engine.
+  \item[\texttt{augment\_trees()}] E-step primitive: draw $S$ augmented trees,
+    return \texttt{trees}, \texttt{logf}, \texttt{logg}.
+  \item[\texttt{eval\_logf()}] Re-score cached trees at a new $\pars$
+    (enables Mode~2 cross-IS, Section~\ref{sec:crossIS}).
+  \item[\texttt{estimate\_rates()}] Unified inference entry point; dispatches
+    to CEM-SA or MCEM and returns a named \texttt{emphasis\_fit} object.
   \item[\texttt{compare\_models()} / \texttt{select\_diversification\_model()}]\mbox{}\\
     AIC-based model comparison.
 \end{description}
 
-\subsection{Separation of concerns}
+\subsection{Separation of simulation and scoring}
 
-The key architectural principle is the separation of simulation and scoring:
-
+The key architectural principle is the clean separation of three concerns:
 \begin{enumerate}
-  \item \texttt{augment\_trees()} simulates trees and computes both $\logf$
-    and $\logq$ during the simulation pass.
-  \item \texttt{eval\_logf()} re-evaluates $\logf(z, \pars')$ for any new
-    $\pars'$ on already-simulated trees, without re-running the stochastic
-    augmentation.
-  \item IS aggregation is performed in \textsf{R} via
-    \texttt{.is\_fhat(logf, logg)}.
+  \item \textbf{Simulation.} \texttt{augment\_trees()} simulates trees and
+    computes $\logf$ and $\logq$ in a single pass.
+  \item \textbf{Scoring.} \texttt{eval\_logf()} re-evaluates $\logf(z,\pars')$
+    for a new $\pars'$ on already-simulated trees, without re-running the
+    stochastic augmentation.
+  \item \textbf{IS aggregation.} \texttt{.is\_fhat(logf, logg)} in \textsf{R}
+    combines $\logf$ and $\logq$ into $\fhat$ via \eqref{eq:fhat}.
 \end{enumerate}
+This design is what makes Mode~2 possible: one simulation pass at $\pars_0$
+produces trees reused across all $M$ particles.
 
-This design enables shared-tree mode (Mode~2): a single simulation pass at
-$\pars_0$ produces trees that are reused for all particles in the CEM
-population, reducing the total number of augmentations from $M \times S$ to
-$S$ per iteration, at the cost of higher IS variance.
+\subsection{Parallel computing}\label{sec:parallel}
+
+All parallelism in \textsf{emphasis} is shared-memory multithreading
+implemented via \textsf{RcppParallel}, which provides:
+\begin{itemize}
+  \item A \emph{portable thread pool} backed by Intel TBB
+    (\texttt{tbb::parallel\_for}) on Linux, macOS, and Windows, with a
+    fallback \texttt{std::thread} implementation when TBB is unavailable.
+  \item \emph{Thread-safe memory} via pre-allocated per-thread result
+    vectors: each thread writes exclusively to its own slice of the output
+    array with no shared mutable state, so no locks or atomics are needed.
+  \item \emph{Work scheduling}: the $S$ (Mode~1) or $M$ (Mode~2) tasks
+    are divided into \texttt{num\_threads} contiguous blocks. The block
+    boundaries are fixed at launch time, so there is no dynamic work
+    stealing (which keeps overhead minimal for uniform per-task cost).
+\end{itemize}
+
+\paragraph{Practical guidance.}
+\begin{itemize}
+  \item Set \texttt{num\_threads} to the number of \emph{physical} cores
+    (not hyperthreads); hyperthreading rarely helps for floating-point
+    intensive workloads.
+  \item Parallel speedup is near-linear when $S \gg \texttt{num\_threads}$
+    and per-tree compute time dominates thread-launch overhead. For very
+    small $S$ (e.g.\ $S=1$, the CEM default), single-threaded mode is
+    optimal.
+  \item In Mode~1, parallelise the $S$ trees per particle
+    (\texttt{num\_threads} $> 1$ inside \texttt{augment\_trees}).
+    In Mode~2, the $M$ re-scorings in \texttt{eval\_logf} are parallelised
+    instead, since augmentation itself is already done.
+\end{itemize}
 
 \subsection{Parameter layout}
 
-Internally, all functions operate on the full 8-element parameter vector
-$\pars \in \R^8$ in the order
-$(\beta_0, \beta_N, \beta_P, \beta_E, \gamma_0, \gamma_N, \gamma_P, \gamma_E)$.
-Model shortcuts set the inactive elements to zero. The model binary flag
-$\mathbf{m} = (m_N, m_P, m_E) \in \{0,1\}^3$ indicates which covariates
-are active and gates the corresponding rate functions in the C++ likelihood
-kernel. For the N and P covariates the model flag only affects the proposal
-(which covariate terms to simulate); for the EP covariate, $m_E = 1$ also
-switches the rate functions from standard to EP-aware in
-\texttt{eval\_logf()}.
+All C++ functions operate on the full 8-element parameter vector in the
+canonical order
+$(\beta_0, \beta_N, \beta_P, \beta_E, \gamma_0, \gamma_N, \gamma_P,
+\gamma_E)^\top$.
+Inactive parameters are set to zero. The model binary flag
+$\mathbf{m} = (m_N, m_P, m_E) \in \{0,1\}^3$ gates which covariate terms
+are included in the augmentation proposal. For the EP covariate, $m_E = 1$
+additionally switches the C++ rate functions from standard to EP-aware
+mode in \texttt{eval\_logf}, since the EP contribution to the hazard
+integral \eqref{eq:hazard} requires a different analytic formula.
 
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Simulation Studies}\label{sec:simstudies}
@@ -732,92 +819,84 @@ switches the rate functions from standard to EP-aware in
 \subsection{Estimation power}\label{sec:study1}
 
 To evaluate the frequentist accuracy of CEM estimation under the PD model,
-we simulate $n = 100$ trees from the true parameter vector
+we simulate $n = 100$ independent trees from the true parameter vector
 \[
   \pars^* = (\beta_0, \beta_P, \gamma_0, \gamma_P)
-          = (0.6,\; 0.005,\; 0.15,\; -0.003)
+          = (0.6,\; 0.005,\; 0.15,\; -0.003),
 \]
-with crown age $T = 8$, and estimate $\pars$ on each replicate.
-
-For each replicate $r = 1, \ldots, n$ we record the estimate $\hat{\pars}_r$
-and the number of extant tips $n_r$. Point accuracy is summarised by:
-
+with crown age $T = 8$ and estimate $\pars$ on each replicate via CEM with
+$M = 100$, $S = 1$, $T = 20$ iterations. For each replicate $r$ we record
+the estimate $\hat{\pars}_r$ and the number of extant tips $n_r$.
+Accuracy is summarised by:
 \begin{align}
-  \text{Bias}_p &= \frac{1}{n}\sum_{r=1}^{n} (\hat{\pars}_{r,p} - \pars^*_p),
-  \label{eq:bias}\\
+  \text{Bias}_p &= \frac{1}{n}\sum_{r=1}^{n}
+    (\hat{\pars}_{r,p} - \pars^*_p),\label{eq:bias}\\
   \text{RMSE}_p &= \sqrt{\frac{1}{n}\sum_{r=1}^{n}
-    (\hat{\pars}_{r,p} - \pars^*_p)^2}.
-  \label{eq:rmse}
+    (\hat{\pars}_{r,p} - \pars^*_p)^2}.\label{eq:rmse}
 \end{align}
-
 The tree-size effect is visualised by plotting $|\hat{\pars}_{r,p} - \pars^*_p|$
-against $n_r$ with a LOWESS smooth. Consistent improvement with $n_r$
-confirms that the IS estimator is consistent: larger trees provide a sharper
-likelihood surface and more informative augmentation.
+against $n_r$ with a LOWESS smooth. Monotone decrease in error with $n_r$
+confirms consistency: larger trees produce a sharper IS likelihood surface.
 
 \subsection{Model selection power}\label{sec:study2}
 
-We assess the ability of AIC-based selection to recover the true
-data-generating model in a fully crossed design. Twenty-five trees are
-simulated from each of the four pure models (CR, DD, PD, EP), giving
-$100$ trees in total. All four models are then fitted to every tree, and
-the model with the lowest AIC is selected.
-
-The results are summarised in a $4 \times 4$ confusion matrix
+We assess AIC-based model selection in a fully crossed design. Twenty-five
+trees are simulated from each of the four pure models (CR, DD, PD, EP),
+giving 100 trees total. All four models are fitted to each tree via CEM,
+and the model with the lowest AIC is selected. Results are summarised by
+the $4\times 4$ confusion matrix
 \begin{equation}
-  C_{ij} = \#\bigl\{\text{trees generated by model }i
-             \text{ for which model }j\text{ was selected}\bigr\},
+  C_{ij} = \#\bigl\{\text{trees from model }i
+             \text{ for which model }j\text{ is selected}\bigr\},
 \end{equation}
-and the row-normalised version $C_{ij}/\sum_j C_{ij}$ (recall matrix).
-Overall accuracy is $\mathrm{acc} = \operatorname{tr}(C)/\sum_{i,j}C_{ij}$.
-Per-model recall $C_{ii}/\sum_j C_{ij}$ measures how reliably each true
-model is identified.
+overall accuracy $\mathrm{acc} = \operatorname{tr}(C)/\sum_{i,j}C_{ij}$,
+and per-model recall $C_{ii}/\sum_j C_{ij}$.
 
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Summary of Control Parameters}\label{sec:control}
 
-\begin{table}[h]
+\begin{table}[ht]
 \centering
 \caption{CEM control parameters (\texttt{estimate\_rates\_control("cem")}).}
 \label{tab:cemcontrol}
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{llp{8cm}}
+\begin{tabular}{llp{7.8cm}}
 \toprule
 Parameter & Default & Description \\
 \midrule
 \texttt{max\_iter} & 20 & Hard iteration cap $T$ \\
 \texttt{num\_points} & 50 & Population size $M$ \\
 \texttt{sample\_size} & 1 & IS sample size $S$ per particle per iteration \\
-\texttt{shared\_trees} & \texttt{FALSE} & Pool trees across particles (Mode 2) \\
+\texttt{shared\_trees} & \texttt{FALSE} & Pool trees across particles (Mode~2) \\
 \texttt{disc\_prop} & 0.5 & Elite fraction $\rho$ \\
-\texttt{sd\_vec} & \texttt{NULL} & Initial $\bm{\sigma}^{(0)}$; auto $= (u-\ell)/4$ \\
+\texttt{sd\_vec} & \texttt{NULL} & Initial $\bm{\sigma}^{(0)}$; auto $=(u-\ell)/4$ \\
 \texttt{maxN} & 10 & Max augmentation attempts before rejection \\
 \texttt{max\_missing} & $10^4$ & Max extinct lineages per augmentation \\
-\texttt{max\_lambda} & 500 & Maximum $\lambda_{\max}$ for thinning \\
+\texttt{max\_lambda} & 500 & Thinning bound $\lambda_{\max}$ \\
 \texttt{tol} & $10^{-4}$ & Plateau tolerance $\delta$ \\
 \texttt{patience} & 5 & Consecutive plateau iterations $P$ \\
-\texttt{bias\_correct} & \texttt{FALSE} & Apply moment-based bias correction \\
+\texttt{bias\_correct} & \texttt{FALSE} & Moment-based bias correction \eqref{eq:biascorrect} \\
 \texttt{n\_boot} & 0 & Bootstrap replicates for $\widehat{\Var}[\fhat]$ \\
-\texttt{num\_threads} & 1 & Parallel threads for particle evaluation \\
+\texttt{num\_threads} & 1 & Parallel threads (Section~\ref{sec:parallel}) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\begin{table}[h]
+\begin{table}[ht]
 \centering
 \caption{MCEM control parameters (\texttt{estimate\_rates\_control("mcem")}).}
 \label{tab:mcemcontrol}
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{llp{8cm}}
+\begin{tabular}{llp{7.8cm}}
 \toprule
 Parameter & Default & Description \\
 \midrule
 \texttt{sample\_size} & 200 & IS sample size $S$ per EM iteration \\
 \texttt{tol} & 0.1 & Convergence tolerance $\varepsilon$ \\
-\texttt{burnin} & 20 & Burn-in iterations excluded from convergence check \\
+\texttt{burnin} & 20 & Iterations excluded from convergence check \\
 \texttt{max\_missing} & $10^4$ & Max extinct lineages per augmentation \\
-\texttt{max\_lambda} & 500 & Maximum $\lambda_{\max}$ for thinning \\
-\texttt{num\_threads} & 1 & Parallel threads \\
+\texttt{max\_lambda} & 500 & Thinning bound $\lambda_{\max}$ \\
+\texttt{num\_threads} & 1 & Parallel threads (Section~\ref{sec:parallel}) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -825,37 +904,65 @@ Parameter & Default & Description \\
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Mathematical Appendix}\label{sec:appendix}
 
-\subsection{Derivation of the log-sum-exp identity}
+\subsection{Log-sum-exp identity}
 
-For numerical stability, \eqref{eq:fhat} is never evaluated as
-$\log(\frac{1}{S}\sum_i \exp(\lw_i))$ directly because the exponentials
-can overflow or underflow. Instead, factor out $w_{\max} = \max_i \lw_i$:
+For numerical stability \eqref{eq:fhat} is evaluated as:
 \begin{align}
   \log\!\left(\frac{1}{S}\sum_{i=1}^S e^{\lw_i}\right)
   &= \log\!\left(\frac{e^{w_{\max}}}{S}
-      \sum_{i=1}^S e^{\lw_i - w_{\max}}\right) \nonumber\\
-  &= w_{\max} + \log\!\left(\frac{1}{S}\sum_{i=1}^S e^{\lw_i - w_{\max}}\right).
+      \sum_{i=1}^S e^{\lw_i - w_{\max}}\right)
+   = w_{\max} + \log\!\left(\frac{1}{S}\sum_{i=1}^S
+     e^{\lw_i - w_{\max}}\right).
 \end{align}
-Since $\lw_i - w_{\max} \leq 0$, all terms $\exp(\lw_i - w_{\max}) \in (0,1]$
-are safe to evaluate.
+Since $\lw_i - w_{\max} \leq 0$, all terms $e^{\lw_i-w_{\max}} \in (0,1]$
+are safe.
 
 \subsection{ESS in log-space}
 
-From the normalised weights $\tilde{w}_i = \exp(\lw_i) / \sum_j \exp(\lw_j)$,
-the ESS \eqref{eq:ESS} equals $1/\sum_i \tilde{w}_i^2$. In log-space:
+Define normalised weights $\tilde{w}_i = e^{\lw_i}/\sum_j e^{\lw_j}$.
+Then $\ESS = 1/\sum_i \tilde{w}_i^2$, which in log-space is:
 \begin{equation}
-  \ESS = \frac{\left(\sum_i e^{\lw_i}\right)^2}{\sum_i e^{2\lw_i}}
-  = \exp\!\left[2\,\mathrm{lse}(\mathbf{w}) - \mathrm{lse}(2\mathbf{w})\right],
+  \ESS = \exp\!\bigl[2\,\mathrm{lse}(\mathbf{w})
+                   - \mathrm{lse}(2\mathbf{w})\bigr],
 \end{equation}
-where $\mathrm{lse}(\mathbf{v}) = \max_i v_i + \log\sum_i e^{v_i - \max_j v_j}$.
+where $\mathrm{lse}(\mathbf{v}) = \max_i v_i
++ \log\sum_i e^{v_i - \max_j v_j}$.
 
 \subsection{Annealing decay rate}
 
-If $\bm{\sigma}^{(0)} = c\mathbf{1}$ for some $c > 0$ and
-$\bm{\sigma}^{(k+1)} = \bm{\sigma}^{(k)} - \alpha\mathbf{1}$, the
-population collapses (all $\sigma_p^{(k)} \leq 0$) at iteration
-$k^* = \lceil c/\alpha \rceil$. Setting $k^* = T$ gives the default
-annealing step $\alpha = c/T = \sigma_p^{(0)}/T$.
+With $\bm{\sigma}^{(0)} = \bm{\sigma}_0$ and linear decay
+$\bm{\sigma}^{(k)} = \bm{\sigma}_0 - k\alpha\mathbf{1}$, the population
+collapses ($\sigma_p^{(k^*)} \leq 0$) at $k^* = \lceil\sigma_{0,p}/\alpha\rceil$.
+Setting $k^* = T$ for all $p$ gives $\alpha = \sigma_{0,p}/T$ as in
+\eqref{eq:anneal}. This ensures the annealing-exhausted stopping rule
+\emph{would} trigger exactly at iteration $T$ in the absence of plateau
+stopping.
+
+\subsection{Hazard integral for the linear link}\label{sec:hazard}
+
+For lineage $k$ alive on $[a_k, d_k]$ under the linear link, the hazard
+integral decomposes as:
+\begin{equation}
+  H_k = \int_{a_k}^{d_k}
+    \bigl[f(\eta_\lambda(k,t)) + f(\eta_\mu(k,t))\bigr]\dd t,
+\end{equation}
+where $\eta_\lambda(k,t) = \beta_0 + \beta_N N(t) + \beta_P P(t)
++ \beta_E E(k,t)$ and similarly for $\eta_\mu$. Since $N(t)$, $P(t)$,
+and $E(k,t)$ are all piecewise-linear in $t$ between consecutive events,
+each sub-interval $[t_j, t_{j+1}]$ within $[a_k, d_k]$ has a constant
+$N$, $P$, and linearly increasing $E(k,t) = t - a_k$. On such a
+sub-interval with $f(\eta) = \max(0,\eta)$:
+\begin{equation}
+  \int_{t_j}^{t_{j+1}} \max(0,\, c_0 + c_1 t)\dd t
+  = \begin{cases}
+      c_0(t_{j+1}-t_j) + \tfrac{c_1}{2}(t_{j+1}^2 - t_j^2)
+        & \text{if } c_0 + c_1 t \geq 0 \text{ on } [t_j,t_{j+1}], \\
+      0 & \text{if } c_0 + c_1 t \leq 0 \text{ on } [t_j,t_{j+1}], \\
+      \text{partial integral} & \text{otherwise (split at root).}
+    \end{cases}
+\end{equation}
+The C++ kernel evaluates this analytically for each sub-interval, making
+the complete-data log-likelihood \eqref{eq:loglik2} exact.
 
 % ══════════════════════════════════════════════════════════════════════════════
 \bibliographystyle{plainnat}
@@ -884,10 +991,20 @@ Approximate Bayesian computation of diversification rates from molecular
 phylogenies: introducing a new efficient summary statistic, the nLTT.
 \textit{Methods in Ecology and Evolution}, 6(5):566--575.
 
+\bibitem[Kirkpatrick et~al.(1983)]{kirkpatrick1983optimization}
+Kirkpatrick, S., Gelatt, C.~D., and Vecchi, M.~P. (1983).
+Optimization by simulated annealing.
+\textit{Science}, 220(4598):671--680.
+
 \bibitem[Levine and Casella(2001)]{levine2001implementations}
 Levine, R.~A. and Casella, G. (2001).
 Implementations of the Monte Carlo EM algorithm.
 \textit{Journal of Computational and Graphical Statistics}, 10(3):422--439.
+
+\bibitem[Lewis and Shedler(1979)]{lewis1979simulation}
+Lewis, P.~A.~W. and Shedler, G.~S. (1979).
+Simulation of nonhomogeneous Poisson processes by thinning.
+\textit{Naval Research Logistics Quarterly}, 26(3):403--413.
 
 \bibitem[Powell(1994)]{powell1994direct}
 Powell, M.~J.~D. (1994).
