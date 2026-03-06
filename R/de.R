@@ -43,31 +43,32 @@
 #' \eqn{\mu + \sigma^2/2}.  With the full series (\eqn{K\to\infty}) the two
 #' estimators are identical; the truncation is the approximation.
 #'
-#' Rejected trees (\eqn{L_i = 0}) are excluded from the moment computation but
-#' enter the denominator via \eqn{\log(n_{\rm valid}/n_{\rm total})}.
+#' Only successfully augmented trees are used.  Rejected trees (those that
+#' hit \code{max_lambda} or \code{max_missing} limits) are computational
+#' failures, not zero-likelihood samples from the proposal, and are simply
+#' discarded.
 #'
+#' @param logf Numeric vector of \code{log p(obs, z | theta)} for valid trees.
+#' @param log_q Numeric vector of \code{log q(z | obs, theta)} for valid trees.
 #' @param bias_correct Logical; use moment-based bias correction (default \code{FALSE}).
 #' @param K Integer truncation order for the moment series (default \code{2}).
 #' @keywords internal
-.is_fhat <- function(logf, log_q, n_rejected = 0L, bias_correct = FALSE, K = 2L) {
+.is_fhat <- function(logf, log_q, bias_correct = FALSE, K = 2L) {
   lw      <- logf - log_q
   n_valid <- length(lw)
   if (n_valid == 0L) return(NA_real_)
-  n_total <- n_valid + n_rejected
 
   if (!bias_correct || n_valid == 1L) {
-    # Standard log-mean-exp (no useful correction with a single sample)
+    # Standard log-mean-exp over valid trees only
     max_lw <- max(lw)
     if (!is.finite(max_lw)) return(NA_real_)
-    return(log(sum(exp(lw - max_lw))) + max_lw - log(n_total))
+    return(log(sum(exp(lw - max_lw))) + max_lw - log(n_valid))
   }
 
   # Moment-based bias-corrected estimator truncated at order K
-  # ell_hat = (1/n_valid) * sum(log L_i)   [mean of IS log-weights, valid only]
   ell_hat <- mean(lw)
   if (!is.finite(ell_hat)) return(NA_real_)
 
-  # Central moments m_k = (1/n_valid) * sum((lw - ell_hat)^k)
   d <- lw - ell_hat
   moment_sum <- 0
   for (k in seq(2L, K)) {
@@ -77,8 +78,7 @@
   inner <- 1 + moment_sum
   if (inner <= 0) return(NA_real_)
 
-  # Rejection adjustment: n_rejected trees have L_i = 0 -> reduce by n_valid/n_total
-  ell_hat + log(inner) + log(n_valid / n_total)
+  ell_hat + log(inner)
 }
 
 
@@ -204,7 +204,6 @@
     )
     if (!is.null(raw) && length(raw$logf) > 0L && !anyNA(raw$logf)) {
       pop$fhat[i]    <- .is_fhat(raw$logf, raw$logg,
-                                 n_rejected   = .total_rejected(raw),
                                  bias_correct = isTRUE(input$bias_correct))
       pop$log_q[[i]] <- raw$logg    # log q(z | obs, theta_i) per tree
       pop$trees[[i]] <- raw$trees   # raw data frames for cross-evaluation
@@ -283,8 +282,7 @@
       error = function(e) NULL
     )
     if (!is.null(ev)) {
-      pop$fhat[j] <- .is_fhat(ev$logf, all_log_q, n_rejected = 0L,
-                              bias_correct = FALSE)
+      pop$fhat[j] <- .is_fhat(ev$logf, all_log_q, bias_correct = FALSE)
     }
   }
 
@@ -398,22 +396,21 @@
 #' \eqn{\mathrm{Var}(\Delta\mathrm{AIC}) = 4[\mathrm{Var}(\hat\ell_1) +
 #' \mathrm{Var}(\hat\ell_2)]}, enabling a Gaussian test of equal AIC.
 #'
-#' @param logf Numeric vector of \code{log p(obs, z | theta)} values.
-#' @param log_q Numeric vector of \code{log q(z | obs, theta)} values.
-#' @param n_rejected Integer; number of rejected (zero-weight) trees.
+#' @param logf Numeric vector of \code{log p(obs, z | theta)} for valid trees.
+#' @param log_q Numeric vector of \code{log q(z | obs, theta)} for valid trees.
 #' @param K Moment truncation order (default \code{2}).
 #' @param B Number of bootstrap replicates (default \code{200}).
 #' @return Numeric scalar: estimated variance of the log-likelihood estimator.
 #'   \code{NA} if fewer than 2 valid log-weights are available.
 #' @keywords internal
-.bootstrap_fhat_var <- function(logf, log_q, n_rejected = 0L, K = 2L, B = 200L) {
+.bootstrap_fhat_var <- function(logf, log_q, K = 2L, B = 200L) {
   lw <- logf - log_q
   n  <- length(lw)
   if (n < 2L) return(NA_real_)
 
   boots <- vapply(seq_len(B), function(.) {
     idx <- sample(n, n, replace = TRUE)
-    .is_fhat(logf[idx], log_q[idx], n_rejected = 0L, bias_correct = TRUE, K = K)
+    .is_fhat(logf[idx], log_q[idx], bias_correct = TRUE, K = K)
   }, numeric(1L))
 
   valid <- is.finite(boots)
@@ -678,15 +675,13 @@ emphasis_cem <- function(brts,
       log_q      = raw_best$logg,
       lw         = lw_all,
       trees      = raw_best$trees,
-      fhat       = .is_fhat(raw_best$logf, raw_best$logg,
-                            n_rejected = .total_rejected(raw_best)),
+      fhat       = .is_fhat(raw_best$logf, raw_best$logg),
       ESS        = .ess_from_lw(lw_all),
       n_trees    = n_final,
-      n_rejected = raw_best$rejected
+      n_rejected = .total_rejected(raw_best)
     )
     if (n_boot > 0L && length(lw_fin) >= 2L) {
       loglik_var <- .bootstrap_fhat_var(raw_best$logf, raw_best$logg,
-                                        n_rejected = raw_best$rejected,
                                         K = 2L, B = as.integer(n_boot))
     }
   }

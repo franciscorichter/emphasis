@@ -4,7 +4,7 @@
 \alias{.resolve_control_aliases}
 \title{Resolve control-parameter aliases}
 \usage{
-.resolve_control_aliases(ctrl, method)
+.resolve_control_aliases(ctrl, method, user_ctrl = list())
 }
 \description{
 Supports both old names (\code{num_points}, \code{sample_size}) and new

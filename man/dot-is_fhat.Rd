@@ -4,9 +4,13 @@
 \alias{.is_fhat}
 \title{IS log-likelihood estimate (with optional bias correction)}
 \usage{
-.is_fhat(logf, log_q, n_rejected = 0L, bias_correct = FALSE, K = 2L)
+.is_fhat(logf, log_q, bias_correct = FALSE, K = 2L)
 }
 \arguments{
+\item{logf}{Numeric vector of \code{log p(obs, z | theta)} for valid trees.}
+
+\item{log_q}{Numeric vector of \code{log q(z | obs, theta)} for valid trees.}
+
 \item{bias_correct}{Logical; use moment-based bias correction (default \code{FALSE}).}
 
 \item{K}{Integer truncation order for the moment series (default \code{2}).}
@@ -30,7 +34,9 @@ truncated at order \code{K} (default 2).  The K=2 approximation is
 \eqn{\mu + \sigma^2/2}.  With the full series (\eqn{K\to\infty}) the two
 estimators are identical; the truncation is the approximation.
 
-Rejected trees (\eqn{L_i = 0}) are excluded from the moment computation but
-enter the denominator via \eqn{\log(n_{\rm valid}/n_{\rm total})}.
+Only successfully augmented trees are used.  Rejected trees (those that
+hit \code{max_lambda} or \code{max_missing} limits) are computational
+failures, not zero-likelihood samples from the proposal, and are simply
+discarded.
 }
 \keyword{internal}

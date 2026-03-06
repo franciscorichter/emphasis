@@ -4,14 +4,12 @@
 \alias{.bootstrap_fhat_var}
 \title{Bootstrap variance of the bias-corrected IS log-likelihood estimate}
 \usage{
-.bootstrap_fhat_var(logf, log_q, n_rejected = 0L, K = 2L, B = 200L)
+.bootstrap_fhat_var(logf, log_q, K = 2L, B = 200L)
 }
 \arguments{
-\item{logf}{Numeric vector of \code{log p(obs, z | theta)} values.}
+\item{logf}{Numeric vector of \code{log p(obs, z | theta)} for valid trees.}
 
-\item{log_q}{Numeric vector of \code{log q(z | obs, theta)} values.}
-
-\item{n_rejected}{Integer; number of rejected (zero-weight) trees.}
+\item{log_q}{Numeric vector of \code{log q(z | obs, theta)} for valid trees.}
 
 \item{K}{Moment truncation order (default \code{2}).}
 
