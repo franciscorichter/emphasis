@@ -14,6 +14,9 @@ drivers. It provides:
 ## Installation
 
 ```r
+# If updating from a previous version, uninstall first to avoid stale cached code:
+# remove.packages("emphasis")
+
 devtools::install_github("franciscorichter/emphasis")
 ```
 
