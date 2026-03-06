@@ -3,11 +3,11 @@
 #                                                                             #
 #  z_i   : augmented tree simulated from proposal q(z | obs, theta_i)        #
 #  logf(z, theta) = log p(obs, z | theta)  -- model log-likelihood           #
-#  log_q(z, theta) = log q(z | obs, theta) -- proposal log-probability       #
-#  lw(z_i, theta_j) = logf(z_i, theta_j) - log_q(z_i, theta_i)             #
-#                     IS log-weight (denominator: simulation particle theta_i)#
-#  fhat(theta_j) = log_mean_exp over a set of lw values                      #
-#                = IS estimate of log p(obs | theta_j)                        #
+#  logg(z, theta) = log q(z | obs, theta)  -- proposal log-probability       #
+#  lw(z_i, theta) = logf(z_i, theta) - logg(z_i, theta)                     #
+#                   IS log-weight (both terms evaluated at same theta)        #
+#  fhat(theta) = log_mean_exp over a set of lw values                        #
+#              = IS estimate of log p(obs | theta)                            #
 # --------------------------------------------------------------------------- #
 
 
@@ -224,15 +224,15 @@
 #' Simulates fresh trees for every particle, pools them into a single set,
 #' and cross-evaluates: for each particle \eqn{\theta_j}, computes
 #' \deqn{\hat{f}(\theta_j) = \log\text{mean}\exp\bigl(
-#'   \text{logf}(z_i, \theta_j) - \log q(z_i, \theta_i)\bigr)}
-#' where the sum runs over all current-iteration trees \eqn{z_i} regardless
-#' of which particle simulated them.
+#'   \text{logf}(z_i, \theta_j) - \log q(z_i, \theta_j)\bigr)}
+#' where both numerator and denominator are evaluated at the target particle
+#' \eqn{\theta_j}.  The trees \eqn{z_i} may have been simulated at any
+#' particle; what matters for IS correctness is that the proposal density
+#' \eqn{q} is evaluated at the same \eqn{\theta_j} used for \eqn{p}.
 #'
 #' Tree caches are cleared between iterations (see \code{.resample_particles}
 #' with \code{clear_cache = TRUE}), so the pool contains only the current
-#' iteration's trees.  This avoids the explosive cross-IS weights that arise
-#' when early-iteration trees (from widely spread particles) remain in the
-#' pool after the population has concentrated.
+#' iteration's trees.
 #'
 #' @return Named list: updated \code{pop}, \code{rej_lambda},
 #'   \code{rej_overruns}, \code{n_simulated}.
@@ -259,18 +259,17 @@
     rej_over <- rej_over + (if (!is.null(raw)) raw$rejected_overruns else 0L)
   }
 
-  # Step 2: pool all trees and their log_q values
+  # Step 2: pool all trees
   has_trees  <- !sapply(pop$trees, is.null)
   if (!any(has_trees)) {
     return(list(pop = pop, rej_lambda = rej_lam, rej_overruns = rej_over,
                 n_simulated = length(needs_sim)))
   }
   all_trees <- do.call(c, pop$trees[has_trees])
-  all_log_q <- unlist(pop$log_q[has_trees])   # log q(z_i | obs, theta_i)
 
-  # Step 3: for each particle theta_j, evaluate logf(z_i, theta_j) over the
-  # full pool and aggregate into fhat(theta_j) using .is_fhat.
-  # fhat(theta_j) = log_mean_exp(logf(z_i, theta_j) - log_q(z_i, theta_i))
+  # Step 3: for each particle theta_j, evaluate logf AND logg at theta_j
+  # over the full pool.  Both are evaluated at the TARGET particle, giving
+  # correct IS weights: logf(z_i, theta_j) - logg(z_i, theta_j).
   for (j in seq_len(n)) {
     ev <- tryCatch(
       eval_logf(
@@ -282,7 +281,7 @@
       error = function(e) NULL
     )
     if (!is.null(ev)) {
-      pop$fhat[j] <- .is_fhat(ev$logf, all_log_q, bias_correct = FALSE)
+      pop$fhat[j] <- .is_fhat(ev$logf, ev$logg, bias_correct = FALSE)
     }
   }
 

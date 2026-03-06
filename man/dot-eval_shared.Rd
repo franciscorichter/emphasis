@@ -14,15 +14,15 @@ Named list: updated \code{pop}, \code{rej_lambda},
 Simulates fresh trees for every particle, pools them into a single set,
 and cross-evaluates: for each particle \eqn{\theta_j}, computes
 \deqn{\hat{f}(\theta_j) = \log\text{mean}\exp\bigl(
-  \text{logf}(z_i, \theta_j) - \log q(z_i, \theta_i)\bigr)}
-where the sum runs over all current-iteration trees \eqn{z_i} regardless
-of which particle simulated them.
+  \text{logf}(z_i, \theta_j) - \log q(z_i, \theta_j)\bigr)}
+where both numerator and denominator are evaluated at the target particle
+\eqn{\theta_j}.  The trees \eqn{z_i} may have been simulated at any
+particle; what matters for IS correctness is that the proposal density
+\eqn{q} is evaluated at the same \eqn{\theta_j} used for \eqn{p}.
 }
 \details{
 Tree caches are cleared between iterations (see \code{.resample_particles}
 with \code{clear_cache = TRUE}), so the pool contains only the current
-iteration's trees.  This avoids the explosive cross-IS weights that arise
-when early-iteration trees (from widely spread particles) remain in the
-pool after the population has concentrated.
+iteration's trees.
 }
 \keyword{internal}

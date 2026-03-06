@@ -21,22 +21,28 @@ generateNonHomogeneousExpCpp <- function(num_variates, covariates, parameters, s
     .Call('_emphasis_generateNonHomogeneousExpCpp', PACKAGE = 'emphasis', num_variates, covariates, parameters, start_time, max_time)
 }
 
-#' Evaluate log p(obs, z | theta) for a set of pre-computed augmented trees
+#' Evaluate log p(obs, z | theta) and log q(z | obs, theta) for augmented trees
 #'
 #' Given a list of augmented trees (produced by \code{\link{augment_trees}})
-#' and a parameter vector, computes \code{logf[i] = log p(obs, z_i | theta)}
-#' for each tree.  IS aggregation (\code{fhat}) is left to the R layer via
-#' \code{.is_fhat}.
+#' and a parameter vector, computes for each tree:
+#' \itemize{
+#'   \item \code{logf[i] = log p(obs, z_i | theta)} (model log-likelihood)
+#'   \item \code{logg[i] = log q(z_i | obs, theta)} (proposal log-probability)
+#' }
+#' Both are evaluated at the supplied \code{pars}, regardless of which
+#' parameters were used to simulate the trees.  This is essential for
+#' shared-tree (Mode 2) evaluation where trees simulated at one particle
+#' are scored at another.
 #'
 #' @param pars Numeric vector of 8 model parameters.
 #' @param trees List of augmented-tree data frames (output of
 #'   \code{\link{augment_trees}}).
 #' @param model Integer vector \code{c(use_N, use_P, use_E)}.
 #' @param link Link function: \code{0} = linear, \code{1} = exponential.
-#' @return A named list with one element:
+#' @return A named list:
 #' \describe{
-#'   \item{logf}{Numeric vector of \code{log p(obs, z_i | theta)}, length =
-#'     \code{length(trees)}.}
+#'   \item{logf}{Numeric vector of \code{log p(obs, z_i | theta)}.}
+#'   \item{logg}{Numeric vector of \code{log q(z_i | obs, theta)}.}
 #' }
 #' @export
 eval_logf <- function(pars, trees, model = as.integer( c(0, 0, 0)), link = 0L) {
