@@ -334,6 +334,21 @@ estimate_rates <- function(tree,
   ctrl     <- utils::modifyList(defaults, control)
   ctrl$verbose <- isTRUE(verbose) || isTRUE(ctrl$verbose)
 
+  if (ctrl$verbose) {
+    model_str <- .model_label(model_bin)
+    cat(sprintf(
+      "[estimate_rates] method=%s  model=%s  n_brts=%d  link=%s\n",
+      toupper(method), model_str, length(brts),
+      if (link_int == 0L) "linear" else "exponential"
+    ))
+    if (method == "cem")
+      cat(sprintf("                 max_iter=%d  num_points=%d  n_boot=%d\n",
+                  ctrl$max_iter, ctrl$num_points, ctrl$n_boot))
+    if (method == "mcem")
+      cat(sprintf("                 sample_size=%d  tol=%.4g  burnin=%d\n",
+                  ctrl$sample_size, ctrl$tol, ctrl$burnin))
+  }
+
   raw <- switch(method,
     mcem = .run_mcem(brts, ip8, lb8, ub8, ctrl, model = model_bin, link = link_int),
     cem  = .run_cem(brts, lb8, ub8, ctrl, model = model_bin, link = link_int)
@@ -345,6 +360,13 @@ estimate_rates <- function(tree,
   n_pars <- length(pars)
   aic <- if (is.finite(raw$loglik)) -2 * raw$loglik + 2 * n_pars else NA_real_
   loglik_var <- if (!is.null(raw$loglik_var)) raw$loglik_var else NA_real_
+
+  if (ctrl$verbose) {
+    cat(sprintf("[estimate_rates] loglik=%.4f  AIC=%.4f  pars: %s\n",
+                raw$loglik, aic,
+                paste(names(pars), "=", round(pars, 4), collapse="  ")))
+  }
+
   result <- list(pars = pars, loglik = raw$loglik, loglik_var = loglik_var,
                  n_pars = n_pars, AIC = aic,
                  method = method, model = model_bin, details = raw$details)
