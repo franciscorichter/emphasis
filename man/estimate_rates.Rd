@@ -7,12 +7,9 @@ estimate_rates(
   tree,
   method = c("mcem", "cem"),
   model = "cr",
-  lower_bound,
-  upper_bound,
   init_pars = NULL,
   control = list(),
-  link = "linear",
-  verbose = FALSE
+  link = "linear"
 )
 }
 \arguments{
@@ -27,10 +24,9 @@ recommended), (b) the list returned by \code{\link{simulate_tree}}
   \item{\code{"mcem"}}{Monte Carlo Expectation-Maximisation (default).
     Iterates E- and M-steps until the log-likelihood standard error
     falls below \code{control$tol}. Requires \code{init_pars}.}
-  \item{\code{"cem"}}{Monte Carlo Differential Evolution. Initialises a
-    particle population randomly within the bounds and evolves it over
-    \code{control$max_iter} iterations. Does not need
-    \code{init_pars}.}
+  \item{\code{"cem"}}{Monte Carlo Cross-Entropy Method. Initialises a
+    particle population randomly within the bounds and evolves it until
+    convergence. Does not need \code{init_pars}.}
 }}
 
 \item{model}{Model specification: a formula (e.g. \code{~ N + PD}),
@@ -38,24 +34,25 @@ a string (\code{"cr"}, \code{"dd"}, \code{"pd"}, \code{"ep"}),
 or a length-3 binary integer vector \code{c(use_N, use_P, use_E)}.
 Default \code{"cr"} (constant rate).}
 
-\item{lower_bound}{Numeric vector of lower parameter bounds.
-Length must be \code{2 + 2*sum(model)}.
-Order: \code{c(beta_0, [beta_N], [beta_P], [beta_E],
-gamma_0, [gamma_N], [gamma_P], [gamma_E])}.}
-
-\item{upper_bound}{Numeric vector of upper parameter bounds (same order).}
-
 \item{init_pars}{Starting parameter vector. Required for \code{"mcem"};
 ignored for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the
 midpoint of the bounds is used.}
 
-\item{control}{Named list of tuning parameters. Use
-\code{\link{estimate_rates_control}} to inspect and modify defaults.}
+\item{control}{Named list of tuning parameters. \strong{Must include}
+\code{lower_bound} and \code{upper_bound}. Use
+\code{\link{estimate_rates_control}} to inspect other defaults.
+\describe{
+  \item{\code{lower_bound}}{Numeric vector of lower parameter bounds.
+    Length must be \code{2 + 2*sum(model)}.
+    Order: \code{c(beta_0, [beta_N], [beta_P], [beta_E],
+    gamma_0, [gamma_N], [gamma_P], [gamma_E])}.}
+  \item{\code{upper_bound}}{Numeric vector of upper parameter bounds
+    (same order as \code{lower_bound}).}
+  \item{\code{verbose}}{Print progress messages. Default \code{FALSE}.}
+}}
 
 \item{link}{Link function for rate computation: \code{"linear"} (default)
 uses \code{max(0, eta)}; \code{"exponential"} uses \code{exp(eta)}.}
-
-\item{verbose}{Print progress messages (\code{TRUE}/\code{FALSE}).}
 }
 \value{
 A list with:
@@ -80,14 +77,15 @@ set.seed(42)
 # Constant-rate model
 sim <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr")
 fit <- estimate_rates(sim, method = "mcem", model = "cr",
-  lower_bound = c(0, 0), upper_bound = c(2, 1))
+  control = list(lower_bound = c(0, 0), upper_bound = c(2, 1)))
 fit$pars
 
-# Diversity-dependent model
+# Diversity-dependent model — CEM for broad search
 sim_dd <- simulate_tree(pars = c(0.5, -0.005, 0.1, 0), max_t = 8, model = "dd")
-fit_dd <- estimate_rates(sim_dd, method = "mcem", model = "dd",
-  lower_bound = c(0.1, -0.1, 0, -0.01),
-  upper_bound = c(2, 0.01, 0.5, 0.01))
+fit_dd <- estimate_rates(sim_dd, method = "cem", model = "dd",
+  control = list(lower_bound = c(0.1, -0.1, 0, -0.01),
+                 upper_bound = c(2, 0.01, 0.5, 0.01),
+                 verbose = TRUE))
 fit_dd$pars
 }
 }

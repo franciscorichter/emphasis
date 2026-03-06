@@ -35,6 +35,11 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'
 #' Shared parameters (both methods):
 #' \describe{
+#'   \item{\code{lower_bound}}{Numeric vector of lower parameter bounds.
+#'     Length must be \code{2 + 2*sum(model)}. \strong{Required} (no default).}
+#'   \item{\code{upper_bound}}{Numeric vector of upper parameter bounds
+#'     (same order). \strong{Required} (no default).}
+#'   \item{\code{verbose}}{Print progress messages. Default \code{FALSE}.}
 #'   \item{\code{max_missing}}{Max missing lineages tolerated during
 #'     augmentation. Default \code{1e4}.}
 #'   \item{\code{max_lambda}}{Max speciation rate for augmentation.
@@ -85,6 +90,9 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
   method <- match.arg(method)
   common <- list(
+    lower_bound = NULL,
+    upper_bound = NULL,
+    verbose     = FALSE,
     max_missing = 1e4,
     max_lambda  = 500,
     num_threads = 1L
@@ -300,19 +308,24 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
 #'     \item a length-3 binary integer vector \code{c(use_N, use_P, use_E)}.
 #'   }
 #'   Default \code{"cr"} (constant rate).
-#' @param lower_bound Numeric vector of lower parameter bounds.
-#'   Length must be \code{2 + 2*sum(model)}.
-#'   Order: \code{c(beta_0, [beta_N], [beta_P], [beta_E],
-#'   gamma_0, [gamma_N], [gamma_P], [gamma_E])}.
-#' @param upper_bound Numeric vector of upper parameter bounds (same order).
 #' @param init_pars Starting parameter vector. Required for \code{"mcem"};
 #'   ignored for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the
 #'   midpoint of the bounds is used.
-#' @param control Named list of tuning parameters. Use
-#'   \code{\link{estimate_rates_control}} to inspect and modify defaults.
+#' @param control Named list of tuning parameters. Must include
+#'   \code{lower_bound} and \code{upper_bound}. Use
+#'   \code{\link{estimate_rates_control}} to inspect other defaults.
+#'   Key entries:
+#'   \describe{
+#'     \item{\code{lower_bound}}{Numeric vector of lower parameter bounds.
+#'       Length must be \code{2 + 2*sum(model)}.
+#'       Order: \code{c(beta_0, [beta_N], [beta_P], [beta_E],
+#'       gamma_0, [gamma_N], [gamma_P], [gamma_E])}.}
+#'     \item{\code{upper_bound}}{Numeric vector of upper parameter bounds
+#'       (same order).}
+#'     \item{\code{verbose}}{Print progress messages. Default \code{FALSE}.}
+#'   }
 #' @param link Link function for rate computation: \code{"linear"} (default)
 #'   uses \code{max(0, eta)}; \code{"exponential"} uses \code{exp(eta)}.
-#' @param verbose Print progress messages (\code{TRUE}/\code{FALSE}).
 #' @return A list with class \code{"emphasis_fit"} containing:
 #'   \describe{
 #'     \item{\code{pars}}{Named numeric vector of parameter estimates.}
@@ -333,31 +346,39 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
 #' # Constant-rate model
 #' sim <- simulate_tree(c(0.5, 0.1), max_t = 5, model = "cr")
 #' fit <- estimate_rates(sim, method = "mcem", model = "cr",
-#'   lower_bound = c(0, 0), upper_bound = c(2, 1))
+#'   control = list(lower_bound = c(0, 0), upper_bound = c(2, 1)))
 #' fit$pars
 #'
 #' # Diversity-dependent model
 #' sim_dd <- simulate_tree(c(0.5, -0.005, 0.1, 0), max_t = 8, model = "dd")
 #' fit_dd <- estimate_rates(sim_dd, method = "mcem", model = "dd",
-#'   lower_bound = c(0.1, -0.1, 0, -0.01),
-#'   upper_bound = c(2, 0.01, 0.5, 0.01))
+#'   control = list(lower_bound = c(0.1, -0.1, 0, -0.01),
+#'                  upper_bound = c(2, 0.01, 0.5, 0.01)))
 #' fit_dd$pars
 #' }
 #' @export
 estimate_rates <- function(tree,
-                           method      = c("mcem", "cem"),
-                           model       = "cr",
-                           lower_bound,
-                           upper_bound,
-                           init_pars   = NULL,
-                           control     = list(),
-                           link        = "linear",
-                           verbose     = FALSE) {
+                           method    = c("mcem", "cem"),
+                           model     = "cr",
+                           init_pars = NULL,
+                           control   = list(),
+                           link      = "linear") {
   method    <- match.arg(method)
 
   model_bin <- .resolve_model(model)
   link_int  <- .resolve_link(link)
 
+  defaults <- estimate_rates_control(method)
+  ctrl     <- utils::modifyList(defaults, control)
+  # Resolve parameter aliases (old names still work)
+  ctrl <- .resolve_control_aliases(ctrl, method, user_ctrl = control)
+
+  lower_bound <- ctrl$lower_bound
+  upper_bound <- ctrl$upper_bound
+
+  if (is.null(lower_bound) || is.null(upper_bound))
+    stop("'lower_bound' and 'upper_bound' must be supplied in 'control'.\n",
+         "  e.g. control = list(lower_bound = c(...), upper_bound = c(...))")
   if (!is.numeric(lower_bound) || !is.numeric(upper_bound))
     stop("'lower_bound' and 'upper_bound' must be numeric vectors.")
   if (length(lower_bound) != length(upper_bound))
@@ -376,12 +397,6 @@ estimate_rates <- function(tree,
   lb8 <- .expand_pars(lower_bound, model_bin)
   ub8 <- .expand_pars(upper_bound, model_bin)
   ip8 <- if (!is.null(init_pars)) .expand_pars(init_pars, model_bin) else NULL
-
-  defaults <- estimate_rates_control(method, n_pars = expected_n)
-  ctrl     <- utils::modifyList(defaults, control)
-  # Resolve parameter aliases (old names still work)
-  ctrl <- .resolve_control_aliases(ctrl, method, user_ctrl = control)
-  ctrl$verbose <- isTRUE(verbose) || isTRUE(ctrl$verbose)
 
   if (ctrl$verbose) {
     model_str <- .model_label(model_bin)
@@ -582,9 +597,10 @@ compare_models <- function(...) {
 #' @param link Link function: \code{"linear"} (default) or
 #'   \code{"exponential"} (EP not supported with exponential).
 #' @param control Named list with optional sub-lists \code{cem} and
-#'   \code{mcem} to override defaults for each stage. Example:
-#'   \code{list(cem = list(max_iter = 20, num_particles = 50),
-#'              mcem = list(num_trees = 300, tol = 0.05))}.
+#'   \code{mcem} to override tuning defaults for each stage. Bounds and
+#'   verbose are taken from the outer arguments; no need to repeat them here.
+#'   Example: \code{list(cem = list(max_iter = 20, num_particles = 50),
+#'                       mcem = list(num_trees = 300, tol = 0.05))}.
 #' @param verbose Print progress messages. Default \code{FALSE}.
 #' @return A list of class \code{"model_selection"} with:
 #'   \describe{
@@ -626,6 +642,12 @@ select_diversification_model <- function(tree,
   )
   ctrl <- utils::modifyList(defaults, control)
 
+  # Inject bounds and verbose into each stage's control list
+  bounds <- list(lower_bound = lower_bound, upper_bound = upper_bound,
+                 verbose = verbose)
+  ctrl$cem  <- utils::modifyList(bounds, ctrl$cem)
+  ctrl$mcem <- utils::modifyList(bounds, ctrl$mcem)
+
   model_names <- c("dd", "pd", "ep")
   fits <- vector("list", 3L)
   names(fits) <- model_names
@@ -635,7 +657,6 @@ select_diversification_model <- function(tree,
 
     fit_de <- tryCatch(
       estimate_rates(tree, method = "cem", model = m,
-                     lower_bound = lower_bound, upper_bound = upper_bound,
                      link = link, control = ctrl$cem),
       error = function(e) {
         warning("MCDE failed for model '", m, "': ", conditionMessage(e))
@@ -647,7 +668,6 @@ select_diversification_model <- function(tree,
 
     fits[[m]] <- tryCatch(
       estimate_rates(tree, method = "mcem", model = m,
-                     lower_bound = lower_bound, upper_bound = upper_bound,
                      init_pars = init, link = link, control = ctrl$mcem),
       error = function(e) {
         warning("MCEM failed for model '", m, "': ", conditionMessage(e))

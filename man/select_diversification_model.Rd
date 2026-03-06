@@ -28,9 +28,10 @@ Default \code{c(3, 0.5, 1, 0.5)}.}
 \code{"exponential"} (EP not supported with exponential).}
 
 \item{control}{Named list with optional sub-lists \code{cem} and
-\code{mcem} to override defaults for each stage. Example:
-\code{list(cem = list(max_iter = 20, num_particles = 50),
-           mcem = list(num_trees = 300, tol = 0.05))}.}
+\code{mcem} to override tuning defaults for each stage. Bounds and
+verbose are taken from the outer arguments; no need to repeat them here.
+Example: \code{list(cem = list(max_iter = 20, num_particles = 50),
+                    mcem = list(num_trees = 300, tol = 0.05))}.}
 
 \item{verbose}{Print progress messages. Default \code{FALSE}.}
 }

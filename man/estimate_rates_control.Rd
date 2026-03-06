@@ -19,7 +19,9 @@ Returns a list of default tuning parameters for \code{\link{estimate_rates}}.
 Override individual elements and pass the modified list via the
 \code{control} argument.
 
-Shared parameters (both methods): \code{max_missing} (default 1e4),
+Shared parameters (both methods): \code{lower_bound} (required, no
+default), \code{upper_bound} (required, no default),
+\code{verbose} (default FALSE), \code{max_missing} (default 1e4),
 \code{max_lambda} (default 500), \code{num_threads} (default 1).
 
 MCEM-specific: \code{sampling} (default \code{"dynamic_fresh"}),

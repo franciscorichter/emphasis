@@ -145,12 +145,15 @@ Two methods are available:
 set.seed(42)
 sim <- simulate_tree(pars = c(0.6, -0.05, 0.15, -0.03), model = "pd", max_t = 10)
 
-lb <- c(0.01, -0.5, 0, -0.5)
-ub <- c(2,     0.5, 1,  0.5)
-
 fit <- estimate_rates(sim, method = "cem", model = "pd",
-  lower_bound = lb, upper_bound = ub, verbose = TRUE,
-  control = list(max_iter = 50, num_particles = 80, n_boot = 100))
+  control = list(
+    lower_bound  = c(0.01, -0.5, 0, -0.5),
+    upper_bound  = c(2,     0.5, 1,  0.5),
+    verbose      = TRUE,
+    max_iter     = 50,
+    num_particles = 80,
+    n_boot       = 100
+  ))
 
 fit              # prints pars, loglik (MC se), AIC, convergence reason
 fit$pars         # named estimates: beta_0, beta_P, gamma_0, gamma_P
@@ -167,6 +170,8 @@ IS quality. Supply the same bounds used during estimation so they appear as
 reference lines in the parameter-trace plots.
 
 ```r
+lb <- c(0.01, -0.5, 0, -0.5)
+ub <- c(2,     0.5, 1,  0.5)
 diag <- diagnose_cem(fit, lower_bound = lb, upper_bound = ub)
 ```
 
@@ -175,6 +180,8 @@ In a simulation study where the true parameters are known, pass them via
 
 ```r
 true_pars <- c(beta_0 = 0.6, beta_P = -0.05, gamma_0 = 0.15, gamma_P = -0.03)
+lb <- c(0.01, -0.5, 0, -0.5)
+ub <- c(2,     0.5, 1,  0.5)
 diag <- diagnose_cem(fit, lower_bound = lb, upper_bound = ub,
                      true_pars = true_pars)
 ```
@@ -194,6 +201,9 @@ All parameters are passed via `control = list(...)`. Inspect defaults with
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
+| `lower_bound` | — | **Required.** Lower parameter bounds vector |
+| `upper_bound` | — | **Required.** Upper parameter bounds vector |
+| `verbose` | FALSE | Print iteration summaries |
 | `max_iter` | 20 | Hard iteration cap |
 | `num_particles` | 50 | Particles (parameter vectors) per iteration. Alias: `num_points` |
 | `num_trees` | 1 | Augmented trees simulated per particle per iteration. Alias: `sample_size` |
@@ -232,15 +242,25 @@ reducing variance but requiring more trees per iteration.
 ```r
 # Higher-quality run: 100 particles, 5 trees each => 500 trees/iter
 estimate_rates(sim, method = "cem", model = "pd",
-  lower_bound = lb, upper_bound = ub, verbose = TRUE,
-  control = list(max_iter = 30, num_particles = 100, num_trees = 5,
-                 patience = 8, n_boot = 200))
+  control = list(
+    lower_bound   = c(0.01, -0.5, 0, -0.5),
+    upper_bound   = c(2,     0.5, 1,  0.5),
+    verbose       = TRUE,
+    max_iter      = 30,
+    num_particles = 100,
+    num_trees     = 5,
+    patience      = 8,
+    n_boot        = 200
+  ))
 ```
 
 ### MCEM control parameters
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
+| `lower_bound` | — | **Required.** Lower parameter bounds vector |
+| `upper_bound` | — | **Required.** Upper parameter bounds vector |
+| `verbose` | FALSE | Print progress messages |
 | `num_trees` | 200 | Augmented trees per EM iteration. Alias: `sample_size` |
 | `tol` | 0.1 | Convergence tolerance on loglik improvement |
 | `burnin` | 20 | Burn-in iterations before convergence is checked |
@@ -255,8 +275,8 @@ data(bird.orders, package = "ape")
 extant <- prune_to_extant(bird.orders)
 
 fit <- estimate_rates(extant, method = "cem", model = "dd",
-  lower_bound = c(0.01, -0.5, 0, -0.5),
-  upper_bound = c(2,     0.5, 1,  0.5))
+  control = list(lower_bound = c(0.01, -0.5, 0, -0.5),
+                 upper_bound = c(2,     0.5, 1,  0.5)))
 fit$pars
 ```
 
@@ -271,14 +291,15 @@ AIC. The model with the lowest AIC is preferred; `delta_AIC` shows the gap.
 set.seed(42)
 sim <- simulate_tree(pars = c(0.8, -0.02, 0.2, 0), model = "dd", max_t = 8)
 
-ctrl <- list(max_iter = 15, num_particles = 40)
-
 fit_cr <- estimate_rates(sim, method = "cem", model = "cr",
-  lower_bound = c(0,    0),              upper_bound = c(2,    1),    control = ctrl)
+  control = list(lower_bound = c(0,    0),              upper_bound = c(2,    1),
+                 max_iter = 15, num_particles = 40))
 fit_dd <- estimate_rates(sim, method = "cem", model = "dd",
-  lower_bound = c(0.1, -0.1, 0, -0.01), upper_bound = c(2, 0.01, 0.5, 0.01), control = ctrl)
+  control = list(lower_bound = c(0.1, -0.1, 0, -0.01), upper_bound = c(2, 0.01, 0.5, 0.01),
+                 max_iter = 15, num_particles = 40))
 fit_pd <- estimate_rates(sim, method = "cem", model = "pd",
-  lower_bound = c(0.01, -1,  0, -1),    upper_bound = c(2,   1,   1,  1),    control = ctrl)
+  control = list(lower_bound = c(0.01, -1,  0, -1),    upper_bound = c(2,   1,   1,  1),
+                 max_iter = 15, num_particles = 40))
 
 compare_models(CR = fit_cr, DD = fit_dd, PD = fit_pd)
 #   model n_pars  loglik    AIC delta_AIC
@@ -303,9 +324,12 @@ model     <- "pd"
 max_t     <- 10
 n_rep     <- 50
 
-lb   <- c(0.01, -0.5, 0,  -0.5)
-ub   <- c(2,     0.5, 1,   0.5)
-ctrl <- list(max_iter = 100, num_particles = 100, num_trees = 1, n_boot = 0)
+ctrl <- list(lower_bound   = c(0.01, -0.5, 0,  -0.5),
+             upper_bound   = c(2,     0.5, 1,   0.5),
+             max_iter      = 100,
+             num_particles = 100,
+             num_trees     = 1,
+             n_boot        = 0)
 
 # ── 1. Simulate trees ─────────────────────────────────────────────────────
 set.seed(1)
@@ -324,8 +348,7 @@ for (i in seq_len(n_rep)) {
   cat(sprintf("Rep %d/%d\n", i, n_rep))
   n_tips[i] <- length(trees[[i]]$tes$tip.label)
   fit <- tryCatch(
-    estimate_rates(trees[[i]], method = "cem", model = model,
-                   lower_bound = lb, upper_bound = ub, control = ctrl),
+    estimate_rates(trees[[i]], method = "cem", model = model, control = ctrl),
     warning = function(w) NULL,
     error   = function(e) NULL
   )
@@ -483,9 +506,9 @@ for (i in seq_len(n_trees)) {
   for (m in model_names) {
     fits[[m]] <- tryCatch(
       estimate_rates(all_trees[[i]], method = "cem", model = tolower(m),
-                     lower_bound = configs[[m]]$lb,
-                     upper_bound = configs[[m]]$ub,
-                     control = ctrl),
+                     control = c(ctrl,
+                                 list(lower_bound = configs[[m]]$lb,
+                                      upper_bound = configs[[m]]$ub))),
       warning = function(w) NULL,
       error   = function(e) NULL
     )
