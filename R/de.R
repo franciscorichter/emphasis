@@ -206,8 +206,8 @@
   }
 
   list(pop          = pop,
-       rej_lambda   = rej_lam,
-       rej_overruns = rej_over,
+       rej_lambda   = sum(rej_lam),
+       rej_overruns = sum(rej_over),
        n_simulated  = length(to_eval))
 }
 
