@@ -565,7 +565,7 @@ emphasis_cem <- function(brts,
       input$max_lambda  <- input$max_lambda  * 10
       if (input$maxN > 10000L) {
         warning("emphasis_cem: all particles failed even after escalating limits. ",
-                "Try increasing num_points or widening the parameter bounds.")
+                "Try increasing num_particles or widening the parameter bounds.")
         all_failed <- TRUE
         break
       }

@@ -47,7 +47,8 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #' \describe{
 #'   \item{\code{sampling}}{Sampling scheme. Currently only
 #'     \code{"dynamic_fresh"} is implemented.}
-#'   \item{\code{sample_size}}{MC sample size per iteration. Default \code{200}.}
+#'   \item{\code{num_trees}}{Augmented trees per EM iteration. Default
+#'     \code{200}. Alias: \code{sample_size}.}
 #'   \item{\code{xtol}}{Relative tolerance for the M-step optimiser.
 #'     Default \code{1e-3}.}
 #'   \item{\code{tol}}{Standard error of log-likelihood below which MCEM
@@ -56,16 +57,17 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     is tested. Default \code{20}.}
 #' }
 #'
-#' MCDE-specific parameters:
+#' CEM-specific parameters:
 #' \describe{
 #'   \item{\code{max_iter}}{Maximum CEM iterations (hard cap). Default \code{20}.}
-#'   \item{\code{num_points}}{Particle population size. Default \code{50}.}
+#'   \item{\code{num_particles}}{Particle population size (parameter vectors
+#'     per iteration). Default \code{50}. Alias: \code{num_points}.}
 #'   \item{\code{sd_vec}}{Initial perturbation SDs. \code{NULL} (default)
 #'     sets each to \code{(upper - lower) / 4} at call time.}
 #'   \item{\code{maxN}}{Max augmentation attempts per particle evaluation.
 #'     Default \code{10}.}
-#'   \item{\code{sample_size}}{IS sample size (augmented trees) per particle
-#'     per iteration. Default \code{1}.}
+#'   \item{\code{num_trees}}{Augmented trees simulated per particle per
+#'     iteration. Default \code{1}. Alias: \code{sample_size}.}
 #'   \item{\code{shared_trees}}{If \code{FALSE} (default), each particle is
 #'     evaluated on its own simulated trees.  If \code{TRUE}, trees are pooled
 #'     across all particles and every particle's \code{fhat} is re-evaluated
@@ -90,7 +92,7 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
   if (method == "mcem") {
     c(common, list(
       sampling    = "dynamic_fresh",
-      sample_size = 200L,
+      sample_size = 200L,       # alias: num_trees
       xtol        = 1e-3,
       tol         = 0.1,
       burnin      = 20L
@@ -98,10 +100,10 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
   } else {
     c(common, list(
       max_iter     = 20L,
-      num_points   = 50L,
+      num_particles = 50L,      # alias: num_points
       sd_vec       = NULL,
       maxN         = 10L,
-      sample_size  = 1L,
+      num_trees    = 1L,        # alias: sample_size
       shared_trees = FALSE,
       disc_prop    = 0.5,
       tol          = 1e-4,
@@ -115,6 +117,44 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
 # --------------------------------------------------------------------------- #
 #  Internal helpers                                                            #
 # --------------------------------------------------------------------------- #
+
+#' Resolve control-parameter aliases
+#'
+#' Supports both old names (\code{num_points}, \code{sample_size}) and new
+#' names (\code{num_particles}, \code{num_trees}).  User-supplied values take
+#' precedence; if both old and new are present, the new name wins.
+#' Internally the code always reads the OLD names for backwards compatibility
+#' with \code{emphasis_cem} and the C++ layer.
+#' @keywords internal
+.resolve_control_aliases <- function(ctrl, method, user_ctrl = list()) {
+  # Sync alias pairs.  If the user explicitly supplied an old name, it
+
+  # overrides the default new name (and vice-versa).  When both old and
+  # new names come from defaults only, the new name is authoritative.
+  .sync <- function(ctrl, new_nm, old_nm, user_ctrl) {
+    user_new <- !is.null(user_ctrl[[new_nm]])
+    user_old <- !is.null(user_ctrl[[old_nm]])
+    if (user_old && !user_new) {
+      # User supplied old name only -> propagate to new
+      ctrl[[new_nm]] <- ctrl[[old_nm]]
+    } else if (user_new && !user_old) {
+      # User supplied new name only -> propagate to old
+      ctrl[[old_nm]] <- ctrl[[new_nm]]
+    } else {
+      # Both from defaults, or both from user -> new name wins; sync to old
+      ctrl[[old_nm]] <- ctrl[[new_nm]]
+    }
+    ctrl
+  }
+  if (method == "cem") {
+    ctrl <- .sync(ctrl, "num_particles", "num_points",  user_ctrl)
+    ctrl <- .sync(ctrl, "num_trees",     "sample_size", user_ctrl)
+  }
+  if (method == "mcem") {
+    ctrl <- .sync(ctrl, "num_trees", "sample_size", user_ctrl)
+  }
+  ctrl
+}
 
 #' @keywords internal
 .extract_brts <- function(tree) {
@@ -213,7 +253,7 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
   )
   if (identical(raw$converged, "all_failed"))
     warning("CEM failed: all particles were rejected at every attempt. ",
-            "Try increasing num_points (e.g. >= 20) or widening the ",
+            "Try increasing num_particles (e.g. >= 20) or widening the ",
             "parameter bounds.")
   # Use the final iteration's best fhat, not the global max over all iterations.
   # The global max picks lucky single-tree spikes; the final iteration reflects
@@ -339,6 +379,8 @@ estimate_rates <- function(tree,
 
   defaults <- estimate_rates_control(method, n_pars = expected_n)
   ctrl     <- utils::modifyList(defaults, control)
+  # Resolve parameter aliases (old names still work)
+  ctrl <- .resolve_control_aliases(ctrl, method, user_ctrl = control)
   ctrl$verbose <- isTRUE(verbose) || isTRUE(ctrl$verbose)
 
   if (ctrl$verbose) {
@@ -349,14 +391,14 @@ estimate_rates <- function(tree,
       if (link_int == 0L) "linear" else "exponential"
     ))
     if (method == "cem") {
-      ss   <- ctrl$sample_size
-      np   <- ctrl$num_points
+      ss   <- ctrl$num_trees
+      np   <- ctrl$num_particles
       mode <- if (isTRUE(ctrl$shared_trees)) "shared (Mode 2)" else "independent (Mode 1)"
       if (ss == 1L) {
         fhat_desc <- paste0(
           "  IS log-weight  : logf - log_q  (single tree per particle)\n",
           "                   logf = log p(obs,z|theta),  log_q = log q(z|obs,theta)\n",
-          "                   WARNING: S=1 gives high variance; consider sample_size > 1\n")
+          "                   WARNING: S=1 gives high variance; consider num_trees > 1\n")
       } else {
         fhat_desc <- sprintf(paste0(
           "  IS log-lik     : log( mean( exp(logf - log_q) ) )  over %d trees\n",
@@ -373,8 +415,8 @@ estimate_rates <- function(tree,
         mode, ctrl$max_iter, ctrl$n_boot))
     }
     if (method == "mcem")
-      cat(sprintf("  sample_size=%d  tol=%.4g  burnin=%d\n",
-                  ctrl$sample_size, ctrl$tol, ctrl$burnin))
+      cat(sprintf("  num_trees=%d  tol=%.4g  burnin=%d\n",
+                  ctrl$num_trees, ctrl$tol, ctrl$burnin))
   }
 
   raw <- switch(method,
@@ -541,8 +583,8 @@ compare_models <- function(...) {
 #'   \code{"exponential"} (EP not supported with exponential).
 #' @param control Named list with optional sub-lists \code{cem} and
 #'   \code{mcem} to override defaults for each stage. Example:
-#'   \code{list(cem = list(max_iter = 20, num_points = 50),
-#'              mcem = list(sample_size = 300, tol = 0.05))}.
+#'   \code{list(cem = list(max_iter = 20, num_particles = 50),
+#'              mcem = list(num_trees = 300, tol = 0.05))}.
 #' @param verbose Print progress messages. Default \code{FALSE}.
 #' @return A list of class \code{"model_selection"} with:
 #'   \describe{
@@ -579,8 +621,8 @@ select_diversification_model <- function(tree,
          "c(beta_0, beta_X, gamma_0, gamma_X).")
 
   defaults <- list(
-    cem  = list(max_iter = 15, num_points = 40),
-    mcem = list(sample_size = 200, tol = 0.1, burnin = 10)
+    cem  = list(max_iter = 15, num_particles = 40),
+    mcem = list(num_trees = 200, tol = 0.1, burnin = 10)
   )
   ctrl <- utils::modifyList(defaults, control)
 

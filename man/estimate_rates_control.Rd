@@ -23,15 +23,19 @@ Shared parameters (both methods): \code{max_missing} (default 1e4),
 \code{max_lambda} (default 500), \code{num_threads} (default 1).
 
 MCEM-specific: \code{sampling} (default \code{"dynamic_fresh"}),
-\code{sample_size} (default 200), \code{xtol} (default 1e-3),
+\code{num_trees} (augmented trees per iteration, default 200;
+alias: \code{sample_size}), \code{xtol} (default 1e-3),
 \code{tol} (log-likelihood SE convergence threshold, default 0.1),
 \code{burnin} (default 20).
 
-CEM-specific: \code{max_iter} (default 20), \code{num_points}
-(default 50), \code{sd_vec} (NULL = (upper-lower)/4), \code{maxN}
-(default 10), \code{disc_prop} (default 0.5), \code{tol} (plateau
-threshold, default 1e-4), \code{patience} (default 5),
-\code{bias_correct} (default FALSE), \code{n_boot} (default 0).
+CEM-specific: \code{max_iter} (default 20), \code{num_particles}
+(particles per iteration, default 50; alias: \code{num_points}),
+\code{num_trees} (trees per particle, default 1;
+alias: \code{sample_size}), \code{sd_vec} (NULL = (upper-lower)/4),
+\code{maxN} (default 10), \code{disc_prop} (default 0.5),
+\code{tol} (plateau threshold, default 1e-4), \code{patience}
+(default 5), \code{bias_correct} (default FALSE),
+\code{n_boot} (default 0).
 }
 \examples{
 estimate_rates_control("mcem")

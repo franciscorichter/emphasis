@@ -150,7 +150,7 @@ ub <- c(2,     0.5, 1,  0.5)
 
 fit <- estimate_rates(sim, method = "cem", model = "pd",
   lower_bound = lb, upper_bound = ub, verbose = TRUE,
-  control = list(max_iter = 50, num_points = 80, n_boot = 100))
+  control = list(max_iter = 50, num_particles = 80, n_boot = 100))
 
 fit              # prints pars, loglik (MC se), AIC, convergence reason
 fit$pars         # named estimates: beta_0, beta_P, gamma_0, gamma_P
@@ -195,8 +195,8 @@ All parameters are passed via `control = list(...)`. Inspect defaults with
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `max_iter` | 20 | Hard iteration cap |
-| `num_points` | 50 | Particles (parameter vectors) per iteration |
-| `sample_size` | 1 | Augmented trees simulated per particle per iteration |
+| `num_particles` | 50 | Particles (parameter vectors) per iteration. Alias: `num_points` |
+| `num_trees` | 1 | Augmented trees simulated per particle per iteration. Alias: `sample_size` |
 | `shared_trees` | FALSE | Pool trees across all particles (`TRUE` = lower variance, slower) |
 | `disc_prop` | 0.5 | Elite fraction of particles kept for resampling |
 | `sd_vec` | NULL | Initial perturbation SDs; auto = `(upper - lower) / 4` |
@@ -209,7 +209,7 @@ All parameters are passed via `control = list(...)`. Inspect defaults with
 | `n_boot` | 0 | Bootstrap replicates for `loglik_var`; 0 = disabled |
 | `num_threads` | 1 | Parallel threads for particle evaluation |
 
-**Total augmented trees per iteration** = `num_points × sample_size`.
+**Total augmented trees per iteration** = `num_particles × num_trees`.
 
 **How `fhat` is computed per particle:**
 
@@ -218,14 +218,14 @@ fhat(theta) = log( mean_i[ exp(logf_i - log_q_i) ] )
 
   logf_i  = log p(obs, z_i | theta)   # joint likelihood of observed + augmented tree
   log_q_i = log q(z_i | obs, theta)   # proposal density of the augmented tree
-  mean over i = 1 ... sample_size augmented trees drawn for this particle
+  mean over i = 1 ... num_trees augmented trees drawn for this particle
 ```
 
 This is the importance-sampling (IS) log-likelihood estimate. A higher `fhat` means
 the parameter vector `theta` is better supported by the data. Each iteration the
 best particle (`fhat*`) is recorded, and the population is resampled around it.
 
-In Mode 1 (default, `shared_trees = FALSE`): each particle draws its own `sample_size`
+In Mode 1 (default, `shared_trees = FALSE`): each particle draws its own `num_trees`
 trees. In Mode 2 (`shared_trees = TRUE`): all particles share a common pool of trees,
 reducing variance but requiring more trees per iteration.
 
@@ -233,7 +233,7 @@ reducing variance but requiring more trees per iteration.
 # Higher-quality run: 100 particles, 5 trees each => 500 trees/iter
 estimate_rates(sim, method = "cem", model = "pd",
   lower_bound = lb, upper_bound = ub, verbose = TRUE,
-  control = list(max_iter = 30, num_points = 100, sample_size = 5,
+  control = list(max_iter = 30, num_particles = 100, num_trees = 5,
                  patience = 8, n_boot = 200))
 ```
 
@@ -241,7 +241,7 @@ estimate_rates(sim, method = "cem", model = "pd",
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `sample_size` | 200 | Augmented trees per EM iteration |
+| `num_trees` | 200 | Augmented trees per EM iteration. Alias: `sample_size` |
 | `tol` | 0.1 | Convergence tolerance on loglik improvement |
 | `burnin` | 20 | Burn-in iterations before convergence is checked |
 | `max_missing` | 1e4 | Max missing lineages during augmentation |
@@ -271,7 +271,7 @@ AIC. The model with the lowest AIC is preferred; `delta_AIC` shows the gap.
 set.seed(42)
 sim <- simulate_tree(pars = c(0.8, -0.02, 0.2, 0), model = "dd", max_t = 8)
 
-ctrl <- list(max_iter = 15, num_points = 40)
+ctrl <- list(max_iter = 15, num_particles = 40)
 
 fit_cr <- estimate_rates(sim, method = "cem", model = "cr",
   lower_bound = c(0,    0),              upper_bound = c(2,    1),    control = ctrl)
@@ -305,7 +305,7 @@ n_rep     <- 50
 
 lb   <- c(0.01, -0.5, 0,  -0.5)
 ub   <- c(2,     0.5, 1,   0.5)
-ctrl <- list(max_iter = 100, num_points = 100, sample_size = 1, n_boot = 0)
+ctrl <- list(max_iter = 100, num_particles = 100, num_trees = 1, n_boot = 0)
 
 # ── 1. Simulate trees ─────────────────────────────────────────────────────
 set.seed(1)
@@ -430,7 +430,7 @@ library(emphasis)
 set.seed(42)
 n_per_model <- 25
 max_t       <- 8
-ctrl        <- list(max_iter = 20, num_points = 80, sample_size = 1, n_boot = 0)
+ctrl        <- list(max_iter = 20, num_particles = 80, num_trees = 1, n_boot = 0)
 
 # True parameters and bounds for each model
 configs <- list(

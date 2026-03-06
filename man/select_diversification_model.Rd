@@ -29,8 +29,8 @@ Default \code{c(3, 0.5, 1, 0.5)}.}
 
 \item{control}{Named list with optional sub-lists \code{cem} and
 \code{mcem} to override defaults for each stage. Example:
-\code{list(cem = list(max_iter = 20, num_points = 50),
-           mcem = list(sample_size = 300, tol = 0.05))}.}
+\code{list(cem = list(max_iter = 20, num_particles = 50),
+           mcem = list(num_trees = 300, tol = 0.05))}.}
 
 \item{verbose}{Print progress messages. Default \code{FALSE}.}
 }
@@ -51,7 +51,7 @@ A list of class \code{"model_selection"} with:
 Fits three 4-parameter models — diversity dependence (DD, covariate N),
 phylogenetic diversity dependence (PD, covariate P), and evolutionary
 pendant (EP, covariate E) — to the same tree using a two-stage
-CEM → MCEM workflow, then ranks them by AIC and computes AIC weights.
+MCDE → MCEM workflow, then ranks them by AIC and computes AIC weights.
 }
 \details{
 All three models share the same parameter layout:

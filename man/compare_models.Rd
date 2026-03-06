@@ -13,11 +13,23 @@ auto-labelled from their model specification.}
 }
 \value{
 A data frame with columns \code{model}, \code{n_pars},
-  \code{loglik}, \code{AIC}, and \code{delta_AIC}, sorted by AIC.
+  \code{loglik}, \code{AIC}, \code{delta_AIC}, and \code{AICw}.
+  If bootstrap variances are present, an additional \code{loglik_se}
+  column is included and pairwise p-values are printed as a message.
 }
 \description{
 Given two or more \code{\link{estimate_rates}} results, returns a summary
 table sorted by AIC. The model with the lowest AIC is preferred.
+}
+\details{
+When all fits carry a \code{loglik_var} (bootstrap variance from
+\code{control$n_boot > 0}), pairwise Gaussian tests of equal AIC are
+appended.  For each pair \eqn{(i, j)},
+\deqn{T_{ij} = \widehat{\rm AIC}_i - \widehat{\rm AIC}_j, \qquad
+  \mathrm{Var}(T_{ij}) = 4[\mathrm{Var}(\hat\ell_i) +
+  \mathrm{Var}(\hat\ell_j)]}
+and \eqn{p = 2\Phi(-|T_{ij}|/\sqrt{\mathrm{Var}(T_{ij})})} under
+the null of equal AIC.
 }
 \examples{
 \dontrun{
