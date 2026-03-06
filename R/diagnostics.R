@@ -55,8 +55,9 @@
 #'
 #' @param x An \code{emphasis_fit} object (from \code{\link{estimate_rates}}
 #'   with \code{method = "cem"}) or the raw list from \code{\link{emphasis_cem}}.
-#' @param plot Logical; if \code{TRUE} (default), produce three diagnostic
-#'   plots: convergence, population spread, and IS weight distribution.
+#' @param plot Logical; if \code{TRUE} (default), produce diagnostic plots:
+#'   log-likelihood convergence, per-parameter traces, population spread, and
+#'   IS weight distribution.
 #' @return A list (invisibly) with components \code{convergence},
 #'   \code{population_spread}, \code{IS_quality}, \code{final_pop}, and
 #'   \code{best_IS}.
@@ -132,21 +133,50 @@ diagnose_cem <- function(x, plot = TRUE) {
     final_pop_df <- cbind(fp$pars, fhat = fp$fhat)
   }
 
-  # ── 5. Plots ──────────────────────────────────────────────────────────────
+  # ── 5. Parameter names ────────────────────────────────────────────────────
+  par_names <- if (inherits(x, "emphasis_fit") && !is.null(names(x$pars))) {
+    names(x$pars)
+  } else if (!is.null(details$best_pars) && !is.null(colnames(details$best_pars))) {
+    colnames(details$best_pars)
+  } else if (!is.null(details$best_pars)) {
+    paste0("par", seq_len(ncol(details$best_pars)))
+  } else {
+    character(0)
+  }
+  n_par <- length(par_names)
+
+  # ── 6. Plots ──────────────────────────────────────────────────────────────
   if (plot) {
-    n_plots  <- 2L + (!is.null(IS_quality))
+    has_IS   <- !is.null(IS_quality)
+    n_plots  <- 2L + has_IS + n_par   # loglik + spread + IS + one per param
+    nc       <- min(n_plots, 3L)
+    nr       <- ceiling(n_plots / nc)
+
     old_par  <- graphics::par(no.readonly = TRUE)
     on.exit(graphics::par(old_par))
-    graphics::par(mfrow = c(1L, n_plots), mar = c(4, 4, 3, 1))
+    graphics::par(mfrow = c(nr, nc), mar = c(4, 4, 3, 1))
 
-    # Plot 1: convergence
+    # Plot 1: log-likelihood convergence
     stop_label <- if (!is.null(details$converged)) details$converged else "?"
     graphics::plot(convergence$iteration, convergence$best_loglik,
                    type = "b", pch = 16, col = "steelblue",
                    xlab = "Iteration", ylab = expression(hat(f)(theta^"*")),
-                   main = paste0("CEM convergence\n(stop: ", stop_label, ")"))
+                   main = paste0("Log-likelihood (best particle)\nstop: ",
+                                 stop_label))
 
-    # Plot 2: population spread (median ± IQR band)
+    # Plots 2..(1+n_par): one per parameter trace
+    if (n_par > 0L && !is.null(details$best_pars)) {
+      bp <- details$best_pars
+      iters <- seq_len(nrow(bp))
+      for (j in seq_len(n_par)) {
+        graphics::plot(iters, bp[, j],
+                       type = "b", pch = 16, col = "forestgreen",
+                       xlab = "Iteration", ylab = par_names[j],
+                       main = par_names[j])
+      }
+    }
+
+    # Next plot: population spread (median ± IQR band)
     valid_rows <- !is.na(pop_spread$median)
     if (any(valid_rows)) {
       ps <- pop_spread[valid_rows, ]
@@ -160,20 +190,20 @@ diagnose_cem <- function(x, plot = TRUE) {
       graphics::polygon(
         c(ps$iteration, rev(ps$iteration)),
         c(ps$median - ps$iqr / 2, rev(ps$median + ps$iqr / 2)),
-        col  = grDevices::adjustcolor("darkorange", alpha.f = 0.25),
+        col    = grDevices::adjustcolor("darkorange", alpha.f = 0.25),
         border = NA
       )
     }
 
-    # Plot 3: IS log-weight distribution at best particle
-    if (!is.null(IS_quality) && !is.null(details$best_IS)) {
+    # Last plot: IS log-weight distribution at best particle
+    if (has_IS && !is.null(details$best_IS)) {
       lw_fin <- details$best_IS$lw[is.finite(details$best_IS$lw)]
       if (length(lw_fin) > 1L) {
         graphics::hist(lw_fin, breaks = min(30L, length(lw_fin)),
                        freq = FALSE, col = "grey85", border = "white",
                        xlab = "IS log-weight  (logf \u2212 log_q)",
                        main = sprintf(
-                         "IS weight distribution\nESS = %.1f / %d  (%.0f%%)",
+                         "IS weights\nESS = %.1f / %d  (%.0f%%)",
                          IS_quality$ESS, IS_quality$n_trees,
                          100 * IS_quality$ESS_fraction))
         graphics::abline(v = IS_quality$mean_lw, col = "red", lty = 2, lwd = 2)
