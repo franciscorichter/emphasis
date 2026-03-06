@@ -211,6 +211,10 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
     link         = link,
     n_boot       = ctrl$n_boot
   )
+  if (identical(raw$converged, "all_failed"))
+    warning("CEM failed: all particles were rejected at every attempt. ",
+            "Try increasing num_points (e.g. >= 20) or widening the ",
+            "parameter bounds.")
   loglik <- if (length(raw$best_loglik) > 0)
     max(raw$best_loglik, na.rm = TRUE) else NA_real_
   list(pars = raw$obtained_estim, loglik = loglik,

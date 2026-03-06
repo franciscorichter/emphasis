@@ -558,14 +558,23 @@ emphasis_cem <- function(brts,
     pop    <- result$pop
 
     # Rescue: if ALL particles still have NA fhat, escalate limits
+    all_failed <- FALSE
     while (all(is.na(pop$fhat))) {
       input$maxN        <- input$maxN        * 10L
       input$max_missing <- input$max_missing * 10L
       input$max_lambda  <- input$max_lambda  * 10
-      if (input$maxN > 10000L)
-        stop("emphasis_cem: all particles failed; maxN limit exceeded.")
+      if (input$maxN > 10000L) {
+        warning("emphasis_cem: all particles failed even after escalating limits. ",
+                "Try increasing num_points or widening the parameter bounds.")
+        all_failed <- TRUE
+        break
+      }
       result <- .eval_particles(pop, input, num_threads)
       pop    <- result$pop
+    }
+    if (all_failed) {
+      stop_reason <- "all_failed"
+      break
     }
 
     # Adaptive limit escalation
@@ -619,6 +628,24 @@ emphasis_cem <- function(brts,
     rej_lambda   = hist_rej_lam[seq_len(k_ran)],
     rej_overruns = hist_rej_over[seq_len(k_ran)]
   )
+
+  # Early exit if no iterations completed successfully
+  if (k_ran == 0L) {
+    if (verbose)
+      cat(sprintf("Stopped: %s — no iterations completed.\n", stop_reason))
+    return(list(
+      best_loglik    = numeric(0),
+      best_pars      = best_pars[integer(0), , drop = FALSE],
+      obtained_estim = rep(NA_real_, n_pars),
+      loglik_var     = NA_real_,
+      converged      = stop_reason,
+      history        = list(fhat_all = list(), n_valid = integer(0),
+                            rej_lambda = integer(0), rej_overruns = integer(0)),
+      final_pop      = NULL,
+      best_IS        = NULL,
+      time           = proc.time() - init_time
+    ))
+  }
 
   global_best <- which.max(best_loglik)
   best_pars_v <- best_pars[global_best, ]
