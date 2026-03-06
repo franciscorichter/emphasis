@@ -345,11 +345,21 @@ estimate_rates <- function(tree,
       toupper(method), model_str, length(brts),
       if (link_int == 0L) "linear" else "exponential"
     ))
-    if (method == "cem")
-      cat(sprintf("                 max_iter=%d  num_points=%d  n_boot=%d\n",
-                  ctrl$max_iter, ctrl$num_points, ctrl$n_boot))
+    if (method == "cem") {
+      ss   <- ctrl$sample_size
+      np   <- ctrl$num_points
+      mode <- if (isTRUE(ctrl$shared_trees)) "shared (Mode 2)" else "independent (Mode 1)"
+      cat(sprintf(paste0(
+        "  particles/iter : %d\n",
+        "  trees/particle : %d  =>  ~%d augmented trees per iteration\n",
+        "  fhat per particle: IS log-likelihood from %d tree%s\n",
+        "  tree mode      : %s\n",
+        "  max_iter=%d  n_boot=%d\n"),
+        np, ss, np * ss, ss, if (ss == 1L) "" else "s", mode,
+        ctrl$max_iter, ctrl$n_boot))
+    }
     if (method == "mcem")
-      cat(sprintf("                 sample_size=%d  tol=%.4g  burnin=%d\n",
+      cat(sprintf("  sample_size=%d  tol=%.4g  burnin=%d\n",
                   ctrl$sample_size, ctrl$tol, ctrl$burnin))
   }
 

@@ -613,10 +613,11 @@ emphasis_cem <- function(brts,
     sd_vec <- sd_vec - alpha
 
     if (verbose)
-      cat(sprintf("Iter %d/%d  best fhat: %.4f  plateau: %d/%d  sim: %d/%d\n",
-                  k, max_iter, best_loglik[k],
-                  plateau_count, patience,
-                  result$n_simulated, num_points))
+      cat(sprintf(
+        "Iter %3d/%d  fhat*=%8.4f  valid=%d/%d  plateau=%d/%d\n",
+        k, max_iter, best_loglik[k],
+        sum(valid), num_points,
+        plateau_count, patience))
   }
 
   # Trim pre-allocated storage to actual iterations run
