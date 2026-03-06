@@ -28,9 +28,9 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #' Override individual elements and pass the modified list via the
 #' \code{control} argument.
 #'
-#' @param method Which method's defaults to return: \code{"mcem"} or \code{"mcde"}.
+#' @param method Which method's defaults to return: \code{"mcem"} or \code{"cem"}.
 #' @param n_pars Number of parameters (used to set the default \code{sd_vec}
-#'   for MCDE when \code{NULL}).
+#'   for CEM when \code{NULL}).
 #' @return A named list of control parameters.
 #'
 #' Shared parameters (both methods):
@@ -58,17 +58,29 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'
 #' MCDE-specific parameters:
 #' \describe{
-#'   \item{\code{num_iterations}}{Number of DE iterations. Default \code{20}.}
+#'   \item{\code{max_iter}}{Maximum CEM iterations (hard cap). Default \code{20}.}
 #'   \item{\code{num_points}}{Particle population size. Default \code{50}.}
 #'   \item{\code{sd_vec}}{Initial perturbation SDs. \code{NULL} (default)
 #'     sets each to \code{(upper - lower) / 4} at call time.}
-#'   \item{\code{maxN}}{Max augmentation attempts per particle. Default
-#'     \code{10}.}
-#'   \item{\code{disc_prop}}{Fraction of best particles retained per
-#'     iteration. Default \code{0.5}.}
+#'   \item{\code{maxN}}{Max augmentation attempts per particle evaluation.
+#'     Default \code{10}.}
+#'   \item{\code{sample_size}}{IS sample size (augmented trees) per particle
+#'     per iteration. Default \code{1}.}
+#'   \item{\code{shared_trees}}{If \code{FALSE} (default), each particle is
+#'     evaluated on its own simulated trees.  If \code{TRUE}, trees are pooled
+#'     across all particles and every particle's \code{fhat} is re-evaluated
+#'     over the full pool (lower variance; bias correction not yet implemented).}
+#'   \item{\code{disc_prop}}{Elite fraction retained per iteration (Cross-Entropy
+#'     Method). Default \code{0.5}.}
+#'   \item{\code{bias_correct}}{Apply moment-based bias correction to the IS
+#'     log-likelihood. Default \code{FALSE}.}
+#'   \item{\code{n_boot}}{Bootstrap replicates for MC variance estimation at
+#'     the best particle. \code{0} (default) disables; set e.g. \code{200} to
+#'     populate \code{loglik_var} in the fit, enabling the AIC T-test in
+#'     \code{\link{compare_models}}.}
 #' }
 #' @export
-estimate_rates_control <- function(method = c("mcem", "mcde"), n_pars = 4) {
+estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
   method <- match.arg(method)
   common <- list(
     max_missing = 1e4,
@@ -85,11 +97,17 @@ estimate_rates_control <- function(method = c("mcem", "mcde"), n_pars = 4) {
     ))
   } else {
     c(common, list(
-      num_iterations = 20L,
-      num_points     = 50L,
-      sd_vec         = NULL,
-      maxN           = 10L,
-      disc_prop      = 0.5
+      max_iter     = 20L,
+      num_points   = 50L,
+      sd_vec       = NULL,
+      maxN         = 10L,
+      sample_size  = 1L,
+      shared_trees = FALSE,
+      disc_prop    = 0.5,
+      tol          = 1e-4,
+      patience     = 5L,
+      bias_correct = FALSE,
+      n_boot       = 0L
     ))
   }
 }
@@ -106,15 +124,13 @@ estimate_rates_control <- function(method = c("mcem", "mcde"), n_pars = 4) {
   if (inherits(tree, "phylo")) {
     return(sort(ape::branching.times(tree), decreasing = TRUE))
   }
-  # simulate_tree() result — prefer $brts (already sorted from DDD::L2brts)
+  # simulate_tree() result: try $tes, then $tas (pruned to extant)
   if (is.list(tree) && !inherits(tree, "phylo")) {
-    if (!is.null(tree$brts) && is.numeric(tree$brts))
-      return(sort(tree$brts, decreasing = TRUE))
     if (!is.null(tree$tes) && inherits(tree$tes, "phylo"))
       return(sort(ape::branching.times(tree$tes), decreasing = TRUE))
     if (!is.null(tree$tas) && inherits(tree$tas, "phylo"))
       return(sort(ape::branching.times(prune_to_extant(tree$tas)), decreasing = TRUE))
-    stop("List passed to estimate_rates() must contain '$brts', '$tes', or '$tas'.")
+    stop("List passed to estimate_rates() must contain '$tes' or '$tas'.")
   }
   stop("'tree' must be a phylo object, a simulate_tree() result, or a numeric branching-time vector.")
 }
@@ -170,29 +186,35 @@ estimate_rates_control <- function(method = c("mcem", "mcde"), n_pars = 4) {
 }
 
 #' @keywords internal
-.run_mcde <- function(brts, lower_bound, upper_bound, ctrl, model = c(0L, 0L, 0L), link = 0L) {
+.run_cem <- function(brts, lower_bound, upper_bound, ctrl, model = c(0L, 0L, 0L), link = 0L) {
   sd_vec <- ctrl$sd_vec
   if (is.null(sd_vec)) sd_vec <- (upper_bound - lower_bound) / 4
-  raw <- emphasis_de(
-    brts           = brts,
-    num_iterations = ctrl$num_iterations,
-    num_points     = ctrl$num_points,
-    max_missing    = ctrl$max_missing,
-    sd_vec         = sd_vec,
-    lower_bound    = lower_bound,
-    upper_bound    = upper_bound,
-    maxN           = ctrl$maxN,
-    max_lambda     = ctrl$max_lambda,
-    disc_prop      = ctrl$disc_prop,
-    verbose        = ctrl$verbose,
-    num_threads    = ctrl$num_threads,
-    model          = model,
-    link           = link
+  raw <- emphasis_cem(
+    brts         = brts,
+    max_iter     = ctrl$max_iter,
+    num_points   = ctrl$num_points,
+    max_missing  = ctrl$max_missing,
+    sd_vec       = sd_vec,
+    lower_bound  = lower_bound,
+    upper_bound  = upper_bound,
+    maxN         = ctrl$maxN,
+    max_lambda   = ctrl$max_lambda,
+    sample_size  = ctrl$sample_size,
+    shared_trees = ctrl$shared_trees,
+    disc_prop    = ctrl$disc_prop,
+    tol          = ctrl$tol,
+    patience     = ctrl$patience,
+    bias_correct = ctrl$bias_correct,
+    verbose      = ctrl$verbose,
+    num_threads  = ctrl$num_threads,
+    model        = model,
+    link         = link,
+    n_boot       = ctrl$n_boot
   )
-  # min_loglik stores -fhat of best particle (vals = -fhat in emphasis_de)
-  loglik <- if (length(raw$minloglik) > 0)
-    -utils::tail(raw$minloglik, 1L) else NA_real_
-  list(pars = raw$obtained_estim, loglik = loglik, details = raw)
+  loglik <- if (length(raw$best_loglik) > 0)
+    max(raw$best_loglik, na.rm = TRUE) else NA_real_
+  list(pars = raw$obtained_estim, loglik = loglik,
+       loglik_var = raw$loglik_var, details = raw)
 }
 
 # --------------------------------------------------------------------------- #
@@ -218,10 +240,10 @@ estimate_rates_control <- function(method = c("mcem", "mcde"), n_pars = 4) {
 #'     \item{\code{"mcem"}}{Monte Carlo Expectation-Maximisation (default).
 #'       Iterates E- and M-steps until the log-likelihood standard error
 #'       falls below \code{control$tol}. Requires \code{init_pars}.}
-#'     \item{\code{"mcde"}}{Monte Carlo Differential Evolution. Initialises a
-#'       particle population randomly within the bounds and evolves it over
-#'       \code{control$num_iterations} iterations. Does not need
-#'       \code{init_pars}.}
+#'     \item{\code{"cem"}}{Monte Carlo Cross-Entropy Method. Initialises a
+#'       particle population randomly within the bounds and evolves it until
+#'       convergence (annealing exhausted, plateau, or \code{control$max_iter}
+#'       reached). Does not need \code{init_pars}.}
 #'   }
 #' @param model Model specification. Accepts:
 #'   \itemize{
@@ -237,7 +259,7 @@ estimate_rates_control <- function(method = c("mcem", "mcde"), n_pars = 4) {
 #'   gamma_0, [gamma_N], [gamma_P], [gamma_E])}.
 #' @param upper_bound Numeric vector of upper parameter bounds (same order).
 #' @param init_pars Starting parameter vector. Required for \code{"mcem"};
-#'   ignored for \code{"mcde"}. If \code{NULL} with \code{"mcem"}, the
+#'   ignored for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the
 #'   midpoint of the bounds is used.
 #' @param control Named list of tuning parameters. Use
 #'   \code{\link{estimate_rates_control}} to inspect and modify defaults.
@@ -248,12 +270,15 @@ estimate_rates_control <- function(method = c("mcem", "mcde"), n_pars = 4) {
 #'   \describe{
 #'     \item{\code{pars}}{Named numeric vector of parameter estimates.}
 #'     \item{\code{loglik}}{Final log-likelihood estimate.}
+#'     \item{\code{loglik_var}}{Bootstrap variance of \code{loglik} due to
+#'       Monte Carlo noise (\code{NA} unless \code{control$n_boot > 0} with
+#'       \code{method = "cem"}).}
 #'     \item{\code{n_pars}}{Number of free parameters (used for AIC).}
 #'     \item{\code{AIC}}{Akaike Information Criterion: \code{-2 * loglik + 2 * n_pars}.}
-#'     \item{\code{method}}{Method used (\code{"mcem"} or \code{"mcde"}).}
+#'     \item{\code{method}}{Method used (\code{"mcem"} or \code{"cem"}).}
 #'     \item{\code{model}}{Resolved binary model vector.}
 #'     \item{\code{details}}{Full output from the back-end function
-#'       (\code{.mcem_dynamic_fresh} or \code{emphasis_de}).}
+#'       (\code{.mcem_dynamic_fresh} or \code{emphasis_cem}).}
 #'   }
 #' @examples
 #' \dontrun{
@@ -273,7 +298,7 @@ estimate_rates_control <- function(method = c("mcem", "mcde"), n_pars = 4) {
 #' }
 #' @export
 estimate_rates <- function(tree,
-                           method      = c("mcem", "mcde"),
+                           method      = c("mcem", "cem"),
                            model       = "cr",
                            lower_bound,
                            upper_bound,
@@ -282,6 +307,7 @@ estimate_rates <- function(tree,
                            link        = "linear",
                            verbose     = FALSE) {
   method    <- match.arg(method)
+
   model_bin <- .resolve_model(model)
   link_int  <- .resolve_link(link)
 
@@ -310,7 +336,7 @@ estimate_rates <- function(tree,
 
   raw <- switch(method,
     mcem = .run_mcem(brts, ip8, lb8, ub8, ctrl, model = model_bin, link = link_int),
-    mcde = .run_mcde(brts, lb8, ub8, ctrl, model = model_bin, link = link_int)
+    cem  = .run_cem(brts, lb8, ub8, ctrl, model = model_bin, link = link_int)
   )
 
   # Contract 8-element result back to compact
@@ -318,7 +344,9 @@ estimate_rates <- function(tree,
   pars <- stats::setNames(compact_pars, .par_names(model_bin))
   n_pars <- length(pars)
   aic <- if (is.finite(raw$loglik)) -2 * raw$loglik + 2 * n_pars else NA_real_
-  result <- list(pars = pars, loglik = raw$loglik, n_pars = n_pars, AIC = aic,
+  loglik_var <- if (!is.null(raw$loglik_var)) raw$loglik_var else NA_real_
+  result <- list(pars = pars, loglik = raw$loglik, loglik_var = loglik_var,
+                 n_pars = n_pars, AIC = aic,
                  method = method, model = model_bin, details = raw$details)
   class(result) <- "emphasis_fit"
   result
@@ -335,8 +363,10 @@ print.emphasis_fit <- function(x, ...) {
   cat("emphasis fit (", x$method, ", model = ", model_str, ")\n\n", sep = "")
   cat("Parameters:\n")
   print(round(x$pars, 6))
-  cat("\nLog-likelihood:", round(x$loglik, 4), "\n")
-  cat("AIC:           ", round(x$AIC, 4), "\n")
+  cat("\nLog-likelihood:", round(x$loglik, 4))
+  if (!is.na(x$loglik_var))
+    cat(sprintf("  (MC se: %.4f)", sqrt(x$loglik_var)))
+  cat("\nAIC:           ", round(x$AIC, 4), "\n")
   cat("n_pars:        ", x$n_pars, "\n")
   invisible(x)
 }
@@ -347,11 +377,22 @@ print.emphasis_fit <- function(x, ...) {
 #' Given two or more \code{\link{estimate_rates}} results, returns a summary
 #' table sorted by AIC. The model with the lowest AIC is preferred.
 #'
+#' When all fits carry a \code{loglik_var} (bootstrap variance from
+#' \code{control$n_boot > 0}), pairwise Gaussian tests of equal AIC are
+#' appended.  For each pair \eqn{(i, j)},
+#' \deqn{T_{ij} = \widehat{\rm AIC}_i - \widehat{\rm AIC}_j, \qquad
+#'   \mathrm{Var}(T_{ij}) = 4[\mathrm{Var}(\hat\ell_i) +
+#'   \mathrm{Var}(\hat\ell_j)]}
+#' and \eqn{p = 2\Phi(-|T_{ij}|/\sqrt{\mathrm{Var}(T_{ij})})} under
+#' the null of equal AIC.
+#'
 #' @param ... Two or more \code{emphasis_fit} objects (results of
 #'   \code{\link{estimate_rates}}). Optionally named; unnamed fits are
 #'   auto-labelled from their model specification.
 #' @return A data frame with columns \code{model}, \code{n_pars},
-#'   \code{loglik}, \code{AIC}, and \code{delta_AIC}, sorted by AIC.
+#'   \code{loglik}, \code{AIC}, \code{delta_AIC}, and \code{AICw}.
+#'   If bootstrap variances are present, an additional \code{loglik_se}
+#'   column is included and pairwise p-values are printed as a message.
 #' @examples
 #' \dontrun{
 #' fit_cr <- estimate_rates(tree, model = "cr",
@@ -373,6 +414,9 @@ compare_models <- function(...) {
     if (nms[i] == "") nms[i] <- .model_label(fits[[i]]$model)
   }
 
+  get_var <- function(f) if (!is.null(f$loglik_var)) f$loglik_var else NA_real_
+  vars <- vapply(fits, get_var, numeric(1L))
+
   tab <- data.frame(
     model     = nms,
     n_pars    = vapply(fits, `[[`, 0L, "n_pars"),
@@ -380,11 +424,35 @@ compare_models <- function(...) {
     AIC       = vapply(fits, `[[`, 0.0, "AIC"),
     stringsAsFactors = FALSE
   )
+
+  # Include MC standard errors if available
+  if (any(!is.na(vars))) {
+    tab$loglik_se <- sqrt(vars)
+  }
+
   tab <- tab[order(tab$AIC, na.last = TRUE), ]
   tab$delta_AIC <- tab$AIC - min(tab$AIC, na.rm = TRUE)
   w <- exp(-0.5 * tab$delta_AIC)
-  tab$AICw <- w / sum(w, na.rm = TRUE)   # NA rows get NA weight automatically
+  tab$AICw <- w / sum(w, na.rm = TRUE)
   rownames(tab) <- NULL
+
+  # Pairwise AIC Gaussian test when all fits have bootstrap variance
+  if (all(!is.na(vars)) && length(fits) >= 2L) {
+    n <- length(fits)
+    pmat <- matrix(NA_real_, n, n, dimnames = list(nms, nms))
+    for (i in seq_len(n - 1L)) {
+      for (j in seq(i + 1L, n)) {
+        T_ij   <- tab$AIC[tab$model == nms[i]] - tab$AIC[tab$model == nms[j]]
+        var_T  <- 4 * (vars[i] + vars[j])
+        if (is.finite(var_T) && var_T > 0) {
+          pmat[i, j] <- pmat[j, i] <-
+            2 * stats::pnorm(-abs(T_ij) / sqrt(var_T))
+        }
+      }
+    }
+    attr(tab, "pairwise_p") <- pmat
+  }
+
   tab
 }
 
@@ -421,9 +489,9 @@ compare_models <- function(...) {
 #'   Default \code{c(3, 0.5, 1, 0.5)}.
 #' @param link Link function: \code{"linear"} (default) or
 #'   \code{"exponential"} (EP not supported with exponential).
-#' @param control Named list with optional sub-lists \code{mcde} and
+#' @param control Named list with optional sub-lists \code{cem} and
 #'   \code{mcem} to override defaults for each stage. Example:
-#'   \code{list(mcde = list(num_iterations = 20, num_points = 50),
+#'   \code{list(cem = list(max_iter = 20, num_points = 50),
 #'              mcem = list(sample_size = 300, tol = 0.05))}.
 #' @param verbose Print progress messages. Default \code{FALSE}.
 #' @return A list of class \code{"model_selection"} with:
@@ -461,7 +529,7 @@ select_diversification_model <- function(tree,
          "c(beta_0, beta_X, gamma_0, gamma_X).")
 
   defaults <- list(
-    mcde = list(num_iterations = 15, num_points = 40),
+    cem  = list(max_iter = 15, num_points = 40),
     mcem = list(sample_size = 200, tol = 0.1, burnin = 10)
   )
   ctrl <- utils::modifyList(defaults, control)
@@ -474,9 +542,9 @@ select_diversification_model <- function(tree,
     if (verbose) message("Fitting model: ", toupper(m), " ...")
 
     fit_de <- tryCatch(
-      estimate_rates(tree, method = "mcde", model = m,
+      estimate_rates(tree, method = "cem", model = m,
                      lower_bound = lower_bound, upper_bound = upper_bound,
-                     link = link, control = ctrl$mcde),
+                     link = link, control = ctrl$cem),
       error = function(e) {
         warning("MCDE failed for model '", m, "': ", conditionMessage(e))
         NULL

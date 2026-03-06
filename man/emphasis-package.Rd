@@ -5,14 +5,14 @@
   Evolutionary Modeling on Phylogenetic Applications with Simulations and Importance Sampling
 }
 \description{
-  Tools for simulating phylogenetic trees, augmenting missing lineages, and fitting diversification models using Monte Carlo EM, differential evolution, and importance sampling.
+  Tools for simulating phylogenetic trees, augmenting missing lineages, and fitting diversification models using Monte Carlo EM, Cross-Entropy Method, and importance sampling.
 }
 \details{
   The package revolves around four workflows:
   \itemize{
     \item \strong{Simulation}: `simulate_tree()` for forward and conditional simulation.
     \item \strong{Augmentation}: `mc_loglik()` for Monte Carlo log-likelihood via importance sampling.
-    \item \strong{Estimation}: `estimate_rates()`, `emphasis_de()`, `emphasis_de_factorial()`.
+    \item \strong{Estimation}: `estimate_rates()`, `emphasis_cem()` (CEM back-end).
     \item \strong{Diagnostics}: `train_GAM()` plus plotting utilities.
   }
   Heavy computations are delegated to C++ via `Rcpp` / `RcppParallel` for performance.

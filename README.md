@@ -7,7 +7,7 @@
 drivers. It provides:
 
 - **Simulation** — stochastic phylogenies under flexible diversification models
-- **Inference** — parameter estimation via MCEM and differential evolution
+- **Inference** — parameter estimation via MCEM and Cross-Entropy Method (CEM)
 - **Model selection** — AIC-based comparison across competing models
 - **Diagnostics** — survival-probability estimation via GAM
 
@@ -139,10 +139,10 @@ Two methods are available:
 
 | Method | Description |
 |--------|-------------|
-| `"mcde"` | Monte Carlo Differential Evolution — broad search, no starting values needed |
+| `"cem"` | Monte Carlo Cross-Entropy Method — broad search, no starting values needed |
 | `"mcem"` | Monte Carlo EM — local refinement, converges to a (local) optimum |
 
-The recommended workflow runs MCDE first to find a good region, then MCEM to
+The recommended workflow runs CEM first to find a good region, then MCEM to
 refine:
 
 ```r
@@ -152,36 +152,47 @@ sim <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003), model = "pd", max_t = 8
 lb <- c(0.01, -1, 0, -1)
 ub <- c(2,     1, 1,  1)
 
-# Stage 1: broad search
-fit_de <- estimate_rates(sim, method = "mcde", model = "pd",
+# Stage 1: broad search with bootstrap UQ
+fit_cem <- estimate_rates(sim, method = "cem", model = "pd",
   lower_bound = lb, upper_bound = ub,
-  control = list(num_iterations = 15, num_points = 50))
+  control = list(max_iter = 20, num_points = 50, n_boot = 200))
+
+fit_cem$converged    # stopping reason: "annealing", "plateau", or "max_iter"
+fit_cem$loglik_var   # MC sampling variance of log-likelihood
 
 # Stage 2: refine
 fit_em <- estimate_rates(sim, method = "mcem", model = "pd",
   lower_bound = lb, upper_bound = ub,
-  init_pars   = fit_de$pars,
+  init_pars   = fit_cem$pars,
   control     = list(sample_size = 200, tol = 0.05))
 
-fit_em          # prints pars, loglik, AIC
+fit_em          # prints pars, loglik (MC se), AIC
 fit_em$pars     # named estimates: beta_0, beta_P, gamma_0, gamma_P
 fit_em$loglik
 fit_em$AIC
 ```
 
+### CEM stopping rules
+
+The CEM stops at the first of:
+
+1. **Annealing exhausted** — perturbation SD reaches zero; population has collapsed
+2. **Plateau** — best fhat has not improved by `> tol` for `patience` consecutive iterations
+3. **Hard cap** — `max_iter` reached
+
 ### Control parameters
 
 ```r
-estimate_rates_control("mcem")   # sample_size=200, tol=0.1, burnin=20, ...
-estimate_rates_control("mcde")   # num_iterations=20, num_points=50, disc_prop=0.5, ...
+estimate_rates_control("mcem")  # sample_size=200, tol=0.1, burnin=20, ...
+estimate_rates_control("cem")   # max_iter=20, num_points=50, tol=1e-4, patience=5, ...
 ```
 
 Override any default by passing a named list to `control`:
 
 ```r
-estimate_rates(sim, method = "mcem", model = "pd",
+estimate_rates(sim, method = "cem", model = "pd",
   lower_bound = lb, upper_bound = ub,
-  control = list(sample_size = 500, tol = 0.01, num_threads = 4))
+  control = list(max_iter = 30, num_points = 100, patience = 10, n_boot = 200))
 ```
 
 ### Empirical trees
@@ -190,7 +201,7 @@ estimate_rates(sim, method = "mcem", model = "pd",
 data(bird.orders, package = "ape")
 extant <- prune_to_extant(bird.orders)
 
-fit <- estimate_rates(extant, method = "mcde", model = "dd",
+fit <- estimate_rates(extant, method = "cem", model = "dd",
   lower_bound = c(0.01, -0.5, 0, -0.5),
   upper_bound = c(2,     0.5, 1,  0.5))
 fit$pars
@@ -207,13 +218,13 @@ AIC. The model with the lowest AIC is preferred; `delta_AIC` shows the gap.
 set.seed(42)
 sim <- simulate_tree(pars = c(0.8, -0.02, 0.2, 0), model = "dd", max_t = 8)
 
-ctrl <- list(num_iterations = 15, num_points = 40)
+ctrl <- list(max_iter = 15, num_points = 40)
 
-fit_cr <- estimate_rates(sim, method = "mcde", model = "cr",
+fit_cr <- estimate_rates(sim, method = "cem", model = "cr",
   lower_bound = c(0,    0),              upper_bound = c(2,    1),    control = ctrl)
-fit_dd <- estimate_rates(sim, method = "mcde", model = "dd",
+fit_dd <- estimate_rates(sim, method = "cem", model = "dd",
   lower_bound = c(0.1, -0.1, 0, -0.01), upper_bound = c(2, 0.01, 0.5, 0.01), control = ctrl)
-fit_pd <- estimate_rates(sim, method = "mcde", model = "pd",
+fit_pd <- estimate_rates(sim, method = "cem", model = "pd",
   lower_bound = c(0.01, -1,  0, -1),    upper_bound = c(2,   1,   1,  1),    control = ctrl)
 
 compare_models(CR = fit_cr, DD = fit_dd, PD = fit_pd)
@@ -222,6 +233,43 @@ compare_models(CR = fit_cr, DD = fit_dd, PD = fit_pd)
 # 2    PD      4  -15.1   38.2      5.60
 # 3    CR      2  -18.9   41.8      9.20
 ```
+
+---
+
+## Diagnostics — CEM inference quality
+
+`diagnose_cem()` takes a fitted `"cem"` model and returns convergence
+statistics, IS quality metrics, and the full particle cloud at the final
+iteration. Optionally produces three diagnostic plots.
+
+```r
+fit <- estimate_rates(sim, method = "cem", model = "pd",
+  lower_bound = lb, upper_bound = ub,
+  control = list(max_iter = 20, n_boot = 200))
+
+diag <- diagnose_cem(fit)          # produces plots by default
+
+diag$convergence       # per-iteration: best_loglik, n_valid, rejections
+diag$population_spread # per-iteration: median/IQR/range of all fhat values
+diag$IS_quality        # ESS, ESS fraction, mean/sd of IS log-weights
+diag$final_pop         # data frame: parameter columns + fhat for each particle
+diag$best_IS           # raw IS data: logf, log_q, lw, trees at best pars
+
+# IS effective sample size (fraction of 1 = perfect; close to 0 = one dominant tree)
+diag$IS_quality$ESS_fraction
+
+# Access raw augmented trees from the best particle's final evaluation
+diag$best_IS$trees[[1]]   # first augmented tree (C++ data frame format)
+diag$best_IS$lw            # IS log-weights for all trees
+```
+
+### Plots produced
+
+| Plot | What it shows |
+|------|--------------|
+| Convergence | Best `fhat` per iteration with stop reason |
+| Population spread | Median ± IQR of all valid `fhat` values per iteration |
+| IS weight distribution | Histogram of `logf - log_q` at the best particle; red dashed line = mean; title shows ESS |
 
 ---
 
