@@ -452,20 +452,24 @@ parameter vectors and adaptively concentrating it near the optimum.
 \subsection{Cross-entropy population update}
 
 Let $g(\pars; \bm{\mu}, \bm{\Sigma})$ be a parametric family of densities
-over the search box $[\lb, \ub]$. The CEM at each iteration selects the
-member of $g$ that minimises the KL divergence to the ``ideal'' importance
-distribution $g^*$ that places all mass at the global maximiser of
-$\fhat$:
+over the search box $[\lb, \ub]$. At each iteration the CEM selects the
+member of $g$ that minimises the KL divergence to the ``ideal'' distribution
+$g^*$ that concentrates all mass at the global maximiser of $\fhat$:
 \begin{equation}
   (\bm{\mu}^{(k+1)}, \bm{\Sigma}^{(k+1)}) = \argmin_{\bm{\mu},\bm{\Sigma}}
   \KL\!\left(g^* \;\big\|\; g(\cdot;\bm{\mu},\bm{\Sigma})\right).
 \end{equation}
-In the Gaussian case this CE update reduces to: set $\bm{\mu}^{(k+1)}$ to
-the sample mean of the elite particles and $\bm{\Sigma}^{(k+1)}$ to their
-sample covariance. Because the full covariance update can overfit with
-small elite populations, \textsf{emphasis} uses a diagonal approximation:
-each parameter dimension is updated independently, and the resulting
-perturbation is a product of univariate Gaussians.
+In the Gaussian family this CE update reduces to computing the sample mean
+and covariance of the elite particles. Because the full covariance update
+can overfit when the elite set is small, \textsf{emphasis} uses a
+diagonal approximation: each parameter dimension is updated independently,
+giving a product of independent Gaussian perturbations.
+
+Each CEM iteration consists of three steps --- \textbf{Evaluation},
+\textbf{Selection}, and \textbf{Update} --- described in the following
+subsections and collected in Algorithm~\ref{alg:CEM}. Note that these are
+\emph{not} the E-step and M-step of the EM algorithm; the CEM has no
+latent-variable expectation and no $Q$-function maximisation.
 
 \subsection{Simulated annealing schedule}\label{sec:annealing}
 
@@ -547,37 +551,35 @@ The complete CEM-SA procedure is given in Algorithm~\ref{alg:CEM}.
 $\bm{\sigma}^{(0)} \leftarrow (u_p - \ell_p)/4$ for each $p$
   \Comment*[r]{initial temperature \eqref{eq:sigma0}}
 Initialise $\{\pars_j^{(0)}\}_{j=1}^{M}$ uniformly in $[\lb,\ub]$\;
-$k \leftarrow 0$;\quad \textit{plat} $\leftarrow 0$;\quad
-$f^* \leftarrow -\infty$\;
+$k \leftarrow 0$;\quad \textit{plat} $\leftarrow 0$\;
 \BlankLine
 \While{$k < T$}{
   \lIf{$\bm{\sigma}^{(k)} \leq \mathbf{0}$}{\textbf{stop}
     (\textit{annealing exhausted})}
   \BlankLine
-  \Comment{E-step: evaluate $\fhat$ for every particle (in parallel)}
+  \Comment{Step 1 -- Evaluation: score every particle (in parallel)}
   \For(\Comment*[f]{\texttt{num\_threads} workers}){$j = 1, \ldots, M$}{
     Draw $z_1^{(j)},\ldots,z_S^{(j)} \sim q(\cdot \mid \obs, \pars_j^{(k)})$\;
-    $\fhat(\pars_j^{(k)}) \leftarrow$ \eqref{eq:fhat};
-    \quad mark invalid if result is NA\;
+    Compute $\fhat(\pars_j^{(k)})$ via \eqref{eq:fhat};
+    mark invalid if result is NA\;
   }
   \BlankLine
+  \Comment{Step 2 -- Selection: identify elite particles}
   $j^* \leftarrow \argmax_{j:\,\text{valid}} \fhat(\pars_j^{(k)})$;\quad
   $f^{(k)} \leftarrow \fhat(\pars_{j^*}^{(k)})$\;
+  Elite $\leftarrow$ top $\lfloor\rho M\rfloor$ valid particles ranked by $\fhat$\;
   \BlankLine
-  \Comment{Plateau check}
+  \Comment{Plateau stopping check}
   \eIf{$k > 0$ \textbf{and} $f^{(k)} - f^{(k-1)} < \delta$}{
     \textit{plat} $\leftarrow$ \textit{plat} $+ 1$\;
     \lIf{\textit{plat} $\geq P$}{\textbf{stop} (\textit{plateau})}
   }{\textit{plat} $\leftarrow 0$}
   \BlankLine
-  \Comment{M-step: resample around elite particles}
-  Elite $\leftarrow$ top $\lfloor\rho M\rfloor$ valid particles by $\fhat$\;
-  For each non-elite slot $j$: sample $\pi(j) \sim \mathrm{Uniform}(\text{Elite})$
-  and set $\pars_j^{(k+1)}$ via \eqref{eq:perturb}\;
-  Elite particles are copied unchanged:
+  \Comment{Step 3 -- Update: resample around elite particles and cool}
+  For each non-elite slot $j$: draw $\pi(j) \sim \mathrm{Uniform}(\text{Elite})$
+  and generate $\pars_j^{(k+1)}$ via \eqref{eq:perturb}\;
+  Copy elite particles unchanged:
   $\pars_j^{(k+1)} \leftarrow \pars_j^{(k)}$ for $j\in\text{Elite}$\;
-  \BlankLine
-  \Comment{Cool the temperature}
   $\bm{\sigma}^{(k+1)} \leftarrow \bm{\sigma}^{(k)} - \alpha\,\mathbf{1}$\;
   $k \leftarrow k + 1$\;
 }
@@ -585,7 +587,7 @@ $\hat{\pars} \leftarrow \argmax_{k} f^{(k)}$
   \Comment*[r]{global best across all iterations}
 \end{algorithm}
 
-\paragraph{Parallelism in the E-step.}
+\paragraph{Parallelism in the evaluation step.}
 The inner loop over particles $j = 1,\ldots,M$ is the dominant cost.
 Each augmentation is entirely independent: particle $j$ accesses only its
 own parameter vector $\pars_j^{(k)}$ and writes to its own pre-allocated
