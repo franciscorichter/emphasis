@@ -240,7 +240,8 @@ nhExpRand <- function(n, rate_func, now = 0, tMax = Inf) {
       },
       error = function(e) NULL
     )
-    vars[i] <- if (!is.null(result)) result$root else NA_real_
+    root <- if (!is.null(result)) result$root else NA_real_
+    vars[i] <- if (!is.na(root) && root > tMax) tMax else root
   }
 
   n_na <- sum(is.na(vars))
