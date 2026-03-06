@@ -48,10 +48,10 @@ test_that("simulate_tree errors on wrong pars length for model", {
   )
 })
 
-test_that("simulate_tree requires max_t for forward sim", {
+test_that("simulate_tree errors on negative max_t", {
   expect_error(
-    simulate_tree(pars = c(0.5, 0.1)),
-    "max_t.*is required"
+    simulate_tree(pars = c(0.5, 0.1), max_t = -1),
+    "positive number"
   )
 })
 
@@ -83,7 +83,7 @@ test_that("simulate_tree cr model returns valid output", {
   result <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr")
 
   expect_type(result, "list")
-  expect_named(result, c("tes", "tas", "L", "brts", "status", "model", "pars"))
+  expect_named(result, c("tes", "tas", "L", "status", "survival_prob"))
   expect_true(result$status %in% c("done", "extinct", "too_large"))
 })
 
@@ -100,19 +100,11 @@ test_that("simulate_tree dd model returns valid output", {
   expect_true(result$status %in% c("done", "extinct", "too_large"))
 })
 
-test_that("simulate_tree verbose prints a message", {
+test_that("simulate_tree returns survival_prob", {
   skip("C++ integration test: run locally with devtools::test(filter='simulate')")
 
-  expect_message(
-    simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr", verbose = TRUE),
-    "simulate_tree"
-  )
-})
-
-test_that("simulate_tree seed produces deterministic output", {
-  skip("C++ integration test: run locally with devtools::test(filter='simulate')")
-
-  r1 <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr", seed = 123)
-  r2 <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr", seed = 123)
-  expect_equal(r1$L, r2$L)
+  set.seed(42)
+  result <- simulate_tree(pars = c(0.8, 0.1), max_t = 5, model = "cr")
+  expect_true(is.numeric(result$survival_prob))
+  expect_true(result$survival_prob >= 0 && result$survival_prob <= 1)
 })

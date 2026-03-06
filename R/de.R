@@ -107,17 +107,22 @@
 .simulate_particle <- function(brts, pars8, model_bin, link,
                                sample_size, maxN, max_missing, max_lambda,
                                num_threads) {
-  compact_pars <- .contract_pars(pars8, model_bin)
+  pars8_full <- as.numeric(.expand_pars(.contract_pars(pars8, model_bin), model_bin))
+  maxN_int   <- if (is.null(maxN) || is.na(maxN))
+    max(2000L, 200L * as.integer(sample_size)) else as.integer(maxN)
   tryCatch(
-    .augment_tree_internal(
-      tree        = brts,
-      pars        = compact_pars,
-      model_bin   = model_bin,
+    mc_loglik(
+      brts        = as.numeric(brts),
+      pars        = pars8_full,
       sample_size = as.integer(sample_size),
-      max_missing = max_missing,
-      max_lambda  = max_lambda,
-      maxN        = as.integer(maxN),
+      maxN        = maxN_int,
+      max_missing = as.integer(max_missing),
+      max_lambda  = as.numeric(max_lambda),
+      lower_bound = rep(-1e6, 8L),
+      upper_bound = rep( 1e6, 8L),
+      xtol_rel    = 1e-3,
       num_threads = as.integer(num_threads),
+      model       = as.integer(model_bin),
       link        = as.integer(link)
     ),
     error = function(e) NULL

@@ -6,25 +6,28 @@
 simulate_tree(
   tree = NULL,
   pars,
-  max_t = NULL,
+  max_t = 1,
   model = "cr",
   max_lin = 1e+06,
   max_tries = 100,
   useDDD = TRUE,
   n_trees = 1L,
-  link = "linear"
+  link = "linear",
+  max_missing = 1e+04,
+  max_lambda = 500,
+  maxN = NULL,
+  num_threads = 1L
 )
 }
 \arguments{
-\item{tree}{Optional extant tree for conditional simulation. Accepts
-\code{NULL} (forward sim), a \code{simulate_tree} result list, a
+\item{tree}{Optional observed extant tree for augmentation. Accepts
+\code{NULL} (forward sim), a \code{simulate_tree} result, a
 \code{phylo} object, or a numeric branching-time vector.}
 
-\item{pars}{Numeric parameter vector or matrix. When a matrix, each row
-is one simulation and the function returns a list of results. Length
-of a single vector = \code{2 + 2 * sum(model)}.}
+\item{pars}{Numeric parameter vector or matrix. When a matrix each row
+produces one forward simulation.}
 
-\item{max_t}{Crown age. Required for forward simulation (\code{tree = NULL}).}
+\item{max_t}{Crown age (forward simulation only). Default \code{1}.}
 
 \item{model}{Model specification: a formula (e.g. \code{~ N + PD}),
 a string (\code{"cr"}, \code{"dd"}, \code{"pd"}, \code{"ep"}),
@@ -34,56 +37,74 @@ Default \code{"cr"}.}
 \item{max_lin}{Maximum lineages before declaring the tree too large.
 Default \code{1e6}.}
 
-\item{max_tries}{Maximum retries after extinction or overflow.
-\code{0} means no retries (useful for GAM training to keep extinct
-outcomes). Default \code{100}.}
+\item{max_tries}{Maximum additional attempts after extinction or overflow
+(forward simulation only). Default \code{100}.}
 
 \item{useDDD}{Convert L-table to \code{phylo} via \pkg{DDD}.
 Default \code{TRUE}.}
 
-\item{n_trees}{Number of augmented trees to draw (conditional simulation
-only). Default \code{1L}.}
+\item{n_trees}{Number of augmented trees to draw (augmentation only).
+Default \code{1L}.}
 
-\item{link}{Link function for rate computation: \code{"linear"} (default)
-uses \code{max(0, eta)}; \code{"exponential"} uses \code{exp(eta)}.}
+\item{link}{Link function: \code{"linear"} (default) or
+\code{"exponential"}.}
+
+\item{max_missing}{Maximum extinct lineages per augmented tree.
+Default \code{1e4}.}
+
+\item{max_lambda}{Maximum speciation rate (thinning bound) for augmentation.
+Default \code{500}.}
+
+\item{maxN}{Maximum total augmentation attempts. \code{NULL} sets this
+to \code{max(2000, 200 * n_trees)}.}
+
+\item{num_threads}{Threads for parallel augmentation. Default \code{1L}.}
 }
 \value{
-For forward simulation, a named list with elements \code{tes},
-\code{tas}, \code{L}, \code{brts}, \code{status}, \code{model},
-\code{pars}. When \code{pars} is a matrix, a list of such lists.
+For forward simulation (single \code{pars} vector), a named list:
+\code{tes}, \code{tas}, \code{L}, \code{status}, \code{survival_prob}.
 
-For conditional simulation (\code{n_trees = 1}), the same structure
-extended with \code{logf}, \code{logg}, \code{log_w}, \code{fhat}.
-When \code{n_trees > 1}, a list with \code{trees}, \code{logf},
-\code{logg}, \code{log_w}, \code{fhat}, \code{tes}, \code{brts},
-\code{model}, \code{pars}.
+For batch forward simulation (matrix \code{pars}), a list with
+\code{simulations} (list of per-row results) and \code{survival_prob}
+(fraction succeeded).
+
+For augmentation (\code{n_trees = 1}): \code{list(tas, log_q)}.
+For augmentation (\code{n_trees > 1}): \code{list(trees, log_q)}.
 }
 \description{
 Unified entry point for forward and conditional tree simulation.
 When \code{tree = NULL} (default) a complete tree is simulated forward
 from the crown; when \code{tree} is supplied the observed extant tree is
-augmented with stochastically drawn extinct lineages (importance-sampling
-augmentation).
+augmented with stochastically drawn extinct lineages.
 }
 \examples{
 \dontrun{
 # Forward simulation — constant rate
 tr <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr")
-tr$status   # "done" / "extinct" / "too_large"
+tr$status         # "done" / "extinct" / "too_large"
+tr$survival_prob  # empirical survival probability
 
 # Diversity-dependent speciation (beta_N < 0)
 dd <- simulate_tree(pars = c(0.8, -0.02, 0.2, -0.005),
                     max_t = 5, model = "dd")
 
-# Batch: 50 simulations varying lambda and mu
-pm <- cbind(beta_0  = runif(50, 0.3, 0.8),
-            gamma_0 = runif(50, 0.0, 0.2))
+# Batch: 200 simulations
+pm <- cbind(beta_0  = runif(200, 0.3, 0.8),
+            gamma_0 = runif(200, 0.05, 0.3))
 sims <- simulate_tree(pars = pm, max_t = 5, model = "cr")
-length(sims)   # 50
+sims$survival_prob          # fraction that succeeded
+sims$simulations[[1]]$tes  # first extant phylo
 
-# Conditional simulation (augmentation)
+# Augmentation (single)
 aug <- simulate_tree(tree = tr, pars = c(0.5, 0.1),
                      model = "cr", n_trees = 1L)
-aug$fhat   # MC log-likelihood of the extant tree
+aug$tas    # augmented phylo
+aug$log_q  # log q(z | obs, theta)
+
+# Augmentation (many)
+augN <- simulate_tree(tree = tr, pars = c(0.5, 0.1),
+                      model = "cr", n_trees = 100L)
+augN$log_q       # vector of length 100
+augN$trees[[1]]  # first augmented phylo
 }
 }

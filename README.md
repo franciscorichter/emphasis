@@ -84,13 +84,13 @@ ep <- simulate_tree(pars = c(0.5, 0.05, 0.1, 0.01),             model = "ep", ma
 np <- simulate_tree(pars = c(0.5, -0.01, 0.005, 0.15, -0.002, 0.001),
                     model = ~ N + PD, max_t = 5)
 
-dd$status   # "done", "extinct", or "too_large"
-dd$tes      # extant-only phylo
-dd$brts     # branching times
+dd$status         # "done", "extinct", or "too_large"
+dd$tes            # extant-only phylo
+dd$survival_prob  # empirical survival probability (1 / n_attempts)
 ```
 
 Each result contains: `tes` (extant phylo), `tas` (full phylo with extinct lineages),
-`L` (L-table), `brts`, `status`, `model`, `pars`.
+`L` (L-table), `status`, `survival_prob`.
 
 ### Batch simulation
 
@@ -101,14 +101,14 @@ set.seed(1)
 pars_mat <- cbind(beta_0  = runif(200, 0.3, 1.2),
                   gamma_0 = runif(200, 0.05, 0.5))
 sims <- simulate_tree(pars = pars_mat, max_t = 8, model = "cr", max_tries = 0)
-mean(sapply(sims, function(s) s$status == "done"))  # survival rate
+sims$survival_prob                          # fraction of rows that produced a tree
+sims$simulations[[1]]$status               # "done", "extinct", or "too_large"
 ```
 
 ### Conditional simulation (augmentation)
 
 Provide `tree =` to augment an observed extant tree with stochastically drawn
-extinct lineages. The result includes importance-sampling statistics used by the
-inference engine.
+extinct lineages.
 
 ```r
 set.seed(42)
@@ -118,17 +118,13 @@ obs <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003), model = "pd", max_t = 5
 aug <- simulate_tree(tree = obs, pars = c(0.6, 0.005, 0.15, -0.003),
                      model = "pd", n_trees = 1L)
 aug$tas    # augmented phylo (extant + stochastic extinct lineages)
-aug$logf   # log p(augmented tree | pars)
-aug$logg   # log q(augmented tree | extant tree, pars)
-aug$log_w  # importance weight = logf - logg
-aug$fhat   # MC log-likelihood estimate of the extant tree
+aug$log_q  # log q(augmented tree | extant tree, pars)
 
-# Many augmented trees — useful for exploring the importance distribution
+# Many augmented trees
 augN <- simulate_tree(tree = obs, pars = c(0.6, 0.005, 0.15, -0.003),
                       model = "pd", n_trees = 100L)
-augN$fhat          # scalar MC log-likelihood
-augN$log_w         # importance weights (length 100)
-augN$trees[[1]]$tas  # first augmented phylo
+augN$log_q       # log q values (length 100)
+augN$trees[[1]]  # first augmented phylo
 ```
 
 ---

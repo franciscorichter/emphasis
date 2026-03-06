@@ -3,8 +3,7 @@
 #' Unified entry point for forward and conditional tree simulation.
 #' When \code{tree = NULL} (default) a complete tree is simulated forward
 #' from the crown; when \code{tree} is supplied the observed extant tree is
-#' augmented with stochastically drawn extinct lineages (importance-sampling
-#' augmentation).
+#' augmented with stochastically drawn extinct lineages.
 #'
 #' @section Model specification:
 #' The model is specified by a 3-element binary vector
@@ -22,129 +21,145 @@
 #'   gamma_0, [gamma_N], [gamma_P], [gamma_E])}
 #' Only active covariates are included; length = \code{2 + 2 * sum(model)}.
 #'
-#' @section Output — forward simulation:
-#' A named list:
+#' @section Output — forward simulation (single):
 #' \describe{
-#'   \item{\code{tes}}{Extant-only phylogeny (\code{phylo}).}
-#'   \item{\code{tas}}{Full phylogeny with extinct lineages (\code{phylo}).}
-#'   \item{\code{L}}{L-table (DDD format).}
-#'   \item{\code{brts}}{Branching times of the extant tree.}
+#'   \item{\code{tes}}{Extant-only phylogeny (\code{phylo}), or \code{NULL}.}
+#'   \item{\code{tas}}{Full phylogeny with extinct lineages (\code{phylo}),
+#'     or \code{NULL}.}
+#'   \item{\code{L}}{L-table (DDD format), or \code{NULL} if simulation
+#'     failed.}
 #'   \item{\code{status}}{\code{"done"}, \code{"extinct"}, or
 #'     \code{"too_large"}.}
-#'   \item{\code{model}}{Resolved binary vector.}
-#'   \item{\code{pars}}{Parameter vector as supplied.}
-#' }
-#' When \code{pars} is a matrix, a list of such lists (one per row).
-#'
-#' @section Output — conditional simulation (augmentation):
-#' When \code{n_trees = 1} the above fields are returned, extended with
-#' importance-sampling statistics:
-#' \describe{
-#'   \item{\code{logf}}{Log-likelihood of the augmented tree under the model.}
-#'   \item{\code{logg}}{Log sampling probability of the augmentation.}
-#'   \item{\code{log_w}}{\code{logf - logg} — importance weight.}
-#'   \item{\code{fhat}}{Monte Carlo log-likelihood estimate of the observed
-#'     extant tree.}
-#' }
-#' When \code{n_trees > 1}, a list with:
-#' \describe{
-#'   \item{\code{trees}}{List of \code{n_trees} augmented-tree results
-#'     (each with \code{tes}, \code{tas}, \code{L}, \code{brts},
-#'     \code{status}).}
-#'   \item{\code{logf}, \code{logg}, \code{log_w}}{Numeric vectors of length
-#'     \code{n_trees}.}
-#'   \item{\code{fhat}}{Scalar MC log-likelihood estimate.}
-#'   \item{\code{tes}, \code{brts}, \code{model}, \code{pars}}{From the
-#'     observed input tree.}
+#'   \item{\code{survival_prob}}{Empirical survival probability: \code{1 /
+#'     n_attempts} when the simulation succeeded, \code{0} otherwise.}
 #' }
 #'
-#' @param tree Optional extant tree for conditional simulation. Accepts
-#'   \code{NULL} (forward sim), a \code{simulate_tree} result list, a
+#' @section Output — forward simulation (batch, matrix \code{pars}):
+#' \describe{
+#'   \item{\code{simulations}}{List of individual results (one per row of
+#'     \code{pars}), each with the fields above.}
+#'   \item{\code{survival_prob}}{Fraction of simulations with
+#'     \code{status == "done"}.}
+#' }
+#'
+#' @section Output — conditional simulation / augmentation:
+#' When \code{n_trees = 1}:
+#' \describe{
+#'   \item{\code{tas}}{Augmented phylogeny (\code{phylo}) including extinct
+#'     lineages, or \code{NULL} on failure or when \code{useDDD = FALSE}.}
+#'   \item{\code{log_q}}{Log sampling probability \eqn{\log q(z \mid
+#'     \text{obs}, \theta)} of the augmentation.  \code{NA} on failure.}
+#' }
+#' When \code{n_trees > 1}:
+#' \describe{
+#'   \item{\code{trees}}{List of \code{tas} phylogenies (length up to
+#'     \code{n_trees}; failed draws are \code{NULL}).}
+#'   \item{\code{log_q}}{Numeric vector of log sampling probabilities,
+#'     one per successful draw.}
+#' }
+#'
+#' @param tree Optional observed extant tree for augmentation. Accepts
+#'   \code{NULL} (forward sim), a \code{simulate_tree} result, a
 #'   \code{phylo} object, or a numeric branching-time vector.
-#' @param pars Numeric parameter vector or matrix. When a matrix, each row
-#'   is one simulation and the function returns a list of results.
-#' @param max_t Crown age. Required for forward simulation.
-#' @param model Model specification. Accepts:
-#'   \itemize{
-#'     \item a formula such as \code{~ N}, \code{~ N + PD}, \code{~ PD + EP},
-#'     \item a string shortcut (\code{"cr"}, \code{"dd"}, \code{"pd"},
-#'       \code{"ep"}), or
-#'     \item a length-3 binary integer vector \code{c(use_N, use_P, use_E)}.
-#'   }
-#'   Default \code{"cr"} (constant rate).
+#' @param pars Numeric parameter vector or matrix. When a matrix each row
+#'   produces one forward simulation.
+#' @param max_t Crown age (forward simulation only). Default \code{1}.
+#' @param model Model specification (string, formula, or binary vector).
+#'   Default \code{"cr"}.
 #' @param max_lin Maximum lineages before declaring the tree too large.
 #'   Default \code{1e6}.
-#' @param max_tries Maximum retries after extinction or overflow.
-#'   Default \code{100}.
+#' @param max_tries Maximum additional attempts after extinction or overflow
+#'   (forward simulation only). Retries are tracked at the R level to
+#'   compute \code{survival_prob}. Default \code{100}.
 #' @param useDDD Convert L-table to \code{phylo} via \pkg{DDD}.
 #'   Default \code{TRUE}.
-#' @param n_trees Number of augmented trees to draw (conditional simulation
-#'   only). Default \code{1L}. When \code{> 1} the output structure changes
-#'   to include importance-sampling statistics across all draws.
-#' @param link Link function for rate computation: \code{"linear"} (default)
-#'   uses \code{max(0, eta)}; \code{"exponential"} uses \code{exp(eta)}.
+#' @param n_trees Number of augmented trees to draw (augmentation only).
+#'   Default \code{1L}.
+#' @param link Link function: \code{"linear"} (default) or
+#'   \code{"exponential"}.
+#' @param max_missing Maximum extinct lineages per augmented tree.
+#'   Default \code{1e4}.
+#' @param max_lambda Maximum speciation rate (thinning bound) for augmentation.
+#'   Default \code{500}.
+#' @param maxN Maximum total augmentation attempts. \code{NULL} (default)
+#'   sets this to \code{max(2000, 200 * n_trees)}.
+#' @param num_threads Threads for parallel augmentation. Default \code{1L}.
 #' @examples
 #' \dontrun{
 #' # --- Forward simulation ---
 #' tr <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr")
-#' tr$brts
+#' tr$status          # "done"
+#' tr$survival_prob   # e.g. 0.25 if took 4 attempts
 #'
-#' # Batch: 50 CR simulations varying lambda and mu
-#' pm <- cbind(beta_0  = runif(50, 0.3, 0.8),
-#'             gamma_0 = runif(50, 0.0, 0.2))
-#' sims <- simulate_tree(pars = pm, max_t = 5, model = "cr")
-#' length(sims)          # 50
-#' sims[[1]]$brts
+#' # Batch: 200 CR simulations
+#' pm <- cbind(beta_0 = runif(200, 0.3, 0.8), gamma_0 = runif(200, 0.05, 0.3))
+#' sims <- simulate_tree(pars = pm, max_t = 8, model = "cr")
+#' sims$survival_prob              # fraction that succeeded
+#' sims$simulations[[1]]$tes      # first extant phylo
 #'
-#' # --- Conditional simulation (augmentation + statistics) ---
-#' # Single augmented tree with IS statistics
-#' aug1 <- simulate_tree(tree = tr, pars = c(0.5, 0.1),
-#'                       model = "cr", n_trees = 1L)
-#' aug1$tas              # augmented phylo
-#' aug1$logf             # log-likelihood of the augmented tree
-#' aug1$fhat             # MC log-likelihood of the extant tree
+#' # --- Augmentation ---
+#' aug <- simulate_tree(tree = tr, pars = c(0.5, 0.1), model = "cr")
+#' aug$tas     # augmented phylo
+#' aug$log_q   # log q(z | obs, theta)
 #'
-#' # Many augmented trees — E-step
-#' augN <- simulate_tree(tree = tr, pars = c(0.5, 0.1),
-#'                       model = "cr", n_trees = 200L)
-#' augN$fhat             # MC log-likelihood
-#' augN$log_w            # importance weights (length 200)
-#' augN$trees[[1]]$tas   # first augmented phylo
+#' # Many augmented trees
+#' augN <- simulate_tree(tree = tr, pars = c(0.5, 0.1), model = "cr",
+#'                       n_trees = 100L)
+#' augN$log_q          # vector of length 100
+#' augN$trees[[1]]     # first augmented phylo
 #' }
 #' @export
-simulate_tree <- function(tree      = NULL,
+simulate_tree <- function(tree        = NULL,
                           pars,
-                          max_t     = NULL,
-                          model     = "cr",
-                          max_lin   = 1e6,
-                          max_tries = 100,
-                          useDDD    = TRUE,
-                          n_trees   = 1L,
-                          link      = "linear") {
+                          max_t       = 1,
+                          model       = "cr",
+                          max_lin     = 1e6,
+                          max_tries   = 100,
+                          useDDD      = TRUE,
+                          n_trees     = 1L,
+                          link        = "linear",
+                          max_missing = 1e4,
+                          max_lambda  = 500,
+                          maxN        = NULL,
+                          num_threads = 1L) {
 
   model_bin <- .resolve_model(model)
   link_int  <- .resolve_link(link)
 
-  # Batch: pars is a matrix — one simulation per row
+  if (!is.numeric(pars) || length(pars) == 0L)
+    stop("'pars' must be a non-empty numeric vector or matrix.")
+
+  # ---------------------------------------------------------------------- #
+  #  Batch forward simulation (matrix pars)                                 #
+  # ---------------------------------------------------------------------- #
   if (is.matrix(pars)) {
-    if (!is.numeric(pars) || nrow(pars) == 0L)
-      stop("'pars' must be a non-empty numeric matrix.")
-    return(lapply(seq_len(nrow(pars)), function(i)
+    if (nrow(pars) == 0L) stop("'pars' matrix must have at least one row.")
+    sims <- lapply(seq_len(nrow(pars)), function(i)
       simulate_tree(tree, pars[i, ], max_t, model_bin,
-                    max_lin, max_tries, useDDD, n_trees, link_int)))
+                    max_lin, max_tries, useDDD, n_trees, link_int,
+                    max_missing, max_lambda, maxN, num_threads))
+    if (is.null(tree)) {
+      # Forward batch: aggregate survival_prob
+      surv <- mean(vapply(sims, `[[`, 0.0, "survival_prob"))
+      return(list(simulations = sims, survival_prob = surv))
+    }
+    # Conditional batch: just return the list
+    return(sims)
   }
 
-  if (!is.numeric(pars) || length(pars) == 0L)
-    stop("'pars' must be a non-empty numeric vector.")
-
-  # Conditional simulation (augmentation)
+  # ---------------------------------------------------------------------- #
+  #  Conditional simulation (augmentation)                                  #
+  # ---------------------------------------------------------------------- #
   if (!is.null(tree)) {
     return(.sim_tree_conditional(tree, pars, model_bin,
-                                 as.integer(n_trees), useDDD, link_int))
+                                 as.integer(n_trees), useDDD, link_int,
+                                 max_missing, max_lambda, maxN,
+                                 as.integer(num_threads)))
   }
 
-  # Forward simulation
-  if (is.null(max_t)) stop("'max_t' is required for forward simulation.")
+  # ---------------------------------------------------------------------- #
+  #  Forward simulation (single)                                            #
+  # ---------------------------------------------------------------------- #
   if (!is.numeric(max_t) || length(max_t) != 1L || max_t <= 0)
     stop("'max_t' must be a positive number.")
   if (!is.numeric(max_lin) || length(max_lin) != 1L || max_lin <= 0)
@@ -153,23 +168,33 @@ simulate_tree <- function(tree      = NULL,
   expected_n <- 2L + 2L * sum(model_bin)
   if (length(pars) != expected_n) stop(.pars_error_msg(model_bin, expected_n))
 
-  raw <- simulate_div_tree_cpp(
-    .expand_pars(pars, model_bin), model_bin,
-    max_t, as.integer(max_lin), as.integer(max_tries), link_int
-  )
+  pars8       <- .expand_pars(pars, model_bin)
+  max_lin_i   <- as.integer(max_lin)
+  max_tries_i <- as.integer(max_tries)
 
-  tes <- tas <- brts <- NULL
-  if (raw$status == "done" && useDDD) {
-    tes  <- tryCatch(DDD::L2phylo(raw$Ltable, dropextinct = TRUE),
-                     error = function(e) NULL)
-    tas  <- tryCatch(DDD::L2phylo(raw$Ltable, dropextinct = FALSE),
-                     error = function(e) NULL)
-    brts <- tryCatch(DDD::L2brts(raw$Ltable,  dropextinct = TRUE),
-                     error = function(e) NULL)
+  # Retry loop at R level to count attempts -> survival_prob
+  n_attempts <- 0L
+  raw        <- list(status = "extinct")
+  while (raw$status != "done" && n_attempts <= max_tries_i) {
+    raw        <- simulate_div_tree_cpp(pars8, model_bin, max_t, max_lin_i, 0L, link_int)
+    n_attempts <- n_attempts + 1L
   }
 
-  list(tes = tes, tas = tas, L = raw$Ltable, brts = brts,
-       status = raw$status, model = model_bin, pars = pars)
+  survival_prob <- if (raw$status == "done") 1.0 / n_attempts else 0.0
+
+  tes <- tas <- NULL
+  if (raw$status == "done" && useDDD) {
+    tes <- tryCatch(DDD::L2phylo(raw$Ltable, dropextinct = TRUE),
+                    error = function(e) NULL)
+    tas <- tryCatch(DDD::L2phylo(raw$Ltable, dropextinct = FALSE),
+                    error = function(e) NULL)
+  }
+
+  list(tes           = tes,
+       tas           = tas,
+       L             = if (raw$status == "done") raw$Ltable else NULL,
+       status        = raw$status,
+       survival_prob = survival_prob)
 }
 
 
@@ -206,7 +231,6 @@ simulate_tree <- function(tree      = NULL,
 #' @keywords internal
 .parse_model_formula <- function(formula) {
   terms <- attr(stats::terms(formula), "term.labels")
-  # Canonical covariate names (case-insensitive)
   known <- c(N = 1L, PD = 2L, EP = 3L, E = 3L)
   terms_upper <- toupper(terms)
   model_bin <- c(0L, 0L, 0L)
@@ -253,73 +277,51 @@ simulate_tree <- function(tree      = NULL,
 
 
 # --------------------------------------------------------------------------- #
-#  Conditional simulation (augmentation)                                      #
+#  Conditional simulation (augmentation) — public output                      #
 # --------------------------------------------------------------------------- #
 
 #' @keywords internal
 .sim_tree_conditional <- function(tree, pars, model_bin,
-                                  n_trees = 1L, useDDD = TRUE,
-                                  link = 0L) {
+                                  n_trees = 1L, useDDD = TRUE, link = 0L,
+                                  max_missing = 1e4, max_lambda = 500,
+                                  maxN = NULL, num_threads = 1L) {
   brts  <- .extract_brts(tree)
   max_t <- brts[1L]
 
   expected_n <- 2L + 2L * sum(model_bin)
   if (length(pars) != expected_n) stop(.pars_error_msg(model_bin, expected_n))
 
-  tes      <- .extract_tes(tree)
   L_extant <- .extract_Ltable(tree)
 
   aug <- tryCatch(
     .augment_tree_internal(tree, pars = pars, model_bin = model_bin,
                            sample_size = n_trees,
-                           max_missing = 1e4, max_lambda = 500,
-                           num_threads = 1L, link = link),
+                           max_missing = max_missing, max_lambda = max_lambda,
+                           maxN = maxN, num_threads = num_threads, link = link),
     error = function(e) NULL
   )
 
-  # Failure path — same structure regardless of n_trees
+  # Failure path
   if (is.null(aug) || length(aug$trees) == 0L) {
-    base <- list(tes = tes, brts = brts, status = "failed",
-                 model = model_bin, pars = pars,
-                 logf = NA_real_, logg = NA_real_,
-                 log_w = NA_real_, fhat = NA_real_)
-    if (n_trees == 1L) {
-      return(c(base, list(tas = NULL, L = NULL)))
-    }
-    return(c(base, list(trees = list())))
+    if (n_trees == 1L) return(list(tas = NULL, log_q = NA_real_))
+    return(list(trees = list(), log_q = numeric(0L)))
   }
 
-  # Build augmented-tree results (shared for both n_trees = 1 and > 1)
-  aug_trees <- lapply(aug$trees, function(df) {
-    L   <- .aug_to_Ltable(df, max_t, brts, L_extant)
-    tas <- if (!is.null(L) && useDDD) {
-      tryCatch(DDD::L2phylo(L, dropextinct = FALSE), error = function(e) NULL)
-    }
-    list(tes    = tes,
-         tas    = tas,
-         L      = L,
-         brts   = brts,
-         status = if (!is.null(tas)) "done" else "failed")
+  # Build augmented phylo for each valid draw
+  tas_list <- lapply(aug$trees, function(df) {
+    if (!useDDD) return(NULL)
+    L <- .aug_to_Ltable(df, max_t, brts, L_extant)
+    if (is.null(L)) return(NULL)
+    tryCatch(DDD::L2phylo(L, dropextinct = FALSE), error = function(e) NULL)
   })
 
-  stats <- list(logf  = aug$logf,
-                logg  = aug$logg,
-                log_w = aug$weights,
-                fhat  = aug$fhat)
+  log_q <- aug$logg   # log q(z | obs, theta) for each draw
 
-  # Single augmented tree: flat structure (backwards-compatible) + stats
   if (n_trees == 1L) {
-    tr <- aug_trees[[1L]]
-    return(c(tr, list(model = model_bin, pars = pars), stats))
+    return(list(tas = tas_list[[1L]], log_q = log_q[1L]))
   }
 
-  # Multiple augmented trees: trees list + stats vectors
-  c(list(trees = aug_trees,
-         tes   = tes,
-         brts  = brts,
-         model = model_bin,
-         pars  = pars),
-    stats)
+  list(trees = tas_list, log_q = log_q)
 }
 
 
@@ -366,7 +368,7 @@ simulate_tree <- function(tree      = NULL,
 
   next_lbl   <- as.integer(max(abs(L_extant[, 3L]))) + 1L
   aug        <- aug[order(aug$brts), , drop = FALSE]
-  aug_labels <- list()  # list so [[missing_key]] returns NULL, not error
+  aug_labels <- list()
   new_rows   <- matrix(0.0, nrow = nrow(aug), ncol = 4L)
 
   for (k in seq_len(nrow(aug))) {
@@ -389,25 +391,27 @@ simulate_tree <- function(tree      = NULL,
 
 
 # --------------------------------------------------------------------------- #
-#  Augmentation via mc_loglik                                                  #
+#  Internal augmentation (raw C++ output — for inference use only)            #
 # --------------------------------------------------------------------------- #
 
 #' @keywords internal
 .augment_tree_internal <- function(tree,
                                    pars,
-                                   model_bin = c(0L, 0L, 0L),
+                                   model_bin   = c(0L, 0L, 0L),
                                    sample_size = 1L,
                                    max_missing = 1e4,
                                    max_lambda  = 500,
+                                   maxN        = NULL,
                                    num_threads = 1L,
-                                   link = 0L) {
-  brts <- .extract_brts(tree)
+                                   link        = 0L) {
+  brts  <- .extract_brts(tree)
   pars8 <- .expand_pars(pars, model_bin)
+  if (is.null(maxN)) maxN <- max(2000L, 200L * as.integer(sample_size))
   mc_loglik(
     brts        = brts,
     pars        = as.numeric(pars8),
     sample_size = as.integer(sample_size),
-    maxN        = max(2000L, 200L * as.integer(sample_size)),
+    maxN        = as.integer(maxN),
     max_missing = as.integer(max_missing),
     max_lambda  = as.numeric(max_lambda),
     lower_bound = rep(-1e6, 8L),
