@@ -215,8 +215,11 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
     warning("CEM failed: all particles were rejected at every attempt. ",
             "Try increasing num_points (e.g. >= 20) or widening the ",
             "parameter bounds.")
+  # Use the final iteration's best fhat, not the global max over all iterations.
+  # The global max picks lucky single-tree spikes; the final iteration reflects
+  # the converged population.
   loglik <- if (length(raw$best_loglik) > 0)
-    max(raw$best_loglik, na.rm = TRUE) else NA_real_
+    raw$best_loglik[length(raw$best_loglik)] else NA_real_
   list(pars = raw$obtained_estim, loglik = loglik,
        loglik_var = raw$loglik_var, details = raw)
 }

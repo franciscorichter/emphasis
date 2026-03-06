@@ -214,33 +214,23 @@
 
 #' Evaluate particles using the shared (pooled) tree estimator (Mode 2)
 #'
-#' For particles without cached trees, simulates new trees first.  Then pools
-#' all available trees across the entire population and, for each particle
-#' \eqn{\theta_j}, computes:
+#' Simulates fresh trees for every particle, pools them into a single set,
+#' and cross-evaluates: for each particle \eqn{\theta_j}, computes
 #' \deqn{\hat{f}(\theta_j) = \log\text{mean}\exp\bigl(
 #'   \text{logf}(z_i, \theta_j) - \log q(z_i, \theta_i)\bigr)}
-#' where the sum runs over all pooled trees \eqn{z_i} regardless of which
-#' particle simulated them.
+#' where the sum runs over all current-iteration trees \eqn{z_i} regardless
+#' of which particle simulated them.
 #'
-#' Unlike Mode 1, elite particles' \code{fhat} is \emph{always} recomputed
-#' because the pool grows with each iteration (new trees enter the pool).
-#' The savings versus Mode 1 is that elite trees are not re-simulated.
+#' Tree caches are cleared between iterations (see \code{.resample_particles}
+#' with \code{clear_cache = TRUE}), so the pool contains only the current
+#' iteration's trees.  This avoids the explosive cross-IS weights that arise
+#' when early-iteration trees (from widely spread particles) remain in the
+#' pool after the population has concentrated.
 #'
-#' \strong{Bias note:} this is a naive pooled IS estimator.  When proposals
-#' differ across particles (\eqn{q(z \mid \theta_i) \neq q(z \mid \theta_j)}),
-#' the estimator is biased.  Set \code{bias_correct = TRUE} to apply the
-#' Multiple IS (MIS) correction once it is implemented.
-#'
-#' \strong{C++ limitation:} \code{loglikelihood()} currently hardcodes
-#' \code{model = c(0,0,0)}; shared mode is therefore only correct for the
-#' CR model until that is fixed.
-#'
-#' @param bias_correct Logical; if \code{TRUE}, apply MIS bias correction
-#'   (not yet implemented -- placeholder).
 #' @return Named list: updated \code{pop}, \code{rej_lambda},
 #'   \code{rej_overruns}, \code{n_simulated}.
 #' @keywords internal
-.eval_shared <- function(pop, input, num_threads, bias_correct = FALSE) {
+.eval_shared <- function(pop, input, num_threads) {
   n <- nrow(pop$pars)
 
   # Step 1: simulate trees only for particles that do not have a cache yet
@@ -286,7 +276,7 @@
     )
     if (!is.null(ev)) {
       pop$fhat[j] <- .is_fhat(ev$logf, all_log_q, n_rejected = 0L,
-                              bias_correct = isTRUE(bias_correct))
+                              bias_correct = FALSE)
     }
   }
 
@@ -301,8 +291,7 @@
 #' @keywords internal
 .eval_particles <- function(pop, input, num_threads) {
   if (isTRUE(input$shared_trees)) {
-    .eval_shared(pop, input, num_threads,
-                 bias_correct = isTRUE(input$bias_correct))
+    .eval_shared(pop, input, num_threads)
   } else {
     .eval_independent(pop, input, num_threads)
   }
@@ -323,27 +312,25 @@
   min(max(stats::rnorm(1L, mean = par, sd = sd_val), lower), upper)
 }
 
-#' Resample particle population, preserving elite tree cache
+#' Resample particle population
 #'
 #' Selects the top \code{disc_prop} fraction of valid particles (elites) and
-#' carries their tree/log_q caches forward.  All particles (including elites)
-#' have their \code{fhat} reset to \code{NA} so they are re-evaluated with a
-#' freshly simulated tree at the next iteration.  This prevents "lucky
-#' particle" lock-in -- a particle whose previous high \code{fhat} was driven
-#' by a single favourable tree draw rather than by being a genuinely good
-#' parameter point.
+#' fills the remaining slots with perturbed copies of elites.  All particles
+#' (including elites) have their \code{fhat} reset to \code{NA} so they are
+#' re-evaluated at the next iteration, preventing "lucky particle" lock-in.
 #'
-#' \strong{Mode 1} benefits from elites concentrating the proposal distribution
-#' (new particles are perturbed copies of elites); the re-evaluation cost is
-#' the price of unbiased position estimates.
+#' When \code{clear_cache = FALSE} (Mode 1), elite tree/log_q caches are
+#' carried forward.  When \code{clear_cache = TRUE} (Mode 2), all caches are
+#' discarded so every particle simulates fresh trees at the next iteration.
+#' This prevents stale trees from unconverged early iterations from polluting
+#' the shared pool.
 #'
-#' \strong{Mode 2:} \code{.eval_shared} always recomputes \code{fhat} over the
-#' full pooled tree set anyway; this reset has no additional effect there.
-#'
+#' @param clear_cache Logical; if \code{TRUE}, discard all tree/log_q caches.
 #' @return Updated population list.
 #' @keywords internal
 .resample_particles <- function(pop, num_points, disc_prop,
-                                lower_bound, upper_bound, sd_vec) {
+                                lower_bound, upper_bound, sd_vec,
+                                clear_cache = FALSE) {
   valid    <- which(!is.na(pop$fhat))
   if (length(valid) == 0L) stop("No valid particles to resample from.")
 
@@ -352,9 +339,14 @@
   elite_ix   <- valid[order(fhat_valid, decreasing = TRUE)[seq_len(k)]]
 
   elite_pars  <- pop$pars[elite_ix,  , drop = FALSE]
-  elite_fhat  <- rep(NA_real_, k)     # always re-evaluate; prevents lucky-particle lock-in
-  elite_log_q <- pop$log_q[elite_ix]
-  elite_trees <- pop$trees[elite_ix]
+  elite_fhat  <- rep(NA_real_, k)     # always re-evaluate
+  if (clear_cache) {
+    elite_log_q <- vector("list", k)
+    elite_trees <- vector("list", k)
+  } else {
+    elite_log_q <- pop$log_q[elite_ix]
+    elite_trees <- pop$trees[elite_ix]
+  }
 
   n_add <- num_points - k
   if (n_add > 0L) {
@@ -609,7 +601,8 @@ emphasis_cem <- function(brts,
     }
 
     pop    <- .resample_particles(pop, num_points, disc_prop,
-                                  lower_bound, upper_bound, sd_vec)
+                                  lower_bound, upper_bound, sd_vec,
+                                  clear_cache = isTRUE(shared_trees))
     sd_vec <- sd_vec - alpha
 
     if (verbose)
@@ -648,8 +641,10 @@ emphasis_cem <- function(brts,
     ))
   }
 
-  global_best <- which.max(best_loglik)
-  best_pars_v <- best_pars[global_best, ]
+  # Use the final iteration's best particle, not the global max.
+  # The global max over all iterations selects lucky single-tree spikes rather
+  # than the converged estimate.
+  best_pars_v <- best_pars[k_ran, ]
 
   # Final evaluation of best particle: always simulate to get IS data
   # (drives both best_IS diagnostics and bootstrap variance)
