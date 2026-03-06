@@ -22,9 +22,9 @@ Given two or more \code{\link{estimate_rates}} results, returns a summary
 table sorted by AIC. The model with the lowest AIC is preferred.
 }
 \details{
-When all fits carry a \code{loglik_var} (bootstrap variance from
-\code{control$n_boot > 0}), pairwise Gaussian tests of equal AIC are
-appended.  For each pair \eqn{(i, j)},
+When all fits carry a \code{loglik_var} (bootstrap variance, available
+when \code{control$num_trees > 1}), pairwise Gaussian tests of equal AIC
+are appended.  For each pair \eqn{(i, j)},
 \deqn{T_{ij} = \widehat{\rm AIC}_i - \widehat{\rm AIC}_j, \qquad
   \mathrm{Var}(T_{ij}) = 4[\mathrm{Var}(\hat\ell_i) +
   \mathrm{Var}(\hat\ell_j)]}

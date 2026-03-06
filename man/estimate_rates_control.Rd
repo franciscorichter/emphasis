@@ -36,8 +36,7 @@ CEM-specific: \code{max_iter} (default 20), \code{num_particles}
 alias: \code{sample_size}), \code{sd_vec} (NULL = (upper-lower)/4),
 \code{maxN} (default 10), \code{disc_prop} (default 0.5),
 \code{tol} (plateau threshold, default 1e-4), \code{patience}
-(default 5), \code{bias_correct} (default FALSE),
-\code{n_boot} (default 0).
+(default 5), \code{bias_correct} (default FALSE).
 }
 \examples{
 estimate_rates_control("mcem")

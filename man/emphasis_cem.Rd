@@ -23,8 +23,7 @@ emphasis_cem(
   verbose = FALSE,
   num_threads = 1L,
   model = c(0L, 0L, 0L),
-  link = 0L,
-  n_boot = 0L
+  link = 0L
 )
 }
 \arguments{
@@ -67,9 +66,6 @@ Default \code{5}.}
 \item{model}{Length-3 binary integer vector \code{c(use_N, use_P, use_E)}.}
 
 \item{link}{Integer link code: \code{0} = linear, \code{1} = exponential.}
-
-\item{n_boot}{Bootstrap replicates for MC variance at best particle.
-\code{0} (default) skips bootstrap; \code{loglik_var} will be \code{NA}.}
 }
 \value{
 A list:
@@ -79,7 +75,7 @@ A list:
     \item{\code{best_pars}}{Parameter matrix, one row per iteration.}
     \item{\code{obtained_estim}}{Globally best parameter vector.}
     \item{\code{loglik_var}}{Bootstrap variance of \code{fhat} at best
-      particle (\code{NA} if \code{n_boot = 0}).}
+      particle (\code{NA} if \code{sample_size = 1}).}
     \item{\code{converged}}{Character string naming the stopping rule that
       fired: \code{"annealing"}, \code{"plateau"}, or \code{"max_iter"}.}
     \item{\code{time}}{Elapsed \code{proc.time()}.}

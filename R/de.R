@@ -462,8 +462,6 @@
 #' @param num_threads Parallel threads. Default \code{1}.
 #' @param model Length-3 binary integer vector \code{c(use_N, use_P, use_E)}.
 #' @param link Integer link code: \code{0} = linear, \code{1} = exponential.
-#' @param n_boot Bootstrap replicates for MC variance at best particle.
-#'   \code{0} (default) skips bootstrap; \code{loglik_var} will be \code{NA}.
 #' @return A list:
 #'   \describe{
 #'     \item{\code{best_loglik}}{fhat of best particle per completed iteration
@@ -471,7 +469,7 @@
 #'     \item{\code{best_pars}}{Parameter matrix, one row per iteration.}
 #'     \item{\code{obtained_estim}}{Globally best parameter vector.}
 #'     \item{\code{loglik_var}}{Bootstrap variance of \code{fhat} at best
-#'       particle (\code{NA} if \code{n_boot = 0}).}
+#'       particle (\code{NA} if \code{sample_size = 1}).}
 #'     \item{\code{converged}}{Character string naming the stopping rule that
 #'       fired: \code{"annealing"}, \code{"plateau"}, or \code{"max_iter"}.}
 #'     \item{\code{time}}{Elapsed \code{proc.time()}.}
@@ -499,8 +497,7 @@ emphasis_cem <- function(brts,
                          verbose      = FALSE,
                          num_threads  = 1L,
                          model        = c(0L, 0L, 0L),
-                         link         = 0L,
-                         n_boot       = 0L) {
+                         link         = 0L) {
 
   if (!is.numeric(lower_bound) || !is.numeric(upper_bound))
     stop("lower_bound and upper_bound must be numeric vectors.")
@@ -652,12 +649,12 @@ emphasis_cem <- function(brts,
   # than the converged estimate.
   best_pars_v <- best_pars[k_ran, ]
 
-  # Final evaluation of best particle: always simulate to get IS data
-  # (drives both best_IS diagnostics and bootstrap variance)
-  n_final  <- max(as.integer(sample_size), as.integer(n_boot), 1L)
+  # Final evaluation of best particle using num_trees draws.
+  # Bootstrap variance is computed automatically from these draws whenever
+  # num_trees > 1 (B = 200 bootstrap replicates, bias-corrected estimator).
   raw_best <- .simulate_particle(
     input$brts, as.numeric(best_pars_v), input$model, input$link,
-    sample_size = n_final,
+    sample_size = as.integer(sample_size),
     maxN        = input$maxN,
     max_missing = input$max_missing,
     max_lambda  = input$max_lambda,
@@ -668,7 +665,6 @@ emphasis_cem <- function(brts,
   loglik_var <- NA_real_
   if (!is.null(raw_best) && length(raw_best$logf) > 0L) {
     lw_all <- raw_best$logf - raw_best$logg
-    lw_fin <- lw_all[is.finite(lw_all)]
     best_IS <- list(
       logf       = raw_best$logf,
       log_q      = raw_best$logg,
@@ -676,12 +672,13 @@ emphasis_cem <- function(brts,
       trees      = raw_best$trees,
       fhat       = .is_fhat(raw_best$logf, raw_best$logg),
       ESS        = .ess_from_lw(lw_all),
-      n_trees    = n_final,
+      n_trees    = as.integer(sample_size),
       n_rejected = .total_rejected(raw_best)
     )
-    if (n_boot > 0L && length(lw_fin) >= 2L) {
+    lw_fin <- lw_all[is.finite(lw_all)]
+    if (length(lw_fin) >= 2L) {
       loglik_var <- .bootstrap_fhat_var(raw_best$logf, raw_best$logg,
-                                        K = 2L, B = as.integer(n_boot))
+                                        K = 2L, B = 200L)
     }
   }
 

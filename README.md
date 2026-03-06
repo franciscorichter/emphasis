@@ -147,12 +147,12 @@ sim <- simulate_tree(pars = c(0.6, -0.05, 0.15, -0.03), model = "pd", max_t = 10
 
 fit <- estimate_rates(sim, method = "cem", model = "pd",
   control = list(
-    lower_bound  = c(0.01, -0.5, 0, -0.5),
-    upper_bound  = c(2,     0.5, 1,  0.5),
-    verbose      = TRUE,
-    max_iter     = 50,
+    lower_bound   = c(0.01, -0.5, 0, -0.5),
+    upper_bound   = c(2,     0.5, 1,  0.5),
+    verbose       = TRUE,
+    max_iter      = 50,
     num_particles = 80,
-    n_boot       = 100
+    num_trees     = 10   # > 1 enables automatic bootstrap variance (B=200)
   ))
 
 fit              # prints pars, loglik (MC se), AIC, convergence reason
@@ -206,7 +206,7 @@ All parameters are passed via `control = list(...)`. Inspect defaults with
 | `verbose` | FALSE | Print iteration summaries |
 | `max_iter` | 20 | Hard iteration cap |
 | `num_particles` | 50 | Particles (parameter vectors) per iteration. Alias: `num_points` |
-| `num_trees` | 1 | Augmented trees simulated per particle per iteration. Alias: `sample_size` |
+| `num_trees` | 1 | Augmented trees per particle. When `> 1`, bootstrap variance of loglik is computed automatically (B=200). Recommend `>= 5`. Alias: `sample_size` |
 | `shared_trees` | FALSE | Pool trees across all particles (`TRUE` = lower variance, slower) |
 | `disc_prop` | 0.5 | Elite fraction of particles kept for resampling |
 | `sd_vec` | NULL | Initial perturbation SDs; auto = `(upper - lower) / 4` |
@@ -216,7 +216,6 @@ All parameters are passed via `control = list(...)`. Inspect defaults with
 | `tol` | 1e-4 | Minimum fhat improvement to reset the plateau counter |
 | `patience` | 5 | Consecutive plateau iterations before early stop |
 | `bias_correct` | FALSE | Moment-based IS bias correction (experimental) |
-| `n_boot` | 0 | Bootstrap replicates for `loglik_var`; 0 = disabled |
 | `num_threads` | 1 | Parallel threads for particle evaluation |
 
 **Total augmented trees per iteration** = `num_particles × num_trees`.
@@ -241,6 +240,7 @@ reducing variance but requiring more trees per iteration.
 
 ```r
 # Higher-quality run: 100 particles, 5 trees each => 500 trees/iter
+# num_trees >= 5 also enables automatic bootstrap variance of log-likelihood
 estimate_rates(sim, method = "cem", model = "pd",
   control = list(
     lower_bound   = c(0.01, -0.5, 0, -0.5),
@@ -249,8 +249,7 @@ estimate_rates(sim, method = "cem", model = "pd",
     max_iter      = 30,
     num_particles = 100,
     num_trees     = 5,
-    patience      = 8,
-    n_boot        = 200
+    patience      = 8
   ))
 ```
 
@@ -328,8 +327,7 @@ ctrl <- list(lower_bound   = c(0.01, -0.5, 0,  -0.5),
              upper_bound   = c(2,     0.5, 1,   0.5),
              max_iter      = 100,
              num_particles = 100,
-             num_trees     = 1,
-             n_boot        = 0)
+             num_trees     = 1)
 
 # ── 1. Simulate trees ─────────────────────────────────────────────────────
 set.seed(1)
@@ -453,7 +451,7 @@ library(emphasis)
 set.seed(42)
 n_per_model <- 25
 max_t       <- 8
-ctrl        <- list(max_iter = 20, num_particles = 80, num_trees = 1, n_boot = 0)
+ctrl        <- list(max_iter = 20, num_particles = 80, num_trees = 1)
 
 # True parameters and bounds for each model
 configs <- list(

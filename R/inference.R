@@ -81,10 +81,10 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     Method). Default \code{0.5}.}
 #'   \item{\code{bias_correct}}{Apply moment-based bias correction to the IS
 #'     log-likelihood. Default \code{FALSE}.}
-#'   \item{\code{n_boot}}{Bootstrap replicates for MC variance estimation at
-#'     the best particle. \code{0} (default) disables; set e.g. \code{200} to
-#'     populate \code{loglik_var} in the fit, enabling the AIC T-test in
-#'     \code{\link{compare_models}}.}
+#'   \item{\code{num_trees}}{When \code{> 1}, bootstrap variance of the
+#'     log-likelihood is computed automatically (B = 200 replicates) from
+#'     the IS weights already drawn.  Minimum recommendation: \code{5}.
+#'     \code{loglik_var} in the fit is \code{NA} when \code{num_trees = 1}.}
 #' }
 #' @export
 estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
@@ -116,8 +116,7 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
       disc_prop    = 0.5,
       tol          = 1e-4,
       patience     = 5L,
-      bias_correct = FALSE,
-      n_boot       = 0L
+      bias_correct = FALSE
     ))
   }
 }
@@ -256,8 +255,7 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
     verbose      = ctrl$verbose,
     num_threads  = ctrl$num_threads,
     model        = model,
-    link         = link,
-    n_boot       = ctrl$n_boot
+    link         = link
   )
   if (identical(raw$converged, "all_failed"))
     warning("CEM failed: all particles were rejected at every attempt. ",
@@ -331,8 +329,8 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
 #'     \item{\code{pars}}{Named numeric vector of parameter estimates.}
 #'     \item{\code{loglik}}{Final log-likelihood estimate.}
 #'     \item{\code{loglik_var}}{Bootstrap variance of \code{loglik} due to
-#'       Monte Carlo noise (\code{NA} unless \code{control$n_boot > 0} with
-#'       \code{method = "cem"}).}
+#'       Monte Carlo noise. Populated automatically when \code{method = "cem"}
+#'       and \code{control$num_trees > 1}; \code{NA} otherwise.}
 #'     \item{\code{n_pars}}{Number of free parameters (used for AIC).}
 #'     \item{\code{AIC}}{Akaike Information Criterion: \code{-2 * loglik + 2 * n_pars}.}
 #'     \item{\code{method}}{Method used (\code{"mcem"} or \code{"cem"}).}
@@ -411,23 +409,23 @@ estimate_rates <- function(tree,
       mode <- if (isTRUE(ctrl$shared_trees)) "shared (Mode 2)" else "independent (Mode 1)"
       if (ss == 1L) {
         fhat_desc <- paste0(
-          "  IS log-weight  : logf - log_q  (single tree per particle)\n",
-          "                   logf = log p(obs,z|theta),  log_q = log q(z|obs,theta)\n",
-          "                   WARNING: S=1 gives high variance; consider num_trees > 1\n")
+          "  fhat           : logf - log_q  (single IS log-weight; high variance)\n",
+          "                   loglik_var = NA  -- use num_trees >= 5 for variance\n")
       } else {
         fhat_desc <- sprintf(paste0(
-          "  IS log-lik     : log( mean( exp(logf - log_q) ) )  over %d trees\n",
-          "                   logf = log p(obs,z|theta),  log_q = log q(z|obs,theta)\n"), ss)
+          "  fhat           : log mean exp(logf - log_q)  over %d trees\n",
+          "                   loglik_var bootstrapped automatically (B=200)\n"), ss)
+        if (ss < 5L)
+          fhat_desc <- paste0(fhat_desc,
+            "                   NOTE: num_trees < 5; recommend >= 5 for stable variance\n")
       }
       cat(sprintf(paste0(
         "  particles/iter : %d\n",
         "  trees/particle : %d  =>  ~%d augmented trees per iteration\n"),
         np, ss, np * ss))
       cat(fhat_desc)
-      cat(sprintf(paste0(
-        "  tree mode      : %s\n",
-        "  max_iter=%d  n_boot=%d\n"),
-        mode, ctrl$max_iter, ctrl$n_boot))
+      cat(sprintf("  tree mode      : %s\n  max_iter=%d\n",
+                  mode, ctrl$max_iter))
     }
     if (method == "mcem")
       cat(sprintf("  num_trees=%d  tol=%.4g  burnin=%d\n",
@@ -484,9 +482,9 @@ print.emphasis_fit <- function(x, ...) {
 #' Given two or more \code{\link{estimate_rates}} results, returns a summary
 #' table sorted by AIC. The model with the lowest AIC is preferred.
 #'
-#' When all fits carry a \code{loglik_var} (bootstrap variance from
-#' \code{control$n_boot > 0}), pairwise Gaussian tests of equal AIC are
-#' appended.  For each pair \eqn{(i, j)},
+#' When all fits carry a \code{loglik_var} (bootstrap variance, available
+#' when \code{control$num_trees > 1}), pairwise Gaussian tests of equal AIC
+#' are appended.  For each pair \eqn{(i, j)},
 #' \deqn{T_{ij} = \widehat{\rm AIC}_i - \widehat{\rm AIC}_j, \qquad
 #'   \mathrm{Var}(T_{ij}) = 4[\mathrm{Var}(\hat\ell_i) +
 #'   \mathrm{Var}(\hat\ell_j)]}
