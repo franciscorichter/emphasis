@@ -352,16 +352,25 @@ estimate_rates <- function(tree,
       ss   <- ctrl$sample_size
       np   <- ctrl$num_points
       mode <- if (isTRUE(ctrl$shared_trees)) "shared (Mode 2)" else "independent (Mode 1)"
+      if (ss == 1L) {
+        fhat_desc <- paste0(
+          "  IS log-weight  : logf - log_q  (single tree per particle)\n",
+          "                   logf = log p(obs,z|theta),  log_q = log q(z|obs,theta)\n",
+          "                   WARNING: S=1 gives high variance; consider sample_size > 1\n")
+      } else {
+        fhat_desc <- sprintf(paste0(
+          "  IS log-lik     : log( mean( exp(logf - log_q) ) )  over %d trees\n",
+          "                   logf = log p(obs,z|theta),  log_q = log q(z|obs,theta)\n"), ss)
+      }
       cat(sprintf(paste0(
         "  particles/iter : %d\n",
-        "  trees/particle : %d  =>  ~%d augmented trees per iteration\n",
-        "  fhat formula   : log( mean( exp(logf - log_q) ) )  over %d tree%s\n",
-        "                   logf = log p(obs,z|theta),  log_q = log q(z|obs,theta)\n",
-        "                   best fhat* = max over all valid particles\n",
+        "  trees/particle : %d  =>  ~%d augmented trees per iteration\n"),
+        np, ss, np * ss))
+      cat(fhat_desc)
+      cat(sprintf(paste0(
         "  tree mode      : %s\n",
         "  max_iter=%d  n_boot=%d\n"),
-        np, ss, np * ss, ss, if (ss == 1L) "" else "s", mode,
-        ctrl$max_iter, ctrl$n_boot))
+        mode, ctrl$max_iter, ctrl$n_boot))
     }
     if (method == "mcem")
       cat(sprintf("  sample_size=%d  tol=%.4g  burnin=%d\n",

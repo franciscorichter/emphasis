@@ -11,6 +11,15 @@
 # --------------------------------------------------------------------------- #
 
 
+# Null-safe integer coercion (for rejection counts that may be NULL)
+.n0 <- function(x) if (is.null(x)) 0L else as.integer(x)
+
+# Total rejection count across all failure types
+.total_rejected <- function(raw) {
+  .n0(raw$rejected) + .n0(raw$rejected_zero_weights) +
+    .n0(raw$rejected_overruns) + .n0(raw$rejected_lambda)
+}
+
 # --------------------------------------------------------------------------- #
 #  IS log-likelihood estimation                                               #
 # --------------------------------------------------------------------------- #
@@ -194,9 +203,8 @@
       input$max_missing, input$max_lambda, num_threads
     )
     if (!is.null(raw) && length(raw$logf) > 0L && !anyNA(raw$logf)) {
-      # fhat(theta_i) = log_mean_exp(logf(z, theta_i) - log_q(z, theta_i))
       pop$fhat[i]    <- .is_fhat(raw$logf, raw$logg,
-                                 n_rejected   = raw$rejected,
+                                 n_rejected   = .total_rejected(raw),
                                  bias_correct = isTRUE(input$bias_correct))
       pop$log_q[[i]] <- raw$logg    # log q(z | obs, theta_i) per tree
       pop$trees[[i]] <- raw$trees   # raw data frames for cross-evaluation
@@ -605,12 +613,14 @@ emphasis_cem <- function(brts,
                                   clear_cache = isTRUE(shared_trees))
     sd_vec <- sd_vec - alpha
 
-    if (verbose)
+    if (verbose) {
+      lbl <- if (sample_size <= 1L) "best_lw" else "loglik*"
       cat(sprintf(
-        "Iter %3d/%d  fhat*=%8.4f  valid=%d/%d  plateau=%d/%d\n",
-        k, max_iter, best_loglik[k],
+        "Iter %3d/%d  %s=%8.4f  valid=%d/%d  plateau=%d/%d\n",
+        k, max_iter, lbl, best_loglik[k],
         sum(valid), num_points,
         plateau_count, patience))
+    }
   }
 
   # Trim pre-allocated storage to actual iterations run
@@ -669,7 +679,7 @@ emphasis_cem <- function(brts,
       lw         = lw_all,
       trees      = raw_best$trees,
       fhat       = .is_fhat(raw_best$logf, raw_best$logg,
-                            n_rejected = raw_best$rejected),
+                            n_rejected = .total_rejected(raw_best)),
       ESS        = .ess_from_lw(lw_all),
       n_trees    = n_final,
       n_rejected = raw_best$rejected
