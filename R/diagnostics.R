@@ -55,26 +55,46 @@
 #'
 #' @param x An \code{emphasis_fit} object (from \code{\link{estimate_rates}}
 #'   with \code{method = "cem"}) or the raw list from \code{\link{emphasis_cem}}.
-#' @param plot Logical; if \code{TRUE} (default), produce diagnostic plots:
-#'   log-likelihood convergence, per-parameter traces, population spread, and
-#'   IS weight distribution.
-#' @return A list (invisibly) with components \code{convergence},
-#'   \code{population_spread}, \code{IS_quality}, \code{final_pop}, and
-#'   \code{best_IS}.
+#' @param plot Logical; if \code{TRUE} (default), produce diagnostic plots.
+#' @param lower_bound,upper_bound Optional numeric vectors of the same length as
+#'   the parameter vector.  When provided, dashed horizontal lines are drawn at
+#'   the lower (orange) and upper (purple) bounds in each parameter-trace panel,
+#'   making it easy to see whether the estimate has converged away from the
+#'   boundary.
+#' @param true_pars Optional named or unnamed numeric vector of true parameter
+#'   values.  Useful in simulation studies where the generative parameters are
+#'   known.  When provided, a red dashed line is added to each parameter-trace
+#'   panel at the true value.  In real-data analyses this argument should be
+#'   omitted (the true parameters are unknown).
+#' @return A list of class \code{"cem_diagnostics"} (invisibly) with components
+#'   \code{convergence}, \code{population_spread}, \code{IS_quality},
+#'   \code{final_pop}, and \code{best_IS}.
 #' @seealso \code{\link{emphasis_cem}}, \code{\link{estimate_rates}}
 #' @examples
 #' \dontrun{
-#' sim <- simulate_tree(c(0.5, 0.1), max_t = 5, model = "cr")
-#' fit <- estimate_rates(sim, method = "cem", model = "cr",
-#'   lower_bound = c(0, 0), upper_bound = c(2, 1),
-#'   control = list(max_iter = 15, n_boot = 100))
-#' diag <- diagnose_cem(fit)
-#' diag$IS_quality$ESS          # effective sample size
-#' diag$IS_quality$ESS_fraction # ESS / n_trees
-#' head(diag$final_pop)         # last-iteration particle cloud
+#' lb  <- c(0.01, -0.5, 0, -0.5)
+#' ub  <- c(2,     0.5, 1,  0.5)
+#' sim <- simulate_tree(c(0.6, -0.05, 0.15, -0.03), max_t = 10, model = "pd")
+#' fit <- estimate_rates(sim, method = "cem", model = "pd",
+#'   lower_bound = lb, upper_bound = ub,
+#'   control = list(max_iter = 50, num_points = 80, n_boot = 100))
+#'
+#' # Basic diagnostics -- bounds shown as dashed lines in parameter panels
+#' diag <- diagnose_cem(fit, lower_bound = lb, upper_bound = ub)
+#'
+#' # Simulation study: also show the true generating parameters
+#' diag <- diagnose_cem(fit, lower_bound = lb, upper_bound = ub,
+#'                      true_pars = c(0.6, -0.05, 0.15, -0.03))
+#'
+#' diag$IS_quality$ESS_fraction  # IS efficiency at the best particle
+#' head(diag$final_pop)          # last-iteration particle cloud
+#' diag$convergence              # per-iteration best fhat and rejection counts
 #' }
 #' @export
-diagnose_cem <- function(x, plot = TRUE) {
+diagnose_cem <- function(x, plot = TRUE,
+                          lower_bound = NULL,
+                          upper_bound = NULL,
+                          true_pars   = NULL) {
 
   # Accept either emphasis_fit or raw emphasis_cem output
   details <- if (inherits(x, "emphasis_fit")) x$details else x
@@ -93,6 +113,7 @@ diagnose_cem <- function(x, plot = TRUE) {
     rej_lambda   = details$history$rej_lambda,
     rej_overruns = details$history$rej_overruns
   )
+  convergence$rej_total <- convergence$rej_lambda + convergence$rej_overruns
 
   # ── 2. Population spread per iteration ───────────────────────────────────
   pop_spread <- do.call(rbind, lapply(seq_len(n_iter), function(k) {
@@ -100,12 +121,13 @@ diagnose_cem <- function(x, plot = TRUE) {
     fv <- fv[is.finite(fv)]
     if (length(fv) == 0L) {
       return(data.frame(iteration = k, median = NA_real_,
-                        iqr = NA_real_, range = NA_real_))
+                        q25 = NA_real_, q75 = NA_real_, range = NA_real_))
     }
     data.frame(
       iteration = k,
       median    = stats::median(fv),
-      iqr       = stats::IQR(fv),
+      q25       = stats::quantile(fv, 0.25),
+      q75       = stats::quantile(fv, 0.75),
       range     = diff(range(fv))
     )
   }))
@@ -113,12 +135,12 @@ diagnose_cem <- function(x, plot = TRUE) {
   # ── 3. IS quality at best particle ───────────────────────────────────────
   IS_quality <- NULL
   if (!is.null(details$best_IS)) {
-    bi <- details$best_IS
+    bi     <- details$best_IS
     lw_fin <- bi$lw[is.finite(bi$lw)]
     IS_quality <- list(
       ESS          = bi$ESS,
       ESS_fraction = if (!is.na(bi$ESS)) bi$ESS / bi$n_trees else NA_real_,
-      mean_lw      = if (length(lw_fin) > 0) mean(lw_fin)   else NA_real_,
+      mean_lw      = if (length(lw_fin) > 0) mean(lw_fin)      else NA_real_,
       sd_lw        = if (length(lw_fin) > 1) stats::sd(lw_fin) else NA_real_,
       fhat         = bi$fhat,
       n_trees      = bi$n_trees,
@@ -147,79 +169,149 @@ diagnose_cem <- function(x, plot = TRUE) {
 
   # ── 6. Plots ──────────────────────────────────────────────────────────────
   if (plot) {
-    has_IS   <- !is.null(IS_quality)
-    n_plots  <- 2L + has_IS + n_par   # loglik + spread + IS + one per param
-    nc       <- min(n_plots, 3L)
-    nr       <- ceiling(n_plots / nc)
+    has_IS  <- !is.null(IS_quality) && !is.null(details$best_IS) &&
+               length(details$best_IS$lw[is.finite(details$best_IS$lw)]) > 1L
+    has_rej <- any(convergence$rej_total > 0L)
 
-    old_par  <- graphics::par(no.readonly = TRUE)
+    n_plots <- 2L + has_IS + has_rej + n_par
+    nc      <- min(n_plots, 3L)
+    nr      <- ceiling(n_plots / nc)
+
+    old_par <- graphics::par(no.readonly = TRUE)
     on.exit(graphics::par(old_par))
     graphics::par(mfrow = c(nr, nc), mar = c(4, 4, 3, 1))
 
-    # Plot 1: log-likelihood convergence
-    stop_label <- if (!is.null(details$converged)) details$converged else "?"
-    graphics::plot(convergence$iteration, convergence$best_loglik,
-                   type = "b", pch = 16, col = "steelblue",
-                   xlab = "Iteration", ylab = expression(hat(f)(theta^"*")),
-                   main = paste0("Log-likelihood (best particle)\nstop: ",
-                                 stop_label))
+    iter <- convergence$iteration
 
-    # Plots 2..(1+n_par): one per parameter trace
+    # Plot 1: log-likelihood trace
+    stop_label <- if (!is.null(details$converged)) details$converged else "?"
+    best_k <- which.max(convergence$best_loglik)
+    graphics::plot(iter, convergence$best_loglik,
+                   type = "b", pch = 16, col = "steelblue", lwd = 1.5,
+                   xlab = "Iteration",
+                   ylab = expression(hat(f)^"*" ~ "(best particle)"),
+                   main = paste0("Log-likelihood convergence\nstop: ", stop_label))
+    graphics::abline(v = best_k, col = "red", lty = 3, lwd = 1)
+
+    # Plots 2..(1+n_par): per-parameter traces with optional bound/true lines
     if (n_par > 0L && !is.null(details$best_pars)) {
       bp <- details$best_pars
-      iters <- seq_len(nrow(bp))
       for (j in seq_len(n_par)) {
-        graphics::plot(iters, bp[, j],
-                       type = "b", pch = 16, col = "forestgreen",
-                       xlab = "Iteration", ylab = par_names[j],
-                       main = par_names[j])
+        nm  <- par_names[j]
+        lb_j <- if (!is.null(lower_bound) && j <= length(lower_bound))
+                  lower_bound[j] else NULL
+        ub_j <- if (!is.null(upper_bound) && j <= length(upper_bound))
+                  upper_bound[j] else NULL
+        tp_j <- if (!is.null(true_pars)) {
+          if (!is.null(names(true_pars)) && nm %in% names(true_pars))
+            true_pars[[nm]]
+          else if (is.numeric(true_pars) && j <= length(true_pars))
+            true_pars[[j]]
+          else NULL
+        } else NULL
+
+        # y-range: include bounds and true value so lines are always visible
+        y_vals <- c(bp[, j], lb_j, ub_j, tp_j)
+        y_rng  <- range(y_vals, na.rm = TRUE)
+        y_pad  <- max(diff(y_rng) * 0.08, 0.05)
+
+        graphics::plot(iter, bp[, j],
+                       type = "b", pch = 16, col = "forestgreen", lwd = 1.5,
+                       ylim = c(y_rng[1] - y_pad, y_rng[2] + y_pad),
+                       xlab = "Iteration", ylab = nm, main = nm)
+
+        leg_lab <- character(0); leg_col <- character(0)
+        leg_lty <- integer(0);   leg_lwd <- numeric(0)
+
+        if (!is.null(lb_j)) {
+          graphics::abline(h = lb_j, col = "darkorange", lty = 2, lwd = 1.5)
+          leg_lab <- c(leg_lab, "lower bound")
+          leg_col <- c(leg_col, "darkorange")
+          leg_lty <- c(leg_lty, 2L); leg_lwd <- c(leg_lwd, 1.5)
+        }
+        if (!is.null(ub_j)) {
+          graphics::abline(h = ub_j, col = "purple", lty = 2, lwd = 1.5)
+          leg_lab <- c(leg_lab, "upper bound")
+          leg_col <- c(leg_col, "purple")
+          leg_lty <- c(leg_lty, 2L); leg_lwd <- c(leg_lwd, 1.5)
+        }
+        if (!is.null(tp_j)) {
+          graphics::abline(h = tp_j, col = "red", lty = 2, lwd = 2)
+          leg_lab <- c(leg_lab, "true value")
+          leg_col <- c(leg_col, "red")
+          leg_lty <- c(leg_lty, 2L); leg_lwd <- c(leg_lwd, 2)
+        }
+        if (length(leg_lab) > 0L)
+          graphics::legend("topright", legend = leg_lab, col = leg_col,
+                           lty = leg_lty, lwd = leg_lwd, bty = "n", cex = 0.75)
       }
     }
 
-    # Next plot: population spread (median ± IQR band)
+    # Population spread plot (median + IQR band)
     valid_rows <- !is.na(pop_spread$median)
     if (any(valid_rows)) {
-      ps <- pop_spread[valid_rows, ]
+      ps    <- pop_spread[valid_rows, ]
+      y_rng <- range(c(ps$q25, ps$q75), na.rm = TRUE)
       graphics::plot(ps$iteration, ps$median,
-                     type = "b", pch = 16, col = "darkorange",
-                     ylim = range(c(ps$median - ps$iqr / 2,
-                                    ps$median + ps$iqr / 2), na.rm = TRUE),
+                     type = "b", pch = 16, col = "darkorange", lwd = 1.5,
+                     ylim = y_rng,
                      xlab = "Iteration",
                      ylab = expression(hat(f) ~ "(valid particles)"),
-                     main = "Population spread\n(median \u00b1 IQR)")
+                     main = "Population spread (median + IQR)")
       graphics::polygon(
         c(ps$iteration, rev(ps$iteration)),
-        c(ps$median - ps$iqr / 2, rev(ps$median + ps$iqr / 2)),
+        c(ps$q25, rev(ps$q75)),
         col    = grDevices::adjustcolor("darkorange", alpha.f = 0.25),
         border = NA
       )
     }
 
-    # Last plot: IS log-weight distribution at best particle
-    if (has_IS && !is.null(details$best_IS)) {
+    # Rejection rate plot (only when rejections occurred)
+    if (has_rej) {
+      graphics::plot(iter, convergence$rej_total,
+                     type = "b", pch = 16, col = "tomato", lwd = 1.5,
+                     xlab = "Iteration", ylab = "Rejected trees",
+                     main = "Tree rejections per iteration")
+      if (any(convergence$rej_lambda > 0L))
+        graphics::lines(iter, convergence$rej_lambda,
+                        col = "darkorange", lty = 2, lwd = 1.2)
+      if (any(convergence$rej_overruns > 0L))
+        graphics::lines(iter, convergence$rej_overruns,
+                        col = "steelblue", lty = 2, lwd = 1.2)
+      graphics::legend("topright",
+                       legend = c("total", "max_lambda", "max_missing"),
+                       col = c("tomato", "darkorange", "steelblue"),
+                       lty = c(1L, 2L, 2L), lwd = c(1.5, 1.2, 1.2),
+                       bty = "n", cex = 0.75)
+    }
+
+    # IS log-weight histogram at best particle
+    if (has_IS) {
       lw_fin <- details$best_IS$lw[is.finite(details$best_IS$lw)]
-      if (length(lw_fin) > 1L) {
-        graphics::hist(lw_fin, breaks = min(30L, length(lw_fin)),
-                       freq = FALSE, col = "grey85", border = "white",
-                       xlab = "IS log-weight  (logf \u2212 log_q)",
-                       main = sprintf(
-                         "IS weights\nESS = %.1f / %d  (%.0f%%)",
-                         IS_quality$ESS, IS_quality$n_trees,
-                         100 * IS_quality$ESS_fraction))
-        graphics::abline(v = IS_quality$mean_lw, col = "red", lty = 2, lwd = 2)
-        graphics::legend("topright", legend = "mean lw",
-                         col = "red", lty = 2, lwd = 2, bty = "n")
-      }
+      graphics::hist(lw_fin,
+                     breaks = min(30L, max(10L, length(lw_fin))),
+                     freq = FALSE, col = "grey85", border = "white",
+                     xlab = expression("IS log-weight" ~ (log*f - log*q)),
+                     main = sprintf(
+                       "IS weights at best particle\nESS = %.1f / %d  (%.0f%%)",
+                       IS_quality$ESS, IS_quality$n_trees,
+                       100 * IS_quality$ESS_fraction))
+      graphics::abline(v = IS_quality$mean_lw, col = "red", lty = 2, lwd = 2)
+      graphics::legend("topright", "mean lw",
+                       col = "red", lty = 2, lwd = 2, bty = "n", cex = 0.75)
     }
   }
 
-  invisible(list(
-    convergence      = convergence,
-    population_spread = pop_spread,
-    IS_quality       = IS_quality,
-    final_pop        = final_pop_df,
-    best_IS          = details$best_IS
-  ))
+  structure(
+    list(
+      convergence       = convergence,
+      population_spread = pop_spread,
+      IS_quality        = IS_quality,
+      final_pop         = final_pop_df,
+      best_IS           = details$best_IS
+    ),
+    class = c("cem_diagnostics", "list")
+  )
 }
 
 

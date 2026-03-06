@@ -40,3 +40,7 @@ rsconnect/
 # Miscellaneous / generated files
 .DS_Store
 src/symbols.rds
+
+# Technical report (kept local only)
+doc/emphasis_technical.tex
+doc/emphasis_technical.pdf

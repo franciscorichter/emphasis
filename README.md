@@ -129,38 +129,6 @@ augN$trees[[1]]  # first augmented phylo
 
 ---
 
-## Low-level IS API
-
-`augment_trees()` and `eval_logf()` expose the two atomic operations of the
-importance-sampling engine:
-
-```r
-brts  <- c(4, 2.5, 1.2, 0.6)                   # branching times
-pars8 <- c(0.5, 0, 0, 0, 0.1, 0, 0, 0)         # 8-param layout (CR model)
-
-# 1. Draw augmented trees from q(z | obs, θ)
-aug <- augment_trees(brts, pars8, sample_size = 10L, maxN = 500L,
-                     max_missing = 1000L, max_lambda = 100,
-                     num_threads = 1L, model = c(0L, 0L, 0L), link = 0L)
-# aug$trees  — list of augmented-tree data frames
-# aug$logf   — log p(obs, z_i | θ)   per tree
-# aug$logg   — log q(z_i | obs, θ)   per tree
-
-# 2. IS log-likelihood estimate at θ
-fhat <- emphasis:::.is_fhat(aug$logf, aug$logg)
-
-# 3. Re-score the same trees at a different θ (cross-IS, no re-simulation)
-pars8_new <- c(0.6, 0, 0, 0, 0.15, 0, 0, 0)
-logf_new  <- eval_logf(pars8_new, aug$trees, model = c(0L,0L,0L))$logf
-fhat_new  <- emphasis:::.is_fhat(logf_new, aug$logg)
-```
-
-This clean separation — **simulate once, score anywhere** — is what the CEM
-inference engine exploits internally.  `model` must be set to `c(0L,0L,1L)` for
-EP models, as it gates the EP-aware rate functions in `eval_logf`.
-
----
-
 ## Inference
 
 `estimate_rates()` estimates parameters from a phylogenetic tree. It accepts a
@@ -173,34 +141,42 @@ Two methods are available:
 | `"cem"` | Monte Carlo Cross-Entropy Method — broad search, no starting values needed |
 | `"mcem"` | Monte Carlo EM — local refinement, converges to a (local) optimum |
 
-The recommended workflow runs CEM first to find a good region, then MCEM to
-refine:
-
 ```r
 set.seed(42)
-sim <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003), model = "pd", max_t = 8)
+sim <- simulate_tree(pars = c(0.6, -0.05, 0.15, -0.03), model = "pd", max_t = 10)
 
-lb <- c(0.01, -1, 0, -1)
-ub <- c(2,     1, 1,  1)
+lb <- c(0.01, -0.5, 0, -0.5)
+ub <- c(2,     0.5, 1,  0.5)
 
-# Stage 1: broad search
-fit_cem <- estimate_rates(sim, method = "cem", model = "pd",
+fit <- estimate_rates(sim, method = "cem", model = "pd",
   lower_bound = lb, upper_bound = ub, verbose = TRUE,
-  control = list(max_iter = 20, num_points = 50, n_boot = 200))
+  control = list(max_iter = 50, num_points = 80, n_boot = 100))
 
-fit_cem$converged    # stopping reason: "annealing", "plateau", or "max_iter"
-fit_cem$loglik_var   # MC sampling variance of log-likelihood
+fit              # prints pars, loglik (MC se), AIC, convergence reason
+fit$pars         # named estimates: beta_0, beta_P, gamma_0, gamma_P
+fit$loglik
+fit$AIC
+fit$converged    # stopping reason: "annealing", "plateau", or "max_iter"
+fit$loglik_var   # MC sampling variance of log-likelihood
+```
 
-# Stage 2: refine
-fit_em <- estimate_rates(sim, method = "mcem", model = "pd",
-  lower_bound = lb, upper_bound = ub,
-  init_pars   = fit_cem$pars,
-  control     = list(sample_size = 200, tol = 0.05))
+### Diagnostics
 
-fit_em          # prints pars, loglik (MC se), AIC
-fit_em$pars     # named estimates: beta_0, beta_P, gamma_0, gamma_P
-fit_em$loglik
-fit_em$AIC
+After fitting, pass the result to `diagnose_cem()` to inspect convergence and
+IS quality. Supply the same bounds used during estimation so they appear as
+reference lines in the parameter-trace plots.
+
+```r
+diag <- diagnose_cem(fit, lower_bound = lb, upper_bound = ub)
+```
+
+In a simulation study where the true parameters are known, pass them via
+`true_pars` to overlay red reference lines:
+
+```r
+true_pars <- c(beta_0 = 0.6, beta_P = -0.05, gamma_0 = 0.15, gamma_P = -0.03)
+diag <- diagnose_cem(fit, lower_bound = lb, upper_bound = ub,
+                     true_pars = true_pars)
 ```
 
 ### CEM stopping rules
@@ -315,23 +291,23 @@ compare_models(CR = fit_cr, DD = fit_dd, PD = fit_pd)
 
 ## Simulation study 1 — estimation power
 
-Simulate 100 trees under a PD model, estimate parameters from each, and
+Simulate 50 trees under a PD model, estimate parameters from each, and
 evaluate accuracy via bias, RMSE, and tree-size effects.
 
 ```r
 library(emphasis)
 
 # True parameters
-true_pars <- c(beta_0 = 0.6, beta_P = 0.005, gamma_0 = 0.15, gamma_P = -0.003)
+true_pars <- c(beta_0 = 0.6, beta_P = -0.05, gamma_0 = 0.15, gamma_P = -0.03)
 model     <- "pd"
-max_t     <- 8
-n_rep     <- 100
+max_t     <- 10
+n_rep     <- 50
 
-lb   <- c(0.01, -0.1, 0,  -0.1)
-ub   <- c(2,     0.1, 1,   0.1)
-ctrl <- list(max_iter = 20, num_points = 100, sample_size = 1, n_boot = 0)
+lb   <- c(0.01, -0.5, 0,  -0.5)
+ub   <- c(2,     0.5, 1,   0.5)
+ctrl <- list(max_iter = 100, num_points = 100, sample_size = 1, n_boot = 0)
 
-# ── 1. Simulate 100 trees ──────────────────────────────────────────────────
+# ── 1. Simulate trees ─────────────────────────────────────────────────────
 set.seed(1)
 trees <- vector("list", n_rep)
 for (i in seq_len(n_rep)) {
@@ -377,27 +353,55 @@ summary_df <- data.frame(
 )
 print(round(summary_df, 5))
 
-# ── 4. Box plots: estimate distribution per parameter ─────────────────────
-op <- par(mfrow = c(1, length(true_pars)), mar = c(4, 4, 3, 1))
-for (j in seq_along(true_pars)) {
-  nm <- names(true_pars)[j]
-  boxplot(est_mat[, j], main = nm, ylab = "estimate",
-          col = "steelblue", border = "navy")
-  abline(h = true_pars[j], col = "red", lty = 2, lwd = 2)
-}
-par(op)
+# ── 4. Violin plots: estimate distribution per parameter ──────────────────
+library(ggplot2)
+
+est_long <- as.data.frame(est_mat)
+est_long$rep <- seq_len(nrow(est_long))
+est_long <- tidyr::pivot_longer(est_long, -rep,
+                                names_to = "parameter", values_to = "estimate")
+est_long$parameter <- factor(est_long$parameter, levels = names(true_pars))
+
+ref_df <- data.frame(
+  parameter = factor(names(true_pars), levels = names(true_pars)),
+  true      = true_pars,
+  lb        = lb,
+  ub        = ub
+)
+
+ggplot(est_long, aes(x = "", y = estimate)) +
+  geom_violin(fill = "steelblue", alpha = 0.4, colour = "navy") +
+  geom_jitter(width = 0.1, alpha = 0.5, colour = "navy", size = 1) +
+  geom_hline(data = ref_df, aes(yintercept = true),
+             colour = "red", linetype = "dashed", linewidth = 0.8) +
+  geom_hline(data = ref_df, aes(yintercept = lb),
+             colour = "darkorange", linetype = "dotted", linewidth = 0.8) +
+  geom_hline(data = ref_df, aes(yintercept = ub),
+             colour = "forestgreen", linetype = "dotted", linewidth = 0.8) +
+  facet_wrap(~parameter, scales = "free_y") +
+  labs(x = NULL, y = "Estimate",
+       title = "Parameter estimate distributions",
+       caption = paste("Red dashed = true value",
+                       "| Orange dotted = lower bound",
+                       "| Green dotted = upper bound")) +
+  theme_bw() +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
 
 # ── 5. Tree size vs absolute error per parameter ──────────────────────────
-err_mat <- abs(est_mat - rep(true_pars, each = nrow(est_mat)))
-op <- par(mfrow = c(1, length(true_pars)), mar = c(4, 4, 3, 1))
-for (j in seq_along(true_pars)) {
-  nm <- names(true_pars)[j]
-  plot(tips_ok, err_mat[, j],
-       xlab = "Extant tips (tree size)", ylab = "|error|",
-       main = nm, pch = 16, col = grDevices::adjustcolor("steelblue", 0.6))
-  lines(lowess(tips_ok, err_mat[, j]), col = "red", lwd = 2)
-}
-par(op)
+err_mat  <- abs(est_mat - rep(true_pars, each = nrow(est_mat)))
+err_long <- as.data.frame(err_mat)
+err_long$tips <- tips_ok
+err_long <- tidyr::pivot_longer(err_long, -tips,
+                                names_to = "parameter", values_to = "abs_error")
+err_long$parameter <- factor(err_long$parameter, levels = names(true_pars))
+
+ggplot(err_long, aes(x = tips, y = abs_error)) +
+  geom_point(alpha = 0.5, colour = "steelblue") +
+  geom_smooth(method = "loess", se = TRUE, colour = "red") +
+  facet_wrap(~parameter, scales = "free_y") +
+  labs(x = "Extant tips (tree size)", y = "|Error|",
+       title = "Estimation error vs tree size") +
+  theme_bw()
 ```
 
 The output `summary_df` contains, for each parameter:
@@ -552,23 +556,31 @@ how often each candidate was chosen — useful for diagnosing systematic confusi
 
 `diagnose_cem()` takes a fitted `"cem"` model and returns convergence
 statistics, IS quality metrics, and the full particle cloud at the final
-iteration. It produces four types of diagnostic plots by default.
+iteration. It produces diagnostic plots by default.
 
 ```r
-fit <- estimate_rates(sim, method = "cem", model = "pd",
-  lower_bound = lb, upper_bound = ub,
-  control = list(max_iter = 20, n_boot = 200))
+# Basic usage — bounds shown as reference lines in parameter traces
+diag <- diagnose_cem(fit, lower_bound = lb, upper_bound = ub)
 
-diag <- diagnose_cem(fit)          # produces plots by default
+# Simulation study — also draw true-parameter lines (red)
+true_pars <- c(beta_0 = 0.6, beta_P = -0.05, gamma_0 = 0.15, gamma_P = -0.03)
+diag <- diagnose_cem(fit, lower_bound = lb, upper_bound = ub,
+                     true_pars = true_pars)
 
-diag$convergence       # per-iteration: best_loglik, n_valid, rejections
-diag$population_spread # per-iteration: median/IQR/range of all fhat values
+# Suppress plots, inspect data only
+diag <- diagnose_cem(fit, plot = FALSE)
+
+diag$convergence       # per-iteration: best_loglik, n_valid, rej_lambda, rej_overruns, rej_total
+diag$population_spread # per-iteration: median/q25/q75/range of all fhat values
 diag$IS_quality        # ESS, ESS fraction, mean/sd of IS log-weights
 diag$final_pop         # data frame: parameter columns + fhat for each particle
 diag$best_IS           # raw IS data: logf, log_q, lw, trees at best pars
 
 # IS effective sample size (fraction of 1 = perfect; close to 0 = one dominant tree)
 diag$IS_quality$ESS_fraction
+
+# Rejection rate over iterations
+diag$convergence[, c("iteration", "rej_lambda", "rej_overruns", "rej_total")]
 
 # Access raw augmented trees from the best particle's final evaluation
 diag$best_IS$trees[[1]]   # first augmented tree (C++ data frame format)
@@ -580,9 +592,10 @@ diag$best_IS$lw            # IS log-weights for all trees
 | Plot | What it shows |
 |------|--------------|
 | Log-likelihood | Best `fhat` per iteration with stop reason |
-| Parameter traces | One plot per parameter: best particle's value across iterations |
-| Population spread | Median ± IQR of all valid `fhat` values per iteration |
+| Parameter traces | Best particle's value per iteration; orange = lower bound, purple = upper bound, red = true value (if `true_pars` supplied) |
+| Population spread | Median with q25/q75 band of all valid `fhat` values per iteration |
 | IS weight distribution | Histogram of `logf - log_q` at the best particle; ESS in title |
+| Rejection rates | Per-iteration count of rejected trees (`rej_lambda`, `rej_overruns`); shown only when rejections occurred |
 
 ---
 
