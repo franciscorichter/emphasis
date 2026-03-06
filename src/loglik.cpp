@@ -4,93 +4,70 @@
 #include "emphasis.hpp"
 #include "model.hpp"
 #include "rinit.h"
-#include "precision_weights.hpp"
 using namespace Rcpp;
 
 namespace loglik {
 
 emphasis::tree_t pack(const Rcpp::DataFrame& r_tree) {
   emphasis::tree_t new_tree;
-  
-  // NOTE 10/8/22: this can probably be micro-optimized, as it would make more 
-  // sense to avoid copying everything, and instead traverse the DataFrame as
-  // a matrix in a row wise fashion.
-  
-  Rcpp::NumericVector brts  = r_tree["brts"];
-  Rcpp::NumericVector n     = r_tree["n"];
-  Rcpp::NumericVector t_ext = r_tree["t_ext"];
-  Rcpp::NumericVector pd    = r_tree["pd"];
+  Rcpp::NumericVector brts      = r_tree["brts"];
+  Rcpp::NumericVector n         = r_tree["n"];
+  Rcpp::NumericVector t_ext     = r_tree["t_ext"];
+  Rcpp::NumericVector pd        = r_tree["pd"];
   Rcpp::NumericVector tip_start_v;
   bool has_tip_start = r_tree.containsElementNamed("tip_start");
   if (has_tip_start) tip_start_v = r_tree["tip_start"];
 
   for (int i = 0; i < r_tree.nrow(); ++i) {
     emphasis::node_t entry;
-    entry.brts = brts[i];
-    entry.n    = n[i];
-    entry.t_ext = t_ext[i];
-    entry.pd    = pd[i];
+    entry.brts      = brts[i];
+    entry.n         = n[i];
+    entry.t_ext     = t_ext[i];
+    entry.pd        = pd[i];
     entry.tip_start = has_tip_start ? tip_start_v[i] : 0.0;
-    entry.clade = 0;
-    entry.id = -1;
+    entry.clade     = 0;
+    entry.id        = -1;
     entry.parent_id = -1;
     new_tree.push_back(entry);
   }
   return new_tree;
 }
 
-}
+}  // namespace loglik
 
-//' function to calculate log likelihood of pars for a tree set,
-//' @param pars vector of parameter values
-//' @param trees list of trees, e.g. a multiPhylo object
-//' @param logg vector of logg values
-//' @param plugin name of used plugin
-//' @param num_rejected number of rejected trees
-//' @return list with the following entries: 
-//' \itemize{
-//'  \item{logf}{logf values}
-//'  \item{log_w}{log of weight}
-//'  \item{fhat}{fhat values}
-//'  \item{N}{number of trees}
+
+//' Evaluate log p(obs, z | theta) for a set of pre-computed augmented trees
+//'
+//' Given a list of augmented trees (produced by \code{\link{augment_trees}})
+//' and a parameter vector, computes \code{logf[i] = log p(obs, z_i | theta)}
+//' for each tree.  IS aggregation (\code{fhat}) is left to the R layer via
+//' \code{.is_fhat}.
+//'
+//' @param pars Numeric vector of 8 model parameters.
+//' @param trees List of augmented-tree data frames (output of
+//'   \code{\link{augment_trees}}).
+//' @param model Integer vector \code{c(use_N, use_P, use_E)}.
+//' @param link Link function: \code{0} = linear, \code{1} = exponential.
+//' @return A named list with one element:
+//' \describe{
+//'   \item{logf}{Numeric vector of \code{log p(obs, z_i | theta)}, length =
+//'     \code{length(trees)}.}
 //' }
 //' @export
-// [[Rcpp::export]]
-Rcpp::List loglikelihood(const std::vector<double>& pars,
+// [[Rcpp::export(name = "eval_logf")]]
+Rcpp::List eval_logf_cpp(const std::vector<double>& pars,
                          const Rcpp::List& trees,
-                         const Rcpp::NumericVector& logg,
-                         const std::string& plugin,
-                         const int num_rejected) {
-  
-  // Use default 8-param bounds; loglik only uses the pars vector directly
+                         Rcpp::IntegerVector model = Rcpp::IntegerVector::create(0, 0, 0),
+                         int link = 0) {
+  std::vector<int> model_bin = {model[0], model[1], model[2]};
   emphasis::param_t lb8(8, -1e6), ub8(8, 1e6);
-  auto model = emphasis::Model(lb8, ub8, {0, 0, 0});
-  
+  auto mdl = emphasis::Model(lb8, ub8, model_bin, link);
+
   std::vector<double> logf(trees.size());
-  std::vector<double> log_w(trees.size());
-  
-  // unpack list and convert to tree_t
   for (int i = 0; i < trees.size(); ++i) {
     auto local_tree = loglik::pack(Rcpp::as<Rcpp::DataFrame>(trees[i]));
-    logf[i] = model.loglik(pars, local_tree);
-    log_w[i] = logf[i] - logg[i];
+    logf[i] = mdl.loglik(pars, local_tree);
   }
 
-  double fhat = logf.front();
-  
-  if (trees.size() > 1) {
-  
-    const double max_log_w = *std::max_element(log_w.cbegin(), log_w.cend());
-    double sum_w = calc_sum_w(log_w.begin(), log_w.end(), max_log_w);
-    
-    fhat = std::log(sum_w / (trees.size() + num_rejected)) + max_log_w;
-  }
-  
-  Rcpp::List ret;
-  ret["logf"]    = logf;
-  ret["weights"] = log_w;
-  ret["fhat"]    = fhat;
-  ret["N"]       = trees.size() + num_rejected;
-  
-  return ret;
+  return Rcpp::List::create(Rcpp::Named("logf") = logf);
 }

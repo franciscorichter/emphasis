@@ -21,62 +21,61 @@ generateNonHomogeneousExpCpp <- function(num_variates, covariates, parameters, s
     .Call('_emphasis_generateNonHomogeneousExpCpp', PACKAGE = 'emphasis', num_variates, covariates, parameters, start_time, max_time)
 }
 
-#' function to calculate log likelihood of pars for a tree set,
-#' @param pars vector of parameter values
-#' @param trees list of trees, e.g. a multiPhylo object
-#' @param logg vector of logg values
-#' @param plugin name of used plugin
-#' @param num_rejected number of rejected trees
-#' @return list with the following entries: 
-#' \itemize{
-#'  \item{logf}{logf values}
-#'  \item{log_w}{log of weight}
-#'  \item{fhat}{fhat values}
-#'  \item{N}{number of trees}
+#' Evaluate log p(obs, z | theta) for a set of pre-computed augmented trees
+#'
+#' Given a list of augmented trees (produced by \code{\link{augment_trees}})
+#' and a parameter vector, computes \code{logf[i] = log p(obs, z_i | theta)}
+#' for each tree.  IS aggregation (\code{fhat}) is left to the R layer via
+#' \code{.is_fhat}.
+#'
+#' @param pars Numeric vector of 8 model parameters.
+#' @param trees List of augmented-tree data frames (output of
+#'   \code{\link{augment_trees}}).
+#' @param model Integer vector \code{c(use_N, use_P, use_E)}.
+#' @param link Link function: \code{0} = linear, \code{1} = exponential.
+#' @return A named list with one element:
+#' \describe{
+#'   \item{logf}{Numeric vector of \code{log p(obs, z_i | theta)}, length =
+#'     \code{length(trees)}.}
 #' }
 #' @export
-loglikelihood <- function(pars, trees, logg, plugin, num_rejected) {
-    .Call('_emphasis_loglikelihood', PACKAGE = 'emphasis', pars, trees, logg, plugin, num_rejected)
+eval_logf <- function(pars, trees, model = as.integer( c(0, 0, 0)), link = 0L) {
+    .Call('_emphasis_eval_logf_cpp', PACKAGE = 'emphasis', pars, trees, model, link)
 }
 
-#' Monte Carlo log-likelihood via importance sampling with augmented trees
+#' Draw augmented trees via importance sampling
 #'
-#' Augments an observed tree (represented by its branching times) with
-#' stochastically drawn extinct lineages, computes importance-sampling
-#' weights, and returns a Monte Carlo estimate of the log-likelihood.
+#' Augments an observed extant tree (given by its branching times) with
+#' stochastically drawn extinct lineages, and returns the simulated trees
+#' together with their log proposal probabilities.  Scoring (\code{logf})
+#' and IS aggregation (\code{fhat}) are intentionally left to the R layer
+#' via \code{\link{eval_logf}} and \code{.is_fhat}.
 #'
 #' @param brts Numeric vector of branching times (crown age first,
 #'   sorted decreasing).
-#' @param pars Numeric vector of model parameters.
+#' @param pars Numeric vector of 8 model parameters
+#'   \code{c(beta_0, beta_N, beta_P, beta_E, gamma_0, gamma_N, gamma_P, gamma_E)}.
 #' @param sample_size Number of valid augmented trees to collect.
 #' @param maxN Maximum total augmentation attempts (including failures).
-#' @param max_missing Maximum number of extinct lineages per tree.
+#' @param max_missing Maximum extinct lineages per augmented tree.
 #' @param max_lambda Upper bound on the speciation rate (thinning bound).
-#' @param lower_bound Lower bounds for parameter optimisation (same length
-#'   as \code{pars}).
-#' @param upper_bound Upper bounds for parameter optimisation.
-#' @param xtol_rel Relative tolerance for internal optimisation.
-#' @param num_threads Number of threads for parallel augmentation.
-#' @param model Integer vector of length 3: c(use_N, use_P, use_E).
-#' @param link Link function: 0 = linear (max(0,...)), 1 = exponential.
+#' @param num_threads Threads for parallel augmentation.
+#' @param model Integer vector \code{c(use_N, use_P, use_E)}.
+#' @param link Link function: \code{0} = linear, \code{1} = exponential.
 #' @return A named list:
 #' \describe{
-#'   \item{trees}{List of augmented-tree data frames (brts, n, t_ext, pd,
-#'     id, parent_id).}
-#'   \item{weights}{Numeric vector of log importance weights
-#'     (\code{logf - logg}).}
-#'   \item{fhat}{Monte Carlo log-likelihood estimate.}
-#'   \item{logf}{Per-tree log-likelihood values.}
-#'   \item{logg}{Per-tree log sampling probabilities.}
-#'   \item{rejected}{Number of trees rejected (unhandled).}
-#'   \item{rejected_overruns}{Rejected due to too many missing lineages.}
-#'   \item{rejected_lambda}{Rejected due to lambda bound exceeded.}
-#'   \item{rejected_zero_weights}{Rejected due to zero weight.}
-#'   \item{time}{Elapsed time in milliseconds.}
+#'   \item{trees}{List of augmented-tree data frames.}
+#'   \item{logf}{Per-tree log p(obs, z | theta).}
+#'   \item{logg}{Per-tree log q(z | obs, theta).}
+#'   \item{rejected}{Unhandled rejections.}
+#'   \item{rejected_overruns}{Rejected: too many extinct lineages.}
+#'   \item{rejected_lambda}{Rejected: lambda bound exceeded.}
+#'   \item{rejected_zero_weights}{Rejected: zero IS weight.}
+#'   \item{time}{Elapsed time (ms).}
 #' }
 #' @export
-mc_loglik <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, model = as.integer( c(0, 0, 0)), link = 0L) {
-    .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, model, link)
+augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model = as.integer( c(0, 0, 0)), link = 0L) {
+    .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link)
 }
 
 #' function to perform one step of the E-M algorithm

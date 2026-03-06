@@ -95,32 +95,26 @@
 
 #' Draw augmented trees at a single particle (internal inference use only)
 #'
-#' Calls \code{.augment_tree_internal} to sample \code{sample_size} augmented
-#' trees from the proposal \code{q(z | obs, theta)}.
+#' Calls \code{\link{augment_trees}} to sample \code{sample_size} augmented
+#' trees from the proposal \eqn{q(z \mid \text{obs}, \theta)}.
 #'
-#' Returns the raw \code{mc_loglik} output, which contains:
-#' \code{logf} (log p(obs, z | theta) per tree), \code{logg} (log_q per tree),
-#' \code{trees} (raw data frames for \code{loglikelihood()}), and rejection
-#' counts for adaptive limit escalation.
+#' Returns the raw \code{augment_trees} output: \code{logf}, \code{logg},
+#' \code{trees}, and rejection counts for adaptive limit escalation.
 #'
 #' @keywords internal
 .simulate_particle <- function(brts, pars8, model_bin, link,
                                sample_size, maxN, max_missing, max_lambda,
                                num_threads) {
-  pars8_full <- as.numeric(.expand_pars(.contract_pars(pars8, model_bin), model_bin))
-  maxN_int   <- if (is.null(maxN) || is.na(maxN))
+  maxN_int <- if (is.null(maxN) || is.na(maxN))
     max(2000L, 200L * as.integer(sample_size)) else as.integer(maxN)
   tryCatch(
-    mc_loglik(
+    augment_trees(
       brts        = as.numeric(brts),
-      pars        = pars8_full,
+      pars        = as.numeric(pars8),
       sample_size = as.integer(sample_size),
       maxN        = maxN_int,
       max_missing = as.integer(max_missing),
       max_lambda  = as.numeric(max_lambda),
-      lower_bound = rep(-1e6, 8L),
-      upper_bound = rep( 1e6, 8L),
-      xtol_rel    = 1e-3,
       num_threads = as.integer(num_threads),
       model       = as.integer(model_bin),
       link        = as.integer(link)
@@ -277,34 +271,22 @@
   all_trees <- do.call(c, pop$trees[has_trees])
   all_log_q <- unlist(pop$log_q[has_trees])   # log q(z_i | obs, theta_i)
 
-  # Step 3: for each particle theta_j, compute logf(z_i, theta_j) over the
-  # full pool and aggregate into fhat(theta_j).
+  # Step 3: for each particle theta_j, evaluate logf(z_i, theta_j) over the
+  # full pool and aggregate into fhat(theta_j) using .is_fhat.
   # fhat(theta_j) = log_mean_exp(logf(z_i, theta_j) - log_q(z_i, theta_i))
-  #
-  # With bias_correct = TRUE: replace log_q(z_i, theta_i) with the MIS
-  # denominator log((1/N) * sum_l q(z_i | obs, theta_l)) — TODO.
   for (j in seq_len(n)) {
     ev <- tryCatch(
-      loglikelihood(
-        pars         = as.numeric(pop$pars[j, ]),
-        trees        = all_trees,
-        logg         = all_log_q,
-        plugin       = "",
-        num_rejected = 0L
+      eval_logf(
+        pars  = as.numeric(pop$pars[j, ]),
+        trees = all_trees,
+        model = as.integer(input$model),
+        link  = as.integer(input$link)
       ),
       error = function(e) NULL
     )
     if (!is.null(ev)) {
-      if (bias_correct && !is.null(ev$logf)) {
-        # Apply moment-based bias correction using the per-tree logf values
-        # returned by loglikelihood() alongside all_log_q as IS denominators.
-        # lw_j[i] = logf(z_i, theta_j) - log_q(z_i, theta_i) for all pooled trees
-        pop$fhat[j] <- .is_fhat(ev$logf, all_log_q, n_rejected = 0L,
-                                bias_correct = TRUE)
-      } else {
-        # Standard log-mean-exp (ev$fhat already computed by loglikelihood())
-        pop$fhat[j] <- ev$fhat
-      }
+      pop$fhat[j] <- .is_fhat(ev$logf, all_log_q, n_rejected = 0L,
+                              bias_correct = isTRUE(bias_correct))
     }
   }
 

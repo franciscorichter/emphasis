@@ -129,6 +129,38 @@ augN$trees[[1]]  # first augmented phylo
 
 ---
 
+## Low-level IS API
+
+`augment_trees()` and `eval_logf()` expose the two atomic operations of the
+importance-sampling engine:
+
+```r
+brts  <- c(4, 2.5, 1.2, 0.6)                   # branching times
+pars8 <- c(0.5, 0, 0, 0, 0.1, 0, 0, 0)         # 8-param layout (CR model)
+
+# 1. Draw augmented trees from q(z | obs, θ)
+aug <- augment_trees(brts, pars8, sample_size = 10L, maxN = 500L,
+                     max_missing = 1000L, max_lambda = 100,
+                     num_threads = 1L, model = c(0L, 0L, 0L), link = 0L)
+# aug$trees  — list of augmented-tree data frames
+# aug$logf   — log p(obs, z_i | θ)   per tree
+# aug$logg   — log q(z_i | obs, θ)   per tree
+
+# 2. IS log-likelihood estimate at θ
+fhat <- emphasis:::.is_fhat(aug$logf, aug$logg)
+
+# 3. Re-score the same trees at a different θ (cross-IS, no re-simulation)
+pars8_new <- c(0.6, 0, 0, 0, 0.15, 0, 0, 0)
+logf_new  <- eval_logf(pars8_new, aug$trees, model = c(0L,0L,0L))$logf
+fhat_new  <- emphasis:::.is_fhat(logf_new, aug$logg)
+```
+
+This clean separation — **simulate once, score anywhere** — is what the CEM
+inference engine exploits internally.  `model` must be set to `c(0L,0L,1L)` for
+EP models, as it gates the EP-aware rate functions in `eval_logf`.
+
+---
+
 ## Inference
 
 `estimate_rates()` estimates parameters from a phylogenetic tree. It accepts a

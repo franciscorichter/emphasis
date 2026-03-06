@@ -11,58 +11,52 @@
 using namespace Rcpp;
 
 
-//' Monte Carlo log-likelihood via importance sampling with augmented trees
+//' Draw augmented trees via importance sampling
 //'
-//' Augments an observed tree (represented by its branching times) with
-//' stochastically drawn extinct lineages, computes importance-sampling
-//' weights, and returns a Monte Carlo estimate of the log-likelihood.
+//' Augments an observed extant tree (given by its branching times) with
+//' stochastically drawn extinct lineages, and returns the simulated trees
+//' together with their log proposal probabilities.  Scoring (\code{logf})
+//' and IS aggregation (\code{fhat}) are intentionally left to the R layer
+//' via \code{\link{eval_logf}} and \code{.is_fhat}.
 //'
 //' @param brts Numeric vector of branching times (crown age first,
 //'   sorted decreasing).
-//' @param pars Numeric vector of model parameters.
+//' @param pars Numeric vector of 8 model parameters
+//'   \code{c(beta_0, beta_N, beta_P, beta_E, gamma_0, gamma_N, gamma_P, gamma_E)}.
 //' @param sample_size Number of valid augmented trees to collect.
 //' @param maxN Maximum total augmentation attempts (including failures).
-//' @param max_missing Maximum number of extinct lineages per tree.
+//' @param max_missing Maximum extinct lineages per augmented tree.
 //' @param max_lambda Upper bound on the speciation rate (thinning bound).
-//' @param lower_bound Lower bounds for parameter optimisation (same length
-//'   as \code{pars}).
-//' @param upper_bound Upper bounds for parameter optimisation.
-//' @param xtol_rel Relative tolerance for internal optimisation.
-//' @param num_threads Number of threads for parallel augmentation.
-//' @param model Integer vector of length 3: c(use_N, use_P, use_E).
-//' @param link Link function: 0 = linear (max(0,...)), 1 = exponential.
+//' @param num_threads Threads for parallel augmentation.
+//' @param model Integer vector \code{c(use_N, use_P, use_E)}.
+//' @param link Link function: \code{0} = linear, \code{1} = exponential.
 //' @return A named list:
 //' \describe{
-//'   \item{trees}{List of augmented-tree data frames (brts, n, t_ext, pd,
-//'     id, parent_id).}
-//'   \item{weights}{Numeric vector of log importance weights
-//'     (\code{logf - logg}).}
-//'   \item{fhat}{Monte Carlo log-likelihood estimate.}
-//'   \item{logf}{Per-tree log-likelihood values.}
-//'   \item{logg}{Per-tree log sampling probabilities.}
-//'   \item{rejected}{Number of trees rejected (unhandled).}
-//'   \item{rejected_overruns}{Rejected due to too many missing lineages.}
-//'   \item{rejected_lambda}{Rejected due to lambda bound exceeded.}
-//'   \item{rejected_zero_weights}{Rejected due to zero weight.}
-//'   \item{time}{Elapsed time in milliseconds.}
+//'   \item{trees}{List of augmented-tree data frames.}
+//'   \item{logf}{Per-tree log p(obs, z | theta).}
+//'   \item{logg}{Per-tree log q(z | obs, theta).}
+//'   \item{rejected}{Unhandled rejections.}
+//'   \item{rejected_overruns}{Rejected: too many extinct lineages.}
+//'   \item{rejected_lambda}{Rejected: lambda bound exceeded.}
+//'   \item{rejected_zero_weights}{Rejected: zero IS weight.}
+//'   \item{time}{Elapsed time (ms).}
 //' }
 //' @export
-// [[Rcpp::export(name = "mc_loglik")]]
+// [[Rcpp::export(name = "augment_trees")]]
 List rcpp_mce(const std::vector<double>& brts,
               const std::vector<double>& pars,
               int sample_size,
               int maxN,
               int max_missing,
               double max_lambda,
-              const std::vector<double>& lower_bound,
-              const std::vector<double>& upper_bound,
-              double xtol_rel,
               int num_threads,
               Rcpp::IntegerVector model = Rcpp::IntegerVector::create(0, 0, 0),
               int link = 0)
 {
   std::vector<int> model_bin = {model[0], model[1], model[2]};
-  auto mdl = emphasis::Model(lower_bound, upper_bound, model_bin, link);
+  // Bounds are only needed for M-step (nlopt); E-step does not use them.
+  std::vector<double> lb8(8, -1e6), ub8(8, 1e6);
+  auto mdl = emphasis::Model(lb8, ub8, model_bin, link);
 
   auto E = emphasis::E_step(sample_size,
                             maxN,
@@ -77,15 +71,13 @@ List rcpp_mce(const std::vector<double>& brts,
   for (const emphasis::tree_t& tree : E.trees) {
     trees.push_back(unpack(tree));
   }
-  ret["trees"] = trees;
-  ret["rejected"] = E.info.rejected;
-  ret["rejected_overruns"] = E.info.rejected_overruns;
-  ret["rejected_lambda"] = E.info.rejected_lambda;
+  ret["trees"]                 = trees;
+  ret["logf"]                  = E.logf_;
+  ret["logg"]                  = E.logg_;
+  ret["rejected"]              = E.info.rejected;
+  ret["rejected_overruns"]     = E.info.rejected_overruns;
+  ret["rejected_lambda"]       = E.info.rejected_lambda;
   ret["rejected_zero_weights"] = E.info.rejected_zero_weights;
-  ret["time"] = E.info.elapsed;
-  ret["weights"] = E.weights;
-  ret["fhat"] = E.info.fhat;
-  ret["logf"] = E.logf_;
-  ret["logg"] = E.logg_;
+  ret["time"]                  = E.info.elapsed;
   return ret;
 }

@@ -11,7 +11,8 @@
   The package revolves around four workflows:
   \itemize{
     \item \strong{Simulation}: `simulate_tree()` for forward and conditional simulation.
-    \item \strong{Augmentation}: `mc_loglik()` for Monte Carlo log-likelihood via importance sampling.
+    \item \strong{Augmentation}: \code{augment_trees()} draws IS-weighted augmented trees;
+      \code{eval_logf()} scores pre-computed trees at any parameter point.
     \item \strong{Estimation}: `estimate_rates()`, `emphasis_cem()` (CEM back-end).
     \item \strong{Diagnostics}: `train_GAM()` plus plotting utilities.
   }
