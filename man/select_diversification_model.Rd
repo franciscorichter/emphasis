@@ -27,9 +27,9 @@ Default \code{c(3, 0.5, 1, 0.5)}.}
 \item{link}{Link function: \code{"linear"} (default) or
 \code{"exponential"} (EP not supported with exponential).}
 
-\item{control}{Named list with optional sub-lists \code{mcde} and
+\item{control}{Named list with optional sub-lists \code{cem} and
 \code{mcem} to override defaults for each stage. Example:
-\code{list(mcde = list(num_iterations = 20, num_points = 50),
+\code{list(cem = list(max_iter = 20, num_points = 50),
            mcem = list(sample_size = 300, tol = 0.05))}.}
 
 \item{verbose}{Print progress messages. Default \code{FALSE}.}
@@ -51,7 +51,7 @@ A list of class \code{"model_selection"} with:
 Fits three 4-parameter models — diversity dependence (DD, covariate N),
 phylogenetic diversity dependence (PD, covariate P), and evolutionary
 pendant (EP, covariate E) — to the same tree using a two-stage
-MCDE → MCEM workflow, then ranks them by AIC and computes AIC weights.
+CEM → MCEM workflow, then ranks them by AIC and computes AIC weights.
 }
 \details{
 All three models share the same parameter layout:

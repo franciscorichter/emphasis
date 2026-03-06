@@ -3,13 +3,13 @@
 \alias{estimate_rates_control}
 \title{Default control parameters for estimate_rates}
 \usage{
-estimate_rates_control(method = c("mcem", "mcde"), n_pars = 4)
+estimate_rates_control(method = c("mcem", "cem"), n_pars = 4)
 }
 \arguments{
-\item{method}{Which method's defaults to return: \code{"mcem"} or \code{"mcde"}.}
+\item{method}{Which method's defaults to return: \code{"mcem"} or \code{"cem"}.}
 
 \item{n_pars}{Number of parameters (used to set the default \code{sd_vec}
-for DE when \code{NULL}).}
+for CEM when \code{NULL}).}
 }
 \value{
 A named list of control parameters for the chosen method.
@@ -27,11 +27,13 @@ MCEM-specific: \code{sampling} (default \code{"dynamic_fresh"}),
 \code{tol} (log-likelihood SE convergence threshold, default 0.1),
 \code{burnin} (default 20).
 
-MCDE-specific: \code{num_iterations} (default 20), \code{num_points}
+CEM-specific: \code{max_iter} (default 20), \code{num_points}
 (default 50), \code{sd_vec} (NULL = (upper-lower)/4), \code{maxN}
-(default 10), \code{disc_prop} (default 0.5).
+(default 10), \code{disc_prop} (default 0.5), \code{tol} (plateau
+threshold, default 1e-4), \code{patience} (default 5),
+\code{bias_correct} (default FALSE), \code{n_boot} (default 0).
 }
 \examples{
 estimate_rates_control("mcem")
-estimate_rates_control("mcde")
+estimate_rates_control("cem")
 }

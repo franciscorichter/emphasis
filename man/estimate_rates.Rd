@@ -5,7 +5,7 @@
 \usage{
 estimate_rates(
   tree,
-  method = c("mcem", "mcde"),
+  method = c("mcem", "cem"),
   model = "cr",
   lower_bound,
   upper_bound,
@@ -27,9 +27,9 @@ recommended), (b) the list returned by \code{\link{simulate_tree}}
   \item{\code{"mcem"}}{Monte Carlo Expectation-Maximisation (default).
     Iterates E- and M-steps until the log-likelihood standard error
     falls below \code{control$tol}. Requires \code{init_pars}.}
-  \item{\code{"mcde"}}{Monte Carlo Differential Evolution. Initialises a
+  \item{\code{"cem"}}{Monte Carlo Differential Evolution. Initialises a
     particle population randomly within the bounds and evolves it over
-    \code{control$num_iterations} iterations. Does not need
+    \code{control$max_iter} iterations. Does not need
     \code{init_pars}.}
 }}
 
@@ -46,7 +46,7 @@ gamma_0, [gamma_N], [gamma_P], [gamma_E])}.}
 \item{upper_bound}{Numeric vector of upper parameter bounds (same order).}
 
 \item{init_pars}{Starting parameter vector. Required for \code{"mcem"};
-ignored for \code{"mcde"}. If \code{NULL} with \code{"mcem"}, the
+ignored for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the
 midpoint of the bounds is used.}
 
 \item{control}{Named list of tuning parameters. Use
@@ -62,10 +62,10 @@ A list with:
 \describe{
   \item{\code{pars}}{Named numeric vector of parameter estimates.}
   \item{\code{loglik}}{Final log-likelihood estimate.}
-  \item{\code{method}}{Method used (\code{"mcem"} or \code{"mcde"}).}
+  \item{\code{method}}{Method used (\code{"mcem"} or \code{"cem"}).}
   \item{\code{model}}{Resolved binary model vector.}
   \item{\code{details}}{Full output from the back-end function
-    (\code{.mcem_dynamic_fresh} or \code{emphasis_de}).}
+    (\code{.mcem_dynamic_fresh} or \code{emphasis_cem}).}
 }
 }
 \description{
