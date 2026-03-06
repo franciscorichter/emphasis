@@ -44,9 +44,9 @@ be equal in length to the vector of init_pars}
 \value{
 list with the following entries:
 \itemize{
- \item{estimates}{vector of estimates}
- \item{nlopt}{nlopt status}
- \item{time}{used computation time}
+ \item \code{estimates} vector of estimates
+ \item \code{nlopt} nlopt status
+ \item \code{time} used computation time
 }
 }
 \description{

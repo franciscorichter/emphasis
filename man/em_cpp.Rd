@@ -55,16 +55,16 @@ be equal in length to the vector of init_pars}
 \value{
 a list with the following components:
 \itemize{
- \item{trees}{list of trees}
- \item{rejected}{number of rejected trees}
- \item{rejected_overruns}{number of trees rejected due to too large size}
- \item{rejected_lambda}{number of trees rejected due to lambda errors}
- \item{rejected_zero_weights}{number of trees rejected to zero weight}
- \item{estimates}{vector of estimates}
- \item{nlopt}{nlopt status}
- \item{fhat}{vector of fhat values}
- \item{time}{time elapsed}
- \item{weights}{vector of weights}
+ \item \code{trees} list of trees
+ \item \code{rejected} number of rejected trees
+ \item \code{rejected_overruns} number of trees rejected due to too large size
+ \item \code{rejected_lambda} number of trees rejected due to lambda errors
+ \item \code{rejected_zero_weights} number of trees rejected to zero weight
+ \item \code{estimates} vector of estimates
+ \item \code{nlopt} nlopt status
+ \item \code{fhat} vector of fhat values
+ \item \code{time} time elapsed
+ \item \code{weights} vector of weights
 }
 }
 \description{

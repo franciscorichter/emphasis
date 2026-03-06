@@ -407,16 +407,13 @@ simulate_tree <- function(tree        = NULL,
   brts  <- .extract_brts(tree)
   pars8 <- .expand_pars(pars, model_bin)
   if (is.null(maxN)) maxN <- max(2000L, 200L * as.integer(sample_size))
-  mc_loglik(
+  augment_trees(
     brts        = brts,
     pars        = as.numeric(pars8),
     sample_size = as.integer(sample_size),
     maxN        = as.integer(maxN),
     max_missing = as.integer(max_missing),
     max_lambda  = as.numeric(max_lambda),
-    lower_bound = rep(-1e6, 8L),
-    upper_bound = rep( 1e6, 8L),
-    xtol_rel    = 1e-3,
     num_threads = as.integer(num_threads),
     model       = as.integer(model_bin),
     link        = as.integer(link)

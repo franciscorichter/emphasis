@@ -68,7 +68,7 @@
   inner <- 1 + moment_sum
   if (inner <= 0) return(NA_real_)
 
-  # Rejection adjustment: n_rejected trees have L_i = 0 → reduce by n_valid/n_total
+  # Rejection adjustment: n_rejected trees have L_i = 0 -> reduce by n_valid/n_total
   ell_hat + log(inner) + log(n_valid / n_total)
 }
 
@@ -236,7 +236,7 @@
 #' CR model until that is fixed.
 #'
 #' @param bias_correct Logical; if \code{TRUE}, apply MIS bias correction
-#'   (not yet implemented — placeholder).
+#'   (not yet implemented -- placeholder).
 #' @return Named list: updated \code{pop}, \code{rej_lambda},
 #'   \code{rej_overruns}, \code{n_simulated}.
 #' @keywords internal
@@ -329,7 +329,7 @@
 #' carries their tree/log_q caches forward.  All particles (including elites)
 #' have their \code{fhat} reset to \code{NA} so they are re-evaluated with a
 #' freshly simulated tree at the next iteration.  This prevents "lucky
-#' particle" lock-in — a particle whose previous high \code{fhat} was driven
+#' particle" lock-in -- a particle whose previous high \code{fhat} was driven
 #' by a single favourable tree draw rather than by being a genuinely good
 #' parameter point.
 #'
@@ -437,7 +437,7 @@
 #'
 #' \strong{Stopping rules} (first triggered wins):
 #' \enumerate{
-#'   \item Annealing exhausted: \code{all(sd_vec <= 0)} — the population has
+#'   \item Annealing exhausted: \code{all(sd_vec <= 0)} -- the population has
 #'     fully collapsed; further iterations produce identical particles.
 #'   \item Plateau: best \code{fhat} has not improved by more than \code{tol}
 #'     for \code{patience} consecutive iterations.
@@ -596,7 +596,7 @@ emphasis_cem <- function(brts,
     hist_rej_over[k]   <- result$rej_overruns
 
     k_ran     <- k
-    final_pop <- pop   # snapshot before resample — has fhat, log_q, trees
+    final_pop <- pop   # snapshot before resample -- has fhat, log_q, trees
 
     # --- Stop rule 2: plateau -----------------------------------------------
     if (k > 1L && is.finite(best_loglik[k]) && is.finite(best_loglik[k - 1L])) {
@@ -633,7 +633,7 @@ emphasis_cem <- function(brts,
   # Early exit if no iterations completed successfully
   if (k_ran == 0L) {
     if (verbose)
-      cat(sprintf("Stopped: %s — no iterations completed.\n", stop_reason))
+      cat(sprintf("Stopped: %s -- no iterations completed.\n", stop_reason))
     return(list(
       best_loglik    = numeric(0),
       best_pars      = best_pars[integer(0), , drop = FALSE],

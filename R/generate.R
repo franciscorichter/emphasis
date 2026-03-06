@@ -72,27 +72,25 @@ generatePhyloPD <- function(n_trees,
 
   for (j in seq_len(n_trees)) {
     lambda_sample <- stats::runif(1, lambda_interval[1], lambda_interval[2])
-    mu_sample <- stats::runif(1, mu_interval[1], mu_interval[2])
-    betaN_sample <- stats::runif(1, betaN_interval[1], betaN_interval[2])
-    betaP_sample <- stats::runif(1, betaP_interval[1], betaP_interval[2])
+    mu_sample     <- stats::runif(1, mu_interval[1],     mu_interval[2])
+    betaN_sample  <- stats::runif(1, betaN_interval[1],  betaN_interval[2])
+    betaP_sample  <- stats::runif(1, betaP_interval[1],  betaP_interval[2])
     sim.param <- c(mu_sample, lambda_sample, betaN_sample, betaP_sample)
 
+    # Map to N+PD model: c(beta_0, beta_N, beta_P, gamma_0, gamma_N=0, gamma_P=0)
+    pars_npd <- c(lambda_sample, betaN_sample, betaP_sample, mu_sample, 0, 0)
+
     outputs <- tryCatch(
-      sim_tree_pd_cpp(
-        pars = sim.param,
-        max_t = max_t,
-        max_lin = max_lin,
-        max_tries = max_tries,
-        useDDD = TRUE
-      ),
+      simulate_tree(pars = pars_npd, model = ~ N + PD,
+                    max_t = max_t, max_tries = max_tries),
       error = function(e) NULL
     )
 
-    if (is.list(outputs) && !is.null(outputs$brts) && max(outputs$brts) == max_t) {
-      trees[[j]] <- outputs[[1]]
-      extrees[[j]] <- outputs[[2]]
-      Lmats[[j]] <- outputs[[3]]
-      brds_s[[j]] <- outputs[[4]]
+    if (!is.null(outputs) && identical(outputs$status, "done")) {
+      trees[[j]]   <- outputs$tes
+      extrees[[j]] <- outputs$tas
+      Lmats[[j]]   <- outputs$L
+      brds_s[[j]]  <- sort(outputs$L[, 1L], decreasing = TRUE)
       for (i in seq_len(4L)) {
         true.param[[i]] <- c(true.param[[i]], sim.param[i])
       }

@@ -234,8 +234,24 @@ All parameters are passed via `control = list(...)`. Inspect defaults with
 | `num_threads` | 1 | Parallel threads for particle evaluation |
 
 **Total augmented trees per iteration** = `num_points × sample_size`.
-Each particle's `fhat` is the IS log-likelihood estimate from its own `sample_size`
-trees (Mode 1, default) or from the full pooled set when `shared_trees = TRUE` (Mode 2).
+
+**How `fhat` is computed per particle:**
+
+```
+fhat(theta) = log( mean_i[ exp(logf_i - log_q_i) ] )
+
+  logf_i  = log p(obs, z_i | theta)   # joint likelihood of observed + augmented tree
+  log_q_i = log q(z_i | obs, theta)   # proposal density of the augmented tree
+  mean over i = 1 ... sample_size augmented trees drawn for this particle
+```
+
+This is the importance-sampling (IS) log-likelihood estimate. A higher `fhat` means
+the parameter vector `theta` is better supported by the data. Each iteration the
+best particle (`fhat*`) is recorded, and the population is resampled around it.
+
+In Mode 1 (default, `shared_trees = FALSE`): each particle draws its own `sample_size`
+trees. In Mode 2 (`shared_trees = TRUE`): all particles share a common pool of trees,
+reducing variance but requiring more trees per iteration.
 
 ```r
 # Higher-quality run: 100 particles, 5 trees each => 500 trees/iter
