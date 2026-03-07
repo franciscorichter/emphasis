@@ -10,10 +10,10 @@ Maintainer: Francisco Richter <richtf@usi.ch>
 Description: Set of statistical tools for the study of diversification of species and ecological drivers of macro-evolution.
 License: file LICENSE
 Encoding: UTF-8
-Depends: R (>= 3.5.0),
-         Rcpp, 
-         RcppParallel
-Imports: nloptr,
+Depends: R (>= 3.5.0)
+Imports: Rcpp,
+         RcppParallel,
+         nloptr,
          ape,
          progress,
          DDD
