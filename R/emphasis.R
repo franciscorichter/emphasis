@@ -117,7 +117,8 @@
       logf  = last_results$logf,
       logg  = last_results$logg,
       lw    = lw,
-      fhat  = .is_fhat(last_results$logf, last_results$logg),
+      fhat  = .is_fhat(last_results$logf, last_results$logg,
+                        n_zero_weight = .n0(last_results$rejected_zero_weights)),
       ESS   = .ess_from_lw(lw)
     )
   }

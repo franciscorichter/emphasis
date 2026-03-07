@@ -43,29 +43,48 @@
 #' \eqn{\mu + \sigma^2/2}.  With the full series (\eqn{K\to\infty}) the two
 #' estimators are identical; the truncation is the approximation.
 #'
-#' Only successfully augmented trees are used.  Rejected trees (those that
-#' hit \code{max_missing} limits) are computational
-#' failures, not zero-likelihood samples from the proposal, and are simply
-#' discarded.
+#' Trees that hit computational limits (\code{max_missing}, \code{max_lambda})
+#' are discarded entirely -- they are simulator failures, not IS samples.
+#' Trees that completed augmentation but have zero IS weight (\code{w = 0}
+#' because \code{lambda = 0} under the current parameters) are legitimate IS
+#' samples and are included in the denominator via \code{n_zero_weight}.
 #'
 #' @param logf Numeric vector of \code{log p(obs, z | theta)} for valid trees.
 #' @param log_q Numeric vector of \code{log q(z | obs, theta)} for valid trees.
 #' @param bias_correct Logical; use moment-based bias correction (default \code{FALSE}).
 #' @param K Integer truncation order for the moment series (default \code{2}).
+#' @param n_zero_weight Integer; number of completed augmentations that had
+#'   zero IS weight.  These contribute \code{w = 0} to the IS sum and inflate
+#'   the denominator accordingly (default \code{0}).
 #' @keywords internal
-.is_fhat <- function(logf, log_q, bias_correct = FALSE, K = 2L) {
+.is_fhat <- function(logf, log_q, bias_correct = FALSE, K = 2L,
+                     n_zero_weight = 0L) {
   lw      <- logf - log_q
   n_valid <- length(lw)
   if (n_valid == 0L) return(NA_real_)
 
+  # Denominator includes zero-weight trees (completed augmentations where
+  # w=0 because lambda=0 under the model).  Overrun/lambda rejections are
+  # excluded: those are computational failures independent of theta.
+  S_completed <- n_valid + as.integer(n_zero_weight)
+
   if (!bias_correct || n_valid == 1L) {
-    # Standard log-mean-exp over valid trees only
+    # Standard log-mean-exp
     max_lw <- max(lw)
     if (!is.finite(max_lw)) return(NA_real_)
-    return(log(sum(exp(lw - max_lw))) + max_lw - log(n_valid))
+    return(log(sum(exp(lw - max_lw))) + max_lw - log(S_completed))
   }
 
-  # Moment-based bias-corrected estimator truncated at order K
+  # Moment-based bias-corrected estimator truncated at order K.
+  # When n_zero_weight > 0, the zero-weight trees contribute w=0 to the sum
+  # but inflate the denominator, so we fall back to the standard estimator
+  # which handles S_completed correctly.
+  if (n_zero_weight > 0L) {
+    max_lw <- max(lw)
+    if (!is.finite(max_lw)) return(NA_real_)
+    return(log(sum(exp(lw - max_lw))) + max_lw - log(S_completed))
+  }
+
   ell_hat <- mean(lw)
   if (!is.finite(ell_hat)) return(NA_real_)
 
@@ -204,7 +223,8 @@
     )
     if (!is.null(raw) && length(raw$logf) > 0L && !anyNA(raw$logf)) {
       pop$fhat[i]    <- .is_fhat(raw$logf, raw$logg,
-                                 bias_correct = isTRUE(input$bias_correct))
+                                 bias_correct = isTRUE(input$bias_correct),
+                                 n_zero_weight = .n0(raw$rejected_zero_weights))
       pop$log_q[[i]] <- raw$logg    # log q(z | obs, theta_i) per tree
       pop$trees[[i]] <- raw$trees   # raw data frames for cross-evaluation
     }
@@ -666,7 +686,8 @@ emphasis_cem <- function(brts,
       log_q      = raw_best$logg,
       lw         = lw_all,
       trees      = raw_best$trees,
-      fhat       = .is_fhat(raw_best$logf, raw_best$logg),
+      fhat       = .is_fhat(raw_best$logf, raw_best$logg,
+                             n_zero_weight = .n0(raw_best$rejected_zero_weights)),
       ESS        = .ess_from_lw(lw_all),
       n_trees    = as.integer(sample_size),
       n_rejected = .total_rejected(raw_best)

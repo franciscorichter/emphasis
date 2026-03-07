@@ -159,7 +159,8 @@ estimate_likelihood_surface <- function(tree, pars_mat, model = "cr",
       logf_i <- eval_logf(pars8, raw$trees,
                           model = as.integer(model_bin),
                           link = as.integer(link_int))
-      fhat[i]    <- .is_fhat(logf_i$logf, logf_i$logg)
+      fhat[i]    <- .is_fhat(logf_i$logf, logf_i$logg,
+                             n_zero_weight = .n0(raw$rejected_zero_weights))
       n_trees[i] <- length(logf_i$logf)
     }
     if (verbose) pb$tick()

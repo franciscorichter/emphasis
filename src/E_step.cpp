@@ -118,7 +118,11 @@ namespace emphasis {
   
     const double max_log_w = *std::max_element(E.weights.cbegin(), E.weights.cend());
     double sum_w = calc_sum_w(E.weights.begin(), E.weights.end(), max_log_w);
-    E.info.fhat = std::log(sum_w / N) + max_log_w;
+    // Denominator includes zero-weight trees (completed augmentations with
+    // w=0 due to lambda=0).  Overrun/lambda rejections are excluded: those
+    // are computational failures independent of theta (see tech report).
+    int S_completed = N + E.info.rejected_zero_weights;
+    E.info.fhat = std::log(sum_w / S_completed) + max_log_w;
     return E;
   }
 

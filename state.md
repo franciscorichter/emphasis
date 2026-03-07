@@ -40,18 +40,17 @@ Status: Clean. All helpers support `simulate_tree()`. No dead code.
 | `.run_cem()` | No | Dispatch to `emphasis_cem` |
 | `.model_label()` | No | "CR", "N", "PD" label |
 
-Status: Clean. All well-structured.
+Status: Clean. Safe init_pars for DD/PD slopes. Proactive PD/EP warning.
 
 ### Module 3: MCEM Engine (`R/emphasis.R`)
 | Function | Exported | Purpose |
 |---|---|---|
 | `.mcem_dynamic_fresh()` | No | MCEM EM loop with convergence |
 | `.mcem_warn_estep()` | No | Diagnose E-step failures |
-| `get_required_sampling_size()` | No | Legacy; unused anywhere in package |
 
-Status: `get_required_sampling_size()` is dead code (uses `MASS::rlm`). Candidate for removal.
+Status: Clean. Dead code removed.
 
-### Module 4: CEM + IS helpers (`R/diagnostics.R`)
+### Module 4: CEM + IS helpers (`R/de.R`, `R/diagnostics.R`)
 | Function | Exported | Purpose |
 |---|---|---|
 | `diagnose_cem()` | Yes | CEM convergence/IS diagnostics |
@@ -78,10 +77,13 @@ Status: Clean. CEM is a substantial optimizer; all helpers are used.
 ### Module 5: GAM-based methods (`R/gam.R`)
 | Function | Exported | Purpose |
 |---|---|---|
-| `train_GAM()` | Yes | Train survival-probability GAM |
+| `train_GAM()` | Yes | Train survival-probability GAM (use case 1) |
 | `predict_survival()` | Yes | Predict from trained GAM |
+| `estimate_likelihood_surface()` | Yes | IS log-likelihood at parameter grid (use case 2) |
+| `train_likelihood_GAM()` | Yes | Fit GAM to log-likelihood surface |
+| `find_MLE()` | Yes | Optimize GAM to find MLE |
 
-Status: Under development. Two planned use cases:
+Status: Both use cases implemented and tested.
 1. Survival conditioning: simulate unconditioned trees, fit GAM on survival
    indicator, use to condition likelihoods.
 2. GAM-based MLE: simulate conditioned trees over parameter grid, estimate
@@ -99,29 +101,10 @@ Status: Under development. Two planned use cases:
 Status: Likely removable. `generatePhyloPD()` superseded by `simulate_tree(model="pd")`.
 The exponential utilities are standalone and unused by the inference pipeline.
 
-### Module 7: Legacy utilities (`R/utils.R`)
-| Function | Exported | Purpose |
-|---|---|---|
-| `get_extant()` | No | Get extant lineages at time |
-| `transf()` | No | Species name -> index |
-| `newick()` | No | Generate Newick string |
-| `etree2phylo()` | No | etree -> phylo conversion |
-| `phylo2etree()` | No | phylo -> etree conversion |
-| `GPD()` | No | Pairwise phylogenetic diversity matrix |
-| `n_from_time()` | No | Count lineages at time |
-| `n_for_all_bt()` | No | Count lineages at all branching times |
-| `extend_tree()` | No | Extend tree with events |
-| `phylodiversity()` | No | Compute total PD |
-| `get_current_species()` | No | Species alive at time |
-| `get.time()` | No | Elapsed time |
-| `L2phylo()` | No | L-table -> phylo (from DDD) |
-
-Status: Mixed. Some used by simulate/augment (`L2phylo`, `etree2phylo`, `phylo2etree`).
-Others need dead-code audit.
-
-### Module 8: Empty file (`R/augment.R`)
-
-Status: Remove. Contains only a comment.
+### Removed files
+- `R/augment.R` -- was empty (comment only)
+- `R/utils.R` -- all 13 functions were dead code (none called outside utils.R)
+- `get_required_sampling_size()` from `R/emphasis.R` -- dead code, allowed dropping `MASS`
 
 ## C++ Exports (src/)
 
@@ -134,31 +117,105 @@ Status: Remove. Contains only a comment.
 | `rcpp_mcem()` | `em_cpp` | rcpp_mcem.cpp | Full E+M step |
 | `rcpp_mcm()` | `m_cpp` | rcpp_mcm.cpp | M-step only |
 
-## Cleanup Priorities
+## Augmentation Rejection Types -- Analysis
 
-| Priority | Action | Impact |
-|---|---|---|
-| High | Remove `R/augment.R` (empty) | Cleanliness |
-| High | Remove `get_required_sampling_size()` (unused) | Dead code; may drop `MASS` import |
-| Medium | Consider removing `R/generate.R` (superseded) | Reduces API surface |
-| Low | Audit `R/utils.R` for dead functions | Cleanliness |
+There are **two fundamentally different** ways an augmented tree can fail.
+The IS estimator must handle them differently to remain correct.
 
-## Recent Bug Fixes (2026-03-07)
+### Type 1: Computational failures (overruns / lambda)
+
+**Where**: `augment_tree.cpp:167-168` (overrun), `augment_tree.cpp:138` (lambda)
+
+**What**: The thinning simulator aborted mid-construction because:
+- `num_missing > max_missing`: too many extinct lineages were inserted
+- `lambda_max > max_lambda`: speciation rate exceeded the thinning bound
+
+**Nature**: These are truncations of the proposal distribution q's support.
+The tree was never completed -- we have no logf or logg to compute. The
+rejection probability depends on `max_missing` and `max_lambda` (user-chosen
+computational limits), NOT on the model parameters theta.
+
+**Current handling**: Discarded. IS estimator uses `S_valid` in denominator.
+
+**Correctness**: Justified (see tech report Eq. 3.10). Since the rejection
+probability is independent of theta, including these as zero-weight samples
+would introduce bias proportional to the user-chosen limit, not the model.
+These trees would also have near-zero weight under f (if the tree needed
+that many lineages, it's extremely unlikely under the true model).
+
+### Type 2: Zero IS weights (parameter-dependent)
+
+**Where**: `E_step.cpp:81-94`
+
+**What**: The tree completed augmentation successfully, logf and logg were
+computed, but `log_w = logf - logg` is non-finite (-Inf, NaN) or
+`exp(log_w) == 0` (underflow).
+
+**Root cause with linear link**: `lambda = max(0, beta_0 + beta_X * X) = 0`
+for large X. Then `logf` includes `log(lambda) = -Inf`, so `log_w = -Inf`.
+
+**Nature**: These are NOT computational failures. The proposal q successfully
+generated a complete tree, but under the target f that tree has zero
+probability. This is a legitimate IS outcome: w_i = f(z_i)/q(z_i) = 0.
+
+**Current handling**: Discarded from both numerator and denominator.
+The fhat computation divides by N (= `sample_size`, the number of VALID
+trees requested), not by N_total.
+
+**Correctness issue**: This is subtly biased upward. In correct IS:
+
+    fhat = log( (1/N_total) * sum_{all i} w_i )
+
+Trees with w_i = 0 contribute 0 to the sum but 1 to the denominator. By
+excluding them, we compute:
+
+    fhat = log( (1/N_valid) * sum_{valid i} w_i )
+
+This inflates fhat because N_valid < N_total. The bias is:
+
+    bias = log(N_total / N_valid) = -log(acceptance_rate)
+
+When acceptance_rate is high (most trees valid), bias is negligible.
+When acceptance_rate is low (IS collapse), bias can be large.
+
+### Recommendations
+
+1. **Track N_total alongside N_valid** in the E-step. Currently the C++ code
+   runs exactly `maxN` attempts and collects `N` valid trees. It should also
+   return `N_attempted` (= maxN or the number actually tried before stopping).
+
+2. **Correct the fhat denominator** for zero-weight trees: use
+   `N_valid + rejected_zero_weights` instead of `N_valid` alone. Overruns and
+   lambda rejections stay excluded (they are computational, not IS failures).
+
+3. **Report acceptance rate** in diagnostics: `N_valid / (N_valid + rejected_zero_weights)`.
+   Low acceptance rate (< 0.5) is a warning sign for IS quality.
+
+4. **Default to exponential link** for DD/PD/EP models in examples and docs,
+   since linear link is prone to IS collapse for these models.
+
+## Recent Changes (2026-03-07)
 
 - Fixed `emphasis.hpp` copy-paste bug: error message printed `rejected_overruns`
-  twice instead of `rejected_zero_weights`, hiding the real failure cause.
-- Fixed `maxN` default from 10 to 2000: the old value was less than `sample_size`,
-  making E-step always fail.
+  twice instead of `rejected_zero_weights`.
+- Fixed `maxN` default from 10 to 2000.
 - Added `.mcem_warn_estep()` diagnostic for zero-weight IS failures.
 - Fixed all R CMD check issues: non-ASCII chars, C++14 spec, Rd braces,
   LaTeX build artifacts.
-- Fixed MCEM `init_pars` for DD/PD/EP models: slope parameters now start at 0
-  instead of midpoint of bounds, preventing IS collapse where `lambda = max(0,
-  beta_0 + beta_X * X)` hits zero for large N or PD.
-- Added proactive warning for PD/EP models with linear link and negative bounds.
-- Fixed `select_diversification_model` best-model bug: `label_to_key` used
-  uppercase keys (`N`, `PD`, `EP`) but `compare_models` passed lowercase names
-  (`dd`, `pd`, `ep`), so `best_key` was always `NA` and fell back to `dd`
-  regardless of AIC.
+- Fixed MCEM `init_pars` for DD/PD/EP models: slope parameters start at 0
+  instead of midpoint of bounds.
+- Added proactive warning for PD/EP models with linear link.
+- Fixed `select_diversification_model` best-model bug: always returned DD
+  due to case mismatch in label lookup.
 - Added Module 5 use-case-2 functions: `estimate_likelihood_surface()`,
   `train_likelihood_GAM()`, `find_MLE()`.
+- Removed dead code: `R/augment.R`, `R/utils.R` (all 13 functions),
+  `get_required_sampling_size()`. Dropped `MASS` from Imports.
+- **Fixed IS fhat denominator for zero-weight trees**: C++ `E_step.cpp` and
+  R `.is_fhat()` now use `S_completed = N_valid + rejected_zero_weights` as
+  denominator, not `N_valid` alone. Overrun/lambda rejections still excluded.
+  This removes the upward bias of `log(S_completed / N_valid)`.
+- Updated technical report (`doc/emphasis_technical.tex`) Section 3: added
+  paragraph distinguishing Type 1 (computational) vs Type 2 (zero-weight)
+  augmentation failures and their correct IS handling.
+- Updated README examples to use `link = "exponential"` for DD/PD/EP models.

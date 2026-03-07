@@ -4,7 +4,7 @@
 \alias{.is_fhat}
 \title{IS log-likelihood estimate (with optional bias correction)}
 \usage{
-.is_fhat(logf, log_q, bias_correct = FALSE, K = 2L)
+.is_fhat(logf, log_q, bias_correct = FALSE, K = 2L, n_zero_weight = 0L)
 }
 \arguments{
 \item{logf}{Numeric vector of \code{log p(obs, z | theta)} for valid trees.}
@@ -14,6 +14,10 @@
 \item{bias_correct}{Logical; use moment-based bias correction (default \code{FALSE}).}
 
 \item{K}{Integer truncation order for the moment series (default \code{2}).}
+
+\item{n_zero_weight}{Integer; number of completed augmentations that had
+zero IS weight.  These contribute \code{w = 0} to the IS sum and inflate
+the denominator accordingly (default \code{0}).}
 }
 \description{
 Two estimators are available:
@@ -34,9 +38,10 @@ truncated at order \code{K} (default 2).  The K=2 approximation is
 \eqn{\mu + \sigma^2/2}.  With the full series (\eqn{K\to\infty}) the two
 estimators are identical; the truncation is the approximation.
 
-Only successfully augmented trees are used.  Rejected trees (those that
-hit \code{max_missing} limits) are computational
-failures, not zero-likelihood samples from the proposal, and are simply
-discarded.
+Trees that hit computational limits (\code{max_missing}, \code{max_lambda})
+are discarded entirely -- they are simulator failures, not IS samples.
+Trees that completed augmentation but have zero IS weight (\code{w = 0}
+because \code{lambda = 0} under the current parameters) are legitimate IS
+samples and are included in the denominator via \code{n_zero_weight}.
 }
 \keyword{internal}

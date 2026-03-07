@@ -44,6 +44,10 @@ The `link` argument controls `f`:
 | `"linear"` (default) | `max(0, eta)` |
 | `"exponential"` | `exp(eta)` |
 
+> **Tip:** For DD, PD, and EP models, use `link = "exponential"` to avoid
+> numerical instability.  With the linear link, covariate slopes can drive
+> `lambda` to zero, causing IS collapse (most augmented trees get zero weight).
+
 ### Model shortcuts
 
 The `model` argument selects active covariates. Use a string, formula, or binary vector:
@@ -78,11 +82,13 @@ library(emphasis)
 set.seed(123)
 
 cr <- simulate_tree(pars = c(0.5, 0.1),                         model = "cr", max_t = 5)
-dd <- simulate_tree(pars = c(0.8, -0.02, 0.2, -0.005),          model = "dd", max_t = 5)
-pd <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003),         model = "pd", max_t = 5)
+dd <- simulate_tree(pars = c(0.8, -0.02, 0.2, -0.005),          model = "dd", max_t = 5,
+                    link = "exponential")
+pd <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003),         model = "pd", max_t = 5,
+                    link = "exponential")
 ep <- simulate_tree(pars = c(0.5, 0.05, 0.1, 0.01),             model = "ep", max_t = 5)
 np <- simulate_tree(pars = c(0.5, -0.01, 0.005, 0.15, -0.002, 0.001),
-                    model = ~ N + PD, max_t = 5)
+                    model = ~ N + PD, max_t = 5, link = "exponential")
 
 dd$status         # "done", "extinct", or "too_large"
 dd$tes            # extant-only phylo
@@ -112,17 +118,18 @@ extinct lineages.
 
 ```r
 set.seed(42)
-obs <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003), model = "pd", max_t = 5)
+obs <- simulate_tree(pars = c(0.6, 0.005, 0.15, -0.003), model = "pd", max_t = 5,
+                     link = "exponential")
 
 # Single augmented tree
 aug <- simulate_tree(tree = obs, pars = c(0.6, 0.005, 0.15, -0.003),
-                     model = "pd", n_trees = 1L)
+                     model = "pd", n_trees = 1L, link = "exponential")
 aug$tas    # augmented phylo (extant + stochastic extinct lineages)
 aug$log_q  # log q(augmented tree | extant tree, pars)
 
 # Many augmented trees
 augN <- simulate_tree(tree = obs, pars = c(0.6, 0.005, 0.15, -0.003),
-                      model = "pd", n_trees = 100L)
+                      model = "pd", n_trees = 100L, link = "exponential")
 augN$log_q       # log q values (length 100)
 augN$trees[[1]]  # first augmented phylo
 ```
@@ -147,12 +154,13 @@ the best fhat has plateaued, or `max_iter` is reached.
 
 ```r
 set.seed(42)
-sim <- simulate_tree(pars = c(0.6, -0.05, 0.15, -0.03), model = "pd", max_t = 10)
+sim <- simulate_tree(pars = c(0.6, -0.05, 0.15, -0.03), model = "pd", max_t = 10,
+                     link = "exponential")
 
 lb <- c(0.01, -0.5, 0, -0.5)
 ub <- c(2,     0.5, 1,  0.5)
 
-fit_cem <- estimate_rates(sim, method = "cem", model = "pd",
+fit_cem <- estimate_rates(sim, method = "cem", model = "pd", link = "exponential",
   control = list(
     lower_bound   = lb,
     upper_bound   = ub,
@@ -198,7 +206,7 @@ declared when all parameters stabilise: the maximum relative change (scaled
 by the search range) stays below `tol` for `patience` consecutive iterations.
 
 ```r
-fit_mcem <- estimate_rates(sim, method = "mcem", model = "pd",
+fit_mcem <- estimate_rates(sim, method = "mcem", model = "pd", link = "exponential",
   init_pars = fit_cem$pars,   # warm-start from CEM (recommended)
   control = list(
     lower_bound = lb,
@@ -242,15 +250,16 @@ AIC. The model with the lowest AIC is preferred; `delta_AIC` shows the gap.
 
 ```r
 set.seed(42)
-sim <- simulate_tree(pars = c(0.8, -0.02, 0.2, 0), model = "dd", max_t = 8)
+sim <- simulate_tree(pars = c(0.8, -0.02, 0.2, 0), model = "dd", max_t = 8,
+                     link = "exponential")
 
 fit_cr <- estimate_rates(sim, method = "cem", model = "cr",
   control = list(lower_bound = c(0,    0),              upper_bound = c(2,    1),
                  max_iter = 15, num_particles = 40))
-fit_dd <- estimate_rates(sim, method = "cem", model = "dd",
+fit_dd <- estimate_rates(sim, method = "cem", model = "dd", link = "exponential",
   control = list(lower_bound = c(0.1, -0.1, 0, -0.01), upper_bound = c(2, 0.01, 0.5, 0.01),
                  max_iter = 15, num_particles = 40))
-fit_pd <- estimate_rates(sim, method = "cem", model = "pd",
+fit_pd <- estimate_rates(sim, method = "cem", model = "pd", link = "exponential",
   control = list(lower_bound = c(0.01, -1,  0, -1),    upper_bound = c(2,   1,   1,  1),
                  max_iter = 15, num_particles = 40))
 
@@ -274,6 +283,7 @@ library(emphasis)
 # True parameters
 true_pars <- c(beta_0 = 0.6, beta_P = -0.05, gamma_0 = 0.15, gamma_P = -0.03)
 model     <- "pd"
+lnk       <- "exponential"
 max_t     <- 10
 n_rep     <- 50
 
@@ -288,7 +298,7 @@ set.seed(1)
 trees <- vector("list", n_rep)
 for (i in seq_len(n_rep)) {
   repeat {
-    sim <- simulate_tree(pars = true_pars, model = model, max_t = max_t)
+    sim <- simulate_tree(pars = true_pars, model = model, max_t = max_t, link = lnk)
     if (sim$status == "done") { trees[[i]] <- sim; break }
   }
 }
@@ -300,7 +310,7 @@ for (i in seq_len(n_rep)) {
   cat(sprintf("Rep %d/%d\n", i, n_rep))
   n_tips[i] <- length(trees[[i]]$tes$tip.label)
   fit <- tryCatch(
-    estimate_rates(trees[[i]], method = "cem", model = model, control = ctrl),
+    estimate_rates(trees[[i]], method = "cem", model = model, link = lnk, control = ctrl),
     warning = function(w) NULL,
     error   = function(e) NULL
   )
@@ -439,7 +449,9 @@ for (m in model_names) {
   cat("Simulating", m, "trees...\n")
   count <- 0L
   while (count < n_per_model) {
-    sim <- simulate_tree(pars = configs[[m]]$pars, model = tolower(m), max_t = max_t)
+    lnk <- if (m == "CR") "linear" else "exponential"
+    sim <- simulate_tree(pars = configs[[m]]$pars, model = tolower(m), max_t = max_t,
+                         link = lnk)
     if (sim$status == "done") {
       count <- count + 1L
       all_trees   <- c(all_trees,   list(sim))
@@ -458,6 +470,7 @@ for (i in seq_len(n_trees)) {
   for (m in model_names) {
     fits[[m]] <- tryCatch(
       estimate_rates(all_trees[[i]], method = "cem", model = tolower(m),
+                     link = if (m == "CR") "linear" else "exponential",
                      control = c(ctrl,
                                  list(lower_bound = configs[[m]]$lb,
                                       upper_bound = configs[[m]]$ub))),
