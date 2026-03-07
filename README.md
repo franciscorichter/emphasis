@@ -133,152 +133,93 @@ augN$trees[[1]]  # first augmented phylo
 
 `estimate_rates()` estimates parameters from a phylogenetic tree. It accepts a
 `simulate_tree()` result, a `phylo` object, or a numeric branching-time vector.
+All tuning parameters — including the required `lower_bound` and `upper_bound` —
+are passed via `control = list(...)`. Inspect defaults with
+`estimate_rates_control("cem")` or `estimate_rates_control("mcem")`.
 
-Two methods are available:
+### CEM
 
-| Method | Description |
-|--------|-------------|
-| `"cem"` | Monte Carlo Cross-Entropy Method — broad search, no starting values needed |
-| `"mcem"` | Monte Carlo EM — local refinement, converges to a (local) optimum |
+The Cross-Entropy Method performs a global search. No starting values are
+needed; it initialises a population of parameter vectors randomly within the
+bounds and concentrates them around the optimum via iterative selection and
+perturbation. Stops when the population has collapsed (annealing exhausted),
+the best fhat has plateaued, or `max_iter` is reached.
 
 ```r
 set.seed(42)
 sim <- simulate_tree(pars = c(0.6, -0.05, 0.15, -0.03), model = "pd", max_t = 10)
 
-fit <- estimate_rates(sim, method = "cem", model = "pd",
+fit_cem <- estimate_rates(sim, method = "cem", model = "pd",
   control = list(
     lower_bound   = c(0.01, -0.5, 0, -0.5),
     upper_bound   = c(2,     0.5, 1,  0.5),
-    verbose       = TRUE,
-    max_iter      = 50,
-    num_particles = 80,
-    num_trees     = 10   # > 1 enables automatic bootstrap variance (B=200)
+    max_iter      = 30,
+    num_particles = 80,     # parameter vectors per iteration
+    num_trees     = 5,      # IS trees per particle; >= 5 enables bootstrap variance
+    verbose       = TRUE
   ))
 
-fit              # prints pars, loglik (MC se), AIC, convergence reason
-fit$pars         # named estimates: beta_0, beta_P, gamma_0, gamma_P
-fit$loglik
-fit$AIC
-fit$converged    # stopping reason: "annealing", "plateau", or "max_iter"
-fit$loglik_var   # MC sampling variance of log-likelihood
+fit_cem$pars       # named estimates: beta_0, beta_P, gamma_0, gamma_P
+fit_cem$loglik     # IS log-likelihood
+fit_cem$loglik_var # MC variance of loglik (bootstrap, B=200); NA if num_trees = 1
+fit_cem$AIC
 ```
 
-### Diagnostics
-
-Both methods have dedicated diagnostic functions:
-
-```r
-# CEM diagnostics
-diag <- diagnose_cem(fit_cem, lower_bound = lb, upper_bound = ub)
-
-# MCEM diagnostics
-diag <- diagnose_mcem(fit_mcem, lower_bound = lb, upper_bound = ub)
-```
-
-In a simulation study where the true parameters are known, pass them via
-`true_pars` to overlay red reference lines:
-
-```r
-true_pars <- c(beta_0 = 0.6, beta_P = -0.05, gamma_0 = 0.15, gamma_P = -0.03)
-diag <- diagnose_cem(fit, lower_bound = lb, upper_bound = ub,
-                     true_pars = true_pars)
-diag <- diagnose_mcem(fit, lower_bound = lb, upper_bound = ub,
-                      true_pars = true_pars)
-```
-
-### CEM stopping rules
-
-The CEM stops at the first of:
-
-1. **Annealing exhausted** — perturbation SD reaches zero; population has collapsed
-2. **Plateau** — best fhat has not improved by `> tol` for `patience` consecutive iterations
-3. **Hard cap** — `max_iter` reached
-
-### CEM control parameters
-
-All parameters are passed via `control = list(...)`. Inspect defaults with
-`estimate_rates_control("cem")`.
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `lower_bound` | — | **Required.** Lower parameter bounds vector |
-| `upper_bound` | — | **Required.** Upper parameter bounds vector |
+| Control parameter | Default | Description |
+|-------------------|---------|-------------|
+| `lower_bound` | — | **Required.** Lower bounds vector |
+| `upper_bound` | — | **Required.** Upper bounds vector |
 | `verbose` | FALSE | Print iteration summaries |
 | `max_iter` | 20 | Hard iteration cap |
-| `num_particles` | 50 | Particles (parameter vectors) per iteration. Alias: `num_points` |
-| `num_trees` | 1 | Augmented trees per particle. When `> 1`, bootstrap variance of loglik is computed automatically (B=200). Recommend `>= 5`. Alias: `sample_size` |
-| `shared_trees` | FALSE | Pool trees across all particles (`TRUE` = lower variance, slower) |
-| `disc_prop` | 0.5 | Elite fraction of particles kept for resampling |
+| `num_particles` | 50 | Particles per iteration. Alias: `num_points` |
+| `num_trees` | 1 | IS trees per particle per iteration. `>= 5` recommended for variance. Alias: `sample_size` |
+| `shared_trees` | FALSE | Pool trees across particles (Mode 2; lower variance, slower) |
+| `disc_prop` | 0.5 | Elite fraction of particles kept each iteration |
 | `sd_vec` | NULL | Initial perturbation SDs; auto = `(upper - lower) / 4` |
-| `maxN` | 10 | Max augmented-tree attempts before a particle is rejected |
-| `max_missing` | 1e4 | Max missing lineages tolerated during augmentation |
-| `max_lambda` | 500 | Max speciation rate during augmentation |
 | `tol` | 1e-4 | Minimum fhat improvement to reset the plateau counter |
-| `patience` | 5 | Consecutive plateau iterations before early stop |
-| `bias_correct` | FALSE | Moment-based IS bias correction (experimental) |
-| `num_threads` | 1 | Parallel threads for particle evaluation |
-
-**Total augmented trees per iteration** = `num_particles × num_trees`.
-
-**How `fhat` is computed per particle:**
-
-```
-fhat(theta) = log( mean_i[ exp(logf_i - log_q_i) ] )
-
-  logf_i  = log p(obs, z_i | theta)   # joint likelihood of observed + augmented tree
-  log_q_i = log q(z_i | obs, theta)   # proposal density of the augmented tree
-  mean over i = 1 ... num_trees augmented trees drawn for this particle
-```
-
-This is the importance-sampling (IS) log-likelihood estimate. A higher `fhat` means
-the parameter vector `theta` is better supported by the data. Each iteration the
-best particle (`fhat*`) is recorded, and the population is resampled around it.
-
-In Mode 1 (default, `shared_trees = FALSE`): each particle draws its own `num_trees`
-trees. In Mode 2 (`shared_trees = TRUE`): all particles share a common pool of trees,
-reducing variance but requiring more trees per iteration.
-
-```r
-# Higher-quality run: 100 particles, 5 trees each => 500 trees/iter
-# num_trees >= 5 also enables automatic bootstrap variance of log-likelihood
-estimate_rates(sim, method = "cem", model = "pd",
-  control = list(
-    lower_bound   = c(0.01, -0.5, 0, -0.5),
-    upper_bound   = c(2,     0.5, 1,  0.5),
-    verbose       = TRUE,
-    max_iter      = 30,
-    num_particles = 100,
-    num_trees     = 5,
-    patience      = 8
-  ))
-```
-
-### MCEM control parameters
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `lower_bound` | — | **Required.** Lower parameter bounds vector |
-| `upper_bound` | — | **Required.** Upper parameter bounds vector |
-| `verbose` | FALSE | Print progress messages |
-| `num_trees` | 200 | Augmented trees per EM iteration. Alias: `sample_size`. Bootstrap variance of `loglik` computed automatically (B = 200) |
-| `tol` | 0.1 | Convergence: SE of fhat across post-burnin iterations |
-| `burnin` | 20 | Burn-in iterations before convergence is checked |
-| `xtol` | 1e-3 | Relative tolerance for the M-step optimizer |
-| `max_missing` | 1e4 | Max missing lineages during augmentation |
-| `max_lambda` | 500 | Max speciation rate during augmentation |
+| `patience` | 5 | Consecutive plateau iterations before stopping |
+| `max_missing` | 1e4 | Max missing lineages per augmentation |
+| `max_lambda` | 500 | Max speciation rate per augmentation |
 | `num_threads` | 1 | Parallel threads |
 
-### Empirical trees
+### MCEM
+
+The Monte Carlo EM algorithm performs local refinement from a given starting
+point. It iterates E-steps (augmenting trees at the current estimate) and
+M-steps (maximising the IS-weighted Q-function via SBPLX). Convergence is
+declared when the standard error of fhat over post-burnin iterations falls
+below `tol`.
 
 ```r
-data(bird.orders, package = "ape")
-extant <- prune_to_extant(bird.orders)
+fit_mcem <- estimate_rates(sim, method = "mcem", model = "pd",
+  init_pars = fit_cem$pars,   # warm-start from CEM (recommended)
+  control = list(
+    lower_bound = c(0.01, -0.5, 0, -0.5),
+    upper_bound = c(2,     0.5, 1,  0.5),
+    num_trees   = 200,   # IS trees per EM iteration; bootstrap variance auto-computed
+    tol         = 0.1,   # convergence: SE(fhat) < tol
+    burnin      = 20,    # iterations excluded from convergence check
+    verbose     = TRUE
+  ))
 
-fit <- estimate_rates(extant, method = "cem", model = "dd",
-  control = list(lower_bound = c(0.01, -0.5, 0, -0.5),
-                 upper_bound = c(2,     0.5, 1,  0.5)))
-fit$pars
+fit_mcem$pars
+fit_mcem$loglik
+fit_mcem$loglik_var  # bootstrap variance (B=200) from final E-step IS weights
+fit_mcem$AIC
 ```
+
+| Control parameter | Default | Description |
+|-------------------|---------|-------------|
+| `lower_bound` | — | **Required.** Lower bounds vector |
+| `upper_bound` | — | **Required.** Upper bounds vector |
+| `verbose` | FALSE | Print iteration summaries |
+| `num_trees` | 200 | IS trees per EM iteration. Bootstrap variance auto-computed. Alias: `sample_size` |
+| `tol` | 0.1 | Convergence: SE(fhat) < tol |
+| `burnin` | 20 | Burn-in iterations excluded from convergence check |
+| `xtol` | 1e-3 | Relative tolerance for the M-step optimiser |
+| `max_missing` | 1e4 | Max missing lineages per augmentation |
+| `max_lambda` | 500 | Max speciation rate per augmentation |
+| `num_threads` | 1 | Parallel threads |
 
 ---
 
