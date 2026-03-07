@@ -51,6 +51,8 @@ namespace {
 //'  \item{fhat}{vector of fhat values}
 //'  \item{time}{time elapsed}
 //'  \item{weights}{vector of weights}
+//'  \item{logf}{vector of log p(obs, z_i | theta) for each valid tree}
+//'  \item{logg}{vector of log q(z_i | obs, theta) for each valid tree}
 //' }
 //' @export
 // [[Rcpp::export(name = "em_cpp")]]

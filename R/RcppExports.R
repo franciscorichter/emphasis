@@ -113,6 +113,8 @@ augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda
 #'  \item{fhat}{vector of fhat values}
 #'  \item{time}{time elapsed}
 #'  \item{weights}{vector of weights}
+#'  \item{logf}{vector of log p(obs, z_i | theta) for each valid tree}
+#'  \item{logg}{vector of log q(z_i | obs, theta) for each valid tree}
 #' }
 #' @export
 em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model = as.integer( c(0, 0, 0)), link = 0L, rconditional = NULL) {

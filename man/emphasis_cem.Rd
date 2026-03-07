@@ -13,7 +13,6 @@ emphasis_cem(
   lower_bound,
   upper_bound,
   maxN = 10L,
-  max_lambda = 500,
   sample_size = 1L,
   shared_trees = FALSE,
   bias_correct = FALSE,
@@ -40,8 +39,6 @@ emphasis_cem(
 \item{lower_bound, upper_bound}{Search bounds (8-element).}
 
 \item{maxN}{Max augmentation attempts per particle. Default \code{10}.}
-
-\item{max_lambda}{Max speciation rate. Default \code{500}.}
 
 \item{sample_size}{Trees simulated per particle per evaluation. Default \code{1}.}
 

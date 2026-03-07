@@ -35,7 +35,7 @@ truncated at order \code{K} (default 2).  The K=2 approximation is
 estimators are identical; the truncation is the approximation.
 
 Only successfully augmented trees are used.  Rejected trees (those that
-hit \code{max_lambda} or \code{max_missing} limits) are computational
+hit \code{max_missing} limits) are computational
 failures, not zero-likelihood samples from the proposal, and are simply
 discarded.
 }
