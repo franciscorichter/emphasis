@@ -135,13 +135,11 @@ The tree was never completed -- we have no logf or logg to compute. The
 rejection probability depends on `max_missing` and `max_lambda` (user-chosen
 computational limits), NOT on the model parameters theta.
 
-**Current handling**: Discarded. IS estimator uses `S_valid` in denominator.
+**Handling**: Discarded from both numerator and denominator.
 
-**Correctness**: Justified (see tech report Eq. 3.10). Since the rejection
+**Correctness**: Justified (see tech report Section 3). Since the rejection
 probability is independent of theta, including these as zero-weight samples
 would introduce bias proportional to the user-chosen limit, not the model.
-These trees would also have near-zero weight under f (if the tree needed
-that many lineages, it's extremely unlikely under the true model).
 
 ### Type 2: Zero IS weights (parameter-dependent)
 
@@ -158,41 +156,56 @@ for large X. Then `logf` includes `log(lambda) = -Inf`, so `log_w = -Inf`.
 generated a complete tree, but under the target f that tree has zero
 probability. This is a legitimate IS outcome: w_i = f(z_i)/q(z_i) = 0.
 
-**Current handling**: Discarded from both numerator and denominator.
-The fhat computation divides by N (= `sample_size`, the number of VALID
-trees requested), not by N_total.
+**Handling** (FIXED): Zero-weight trees are now included in the IS
+denominator. `S_completed = N_valid + rejected_zero_weights` is used in
+both C++ (`E_step.cpp`) and R (`.is_fhat()`). They contribute w=0 to the
+numerator and 1 to the denominator, which is the correct IS treatment.
 
-**Correctness issue**: This is subtly biased upward. In correct IS:
+**Previous bug**: Denominator used `N_valid` only, inflating fhat by
+`log(S_completed / N_valid)` -- significant during IS collapse.
 
-    fhat = log( (1/N_total) * sum_{all i} w_i )
+### Previous Recommendations -- Status
 
-Trees with w_i = 0 contribute 0 to the sum but 1 to the denominator. By
-excluding them, we compute:
+1. ~~**Track N_total alongside N_valid**~~ -- **DONE**. `rejected_zero_weights`
+   is returned by C++ and passed through R. `S_completed` is computable.
 
-    fhat = log( (1/N_valid) * sum_{valid i} w_i )
+2. ~~**Correct the fhat denominator**~~ -- **DONE**. C++ `E_step.cpp` and
+   R `.is_fhat()` both use `S_completed` as denominator.
 
-This inflates fhat because N_valid < N_total. The bias is:
+3. **Report acceptance rate in diagnostics** -- **OPEN**. Neither
+   `diagnose_cem()` nor `diagnose_mcem()` reports `N_valid / S_completed`.
+   The rejection counts are available but not surfaced as an acceptance rate.
 
-    bias = log(N_total / N_valid) = -log(acceptance_rate)
+4. ~~**Default to exponential link in examples**~~ -- **DONE**. README updated.
 
-When acceptance_rate is high (most trees valid), bias is negligible.
-When acceptance_rate is low (IS collapse), bias can be large.
+### New Recommendations
 
-### Recommendations
+5. **Remove dead C++ code in `phylodiv_tree.cpp`**. All 4 functions
+   (`simulate_single_pd_tree_cpp`, `simulate_single_ep_tree_cpp`,
+   `simulate_pd_trees_cpp`, `explore_grid_cpp`) have no `Rcpp::export`
+   annotations and are never called from R. Also `phylodiv_tree.hpp` can
+   be removed. This eliminates compilation time and the only compiler warning.
 
-1. **Track N_total alongside N_valid** in the E-step. Currently the C++ code
-   runs exactly `maxN` attempts and collects `N` valid trees. It should also
-   return `N_attempted` (= maxN or the number actually tried before stopping).
+6. **Remove or deprecate Module 6 (`R/generate.R`)**. All 5 exported functions
+   (`generatePhyloPD`, `generateNonHomogeneousExp`, `nhExpRand`, `rate_t`,
+   `ExponentialRate`) are unused by the inference pipeline. `generatePhyloPD`
+   is superseded by `simulate_tree(model="pd")`. Also removes the C++ file
+   `generateNonHomogeneousExp.cpp`. Dropping these would reduce the exported
+   API from 27 to 22 functions.
 
-2. **Correct the fhat denominator** for zero-weight trees: use
-   `N_valid + rejected_zero_weights` instead of `N_valid` alone. Overruns and
-   lambda rejections stay excluded (they are computational, not IS failures).
+7. **Add tests for inference and GAM modules**. The existing test suite
+   (41 pass, 15 skip) covers simulation, augmentation, and CEM/MCEM at a
+   basic level but has no tests for:
+   - `estimate_rates()` end-to-end (CR/DD with small tree)
+   - `compare_models()` / `select_diversification_model()`
+   - `diagnose_cem()` / `diagnose_mcem()`
+   - GAM functions: `train_GAM()`, `estimate_likelihood_surface()`, etc.
+   - IS fhat denominator correction (n_zero_weight > 0)
 
-3. **Report acceptance rate** in diagnostics: `N_valid / (N_valid + rejected_zero_weights)`.
-   Low acceptance rate (< 0.5) is a warning sign for IS quality.
-
-4. **Default to exponential link** for DD/PD/EP models in examples and docs,
-   since linear link is prone to IS collapse for these models.
+8. **Exponential link for EP model**. Currently EP + exponential is blocked
+   ("no closed-form integral"). Investigate whether numerical integration
+   or a different parameterization could enable it. EP is the only model
+   restricted to linear link, which is prone to IS collapse.
 
 ## Recent Changes (2026-03-07)
 

@@ -540,6 +540,66 @@ how often each candidate was chosen — useful for diagnosing systematic confusi
 
 ---
 
+## GAM-based methods
+
+Two GAM-based workflows complement the iterative EM/CE methods. Both
+require the `mgcv` package.
+
+### Use case 1: Survival conditioning
+
+Estimate the probability that a forward simulation survives (doesn't go
+extinct), as a function of parameters. Useful for conditioning likelihoods
+on tree survival.
+
+```r
+library(emphasis)
+set.seed(1)
+
+# Batch simulation: one tree per parameter row, no retries
+pars_mat <- cbind(beta_0  = runif(200, 0.3, 1.2),
+                  gamma_0 = runif(200, 0.05, 0.5))
+sims <- simulate_tree(pars = pars_mat, max_t = 8, model = "cr", max_tries = 0)
+
+# Fit survival GAM
+gam_surv <- train_GAM(sims, pars_mat, model = "cr")
+
+# Predict survival probability at new parameter values
+predict_survival(gam_surv, data.frame(beta_0 = 0.8, gamma_0 = 0.2))
+```
+
+### Use case 2: GAM-based MLE
+
+Estimate the log-likelihood surface over a parameter grid via IS, fit a
+GAM to it, then optimize the GAM directly — a one-shot alternative to
+iterative MCEM/CEM.
+
+```r
+set.seed(42)
+sim <- simulate_tree(pars = c(0.5, 0.1), model = "cr", max_t = 8, useDDD = TRUE)
+
+# Create parameter grid
+pars_grid <- expand.grid(
+  beta_0  = seq(0.2, 1.0, length.out = 10),
+  gamma_0 = seq(0.01, 0.5, length.out = 10)
+)
+
+# Evaluate IS log-likelihood at each grid point
+surface <- estimate_likelihood_surface(
+  sim, as.matrix(pars_grid), model = "cr",
+  sample_size = 100, verbose = TRUE
+)
+
+# Fit GAM and find MLE
+gam_fit <- train_likelihood_GAM(surface)
+mle     <- find_MLE(gam_fit,
+                    lower_bound = c(0.2, 0.01),
+                    upper_bound = c(1.0, 0.5))
+mle$par   # MLE estimates
+mle$value # log-likelihood at MLE
+```
+
+---
+
 ## Diagnostics — inference quality
 
 Both `diagnose_cem()` and `diagnose_mcem()` produce four diagnostic plots
