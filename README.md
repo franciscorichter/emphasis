@@ -165,14 +165,14 @@ fit$loglik_var   # MC sampling variance of log-likelihood
 
 ### Diagnostics
 
-After fitting, pass the result to `diagnose_cem()` to inspect convergence and
-IS quality. Supply the same bounds used during estimation so they appear as
-reference lines in the parameter-trace plots.
+Both methods have dedicated diagnostic functions:
 
 ```r
-lb <- c(0.01, -0.5, 0, -0.5)
-ub <- c(2,     0.5, 1,  0.5)
-diag <- diagnose_cem(fit, lower_bound = lb, upper_bound = ub)
+# CEM diagnostics
+diag <- diagnose_cem(fit_cem, lower_bound = lb, upper_bound = ub)
+
+# MCEM diagnostics
+diag <- diagnose_mcem(fit_mcem, lower_bound = lb, upper_bound = ub)
 ```
 
 In a simulation study where the true parameters are known, pass them via
@@ -180,10 +180,10 @@ In a simulation study where the true parameters are known, pass them via
 
 ```r
 true_pars <- c(beta_0 = 0.6, beta_P = -0.05, gamma_0 = 0.15, gamma_P = -0.03)
-lb <- c(0.01, -0.5, 0, -0.5)
-ub <- c(2,     0.5, 1,  0.5)
 diag <- diagnose_cem(fit, lower_bound = lb, upper_bound = ub,
                      true_pars = true_pars)
+diag <- diagnose_mcem(fit, lower_bound = lb, upper_bound = ub,
+                      true_pars = true_pars)
 ```
 
 ### CEM stopping rules
@@ -574,50 +574,53 @@ how often each candidate was chosen — useful for diagnosing systematic confusi
 
 ---
 
-## Diagnostics — CEM inference quality
+## Diagnostics — inference quality
+
+### CEM diagnostics
 
 `diagnose_cem()` takes a fitted `"cem"` model and returns convergence
 statistics, IS quality metrics, and the full particle cloud at the final
 iteration. It produces diagnostic plots by default.
 
 ```r
-# Basic usage — bounds shown as reference lines in parameter traces
 diag <- diagnose_cem(fit, lower_bound = lb, upper_bound = ub)
-
-# Simulation study — also draw true-parameter lines (red)
-true_pars <- c(beta_0 = 0.6, beta_P = -0.05, gamma_0 = 0.15, gamma_P = -0.03)
-diag <- diagnose_cem(fit, lower_bound = lb, upper_bound = ub,
-                     true_pars = true_pars)
-
-# Suppress plots, inspect data only
-diag <- diagnose_cem(fit, plot = FALSE)
 
 diag$convergence       # per-iteration: best_loglik, n_valid, rej_lambda, rej_overruns, rej_total
 diag$population_spread # per-iteration: median/q25/q75/range of all fhat values
 diag$IS_quality        # ESS, ESS fraction, mean/sd of IS log-weights
 diag$final_pop         # data frame: parameter columns + fhat for each particle
 diag$best_IS           # raw IS data: logf, log_q, lw, trees at best pars
-
-# IS effective sample size (fraction of 1 = perfect; close to 0 = one dominant tree)
-diag$IS_quality$ESS_fraction
-
-# Rejection rate over iterations
-diag$convergence[, c("iteration", "rej_lambda", "rej_overruns", "rej_total")]
-
-# Access raw augmented trees from the best particle's final evaluation
-diag$best_IS$trees[[1]]   # first augmented tree (C++ data frame format)
-diag$best_IS$lw            # IS log-weights for all trees
 ```
-
-### Plots produced
 
 | Plot | What it shows |
 |------|--------------|
 | Log-likelihood | Best `fhat` per iteration with stop reason |
-| Parameter traces | Best particle's value per iteration; orange = lower bound, purple = upper bound, red = true value (if `true_pars` supplied) |
+| Parameter traces | Best particle's value per iteration; orange = lower bound, purple = upper bound, red = true value |
 | Population spread | Median with q25/q75 band of all valid `fhat` values per iteration |
 | IS weight distribution | Histogram of `logf - log_q` at the best particle; ESS in title |
-| Rejection rates | Per-iteration count of rejected trees (`rej_lambda`, `rej_overruns`); shown only when rejections occurred |
+| Rejection rates | Per-iteration count of rejected trees (shown only when rejections occurred) |
+
+### MCEM diagnostics
+
+`diagnose_mcem()` provides analogous diagnostics for MCEM fits:
+log-likelihood trace, parameter traces, SE convergence trace, and IS
+weight histogram at the final E-step.
+
+```r
+diag <- diagnose_mcem(fit, lower_bound = lb, upper_bound = ub)
+
+diag$convergence  # per-iteration: fhat, num_trees, time
+diag$se_trace     # running SE of fhat (convergence criterion)
+diag$IS_quality   # ESS, mean/sd of log-weights, bootstrap variance
+diag$final_IS     # raw IS data: logf, logg, lw from last E-step
+```
+
+| Plot | What it shows |
+|------|--------------|
+| Log-likelihood trace | `fhat` vs. EM iteration |
+| Parameter traces | M-step estimates per iteration; orange/purple = bounds, red = true value |
+| SE trace | Running SE(fhat) — convergence declared when SE < tol |
+| IS weight distribution | Histogram of IS log-weights at the final E-step; ESS in title |
 
 ---
 

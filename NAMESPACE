@@ -2,11 +2,13 @@
 
 S3method(print,cem_diagnostics)
 S3method(print,emphasis_fit)
+S3method(print,mcem_diagnostics)
 S3method(print,model_selection)
 export(ExponentialRate)
 export(augment_trees)
 export(compare_models)
 export(diagnose_cem)
+export(diagnose_mcem)
 export(em_cpp)
 export(estimate_rates)
 export(estimate_rates_control)

@@ -315,6 +315,276 @@ diagnose_cem <- function(x, plot = TRUE,
 }
 
 
+# --------------------------------------------------------------------------- #
+#  Diagnostics for MCEM                                                        #
+# --------------------------------------------------------------------------- #
+
+#' Diagnostics for an MCEM fit
+#'
+#' Computes convergence and importance-sampling quality diagnostics from
+#' the output of \code{\link{estimate_rates}} with \code{method = "mcem"}.
+#'
+#' @section Convergence (\code{$convergence}):
+#' A data frame with one row per EM iteration containing:
+#' \describe{
+#'   \item{\code{iteration}}{Iteration index.}
+#'   \item{\code{fhat}}{IS log-likelihood at the M-step estimate.}
+#'   \item{\code{num_trees}}{Number of augmented trees used.}
+#'   \item{\code{time}}{Wall-clock time for the iteration (ms).}
+#' }
+#'
+#' @section SE trace (\code{$se_trace}):
+#' A data frame with one row per post-burnin iteration containing the
+#' running standard error of \code{fhat}.  Convergence is declared when
+#' this falls below \code{tol}.
+#'
+#' @section IS quality (\code{$IS_quality}):
+#' Importance-sampling diagnostics from the final EM iteration:
+#' \describe{
+#'   \item{\code{ESS}}{Effective sample size.}
+#'   \item{\code{ESS_fraction}}{ESS as a fraction of \code{num_trees}.}
+#'   \item{\code{mean_lw}, \code{sd_lw}}{Mean and SD of IS log-weights.}
+#'   \item{\code{fhat}}{IS log-likelihood at the final parameters.}
+#'   \item{\code{loglik_var}}{Bootstrap variance of \code{fhat}.}
+#' }
+#'
+#' @param x An \code{emphasis_fit} object (from \code{\link{estimate_rates}}
+#'   with \code{method = "mcem"}) or the raw list from \code{.mcem_dynamic_fresh}.
+#' @param plot Logical; if \code{TRUE} (default), produce diagnostic plots.
+#' @param true_pars Optional numeric vector of true parameter values
+#'   (for simulation studies).  Red dashed lines are drawn at these values.
+#' @param lower_bound,upper_bound Optional numeric vectors for bound lines.
+#' @return A list of class \code{"mcem_diagnostics"} (invisibly) with
+#'   components \code{convergence}, \code{se_trace}, \code{IS_quality},
+#'   and \code{final_IS}.
+#' @seealso \code{\link{diagnose_cem}}, \code{\link{estimate_rates}}
+#' @examples
+#' \dontrun{
+#' sim <- simulate_tree(c(0.5, 0.1), max_t = 5, model = "cr")
+#' fit <- estimate_rates(sim, method = "mcem", model = "cr",
+#'   control = list(lower_bound = c(0, 0), upper_bound = c(2, 1)))
+#' diagnose_mcem(fit, lower_bound = c(0, 0), upper_bound = c(2, 1))
+#' }
+#' @export
+diagnose_mcem <- function(x, plot = TRUE,
+                           lower_bound = NULL,
+                           upper_bound = NULL,
+                           true_pars   = NULL) {
+
+  # Accept either emphasis_fit or raw .mcem_dynamic_fresh output
+  if (inherits(x, "emphasis_fit")) {
+    details  <- x$details
+    par_names <- names(x$pars)
+  } else {
+    details   <- x
+    par_names <- NULL
+  }
+
+  if (is.null(details$mcem))
+    stop("No MCEM trace found. Is this an MCEM fit?")
+
+  mcem_df  <- details$mcem
+  n_iter   <- nrow(mcem_df)
+
+  # ── 1. Convergence table ──────────────────────────────────────────────────
+  par_cols <- grep("^par[0-9]+$", names(mcem_df), value = TRUE)
+  convergence <- data.frame(
+    iteration = seq_len(n_iter),
+    fhat      = mcem_df$fhat,
+    num_trees = mcem_df$num_trees,
+    time      = mcem_df$time
+  )
+
+  # ── 2. SE trace (post-burnin) ─────────────────────────────────────────────
+  se_trace <- data.frame(iteration = integer(0), se = numeric(0))
+  for (t in seq_len(n_iter)) {
+    half_start <- max(1L, floor(t / 2))
+    window     <- mcem_df$fhat[half_start:t]
+    window     <- window[is.finite(window)]
+    if (length(window) >= 2L) {
+      se_val <- stats::sd(window) / sqrt(length(window))
+      se_trace <- rbind(se_trace,
+                        data.frame(iteration = t, se = se_val))
+    }
+  }
+
+  # ── 3. IS quality at final iteration ──────────────────────────────────────
+  IS_quality <- NULL
+  final_IS   <- details$final_IS
+  if (!is.null(final_IS)) {
+    lw_fin <- final_IS$lw[is.finite(final_IS$lw)]
+    n_trees <- length(final_IS$lw)
+    IS_quality <- list(
+      ESS          = final_IS$ESS,
+      ESS_fraction = if (!is.na(final_IS$ESS) && n_trees > 0)
+                       final_IS$ESS / n_trees else NA_real_,
+      mean_lw      = if (length(lw_fin) > 0) mean(lw_fin) else NA_real_,
+      sd_lw        = if (length(lw_fin) > 1) stats::sd(lw_fin) else NA_real_,
+      fhat         = final_IS$fhat,
+      num_trees    = n_trees,
+      loglik_var   = if (!is.null(details$loglik_var)) details$loglik_var else NA_real_
+    )
+  }
+
+  # ── 4. Parameter names ──────────────────────────────────────────────────
+  if (is.null(par_names) && length(par_cols) > 0L)
+    par_names <- paste0("par", seq_along(par_cols))
+  n_par <- length(par_cols)
+
+  # ── 5. Plots ────────────────────────────────────────────────────────────
+  if (plot) {
+    has_IS  <- !is.null(final_IS) &&
+               length(final_IS$lw[is.finite(final_IS$lw)]) > 1L
+    has_se  <- nrow(se_trace) > 0L
+
+    n_plots <- 1L + has_se + has_IS + n_par
+    nc      <- min(n_plots, 3L)
+    nr      <- ceiling(n_plots / nc)
+
+    old_par <- graphics::par(no.readonly = TRUE)
+    on.exit(graphics::par(old_par))
+    graphics::par(mfrow = c(nr, nc), mar = c(4, 4, 3, 1))
+
+    iter <- seq_len(n_iter)
+
+    # Plot 1: fhat trace
+    graphics::plot(iter, mcem_df$fhat,
+                   type = "b", pch = 16, col = "steelblue", lwd = 1.5,
+                   xlab = "EM iteration", ylab = expression(hat(f)),
+                   main = sprintf("Log-likelihood trace  (%d iterations)", n_iter))
+    if (n_iter > 1L) {
+      fhat_fin <- mcem_df$fhat[is.finite(mcem_df$fhat)]
+      if (length(fhat_fin) > 0L)
+        graphics::abline(h = utils::tail(fhat_fin, 1L),
+                         col = "red", lty = 3, lwd = 1)
+    }
+
+    # Plots: per-parameter traces
+    if (n_par > 0L) {
+      for (j in seq_len(n_par)) {
+        nm   <- par_names[j]
+        vals <- mcem_df[, par_cols[j]]
+
+        lb_j <- if (!is.null(lower_bound) && j <= length(lower_bound))
+                  lower_bound[j] else NULL
+        ub_j <- if (!is.null(upper_bound) && j <= length(upper_bound))
+                  upper_bound[j] else NULL
+        tp_j <- if (!is.null(true_pars)) {
+          if (!is.null(names(true_pars)) && nm %in% names(true_pars))
+            true_pars[[nm]]
+          else if (is.numeric(true_pars) && j <= length(true_pars))
+            true_pars[[j]]
+          else NULL
+        } else NULL
+
+        y_vals <- c(vals, lb_j, ub_j, tp_j)
+        y_rng  <- range(y_vals, na.rm = TRUE)
+        y_pad  <- max(diff(y_rng) * 0.08, 0.05)
+
+        graphics::plot(iter, vals,
+                       type = "b", pch = 16, col = "forestgreen", lwd = 1.5,
+                       ylim = c(y_rng[1] - y_pad, y_rng[2] + y_pad),
+                       xlab = "EM iteration", ylab = nm, main = nm)
+
+        leg_lab <- character(0); leg_col <- character(0)
+        leg_lty <- integer(0);   leg_lwd <- numeric(0)
+
+        if (!is.null(lb_j)) {
+          graphics::abline(h = lb_j, col = "darkorange", lty = 2, lwd = 1.5)
+          leg_lab <- c(leg_lab, "lower"); leg_col <- c(leg_col, "darkorange")
+          leg_lty <- c(leg_lty, 2L);     leg_lwd <- c(leg_lwd, 1.5)
+        }
+        if (!is.null(ub_j)) {
+          graphics::abline(h = ub_j, col = "purple", lty = 2, lwd = 1.5)
+          leg_lab <- c(leg_lab, "upper"); leg_col <- c(leg_col, "purple")
+          leg_lty <- c(leg_lty, 2L);     leg_lwd <- c(leg_lwd, 1.5)
+        }
+        if (!is.null(tp_j)) {
+          graphics::abline(h = tp_j, col = "red", lty = 2, lwd = 2)
+          leg_lab <- c(leg_lab, "true"); leg_col <- c(leg_col, "red")
+          leg_lty <- c(leg_lty, 2L);    leg_lwd <- c(leg_lwd, 2)
+        }
+        if (length(leg_lab) > 0L)
+          graphics::legend("topright", legend = leg_lab, col = leg_col,
+                           lty = leg_lty, lwd = leg_lwd, bty = "n", cex = 0.75)
+      }
+    }
+
+    # SE trace
+    if (has_se) {
+      tol_val <- if (!is.null(details$se) && is.finite(details$se)) details$se else NULL
+      graphics::plot(se_trace$iteration, se_trace$se,
+                     type = "b", pch = 16, col = "darkorange", lwd = 1.5,
+                     xlab = "EM iteration", ylab = "SE(fhat)",
+                     main = "Convergence: SE of fhat")
+      if (!is.null(tol_val))
+        graphics::abline(h = tol_val, col = "grey50", lty = 3, lwd = 1)
+    }
+
+    # IS log-weight histogram at final iteration
+    if (has_IS) {
+      lw_fin <- final_IS$lw[is.finite(final_IS$lw)]
+      graphics::hist(lw_fin,
+                     breaks = min(30L, max(10L, length(lw_fin))),
+                     freq = FALSE, col = "grey85", border = "white",
+                     xlab = expression("IS log-weight" ~ (log*f - log*q)),
+                     main = sprintf(
+                       "IS weights (final E-step)\nESS = %.1f / %d  (%.0f%%)",
+                       IS_quality$ESS, IS_quality$num_trees,
+                       100 * IS_quality$ESS_fraction))
+      graphics::abline(v = IS_quality$mean_lw, col = "red", lty = 2, lwd = 2)
+    }
+  }
+
+  structure(
+    list(
+      convergence = convergence,
+      se_trace    = se_trace,
+      IS_quality  = IS_quality,
+      final_IS    = final_IS
+    ),
+    class = c("mcem_diagnostics", "list")
+  )
+}
+
+
+#' Print method for MCEM diagnostics
+#'
+#' @param x Output of \code{\link{diagnose_mcem}}.
+#' @param ... Additional arguments (ignored).
+#' @export
+print.mcem_diagnostics <- function(x, ...) {
+  cat("MCEM diagnostics\n")
+  cat("================\n\n")
+
+  cat(sprintf("Iterations run:  %d\n", nrow(x$convergence)))
+
+  fhat_fin <- x$convergence$fhat[is.finite(x$convergence$fhat)]
+  if (length(fhat_fin) > 0L)
+    cat(sprintf("Final fhat:      %.4f\n", utils::tail(fhat_fin, 1L)))
+
+  if (nrow(x$se_trace) > 0L)
+    cat(sprintf("Final SE(fhat):  %.4f\n",
+                utils::tail(x$se_trace$se, 1L)))
+
+  if (!is.null(x$IS_quality)) {
+    iq <- x$IS_quality
+    cat("\nIS quality (final E-step):\n")
+    cat(sprintf("  num_trees:    %d\n", iq$num_trees))
+    cat(sprintf("  ESS:          %.1f  (%.0f%% of num_trees)\n",
+                iq$ESS, 100 * iq$ESS_fraction))
+    cat(sprintf("  mean lw:      %.4f\n", iq$mean_lw))
+    cat(sprintf("  sd lw:        %.4f\n", iq$sd_lw))
+    cat(sprintf("  fhat:         %.4f\n", iq$fhat))
+    if (!is.na(iq$loglik_var))
+      cat(sprintf("  loglik_se:    %.4f  (bootstrap, B=200)\n",
+                  sqrt(iq$loglik_var)))
+  }
+
+  invisible(x)
+}
+
+
 #' Print method for CEM diagnostics
 #'
 #' @param x Output of \code{\link{diagnose_cem}}.

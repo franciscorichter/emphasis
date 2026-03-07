@@ -105,12 +105,26 @@
                                       K = 2L, B = 200L)
   }
 
+  # Store final IS components for diagnostics
+  final_IS <- NULL
+  if (!is.null(last_results) && length(last_results$logf) > 0L) {
+    lw <- last_results$logf - last_results$logg
+    final_IS <- list(
+      logf  = last_results$logf,
+      logg  = last_results$logg,
+      lw    = lw,
+      fhat  = .is_fhat(last_results$logf, last_results$logg),
+      ESS   = .ess_from_lw(lw)
+    )
+  }
+
   list(
     mcem       = mcem,
     pars       = pars,
     iterations = i,
     se         = sde,
-    loglik_var = loglik_var
+    loglik_var = loglik_var,
+    final_IS   = final_IS
   )
 }
 
