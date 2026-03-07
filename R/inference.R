@@ -55,10 +55,15 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     \code{200}. Alias: \code{sample_size}.}
 #'   \item{\code{xtol}}{Relative tolerance for the M-step optimiser.
 #'     Default \code{1e-3}.}
-#'   \item{\code{tol}}{Standard error of log-likelihood below which MCEM
-#'     is considered converged. Default \code{0.1}.}
+#'   \item{\code{tol}}{Parameter-stability convergence threshold. MCEM
+#'     is considered converged when the largest relative parameter change
+#'     (scaled by the search range) is below \code{tol} for \code{patience}
+#'     consecutive iterations. Default \code{1e-3}.}
 #'   \item{\code{burnin}}{Number of burn-in iterations before convergence
 #'     is tested. Default \code{20}.}
+#'   \item{\code{patience}}{Number of consecutive iterations with parameter
+#'     change below \code{tol} required to declare convergence. Default
+#'     \code{3}.}
 #' }
 #'
 #' CEM-specific parameters:
@@ -100,8 +105,9 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
       sampling    = "dynamic_fresh",
       sample_size = 200L,       # alias: num_trees
       xtol        = 1e-3,
-      tol         = 0.1,
-      burnin      = 20L
+      tol         = 1e-3,
+      burnin      = 20L,
+      patience    = 3L
     ))
   } else {
     c(common, list(
@@ -215,6 +221,7 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
       xtol        = ctrl$xtol,
       tol         = ctrl$tol,
       burnin      = ctrl$burnin,
+      patience    = ctrl$patience,
       num_threads = ctrl$num_threads,
       verbose     = ctrl$verbose,
       model       = model,
@@ -244,7 +251,6 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
     lower_bound  = lower_bound,
     upper_bound  = upper_bound,
     maxN         = ctrl$maxN,
-    max_lambda   = 1e6,
     sample_size  = ctrl$sample_size,
     shared_trees = ctrl$shared_trees,
     disc_prop    = ctrl$disc_prop,
@@ -290,8 +296,9 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
 #' @param method Optimisation method:
 #'   \describe{
 #'     \item{\code{"mcem"}}{Monte Carlo Expectation-Maximisation (default).
-#'       Iterates E- and M-steps until the log-likelihood standard error
-#'       falls below \code{control$tol}. Requires \code{init_pars}.}
+#'       Iterates E- and M-steps until all parameters stabilise (max relative
+#'       change < \code{control$tol} for \code{control$patience} consecutive
+#'       iterations). Requires \code{init_pars}.}
 #'     \item{\code{"cem"}}{Monte Carlo Cross-Entropy Method. Initialises a
 #'       particle population randomly within the bounds and evolves it until
 #'       convergence (annealing exhausted, plateau, or \code{control$max_iter}
@@ -428,8 +435,8 @@ estimate_rates <- function(tree,
                   mode, ctrl$max_iter))
     }
     if (method == "mcem") {
-      cat(sprintf("  num_trees=%d  tol=%.4g  burnin=%d  xtol=%.1e\n",
-                  ctrl$num_trees, ctrl$tol, ctrl$burnin, ctrl$xtol))
+      cat(sprintf("  num_trees=%d  tol=%.1e  patience=%d  burnin=%d  xtol=%.1e\n",
+                  ctrl$num_trees, ctrl$tol, ctrl$patience, ctrl$burnin, ctrl$xtol))
       if (ctrl$num_trees >= 2L)
         cat("  loglik_var   : bootstrapped automatically (B=200)\n")
       else
@@ -641,7 +648,7 @@ select_diversification_model <- function(tree,
 
   defaults <- list(
     cem  = list(max_iter = 15, num_particles = 40),
-    mcem = list(num_trees = 200, tol = 0.1, burnin = 10)
+    mcem = list(num_trees = 200, tol = 1e-3, burnin = 10)
   )
   ctrl <- utils::modifyList(defaults, control)
 

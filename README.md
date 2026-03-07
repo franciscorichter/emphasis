@@ -194,8 +194,8 @@ diag_cem$IS_quality        # ESS, ESS fraction, mean/sd of IS log-weights
 The Monte Carlo EM algorithm performs local refinement from a given starting
 point. It iterates E-steps (augmenting trees at the current estimate) and
 M-steps (maximising the IS-weighted Q-function via SBPLX). Convergence is
-declared when the standard error of fhat over post-burnin iterations falls
-below `tol`.
+declared when all parameters stabilise: the maximum relative change (scaled
+by the search range) stays below `tol` for `patience` consecutive iterations.
 
 ```r
 fit_mcem <- estimate_rates(sim, method = "mcem", model = "pd",
@@ -204,7 +204,7 @@ fit_mcem <- estimate_rates(sim, method = "mcem", model = "pd",
     lower_bound = lb,
     upper_bound = ub,
     num_trees   = 200,   # IS trees per EM iteration; bootstrap variance auto-computed
-    tol         = 0.1,   # convergence: SE(fhat) < tol
+    tol         = 1e-3,  # convergence: max relative parameter change < tol
     burnin      = 20,    # iterations excluded from convergence check
     verbose     = TRUE
   ))
@@ -216,7 +216,7 @@ fit_mcem$AIC
 
 # Convergence diagnostics: fhat trace, parameter traces, SE convergence, IS weights
 diag_mcem <- diagnose_mcem(fit_mcem, lower_bound = lb, upper_bound = ub)
-diag_mcem$convergence  # per-iteration: fhat, num_trees, time
+diag_mcem$convergence  # per-iteration: fhat, delta_max, num_trees, time
 diag_mcem$IS_quality   # ESS, mean/sd of log-weights, bootstrap variance
 ```
 
@@ -226,7 +226,8 @@ diag_mcem$IS_quality   # ESS, mean/sd of log-weights, bootstrap variance
 | `upper_bound` | — | **Required.** Upper bounds vector |
 | `verbose` | FALSE | Print iteration summaries |
 | `num_trees` | 200 | IS trees per EM iteration. Bootstrap variance auto-computed. Alias: `sample_size` |
-| `tol` | 0.1 | Convergence: SE(fhat) < tol |
+| `tol` | 1e-3 | Parameter-stability threshold: max relative change (fraction of search range) |
+| `patience` | 3 | Consecutive stable iterations required to declare convergence |
 | `burnin` | 20 | Burn-in iterations excluded from convergence check |
 | `xtol` | 1e-3 | Relative tolerance for the M-step optimiser |
 | `max_missing` | 1e4 | Max extinct lineages per augmented tree; trees exceeding this are discarded |
@@ -546,8 +547,7 @@ usage examples integrated with the estimation workflow.
 
 | Field | Content |
 |-------|---------|
-| `convergence` | Per-iteration: `fhat`, `num_trees`, `time` |
-| `se_trace` | Running SE of `fhat` (convergence declared when SE < `tol`) |
+| `convergence` | Per-iteration: `fhat`, `delta_max`, `num_trees`, `time` |
 | `IS_quality` | ESS, mean/sd of log-weights, bootstrap variance |
 | `final_IS` | Raw IS data (`logf`, `logg`, `lw`) from the final E-step |
 

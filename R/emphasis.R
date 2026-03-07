@@ -8,6 +8,7 @@
                       xtol,
                       tol,
                       burnin,
+                      patience,
                       num_threads,
                       return_trees = FALSE,
                       verbose = FALSE,
@@ -31,12 +32,17 @@
   copy_trees <- isTRUE(return_trees)
   maxN <- max(1L, as.integer(10 * sample_size))
 
-  sde <- Inf
-  i <- 0
-  mcem <- NULL
-  last_results <- NULL  # keep last iteration's E-step output for bootstrap
+  # Parameter-stability convergence: scale changes by the search range
+  range_vec <- upper_bound - lower_bound
+  range_vec[range_vec == 0] <- 1  # fixed params: lb == ub, delta always 0
 
-  while (is.infinite(sde) || sde > tol) {
+  i <- 0
+  streak <- 0L
+  prev_pars <- pars
+  mcem <- NULL
+  last_results <- NULL
+
+  repeat {
     i <- i + 1
     results <- tryCatch(
       em_cpp(brts = brts,
@@ -64,28 +70,33 @@
     last_results <- results
     pars <- results$estimates
     par_df <- as.data.frame(as.list(stats::setNames(pars, paste0("par", seq_along(pars)))))
+
+    # Max relative parameter change (fraction of search range)
+    delta_max <- max(abs(pars - prev_pars) / range_vec)
+    prev_pars <- pars
+
     step <- cbind(par_df, data.frame(
-      fhat = results$fhat,
+      fhat      = results$fhat,
+      delta_max = delta_max,
       num_trees = sample_size,
-      time = results$time
+      time      = results$time
     ))
     mcem <- rbind(mcem, step)
 
     if (verbose) {
-      message(sprintf("Iteration %d: fhat = %.4f", i, results$fhat))
+      message(sprintf("Iteration %d: fhat = %.4f  delta_max = %.2e", i, results$fhat, delta_max))
     }
 
     if (i > burnin) {
-      mcem_est <- mcem[max(1, floor(nrow(mcem) / 2)):nrow(mcem), , drop = FALSE]
-      mcem_est <- mcem_est[is.finite(mcem_est$fhat), , drop = FALSE]
-      if (nrow(mcem_est) == 0) {
-        warning("No finite fhat after burn-in; stopping .mcem_dynamic_fresh().")
-        break
+      if (delta_max < tol) {
+        streak <- streak + 1L
+      } else {
+        streak <- 0L
       }
-      sde <- stats::sd(mcem_est$fhat) / sqrt(nrow(mcem_est))
       if (verbose) {
-        message(sprintf("  SE(fhat) = %.4f  (tol = %.4f)", sde, tol))
+        message(sprintf("  streak = %d/%d  (tol = %.1e)", streak, patience, tol))
       }
+      if (streak >= patience) break
     } else if (verbose) {
       message(sprintf("  burn-in %d/%d", i, burnin))
     }
@@ -95,6 +106,8 @@
       break
     }
   }
+
+  converged <- streak >= patience
 
   # Bootstrap variance from the last iteration's IS weights
   loglik_var <- NA_real_
@@ -122,7 +135,7 @@
     mcem       = mcem,
     pars       = pars,
     iterations = i,
-    se         = sde,
+    converged  = converged,
     loglik_var = loglik_var,
     final_IS   = final_IS
   )

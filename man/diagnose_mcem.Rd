@@ -26,9 +26,8 @@ diagnose_mcem(x, plot = TRUE, lower_bound = NULL,
 A list of class \code{"mcem_diagnostics"} (invisibly) with:
 \describe{
   \item{\code{convergence}}{Data frame with per-iteration \code{fhat},
-    \code{num_trees}, and \code{time}.}
-  \item{\code{se_trace}}{Data frame with running SE of \code{fhat}
-    (post-burnin).}
+    \code{delta_max} (max relative parameter change), \code{num_trees},
+    and \code{time}.}
   \item{\code{IS_quality}}{List with ESS, mean/sd of log-weights,
     and bootstrap variance at the final iteration.}
   \item{\code{final_IS}}{Raw IS components (\code{logf}, \code{logg},
@@ -45,8 +44,9 @@ Diagnostic plots include:
     convergence of the sequence.}
   \item{Parameter traces}{Per-parameter estimates across iterations,
     with optional bound and true-value lines.}
-  \item{SE trace}{Running standard error of fhat used for the
-    convergence criterion.}
+  \item{Parameter stability}{Max relative parameter change (delta\_max)
+    vs.\ iteration; convergence is declared when this falls below tol
+    for patience consecutive iterations.}
   \item{IS weight histogram}{Distribution of IS log-weights at the
     final iteration, annotated with ESS.}
 }

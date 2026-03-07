@@ -329,14 +329,11 @@ diagnose_cem <- function(x, plot = TRUE,
 #' \describe{
 #'   \item{\code{iteration}}{Iteration index.}
 #'   \item{\code{fhat}}{IS log-likelihood at the M-step estimate.}
+#'   \item{\code{delta_max}}{Maximum relative parameter change (fraction of
+#'     search range) from the previous iteration.}
 #'   \item{\code{num_trees}}{Number of augmented trees used.}
 #'   \item{\code{time}}{Wall-clock time for the iteration (ms).}
 #' }
-#'
-#' @section SE trace (\code{$se_trace}):
-#' A data frame with one row per post-burnin iteration containing the
-#' running standard error of \code{fhat}.  Convergence is declared when
-#' this falls below \code{tol}.
 #'
 #' @section IS quality (\code{$IS_quality}):
 #' Importance-sampling diagnostics from the final EM iteration:
@@ -355,7 +352,7 @@ diagnose_cem <- function(x, plot = TRUE,
 #'   (for simulation studies).  Red dashed lines are drawn at these values.
 #' @param lower_bound,upper_bound Optional numeric vectors for bound lines.
 #' @return A list of class \code{"mcem_diagnostics"} (invisibly) with
-#'   components \code{convergence}, \code{se_trace}, \code{IS_quality},
+#'   components \code{convergence}, \code{IS_quality},
 #'   and \code{final_IS}.
 #' @seealso \code{\link{diagnose_cem}}, \code{\link{estimate_rates}}
 #' @examples
@@ -391,24 +388,13 @@ diagnose_mcem <- function(x, plot = TRUE,
   convergence <- data.frame(
     iteration = seq_len(n_iter),
     fhat      = mcem_df$fhat,
+    delta_max = if ("delta_max" %in% names(mcem_df)) mcem_df$delta_max
+                else rep(NA_real_, n_iter),
     num_trees = mcem_df$num_trees,
     time      = mcem_df$time
   )
 
-  # ── 2. SE trace (post-burnin) ─────────────────────────────────────────────
-  se_trace <- data.frame(iteration = integer(0), se = numeric(0))
-  for (t in seq_len(n_iter)) {
-    half_start <- max(1L, floor(t / 2))
-    window     <- mcem_df$fhat[half_start:t]
-    window     <- window[is.finite(window)]
-    if (length(window) >= 2L) {
-      se_val <- stats::sd(window) / sqrt(length(window))
-      se_trace <- rbind(se_trace,
-                        data.frame(iteration = t, se = se_val))
-    }
-  }
-
-  # ── 3. IS quality at final iteration ──────────────────────────────────────
+  # ── 2. IS quality at final iteration ──────────────────────────────────────
   IS_quality <- NULL
   final_IS   <- details$final_IS
   if (!is.null(final_IS)) {
@@ -426,18 +412,18 @@ diagnose_mcem <- function(x, plot = TRUE,
     )
   }
 
-  # ── 4. Parameter names ──────────────────────────────────────────────────
+  # ── 3. Parameter names ──────────────────────────────────────────────────
   if (is.null(par_names) && length(par_cols) > 0L)
     par_names <- paste0("par", seq_along(par_cols))
   n_par <- length(par_cols)
 
-  # ── 5. Plots ────────────────────────────────────────────────────────────
+  # ── 4. Plots ────────────────────────────────────────────────────────────
   if (plot) {
-    has_IS  <- !is.null(final_IS) &&
-               length(final_IS$lw[is.finite(final_IS$lw)]) > 1L
-    has_se  <- nrow(se_trace) > 0L
+    has_IS    <- !is.null(final_IS) &&
+                 length(final_IS$lw[is.finite(final_IS$lw)]) > 1L
+    has_delta <- any(!is.na(convergence$delta_max))
 
-    n_plots <- 1L + has_se + has_IS + n_par
+    n_plots <- 1L + has_delta + has_IS + n_par
     nc      <- min(n_plots, 3L)
     nr      <- ceiling(n_plots / nc)
 
@@ -510,15 +496,17 @@ diagnose_mcem <- function(x, plot = TRUE,
       }
     }
 
-    # SE trace
-    if (has_se) {
-      tol_val <- if (!is.null(details$se) && is.finite(details$se)) details$se else NULL
-      graphics::plot(se_trace$iteration, se_trace$se,
+    # Parameter stability trace
+    if (has_delta) {
+      dm <- convergence$delta_max[!is.na(convergence$delta_max)]
+      dm_iter <- convergence$iteration[!is.na(convergence$delta_max)]
+      graphics::plot(dm_iter, dm,
                      type = "b", pch = 16, col = "darkorange", lwd = 1.5,
-                     xlab = "EM iteration", ylab = "SE(fhat)",
-                     main = "Convergence: SE of fhat")
-      if (!is.null(tol_val))
-        graphics::abline(h = tol_val, col = "grey50", lty = 3, lwd = 1)
+                     log = "y",
+                     xlab = "EM iteration",
+                     ylab = expression(Delta[max]),
+                     main = "Parameter stability")
+      graphics::abline(h = dm[length(dm)], col = "grey50", lty = 3, lwd = 1)
     }
 
     # IS log-weight histogram at final iteration
@@ -539,7 +527,6 @@ diagnose_mcem <- function(x, plot = TRUE,
   structure(
     list(
       convergence = convergence,
-      se_trace    = se_trace,
       IS_quality  = IS_quality,
       final_IS    = final_IS
     ),
@@ -563,9 +550,10 @@ print.mcem_diagnostics <- function(x, ...) {
   if (length(fhat_fin) > 0L)
     cat(sprintf("Final fhat:      %.4f\n", utils::tail(fhat_fin, 1L)))
 
-  if (nrow(x$se_trace) > 0L)
-    cat(sprintf("Final SE(fhat):  %.4f\n",
-                utils::tail(x$se_trace$se, 1L)))
+  dm <- x$convergence$delta_max
+  dm <- dm[!is.na(dm)]
+  if (length(dm) > 0L)
+    cat(sprintf("Final delta_max: %.2e\n", utils::tail(dm, 1L)))
 
   if (!is.null(x$IS_quality)) {
     iq <- x$IS_quality

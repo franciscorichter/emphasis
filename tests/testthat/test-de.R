@@ -7,8 +7,7 @@
 test_that("emphasis_cem errors on mismatched bounds", {
   expect_error(
     emphasis_cem(brts = 1:3, max_iter = 1, num_points = 10, max_missing = 100,
-                 sd_vec = c(0.1), lower_bound = c(0, 0), upper_bound = c(1),
-                 max_lambda = 10),
+                 sd_vec = c(0.1), lower_bound = c(0, 0), upper_bound = c(1)),
     "same length"
   )
 })
@@ -144,7 +143,6 @@ test_that("emphasis_cem integration test", {
     lower_bound = lb8,
     upper_bound = ub8,
     maxN        = 20,
-    max_lambda  = 100,
     disc_prop   = 0.5,
     verbose     = FALSE,
     num_threads = 1,
