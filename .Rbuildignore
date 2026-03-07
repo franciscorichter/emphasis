@@ -17,3 +17,5 @@
 ^vignettes/.*\.html$
 ^\.R$
 ^doc$
+^state\.md$
+^analysis$

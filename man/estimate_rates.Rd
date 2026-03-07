@@ -5,7 +5,7 @@
 \usage{
 estimate_rates(
   tree,
-  method = c("mcem", "cem"),
+  method = c("mcem", "cem", "gam"),
   model = "cr",
   init_pars = NULL,
   control = list(),
@@ -22,11 +22,16 @@ recommended), (b) the list returned by \code{\link{simulate_tree}}
 \item{method}{Optimisation method:
 \describe{
   \item{\code{"mcem"}}{Monte Carlo Expectation-Maximisation (default).
-    Iterates E- and M-steps until the log-likelihood standard error
-    falls below \code{control$tol}. Requires \code{init_pars}.}
+    Iterates E- and M-steps until parameters stabilise (max relative
+    change < \code{tol} for \code{patience} consecutive iterations)
+    or \code{max_iter} is reached. Requires \code{init_pars}.}
   \item{\code{"cem"}}{Monte Carlo Cross-Entropy Method. Initialises a
     particle population randomly within the bounds and evolves it until
     convergence. Does not need \code{init_pars}.}
+  \item{\code{"gam"}}{GAM-based MLE. Evaluates the IS log-likelihood
+    on a grid spanning the bounds, fits a smooth GAM surface, and
+    optimises it via L-BFGS-B. One-shot (non-iterative); no
+    \code{init_pars} needed. Requires the \pkg{mgcv} package.}
 }}
 
 \item{model}{Model specification: a formula (e.g. \code{~ N + PD}),
@@ -35,8 +40,8 @@ or a length-3 binary integer vector \code{c(use_N, use_P, use_E)}.
 Default \code{"cr"} (constant rate).}
 
 \item{init_pars}{Starting parameter vector. Required for \code{"mcem"};
-ignored for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the
-midpoint of the bounds is used.}
+ignored for \code{"cem"} and \code{"gam"}. If \code{NULL} with
+\code{"mcem"}, the midpoint of the bounds is used.}
 
 \item{control}{Named list of tuning parameters. \strong{Must include}
 \code{lower_bound} and \code{upper_bound}. Use
@@ -62,13 +67,12 @@ A list with class \code{"emphasis_fit"} containing:
   \item{\code{loglik_var}}{Bootstrap variance of \code{loglik} due to
     IS Monte Carlo noise. Computed automatically when
     \code{num_trees >= 2} (B = 200 replicates); \code{NA}
-    when \code{num_trees = 1}.}
+    when \code{num_trees = 1} or method is \code{"gam"}.}
   \item{\code{n_pars}}{Number of free parameters (used for AIC).}
   \item{\code{AIC}}{Akaike Information Criterion: \code{-2 * loglik + 2 * n_pars}.}
-  \item{\code{method}}{Method used (\code{"mcem"} or \code{"cem"}).}
+  \item{\code{method}}{Method used (\code{"mcem"}, \code{"cem"}, or \code{"gam"}).}
   \item{\code{model}}{Resolved binary model vector.}
-  \item{\code{details}}{Full output from the back-end function
-    (\code{.mcem_dynamic_fresh} or \code{emphasis_cem}).}
+  \item{\code{details}}{Full output from the back-end function.}
 }
 }
 \description{
@@ -86,12 +90,18 @@ fit <- estimate_rates(sim, method = "mcem", model = "cr",
   control = list(lower_bound = c(0, 0), upper_bound = c(2, 1)))
 fit$pars
 
-# Diversity-dependent model — CEM for broad search
+# Diversity-dependent model -- CEM for broad search
 sim_dd <- simulate_tree(pars = c(0.5, -0.005, 0.1, 0), max_t = 8, model = "dd")
 fit_dd <- estimate_rates(sim_dd, method = "cem", model = "dd",
   control = list(lower_bound = c(0.1, -0.1, 0, -0.01),
                  upper_bound = c(2, 0.01, 0.5, 0.01),
                  verbose = TRUE))
 fit_dd$pars
+
+# GAM-based MLE
+fit_gam <- estimate_rates(sim, method = "gam", model = "cr",
+  control = list(lower_bound = c(0.1, 0.01), upper_bound = c(1.5, 0.5),
+                 grid_points = 15, sample_size = 100))
+fit_gam$pars
 }
 }

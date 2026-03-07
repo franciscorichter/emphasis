@@ -3,10 +3,11 @@
 \alias{estimate_rates_control}
 \title{Default control parameters for estimate_rates}
 \usage{
-estimate_rates_control(method = c("mcem", "cem"), n_pars = 4)
+estimate_rates_control(method = c("mcem", "cem", "gam"), n_pars = 4)
 }
 \arguments{
-\item{method}{Which method's defaults to return: \code{"mcem"} or \code{"cem"}.}
+\item{method}{Which method's defaults to return: \code{"mcem"},
+\code{"cem"}, or \code{"gam"}.}
 
 \item{n_pars}{Number of parameters (used to set the default \code{sd_vec}
 for CEM when \code{NULL}).}
@@ -19,7 +20,7 @@ Returns a list of default tuning parameters for \code{\link{estimate_rates}}.
 Override individual elements and pass the modified list via the
 \code{control} argument.
 
-Shared parameters (both methods): \code{lower_bound} (required, no
+Shared parameters (all methods): \code{lower_bound} (required, no
 default), \code{upper_bound} (required, no default),
 \code{verbose} (default FALSE), \code{max_missing} (default 1e4),
 \code{num_threads} (default 1).
@@ -27,13 +28,11 @@ default), \code{upper_bound} (required, no default),
 MCEM-specific: \code{sampling} (default \code{"dynamic_fresh"}),
 \code{num_trees} (augmented trees per EM iteration, default 200;
 alias: \code{sample_size}), \code{max_iter} (iteration cap, default 200),
-\code{maxN} (max augmentation attempts per tree, default 10),
+\code{maxN} (max augmentation attempts per E-step, default 2000),
 \code{xtol} (M-step optimiser tolerance, default 1e-3),
 \code{tol} (parameter-stability threshold: max relative change scaled
 by search range, default 1e-3), \code{patience} (consecutive stable
 iterations required, default 3).
-Bootstrap variance (\code{loglik_var}) is computed automatically from
-the final iteration's IS weights (B = 200).
 
 CEM-specific: \code{max_iter} (default 20), \code{num_particles}
 (particles per iteration, default 50; alias: \code{num_points}),
@@ -42,8 +41,10 @@ alias: \code{sample_size}), \code{sd_vec} (NULL = (upper-lower)/4),
 \code{maxN} (default 10), \code{disc_prop} (default 0.5),
 \code{tol} (plateau threshold, default 1e-4), \code{patience}
 (default 5), \code{bias_correct} (default FALSE).
+
+GAM-specific: \code{grid_points} (per-parameter resolution, default 20),
+\code{sample_size} (IS trees per grid point, default 200),
+\code{maxN} (NULL = auto), \code{max_lambda} (default 500),
+\code{spline_type} (\code{"univariate"} or \code{"bivariate"}).
 }
-\examples{
-estimate_rates_control("mcem")
-estimate_rates_control("cem")
-}
+\keyword{internal}
