@@ -17,10 +17,6 @@ simulate_div_tree_cpp <- function(pars, model, max_t, max_N, max_tries, link = 0
     .Call('_emphasis_simulate_div_tree_cpp', PACKAGE = 'emphasis', pars, model, max_t, max_N, max_tries, link)
 }
 
-generateNonHomogeneousExpCpp <- function(num_variates, covariates, parameters, start_time, max_time) {
-    .Call('_emphasis_generateNonHomogeneousExpCpp', PACKAGE = 'emphasis', num_variates, covariates, parameters, start_time, max_time)
-}
-
 #' Evaluate log p(obs, z | theta) and log q(z | obs, theta) for augmented trees
 #'
 #' Given a list of augmented trees (produced by \code{\link{augment_trees}})

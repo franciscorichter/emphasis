@@ -113,13 +113,18 @@
   final_IS <- NULL
   if (!is.null(last_results) && length(last_results$logf) > 0L) {
     lw <- last_results$logf - last_results$logg
+    n_rej <- .n0(last_results$rejected) +
+              .n0(last_results$rejected_overruns) +
+              .n0(last_results$rejected_lambda)
     final_IS <- list(
       logf  = last_results$logf,
       logg  = last_results$logg,
       lw    = lw,
       fhat  = .is_fhat(last_results$logf, last_results$logg,
                         n_zero_weight = .n0(last_results$rejected_zero_weights)),
-      ESS   = .ess_from_lw(lw)
+      ESS   = .ess_from_lw(lw),
+      n_rejected = n_rej,
+      rejected_zero_weights = .n0(last_results$rejected_zero_weights)
     )
   }
 

@@ -402,15 +402,19 @@ diagnose_mcem <- function(x, plot = TRUE,
   if (!is.null(final_IS)) {
     lw_fin <- final_IS$lw[is.finite(final_IS$lw)]
     n_trees <- length(final_IS$lw)
+    n_rej   <- if (!is.null(final_IS$n_rejected)) final_IS$n_rejected else 0L
+    n_total <- n_trees + n_rej
     IS_quality <- list(
-      ESS          = final_IS$ESS,
-      ESS_fraction = if (!is.na(final_IS$ESS) && n_trees > 0)
-                       final_IS$ESS / n_trees else NA_real_,
-      mean_lw      = if (length(lw_fin) > 0) mean(lw_fin) else NA_real_,
-      sd_lw        = if (length(lw_fin) > 1) stats::sd(lw_fin) else NA_real_,
-      fhat         = final_IS$fhat,
-      num_trees    = n_trees,
-      loglik_var   = if (!is.null(details$loglik_var)) details$loglik_var else NA_real_
+      ESS             = final_IS$ESS,
+      ESS_fraction    = if (!is.na(final_IS$ESS) && n_trees > 0)
+                          final_IS$ESS / n_trees else NA_real_,
+      mean_lw         = if (length(lw_fin) > 0) mean(lw_fin) else NA_real_,
+      sd_lw           = if (length(lw_fin) > 1) stats::sd(lw_fin) else NA_real_,
+      fhat            = final_IS$fhat,
+      num_trees       = n_trees,
+      n_rejected      = n_rej,
+      acceptance_rate = if (n_total > 0) n_trees / n_total else NA_real_,
+      loglik_var      = if (!is.null(details$loglik_var)) details$loglik_var else NA_real_
     )
   }
 
@@ -564,6 +568,8 @@ print.mcem_diagnostics <- function(x, ...) {
     iq <- x$IS_quality
     cat("\nIS quality (final E-step):\n")
     cat(sprintf("  num_trees:    %d\n", iq$num_trees))
+    if (!is.na(iq$acceptance_rate))
+      cat(sprintf("  acceptance:   %.0f%%\n", 100 * iq$acceptance_rate))
     cat(sprintf("  ESS:          %.1f  (%.0f%% of num_trees)\n",
                 iq$ESS, 100 * iq$ESS_fraction))
     cat(sprintf("  mean lw:      %.4f\n", iq$mean_lw))
@@ -792,8 +798,11 @@ print.cem_diagnostics <- function(x, ...) {
   if (!is.null(x$IS_quality)) {
     iq <- x$IS_quality
     cat("IS quality at best particle:\n")
-    cat(sprintf("  n_trees:      %d  (rejected: %d)\n",
-                iq$n_trees, iq$n_rejected))
+    acceptance <- if (iq$n_trees + iq$n_rejected > 0)
+      iq$n_trees / (iq$n_trees + iq$n_rejected) else NA_real_
+    cat(sprintf("  n_trees:      %d  (rejected: %d, acceptance: %.0f%%)\n",
+                iq$n_trees, iq$n_rejected,
+                if (!is.na(acceptance)) 100 * acceptance else 0))
     cat(sprintf("  ESS:          %.1f  (%.0f%% of n_trees)\n",
                 iq$ESS, 100 * iq$ESS_fraction))
     cat(sprintf("  mean lw:      %.4f\n", iq$mean_lw))

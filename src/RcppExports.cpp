@@ -26,21 +26,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// generateNonHomogeneousExpCpp
-NumericVector generateNonHomogeneousExpCpp(int num_variates, NumericMatrix covariates, NumericVector parameters, double start_time, double max_time);
-RcppExport SEXP _emphasis_generateNonHomogeneousExpCpp(SEXP num_variatesSEXP, SEXP covariatesSEXP, SEXP parametersSEXP, SEXP start_timeSEXP, SEXP max_timeSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type num_variates(num_variatesSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type covariates(covariatesSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< double >::type start_time(start_timeSEXP);
-    Rcpp::traits::input_parameter< double >::type max_time(max_timeSEXP);
-    rcpp_result_gen = Rcpp::wrap(generateNonHomogeneousExpCpp(num_variates, covariates, parameters, start_time, max_time));
-    return rcpp_result_gen;
-END_RCPP
-}
 // eval_logf_cpp
 Rcpp::List eval_logf_cpp(const std::vector<double>& pars, const Rcpp::List& trees, Rcpp::IntegerVector model, int link);
 RcppExport SEXP _emphasis_eval_logf_cpp(SEXP parsSEXP, SEXP treesSEXP, SEXP modelSEXP, SEXP linkSEXP) {
@@ -121,7 +106,6 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_emphasis_simulate_div_tree_cpp", (DL_FUNC) &_emphasis_simulate_div_tree_cpp, 6},
-    {"_emphasis_generateNonHomogeneousExpCpp", (DL_FUNC) &_emphasis_generateNonHomogeneousExpCpp, 5},
     {"_emphasis_eval_logf_cpp", (DL_FUNC) &_emphasis_eval_logf_cpp, 4},
     {"_emphasis_rcpp_mce", (DL_FUNC) &_emphasis_rcpp_mce, 9},
     {"_emphasis_rcpp_mcem", (DL_FUNC) &_emphasis_rcpp_mcem, 14},
