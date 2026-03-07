@@ -90,7 +90,7 @@ namespace emphasis {
       std::string msg = "maxN exceeded with rejection reasons: ";
       msg += std::to_string(E.info.rejected_lambda) + " lambda; ";
       msg += std::to_string(E.info.rejected_overruns) + " overruns; ";
-      msg += std::to_string(E.info.rejected_overruns) + " zero weights; ";
+      msg += std::to_string(E.info.rejected_zero_weights) + " zero weights; ";
       msg += std::to_string(E.info.rejected) + " unhandled exception; ";
       msg += " Trees so far: " + std::to_string(E.info.num_trees);
       return msg;

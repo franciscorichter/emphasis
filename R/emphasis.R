@@ -58,8 +58,8 @@
       if (verbose) message(sprintf("Iteration %d: E-step failed (%d consecutive)", i, fail_streak))
       if (fail_streak >= 5L) {
         stop_reason <- "e_step_failure"
-        warning("MCEM: 5 consecutive E-step failures; stopping. ",
-                "Try widening bounds or increasing max_missing.")
+        # Try to diagnose why by extracting the last error
+        .mcem_warn_estep(brts, pars, lower_bound, upper_bound, model, link)
         break
       }
       next
@@ -131,6 +131,53 @@
     final_IS    = final_IS
   )
 }
+
+# Diagnose why E-step failed and issue an informative warning.
+.mcem_warn_estep <- function(brts, pars, lower_bound, upper_bound, model, link) {
+  # Run a tiny diagnostic E-step to get rejection breakdown
+  err_msg <- tryCatch({
+    em_cpp(brts         = brts,
+           init_pars    = pars,
+           sample_size  = 1L,
+           maxN         = 200L,
+           max_missing  = 1e4,
+           max_lambda   = 1e6,
+           lower_bound  = lower_bound,
+           upper_bound  = upper_bound,
+           xtol_rel     = 1e-3,
+           num_threads  = 1L,
+           copy_trees   = FALSE,
+           model        = as.integer(model),
+           link         = as.integer(link))
+    NULL
+  }, error = function(e) conditionMessage(e))
+
+  zero_w <- if (!is.null(err_msg)) {
+    m <- regmatches(err_msg, regexpr("[0-9]+ zero weights", err_msg))
+    if (length(m)) as.integer(sub(" zero weights", "", m)) else NA_integer_
+  } else NA_integer_
+
+  if (!is.na(zero_w) && zero_w > 50L) {
+    warning(
+      "MCEM: E-step failed — nearly all augmented trees have zero IS weight ",
+      "(rejected_zero_weights=", zero_w, "/200).\n",
+      "  Likely cause: speciation rate is zero (lambda=0) under current parameters,\n",
+      "  e.g. PD or DD model with large tree and strongly negative covariate slope.\n",
+      "  Suggestions:\n",
+      "    1. Use link=\"exponential\" (ensures lambda > 0 everywhere).\n",
+      "    2. Restrict bounds so the covariate slope cannot drive lambda to zero.\n",
+      "    3. Use a simpler model (e.g. CR or DD) for this tree size.",
+      call. = FALSE
+    )
+  } else {
+    warning(
+      "MCEM: 5 consecutive E-step failures; stopping. ",
+      "Try widening bounds or increasing max_missing.",
+      call. = FALSE
+    )
+  }
+}
+
 
 get_required_sampling_size <- function(M, tol = 0.05) {
   if (!nrow(M)) {

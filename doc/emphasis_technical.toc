@@ -1,0 +1,52 @@
+\contentsline {section}{\numberline {1}Notation}{2}{section.1}%
+\contentsline {section}{\numberline {2}The Diversification Model and Its Simulation}{3}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Rate specification, link functions, and model variants}{3}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Forward simulation via Gillespie's algorithm and thinning}{3}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Conditional simulation of augmented trees}{4}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}Batch simulation, survival probability, and parallel computing}{4}{subsection.2.4}%
+\contentsline {section}{\numberline {3}Phylogenetic Likelihood and Importance Sampling}{4}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Complete-data and marginal likelihood}{4}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}The importance-sampling likelihood estimator}{5}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Bias correction and cross-importance sampling}{6}{subsection.3.3}%
+\contentsline {paragraph}{Moment-based bias correction.}{6}{section*.2}%
+\contentsline {paragraph}{Cross-importance sampling (Mode\nobreakspace {}2).}{6}{section*.3}%
+\contentsline {section}{\numberline {4}The Cross-Entropy Method with Simulated Annealing}{6}{section.4}%
+\contentsline {subsection}{\numberline {4.1}The optimisation problem}{6}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Cross-entropy population update}{7}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Per-particle likelihood evaluation: Mode\nobreakspace {}1 and Mode\nobreakspace {}2}{7}{subsection.4.3}%
+\contentsline {paragraph}{Why caches are cleared.}{8}{section*.6}%
+\contentsline {paragraph}{Tracking the best particle.}{9}{section*.7}%
+\contentsline {subsection}{\numberline {4.4}Simulated annealing schedule}{9}{subsection.4.4}%
+\contentsline {paragraph}{Connection to simulated annealing.}{9}{section*.8}%
+\contentsline {subsection}{\numberline {4.5}Stopping rules}{10}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}Algorithm}{10}{subsection.4.6}%
+\contentsline {paragraph}{Parallelism in the evaluation step.}{12}{section*.9}%
+\contentsline {paragraph}{Particle rescue.}{12}{section*.10}%
+\contentsline {section}{\numberline {5}Monte Carlo EM for Local Refinement}{12}{section.5}%
+\contentsline {subsection}{\numberline {5.1}The EM objective}{12}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}IS-weighted E-step}{12}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}M-step and convergence}{12}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}MCEM as a refinement stage}{13}{subsection.5.4}%
+\contentsline {section}{\numberline {6}Model Selection}{13}{section.6}%
+\contentsline {subsection}{\numberline {6.1}AIC}{13}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Bootstrap variance of $\setbox \z@ \hbox {\mathsurround \z@ $\textstyle f$}\mathaccent "0362{f}$}{13}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Automated three-model selection}{14}{subsection.6.3}%
+\contentsline {section}{\numberline {7}Diagnostics}{14}{section.7}%
+\contentsline {subsection}{\numberline {7.1}CEM convergence diagnostics}{14}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}MCEM convergence diagnostics}{14}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}GAM-based survival probability}{14}{subsection.7.3}%
+\contentsline {section}{\numberline {8}Implementation}{15}{section.8}%
+\contentsline {subsection}{\numberline {8.1}Software architecture}{15}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}Separation of simulation and scoring}{15}{subsection.8.2}%
+\contentsline {subsection}{\numberline {8.3}Parallel computing}{15}{subsection.8.3}%
+\contentsline {paragraph}{Practical guidance.}{16}{section*.11}%
+\contentsline {subsection}{\numberline {8.4}Parameter layout}{16}{subsection.8.4}%
+\contentsline {section}{\numberline {9}Simulation Studies}{16}{section.9}%
+\contentsline {subsection}{\numberline {9.1}Estimation power}{16}{subsection.9.1}%
+\contentsline {subsection}{\numberline {9.2}Model selection power}{16}{subsection.9.2}%
+\contentsline {section}{\numberline {10}Summary of Control Parameters}{17}{section.10}%
+\contentsline {section}{\numberline {11}Mathematical Appendix}{17}{section.11}%
+\contentsline {subsection}{\numberline {11.1}Log-sum-exp identity}{17}{subsection.11.1}%
+\contentsline {subsection}{\numberline {11.2}ESS in log-space}{17}{subsection.11.2}%
+\contentsline {subsection}{\numberline {11.3}Annealing decay rate}{17}{subsection.11.3}%
+\contentsline {subsection}{\numberline {11.4}Hazard integral for the linear link}{17}{subsection.11.4}%

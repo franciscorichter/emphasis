@@ -56,8 +56,10 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'   \item{\code{xtol}}{Relative tolerance for the M-step optimiser.
 #'     Default \code{1e-3}.}
 #'   \item{\code{max_iter}}{Maximum EM iterations. Default \code{200}.}
-#'   \item{\code{maxN}}{Maximum augmentation attempts per tree before
-#'     rejection. Default \code{10}.}
+#'   \item{\code{maxN}}{Total augmentation attempts per E-step (accepted
+#'     plus rejected). Must exceed \code{num_trees}; increase for models
+#'     with high rejection rates (e.g. PD/DD with strongly negative
+#'     covariate slope). Default \code{2000}.}
 #'   \item{\code{tol}}{Parameter-stability convergence threshold. MCEM
 #'     is considered converged when the largest relative parameter change
 #'     (scaled by the search range) is below \code{tol} for \code{patience}
@@ -106,7 +108,7 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
       sampling    = "dynamic_fresh",
       sample_size = 200L,       # alias: num_trees
       max_iter    = 200L,
-      maxN        = 10L,
+      maxN        = 2000L,      # total augmentation attempts; must exceed sample_size
       xtol        = 1e-3,
       tol         = 1e-3,
       patience    = 3L
