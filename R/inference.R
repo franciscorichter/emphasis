@@ -399,8 +399,35 @@ estimate_rates <- function(tree,
 
   brts <- .extract_brts(tree)
 
-  if (is.null(init_pars) && method == "mcem")
+  if (is.null(init_pars) && method == "mcem") {
     init_pars <- (lower_bound + upper_bound) / 2
+    # For linear link with DD/PD/EP models, the midpoint of the slope bounds
+    # can push lambda to zero (lambda = max(0, beta_0 + beta_X * X)).
+    # Start slopes near zero so lambda stays positive during early E-steps.
+    if (link_int == 0L && any(model_bin != 0L)) {
+      n_pars <- length(init_pars)
+      slope_idx <- which(model_bin == 1L)           # which covariates are active
+      lam_slopes <- 1L + slope_idx                   # compact positions for beta_X
+      mu_slopes  <- (n_pars / 2L) + 1L + slope_idx  # compact positions for gamma_X
+      all_slopes <- c(lam_slopes, mu_slopes)
+      all_slopes <- all_slopes[all_slopes <= n_pars]
+      # Clamp slopes: start at 0 if 0 is within bounds, else nearest bound
+      for (j in all_slopes) {
+        init_pars[j] <- max(lower_bound[j], min(upper_bound[j], 0))
+      }
+    }
+  }
+
+  # Warn if PD/EP model with linear link — IS collapse is very likely
+  if (link_int == 0L && (model_bin[2] == 1L || model_bin[3] == 1L) &&
+      any(lower_bound < 0)) {
+    model_str <- .model_label(model_bin)
+    message(
+      "Note: ", model_str, " model with linear link can suffer IS collapse ",
+      "when the covariate drives lambda to zero.\n",
+      "  Consider using link=\"exponential\" for more stable estimation."
+    )
+  }
 
   # Expand compact pars/bounds to full 8-element layout for C++
   lb8 <- .expand_pars(lower_bound, model_bin)
@@ -697,11 +724,10 @@ select_diversification_model <- function(tree,
 
   tab <- do.call(compare_models, fits)
 
-  # Map display label back to model shortcut (compare_models uses .model_label)
-  label_to_key <- c(N = "dd", PD = "pd", EP = "ep")
-  best_label   <- tab$model[tab$delta_AIC == 0 & !is.na(tab$delta_AIC)][1L]
-  best_key     <- label_to_key[best_label]
-  if (is.na(best_key)) best_key <- names(fits)[1L]
+  # Best model = row with delta_AIC == 0
+  best_key <- tab$model[tab$delta_AIC == 0 & !is.na(tab$delta_AIC)][1L]
+  if (is.na(best_key) || !best_key %in% names(fits))
+    best_key <- names(fits)[1L]
 
   result <- list(
     summary    = tab,

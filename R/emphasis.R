@@ -177,15 +177,3 @@
     )
   }
 }
-
-
-get_required_sampling_size <- function(M, tol = 0.05) {
-  if (!nrow(M)) {
-    stop("Input `M` must contain at least one row.")
-  }
-  hlp <- MASS::rlm(M$fhat ~ I(1 / M$sample_size), weights = M$sample_size)
-  ab <- stats::coef(hlp)
-  f_r <- ab[1] - tol
-  n_r <- ceiling(ab[2] / (f_r - ab[1]))
-  n_r
-}

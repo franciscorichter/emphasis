@@ -16,7 +16,6 @@ Depends: R (>= 3.5.0),
 Imports: nloptr,
          ape,
          progress,
-         MASS,
          DDD
 Suggests: ggplot2,
           patchwork,
