@@ -26,8 +26,10 @@ diagnose_mcem(x, plot = TRUE, lower_bound = NULL,
 A list of class \code{"mcem_diagnostics"} (invisibly) with:
 \describe{
   \item{\code{convergence}}{Data frame with per-iteration \code{fhat},
-    \code{delta_max} (max relative parameter change), \code{num_trees},
-    and \code{time}.}
+    \code{delta_max} (max relative parameter change), \code{rejected},
+    \code{num_trees}, and \code{time}.}
+  \item{\code{stop_reason}}{Why MCEM stopped: \code{"converged"},
+    \code{"max_iter"}, or \code{"e_step_failure"}.}
   \item{\code{IS_quality}}{List with ESS, mean/sd of log-weights,
     and bootstrap variance at the final iteration.}
   \item{\code{final_IS}}{Raw IS components (\code{logf}, \code{logg},

@@ -1,113 +1,104 @@
 .mcem_dynamic_fresh <- function(brts,
                       pars,
                       sample_size,
+                      maxN,
                       max_missing,
-                      max_lambda,
                       lower_bound,
                       upper_bound,
+                      max_iter,
                       xtol,
                       tol,
-                      burnin,
                       patience,
                       num_threads,
-                      return_trees = FALSE,
                       verbose = FALSE,
                       conditional = NULL,
                       model = c(0L, 0L, 0L),
-                      link = 0L,
-                      ...) {
+                      link = 0L) {
   if (inherits(brts, "phylo")) {
     brts <- sort(ape::branching.times(brts), decreasing = TRUE)
   }
-  if (!is.numeric(brts)) {
-    stop("`brts` must be numeric or a `phylo` object.")
-  }
-  if (!is.numeric(pars)) {
-    stop("`pars` must be numeric.")
-  }
-  if (!is.null(conditional) && !is.function(conditional)) {
+  if (!is.numeric(brts)) stop("`brts` must be numeric or a `phylo` object.")
+  if (!is.numeric(pars)) stop("`pars` must be numeric.")
+  if (!is.null(conditional) && !is.function(conditional))
     stop("`conditional` must be a function or NULL.")
-  }
 
-  copy_trees <- isTRUE(return_trees)
-  maxN <- max(1L, as.integer(10 * sample_size))
-
-  # Parameter-stability convergence: scale changes by the search range
+  # Scale parameter changes by the search range for convergence check
   range_vec <- upper_bound - lower_bound
-  range_vec[range_vec == 0] <- 1  # fixed params: lb == ub, delta always 0
+  range_vec[range_vec == 0] <- 1  # fixed params (lb == ub): delta always 0
 
-  i <- 0
-  streak <- 0L
-  prev_pars <- pars
-  mcem <- NULL
+  streak      <- 0L
+  fail_streak <- 0L
+  prev_pars   <- pars
+  mcem        <- NULL
   last_results <- NULL
+  stop_reason <- "max_iter"
 
-  repeat {
-    i <- i + 1
+  for (i in seq_len(max_iter)) {
     results <- tryCatch(
       em_cpp(brts = brts,
              init_pars = pars,
              sample_size = sample_size,
              maxN = maxN,
              max_missing = max_missing,
-             max_lambda = max_lambda,
+             max_lambda = 1e6,
              lower_bound = lower_bound,
              upper_bound = upper_bound,
              xtol_rel = xtol,
              num_threads = num_threads,
-             copy_trees = copy_trees,
+             copy_trees = FALSE,
              model = as.integer(model),
              link = as.integer(link),
              rconditional = conditional),
-      error = function(e) {
-        warning(".mcem_dynamic_fresh: E-step failed (", conditionMessage(e),
-                "); stopping at iteration ", i, ".")
-        NULL
-      }
+      error = function(e) NULL
     )
-    if (is.null(results)) break
+
+    # Handle E-step failure (all trees rejected)
+    if (is.null(results)) {
+      fail_streak <- fail_streak + 1L
+      if (verbose) message(sprintf("Iteration %d: E-step failed (%d consecutive)", i, fail_streak))
+      if (fail_streak >= 5L) {
+        stop_reason <- "e_step_failure"
+        warning("MCEM: 5 consecutive E-step failures; stopping. ",
+                "Try widening bounds or increasing max_missing.")
+        break
+      }
+      next
+    }
+    fail_streak <- 0L
 
     last_results <- results
     pars <- results$estimates
-    par_df <- as.data.frame(as.list(stats::setNames(pars, paste0("par", seq_along(pars)))))
-
-    # Max relative parameter change (fraction of search range)
     delta_max <- max(abs(pars - prev_pars) / range_vec)
     prev_pars <- pars
 
+    # Record iteration
+    par_df <- as.data.frame(as.list(stats::setNames(pars, paste0("par", seq_along(pars)))))
     step <- cbind(par_df, data.frame(
       fhat      = results$fhat,
       delta_max = delta_max,
+      rejected  = results$rejected,
       num_trees = sample_size,
       time      = results$time
     ))
     mcem <- rbind(mcem, step)
 
     if (verbose) {
-      message(sprintf("Iteration %d: fhat = %.4f  delta_max = %.2e", i, results$fhat, delta_max))
+      rej_str <- if (results$rejected > 0L) sprintf("  rej=%d", results$rejected) else ""
+      message(sprintf("Iteration %d: fhat=%.4f  delta=%.2e  streak=%d/%d%s",
+                      i, results$fhat, delta_max, streak, patience, rej_str))
     }
 
-    if (i > burnin) {
-      if (delta_max < tol) {
-        streak <- streak + 1L
-      } else {
-        streak <- 0L
+    # Check convergence: parameter stability
+    if (delta_max < tol) {
+      streak <- streak + 1L
+      if (streak >= patience) {
+        stop_reason <- "converged"
+        break
       }
-      if (verbose) {
-        message(sprintf("  streak = %d/%d  (tol = %.1e)", streak, patience, tol))
-      }
-      if (streak >= patience) break
-    } else if (verbose) {
-      message(sprintf("  burn-in %d/%d", i, burnin))
-    }
-
-    if (i >= 1000) {
-      warning(".mcem_dynamic_fresh reached 1000 iterations without convergence.")
-      break
+    } else {
+      streak <- 0L
     }
   }
-
-  converged <- streak >= patience
 
   # Bootstrap variance from the last iteration's IS weights
   loglik_var <- NA_real_
@@ -132,12 +123,12 @@
   }
 
   list(
-    mcem       = mcem,
-    pars       = pars,
-    iterations = i,
-    converged  = converged,
-    loglik_var = loglik_var,
-    final_IS   = final_IS
+    mcem        = mcem,
+    pars        = pars,
+    iterations  = nrow(mcem),
+    stop_reason = stop_reason,
+    loglik_var  = loglik_var,
+    final_IS    = final_IS
   )
 }
 

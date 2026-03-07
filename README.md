@@ -205,7 +205,6 @@ fit_mcem <- estimate_rates(sim, method = "mcem", model = "pd",
     upper_bound = ub,
     num_trees   = 200,   # IS trees per EM iteration; bootstrap variance auto-computed
     tol         = 1e-3,  # convergence: max relative parameter change < tol
-    burnin      = 20,    # iterations excluded from convergence check
     verbose     = TRUE
   ))
 
@@ -214,7 +213,7 @@ fit_mcem$loglik
 fit_mcem$loglik_var  # bootstrap variance (B=200) from final E-step IS weights
 fit_mcem$AIC
 
-# Convergence diagnostics: fhat trace, parameter traces, SE convergence, IS weights
+# Convergence diagnostics: fhat trace, parameter traces, parameter stability, IS weights
 diag_mcem <- diagnose_mcem(fit_mcem, lower_bound = lb, upper_bound = ub)
 diag_mcem$convergence  # per-iteration: fhat, delta_max, num_trees, time
 diag_mcem$IS_quality   # ESS, mean/sd of log-weights, bootstrap variance
@@ -226,10 +225,11 @@ diag_mcem$IS_quality   # ESS, mean/sd of log-weights, bootstrap variance
 | `upper_bound` | — | **Required.** Upper bounds vector |
 | `verbose` | FALSE | Print iteration summaries |
 | `num_trees` | 200 | IS trees per EM iteration. Bootstrap variance auto-computed. Alias: `sample_size` |
+| `max_iter` | 200 | Maximum EM iterations |
 | `tol` | 1e-3 | Parameter-stability threshold: max relative change (fraction of search range) |
 | `patience` | 3 | Consecutive stable iterations required to declare convergence |
-| `burnin` | 20 | Burn-in iterations excluded from convergence check |
 | `xtol` | 1e-3 | Relative tolerance for the M-step optimiser |
+| `maxN` | 10 | Max augmentation attempts per tree before rejection |
 | `max_missing` | 1e4 | Max extinct lineages per augmented tree; trees exceeding this are discarded |
 | `num_threads` | 1 | Parallel threads |
 

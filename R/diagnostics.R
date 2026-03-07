@@ -390,6 +390,8 @@ diagnose_mcem <- function(x, plot = TRUE,
     fhat      = mcem_df$fhat,
     delta_max = if ("delta_max" %in% names(mcem_df)) mcem_df$delta_max
                 else rep(NA_real_, n_iter),
+    rejected  = if ("rejected" %in% names(mcem_df)) mcem_df$rejected
+                else rep(NA_integer_, n_iter),
     num_trees = mcem_df$num_trees,
     time      = mcem_df$time
   )
@@ -527,6 +529,7 @@ diagnose_mcem <- function(x, plot = TRUE,
   structure(
     list(
       convergence = convergence,
+      stop_reason = details$stop_reason,
       IS_quality  = IS_quality,
       final_IS    = final_IS
     ),
@@ -544,7 +547,9 @@ print.mcem_diagnostics <- function(x, ...) {
   cat("MCEM diagnostics\n")
   cat("================\n\n")
 
-  cat(sprintf("Iterations run:  %d\n", nrow(x$convergence)))
+  cat(sprintf("Iterations:      %d\n", nrow(x$convergence)))
+  if (!is.null(x$stop_reason))
+    cat(sprintf("Stop reason:     %s\n", x$stop_reason))
 
   fhat_fin <- x$convergence$fhat[is.finite(x$convergence$fhat)]
   if (length(fhat_fin) > 0L)

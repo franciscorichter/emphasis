@@ -26,10 +26,12 @@ default), \code{upper_bound} (required, no default),
 
 MCEM-specific: \code{sampling} (default \code{"dynamic_fresh"}),
 \code{num_trees} (augmented trees per EM iteration, default 200;
-alias: \code{sample_size}), \code{xtol} (default 1e-3),
+alias: \code{sample_size}), \code{max_iter} (iteration cap, default 200),
+\code{maxN} (max augmentation attempts per tree, default 10),
+\code{xtol} (M-step optimiser tolerance, default 1e-3),
 \code{tol} (parameter-stability threshold: max relative change scaled
 by search range, default 1e-3), \code{patience} (consecutive stable
-iterations required, default 3), \code{burnin} (default 20).
+iterations required, default 3).
 Bootstrap variance (\code{loglik_var}) is computed automatically from
 the final iteration's IS weights (B = 200).
 
