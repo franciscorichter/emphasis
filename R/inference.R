@@ -12,7 +12,7 @@
 #' sim <- simulate_tree(c(0.1, 0.5, -0.02, 0.01), max_t = 5, model = "pd")
 #' extant <- prune_to_extant(sim$tas)
 #' }
-#' @export
+#' @keywords internal
 prune_to_extant <- function(phy, tol = 1e-8) {
   if (!inherits(phy, "phylo")) stop("'phy' must be a phylo object.")
   heights  <- ape::node.depth.edgelength(phy)
@@ -93,7 +93,7 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     the IS weights already drawn.  Minimum recommendation: \code{5}.
 #'     \code{loglik_var} in the fit is \code{NA} when \code{num_trees = 1}.}
 #' }
-#' @export
+#' @keywords internal
 estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
   method <- match.arg(method)
   common <- list(
@@ -550,7 +550,7 @@ print.emphasis_fit <- function(x, ...) {
 #'   upper_bound = c(2, 0.01, 0.5, 0.01))
 #' compare_models(CR = fit_cr, DD = fit_dd)
 #' }
-#' @export
+#' @keywords internal
 compare_models <- function(...) {
   fits <- list(...)
   if (length(fits) < 2L)
@@ -666,7 +666,7 @@ compare_models <- function(...) {
 #' sel$best_model   # "dd"
 #' sel$best_pars
 #' }
-#' @export
+#' @keywords internal
 select_diversification_model <- function(tree,
                                          lower_bound = c(0.1, -0.5, 0, -0.5),
                                          upper_bound = c(3,    0.5, 1,  0.5),

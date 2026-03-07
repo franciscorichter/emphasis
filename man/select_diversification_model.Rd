@@ -74,3 +74,4 @@ sel$best_pars
 \seealso{
 \code{\link{estimate_rates}}, \code{\link{compare_models}}
 }
+\keyword{internal}

@@ -41,3 +41,4 @@ fit_dd <- estimate_rates(tree, model = "dd",
 compare_models(CR = fit_cr, DD = fit_dd)
 }
 }
+\keyword{internal}
