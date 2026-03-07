@@ -46,7 +46,7 @@ Diagnostic plots include:
     convergence of the sequence.}
   \item{Parameter traces}{Per-parameter estimates across iterations,
     with optional bound and true-value lines.}
-  \item{Parameter stability}{Max relative parameter change (delta\_max)
+  \item{Parameter stability}{Max relative parameter change (delta_max)
     vs.\ iteration; convergence is declared when this falls below tol
     for patience consecutive iterations.}
   \item{IS weight histogram}{Distribution of IS log-weights at the

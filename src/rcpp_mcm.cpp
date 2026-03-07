@@ -1,4 +1,3 @@
-// [[Rcpp::plugins(cpp14)]]
 
 #include <Rcpp.h>
 #include "emphasis.hpp"
@@ -43,7 +42,7 @@ namespace {
 //' @param link link function: 0 = linear (max(0,...)), 1 = exponential
 //' @param rconditional R function that evaluates the GAM function.
 //' @return list with the following entries:
-//' \itemize{
+//' \describe{
 //'  \item{estimates}{vector of estimates}
 //'  \item{nlopt}{nlopt status}
 //'  \item{time}{used computation time}

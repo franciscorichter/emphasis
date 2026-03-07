@@ -105,7 +105,7 @@ diagnose_cem <- function(x, plot = TRUE,
 
   n_iter <- length(details$best_loglik)
 
-  # ── 1. Convergence table ──────────────────────────────────────────────────
+  # -- 1. Convergence table --------------------------------------------------
   convergence <- data.frame(
     iteration    = seq_len(n_iter),
     best_loglik  = details$best_loglik,
@@ -115,7 +115,7 @@ diagnose_cem <- function(x, plot = TRUE,
   )
   convergence$rej_total <- convergence$rej_lambda + convergence$rej_overruns
 
-  # ── 2. Population spread per iteration ───────────────────────────────────
+  # -- 2. Population spread per iteration -----------------------------------
   pop_spread <- do.call(rbind, lapply(seq_len(n_iter), function(k) {
     fv <- details$history$fhat_all[[k]]
     fv <- fv[is.finite(fv)]
@@ -132,7 +132,7 @@ diagnose_cem <- function(x, plot = TRUE,
     )
   }))
 
-  # ── 3. IS quality at best particle ───────────────────────────────────────
+  # -- 3. IS quality at best particle ---------------------------------------
   IS_quality <- NULL
   if (!is.null(details$best_IS)) {
     bi     <- details$best_IS
@@ -148,14 +148,14 @@ diagnose_cem <- function(x, plot = TRUE,
     )
   }
 
-  # ── 4. Final population data frame ───────────────────────────────────────
+  # -- 4. Final population data frame ---------------------------------------
   final_pop_df <- NULL
   if (!is.null(details$final_pop)) {
     fp <- details$final_pop
     final_pop_df <- cbind(fp$pars, fhat = fp$fhat)
   }
 
-  # ── 5. Parameter names ────────────────────────────────────────────────────
+  # -- 5. Parameter names ----------------------------------------------------
   par_names <- if (inherits(x, "emphasis_fit") && !is.null(names(x$pars))) {
     names(x$pars)
   } else if (!is.null(details$best_pars) && !is.null(colnames(details$best_pars))) {
@@ -167,7 +167,7 @@ diagnose_cem <- function(x, plot = TRUE,
   }
   n_par <- length(par_names)
 
-  # ── 6. Plots ──────────────────────────────────────────────────────────────
+  # -- 6. Plots --------------------------------------------------------------
   if (plot) {
     has_IS  <- !is.null(IS_quality) && !is.null(details$best_IS) &&
                length(details$best_IS$lw[is.finite(details$best_IS$lw)]) > 1L
@@ -383,7 +383,7 @@ diagnose_mcem <- function(x, plot = TRUE,
   mcem_df  <- details$mcem
   n_iter   <- nrow(mcem_df)
 
-  # ── 1. Convergence table ──────────────────────────────────────────────────
+  # -- 1. Convergence table --------------------------------------------------
   par_cols <- grep("^par[0-9]+$", names(mcem_df), value = TRUE)
   convergence <- data.frame(
     iteration = seq_len(n_iter),
@@ -396,7 +396,7 @@ diagnose_mcem <- function(x, plot = TRUE,
     time      = mcem_df$time
   )
 
-  # ── 2. IS quality at final iteration ──────────────────────────────────────
+  # -- 2. IS quality at final iteration --------------------------------------
   IS_quality <- NULL
   final_IS   <- details$final_IS
   if (!is.null(final_IS)) {
@@ -414,12 +414,12 @@ diagnose_mcem <- function(x, plot = TRUE,
     )
   }
 
-  # ── 3. Parameter names ──────────────────────────────────────────────────
+  # -- 3. Parameter names --------------------------------------------------
   if (is.null(par_names) && length(par_cols) > 0L)
     par_names <- paste0("par", seq_along(par_cols))
   n_par <- length(par_cols)
 
-  # ── 4. Plots ────────────────────────────────────────────────────────────
+  # -- 4. Plots ------------------------------------------------------------
   if (plot) {
     has_IS    <- !is.null(final_IS) &&
                  length(final_IS$lw[is.finite(final_IS$lw)]) > 1L

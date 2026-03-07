@@ -102,12 +102,12 @@ augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda
 #' @param link link function: 0 = linear (max(0,...)), 1 = exponential
 #' @param rconditional R function that evaluates the GAM function.
 #' @return a list with the following components:
-#' \itemize{
+#' \describe{
 #'  \item{trees}{list of trees}
 #'  \item{rejected}{number of rejected trees}
 #'  \item{rejected_overruns}{number of trees rejected due to too large size}
 #'  \item{rejected_lambda}{number of trees rejected due to lambda errors}
-#'  \item{rejected_zero_weights}{number of trees rejected to zero weight}
+#'  \item{rejected_zero_weights}{number of trees rejected due to zero weight}
 #'  \item{estimates}{vector of estimates}
 #'  \item{nlopt}{nlopt status}
 #'  \item{fhat}{vector of fhat values}
@@ -136,7 +136,7 @@ em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, 
 #' @param link link function: 0 = linear (max(0,...)), 1 = exponential
 #' @param rconditional R function that evaluates the GAM function.
 #' @return list with the following entries:
-#' \itemize{
+#' \describe{
 #'  \item{estimates}{vector of estimates}
 #'  \item{nlopt}{nlopt status}
 #'  \item{time}{used computation time}

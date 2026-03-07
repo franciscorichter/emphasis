@@ -44,7 +44,7 @@ train_GAM <- function(simulations, pars_mat, model = "cr",
   sim_data  <- cbind(pars_df, survived = survived)
   par_names <- colnames(pars_df)
 
-  # Drop constant columns — mgcv cannot fit a smooth on zero-variance predictors
+  # Drop constant columns -- mgcv cannot fit a smooth on zero-variance predictors
   varying <- par_names[sapply(par_names,
                               function(p) length(unique(pars_df[[p]])) > 1L)]
   if (length(varying) == 0L) stop("All parameter columns are constant; nothing to fit.")
@@ -82,4 +82,4 @@ predict_survival <- function(gam_fit, newpars) {
 }
 
 
-# .par_names() is defined in inference.R — shared by both modules
+# .par_names() is defined in inference.R -- shared by both modules

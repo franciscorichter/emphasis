@@ -15,3 +15,5 @@
 ^src/.*\.o$
 ^src/.*\.so$
 ^vignettes/.*\.html$
+^\.R$
+^doc$

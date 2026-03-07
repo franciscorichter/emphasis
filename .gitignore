@@ -42,5 +42,4 @@ rsconnect/
 src/symbols.rds
 
 # Technical report (kept local only)
-doc/emphasis_technical.tex
-doc/emphasis_technical.pdf
+doc/emphasis_technical.*

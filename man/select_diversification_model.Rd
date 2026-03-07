@@ -49,10 +49,10 @@ A list of class \code{"model_selection"} with:
   }
 }
 \description{
-Fits three 4-parameter models — diversity dependence (DD, covariate N),
+Fits three 4-parameter models -- diversity dependence (DD, covariate N),
 phylogenetic diversity dependence (PD, covariate P), and evolutionary
-pendant (EP, covariate E) — to the same tree using a two-stage
-MCDE → MCEM workflow, then ranks them by AIC and computes AIC weights.
+pendant (EP, covariate E) -- to the same tree using a two-stage
+MCDE -> MCEM workflow, then ranks them by AIC and computes AIC weights.
 }
 \details{
 All three models share the same parameter layout:

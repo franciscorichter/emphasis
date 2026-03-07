@@ -159,7 +159,7 @@
 
   if (!is.na(zero_w) && zero_w > 50L) {
     warning(
-      "MCEM: E-step failed — nearly all augmented trees have zero IS weight ",
+      "MCEM: E-step failed - nearly all augmented trees have zero IS weight ",
       "(rejected_zero_weights=", zero_w, "/200).\n",
       "  Likely cause: speciation rate is zero (lambda=0) under current parameters,\n",
       "  e.g. PD or DD model with large tree and strongly negative covariate slope.\n",

@@ -54,12 +54,12 @@ be equal in length to the vector of init_pars}
 }
 \value{
 a list with the following components:
-\itemize{
+\describe{
  \item{trees}{list of trees}
  \item{rejected}{number of rejected trees}
  \item{rejected_overruns}{number of trees rejected due to too large size}
  \item{rejected_lambda}{number of trees rejected due to lambda errors}
- \item{rejected_zero_weights}{number of trees rejected to zero weight}
+ \item{rejected_zero_weights}{number of trees rejected due to zero weight}
  \item{estimates}{vector of estimates}
  \item{nlopt}{nlopt status}
  \item{fhat}{vector of fhat values}

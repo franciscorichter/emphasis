@@ -21,7 +21,7 @@
 #'   gamma_0, [gamma_N], [gamma_P], [gamma_E])}
 #' Only active covariates are included; length = \code{2 + 2 * sum(model)}.
 #'
-#' @section Output — forward simulation (single):
+#' @section Output -- forward simulation (single):
 #' \describe{
 #'   \item{\code{tes}}{Extant-only phylogeny (\code{phylo}), or \code{NULL}.}
 #'   \item{\code{tas}}{Full phylogeny with extinct lineages (\code{phylo}),
@@ -34,7 +34,7 @@
 #'     n_attempts} when the simulation succeeded, \code{0} otherwise.}
 #' }
 #'
-#' @section Output — forward simulation (batch, matrix \code{pars}):
+#' @section Output -- forward simulation (batch, matrix \code{pars}):
 #' \describe{
 #'   \item{\code{simulations}}{List of individual results (one per row of
 #'     \code{pars}), each with the fields above.}
@@ -42,7 +42,7 @@
 #'     \code{status == "done"}.}
 #' }
 #'
-#' @section Output — conditional simulation / augmentation:
+#' @section Output -- conditional simulation / augmentation:
 #' When \code{n_trees = 1}:
 #' \describe{
 #'   \item{\code{tas}}{Augmented phylogeny (\code{phylo}) including extinct
@@ -277,7 +277,7 @@ simulate_tree <- function(tree        = NULL,
 
 
 # --------------------------------------------------------------------------- #
-#  Conditional simulation (augmentation) — public output                      #
+#  Conditional simulation (augmentation) -- public output                      #
 # --------------------------------------------------------------------------- #
 
 #' @keywords internal
@@ -391,7 +391,7 @@ simulate_tree <- function(tree        = NULL,
 
 
 # --------------------------------------------------------------------------- #
-#  Internal augmentation (raw C++ output — for inference use only)            #
+#  Internal augmentation (raw C++ output -- for inference use only)            #
 # --------------------------------------------------------------------------- #
 
 #' @keywords internal
