@@ -55,3 +55,4 @@ ready for \code{\link{train_likelihood_GAM}}.
 \seealso{
 \code{\link{train_likelihood_GAM}}, \code{\link{find_MLE}}
 }
+\keyword{internal}

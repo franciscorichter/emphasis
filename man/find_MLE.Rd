@@ -37,3 +37,4 @@ log-likelihood surface.
 \code{\link{train_likelihood_GAM}},
   \code{\link{estimate_likelihood_surface}}
 }
+\keyword{internal}

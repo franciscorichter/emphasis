@@ -110,7 +110,7 @@ predict_survival <- function(gam_fit, newpars) {
 #'   (IS log-likelihood) and \code{n_trees} (number of valid trees obtained).
 #'   Rows where IS failed have \code{fhat = NA}.
 #' @seealso \code{\link{train_likelihood_GAM}}, \code{\link{find_MLE}}
-#' @export
+#' @keywords internal
 estimate_likelihood_surface <- function(tree, pars_mat, model = "cr",
                                         sample_size = 200L,
                                         link = "linear",
@@ -186,7 +186,7 @@ estimate_likelihood_surface <- function(tree, pars_mat, model = "cr",
 #' @return A \code{gam} object (Gaussian family) representing
 #'   \eqn{\hat\ell(\theta) \approx \log L(\theta \mid \text{data})}.
 #' @seealso \code{\link{estimate_likelihood_surface}}, \code{\link{find_MLE}}
-#' @export
+#' @keywords internal
 train_likelihood_GAM <- function(surface,
                                  par_names = NULL,
                                  spline_type = c("univariate", "bivariate")) {
@@ -204,13 +204,25 @@ train_likelihood_GAM <- function(surface,
     function(p) length(unique(surface[[p]])) > 1L, logical(1L))]
   if (length(varying) == 0L) stop("All parameter columns are constant.")
 
+  # Cap basis dimension at the number of unique values per predictor
+  n_unique <- vapply(varying,
+    function(p) length(unique(surface[[p]])), integer(1L))
+
   if (spline_type == "univariate" || length(varying) < 2L) {
-    smooth_terms <- paste0("s(", varying, ")", collapse = " + ")
+    smooth_terms <- vapply(varying, function(p) {
+      k <- min(n_unique[[p]], 10L)
+      if (k < 3L) k <- 3L
+      sprintf("s(%s, k=%d)", p, k)
+    }, character(1L))
+    smooth_terms <- paste(smooth_terms, collapse = " + ")
   } else {
     pairs <- utils::combn(varying, 2L, simplify = FALSE)
     smooth_terms <- paste(
-      vapply(pairs, function(p) paste0("te(", p[1L], ", ", p[2L], ")"),
-             character(1L)),
+      vapply(pairs, function(p) {
+        k1 <- min(n_unique[[p[1L]]], 5L)
+        k2 <- min(n_unique[[p[2L]]], 5L)
+        sprintf("te(%s, %s, k=c(%d,%d))", p[1L], p[2L], max(3L, k1), max(3L, k2))
+      }, character(1L)),
       collapse = " + ")
   }
 
@@ -243,7 +255,7 @@ train_likelihood_GAM <- function(surface,
 #'   }
 #' @seealso \code{\link{train_likelihood_GAM}},
 #'   \code{\link{estimate_likelihood_surface}}
-#' @export
+#' @keywords internal
 find_MLE <- function(gam_fit, lower_bound, upper_bound,
                      start = NULL, par_names = NULL) {
   if (is.null(par_names)) {

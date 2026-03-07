@@ -33,3 +33,4 @@ parameters.
 \seealso{
 \code{\link{estimate_likelihood_surface}}, \code{\link{find_MLE}}
 }
+\keyword{internal}

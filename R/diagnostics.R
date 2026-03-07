@@ -578,6 +578,202 @@ print.mcem_diagnostics <- function(x, ...) {
 }
 
 
+# --------------------------------------------------------------------------- #
+#  Diagnostics for GAM-based MLE                                               #
+# --------------------------------------------------------------------------- #
+
+#' Diagnostics for a GAM-based MLE fit
+#'
+#' Produces diagnostic plots and returns summary statistics from a
+#' \code{\link{estimate_rates}} fit obtained with \code{method = "gam"}.
+#'
+#' @section Surface coverage (\code{$surface_summary}):
+#' Summary of the IS log-likelihood grid: total grid points, number with
+#' finite fhat, fhat range, and mean trees per grid point.
+#'
+#' @section GAM quality (\code{$gam_summary}):
+#' Key statistics from the fitted GAM: deviance explained, GCV score,
+#' and effective degrees of freedom.
+#'
+#' @section MLE (\code{$mle}):
+#' The MLE parameter estimates and predicted log-likelihood at the optimum.
+#'
+#' @param x An \code{emphasis_fit} object from \code{\link{estimate_rates}}
+#'   with \code{method = "gam"}.
+#' @param plot Logical; if \code{TRUE} (default), produce diagnostic plots.
+#' @param true_pars Optional numeric vector of true parameter values
+#'   (for simulation studies).
+#' @return A list of class \code{"gam_diagnostics"} (invisibly) with
+#'   components \code{surface_summary}, \code{gam_summary}, and \code{mle}.
+#' @seealso \code{\link{diagnose_cem}}, \code{\link{diagnose_mcem}},
+#'   \code{\link{estimate_rates}}
+#' @examples
+#' \dontrun{
+#' sim <- simulate_tree(c(0.5, 0.1), max_t = 5, model = "cr")
+#' fit <- estimate_rates(sim, method = "gam", model = "cr",
+#'   control = list(lower_bound = c(0, 0), upper_bound = c(2, 1)))
+#' diagnose_gam(fit)
+#' }
+#' @export
+diagnose_gam <- function(x, plot = TRUE, true_pars = NULL) {
+
+  if (inherits(x, "emphasis_fit")) {
+    details <- x$details
+    par_names <- names(x$pars)
+  } else {
+    details   <- x
+    par_names <- NULL
+  }
+
+  if (is.null(details$surface) || is.null(details$gam_fit))
+    stop("No GAM data found. Is this a method=\"gam\" fit?")
+
+  surface   <- details$surface
+  gam_fit   <- details$gam_fit
+  if (is.null(par_names))
+    par_names <- details$par_names
+
+  n_par     <- length(par_names)
+  valid     <- is.finite(surface$fhat)
+  n_valid   <- sum(valid)
+  n_total   <- nrow(surface)
+
+  # -- 1. Surface summary ---------------------------------------------------
+  surface_summary <- list(
+    n_grid_points = n_total,
+    n_valid       = n_valid,
+    coverage      = n_valid / n_total,
+    fhat_range    = if (n_valid > 0) range(surface$fhat[valid]) else c(NA, NA),
+    mean_trees    = if (n_valid > 0) mean(surface$n_trees[valid]) else NA_real_
+  )
+
+  # -- 2. GAM summary -------------------------------------------------------
+  gs <- summary(gam_fit)
+  gam_summary <- list(
+    deviance_explained = gs$dev.expl,
+    gcv_score          = gam_fit$gcv.ubre,
+    edf_total          = sum(gs$edf),
+    r_squared          = gs$r.sq
+  )
+
+  # -- 3. MLE ---------------------------------------------------------------
+  mle_pars   <- if (inherits(x, "emphasis_fit")) x$pars else NULL
+  mle_loglik <- if (inherits(x, "emphasis_fit")) x$loglik else NULL
+
+  # -- 4. Plots --------------------------------------------------------------
+  if (plot && n_valid > 0L) {
+    n_plots <- n_par + 2L  # 1D slices + residuals + predicted vs observed
+    nc      <- min(n_plots, 3L)
+    nr      <- ceiling(n_plots / nc)
+
+    old_par <- graphics::par(no.readonly = TRUE)
+    on.exit(graphics::par(old_par))
+    graphics::par(mfrow = c(nr, nc), mar = c(4, 4, 3, 1))
+
+    surf_valid <- surface[valid, , drop = FALSE]
+
+    # Per-parameter: fhat vs parameter value with GAM prediction curve
+    for (j in seq_len(n_par)) {
+      nm <- par_names[j]
+      x_vals <- surf_valid[[nm]]
+      y_vals <- surf_valid$fhat
+
+      graphics::plot(x_vals, y_vals,
+                     pch = 16, col = grDevices::adjustcolor("steelblue", 0.5),
+                     cex = 0.7,
+                     xlab = nm, ylab = expression(hat(f)),
+                     main = paste("fhat vs", nm))
+
+      # GAM prediction curve along this parameter (others at MLE)
+      x_seq <- seq(min(x_vals), max(x_vals), length.out = 100L)
+      if (!is.null(mle_pars)) {
+        nd <- as.data.frame(as.list(mle_pars))
+        nd <- nd[rep(1L, 100L), , drop = FALSE]
+        nd[[nm]] <- x_seq
+        pred <- stats::predict(gam_fit, newdata = nd, type = "response")
+        graphics::lines(x_seq, pred, col = "red", lwd = 2)
+      }
+
+      if (!is.null(true_pars)) {
+        tp_j <- if (!is.null(names(true_pars)) && nm %in% names(true_pars))
+          true_pars[[nm]]
+        else if (j <= length(true_pars)) true_pars[[j]]
+        else NULL
+        if (!is.null(tp_j))
+          graphics::abline(v = tp_j, col = "red", lty = 2, lwd = 2)
+      }
+      if (!is.null(mle_pars))
+        graphics::abline(v = mle_pars[[nm]], col = "forestgreen", lty = 2, lwd = 1.5)
+    }
+
+    # Predicted vs observed fhat
+    fitted_vals <- stats::fitted(gam_fit)
+    obs_vals    <- gam_fit$y
+    graphics::plot(obs_vals, fitted_vals,
+                   pch = 16, col = grDevices::adjustcolor("steelblue", 0.5),
+                   cex = 0.7,
+                   xlab = "Observed fhat", ylab = "GAM predicted fhat",
+                   main = sprintf("Predicted vs observed\n(R2=%.3f, dev.expl=%.1f%%)",
+                                  gam_summary$r_squared,
+                                  100 * gam_summary$deviance_explained))
+    graphics::abline(0, 1, col = "red", lty = 2, lwd = 1.5)
+
+    # Residuals
+    resid_vals <- stats::residuals(gam_fit)
+    graphics::hist(resid_vals,
+                   breaks = min(30L, max(10L, length(resid_vals))),
+                   freq = FALSE, col = "grey85", border = "white",
+                   xlab = "Residual", main = "GAM residuals")
+    graphics::abline(v = 0, col = "red", lty = 2, lwd = 1.5)
+  }
+
+  result <- structure(
+    list(
+      surface_summary = surface_summary,
+      gam_summary     = gam_summary,
+      mle             = list(pars = mle_pars, loglik = mle_loglik),
+      surface         = surface,
+      gam_fit         = gam_fit
+    ),
+    class = c("gam_diagnostics", "list")
+  )
+  invisible(result)
+}
+
+
+#' Print method for GAM diagnostics
+#'
+#' @param x Output of \code{\link{diagnose_gam}}.
+#' @param ... Additional arguments (ignored).
+#' @export
+print.gam_diagnostics <- function(x, ...) {
+  cat("GAM-based MLE diagnostics\n")
+  cat("=========================\n\n")
+
+  ss <- x$surface_summary
+  cat(sprintf("Grid coverage:    %d/%d valid (%.0f%%)\n",
+              ss$n_valid, ss$n_grid_points, 100 * ss$coverage))
+  cat(sprintf("fhat range:       [%.2f, %.2f]\n",
+              ss$fhat_range[1], ss$fhat_range[2]))
+  cat(sprintf("Mean trees/point: %.0f\n\n", ss$mean_trees))
+
+  gs <- x$gam_summary
+  cat(sprintf("GAM fit:\n"))
+  cat(sprintf("  R-squared:        %.4f\n", gs$r_squared))
+  cat(sprintf("  Deviance expl:    %.1f%%\n", 100 * gs$deviance_explained))
+  cat(sprintf("  Effective df:     %.1f\n\n", gs$edf_total))
+
+  if (!is.null(x$mle$pars)) {
+    cat("MLE estimates:\n")
+    print(round(x$mle$pars, 6))
+    if (!is.null(x$mle$loglik))
+      cat(sprintf("\nlog-likelihood:   %.4f\n", x$mle$loglik))
+  }
+
+  invisible(x)
+}
+
+
 #' Print method for CEM diagnostics
 #'
 #' @param x Output of \code{\link{diagnose_cem}}.

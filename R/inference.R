@@ -94,7 +94,7 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     \code{loglik_var} in the fit is \code{NA} when \code{num_trees = 1}.}
 #' }
 #' @keywords internal
-estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
+estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4) {
   method <- match.arg(method)
   common <- list(
     lower_bound = NULL,
@@ -113,7 +113,7 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
       tol         = 1e-3,
       patience    = 3L
     ))
-  } else {
+  } else if (method == "cem") {
     c(common, list(
       max_iter     = 20L,
       num_particles = 50L,      # alias: num_points
@@ -125,6 +125,15 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
       tol          = 1e-4,
       patience     = 5L,
       bias_correct = FALSE
+    ))
+  } else {
+    # GAM method
+    c(common, list(
+      grid_points  = 20L,       # per-parameter grid resolution
+      sample_size  = 200L,      # IS trees per grid point
+      maxN         = NULL,      # auto-set from sample_size
+      max_lambda   = 500,
+      spline_type  = "univariate"
     ))
   }
 }
@@ -279,6 +288,82 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
        loglik_var = raw$loglik_var, details = raw)
 }
 
+#' @keywords internal
+.run_gam <- function(brts, lower_bound, upper_bound, ctrl,
+                     model = c(0L, 0L, 0L), link = 0L) {
+  if (!requireNamespace("mgcv", quietly = TRUE))
+    stop("Package 'mgcv' is required for method=\"gam\". ",
+         "Install it with install.packages(\"mgcv\").")
+
+  model_bin <- as.integer(model)
+  link_int  <- as.integer(link)
+  par_names <- .par_names(model_bin)
+  n_par     <- length(par_names)
+  compact_lb <- .contract_pars(lower_bound, model_bin)
+  compact_ub <- .contract_pars(upper_bound, model_bin)
+
+  # Build parameter grid (uniform grid per dimension)
+  gp <- as.integer(ctrl$grid_points)
+  grid_list <- lapply(seq_len(n_par), function(j) {
+    seq(compact_lb[j], compact_ub[j], length.out = gp)
+  })
+  names(grid_list) <- par_names
+  pars_grid <- as.matrix(expand.grid(grid_list))
+
+  if (ctrl$verbose)
+    cat(sprintf("  GAM grid: %d points (%d per parameter, %d parameters)\n",
+                nrow(pars_grid), gp, n_par))
+
+  # Evaluate IS log-likelihood at each grid point
+  surface <- estimate_likelihood_surface(
+    tree        = brts,
+    pars_mat    = pars_grid,
+    model       = model_bin,
+    sample_size = as.integer(ctrl$sample_size),
+    link        = if (link_int == 0L) "linear" else "exponential",
+    max_missing = ctrl$max_missing,
+    max_lambda  = ctrl$max_lambda,
+    maxN        = ctrl$maxN,
+    num_threads = ctrl$num_threads,
+    verbose     = ctrl$verbose
+  )
+
+  n_valid <- sum(is.finite(surface$fhat))
+  if (n_valid < 10L)
+    stop("Only ", n_valid, " grid points have finite fhat; ",
+         "need at least 10. Try increasing grid_points or sample_size.")
+
+  if (ctrl$verbose)
+    cat(sprintf("  GAM surface: %d/%d valid grid points\n",
+                n_valid, nrow(surface)))
+
+  # Fit GAM to the surface
+  gam_fit <- train_likelihood_GAM(
+    surface, par_names = par_names,
+    spline_type = ctrl$spline_type
+  )
+
+  # Optimize to find MLE
+  mle <- find_MLE(gam_fit,
+                  lower_bound = compact_lb,
+                  upper_bound = compact_ub,
+                  par_names   = par_names)
+
+  pars8 <- .expand_pars(mle$pars, model_bin)
+
+  details <- list(
+    surface     = surface,
+    gam_fit     = gam_fit,
+    mle_optim   = mle$optim,
+    convergence = mle$convergence,
+    par_names   = par_names,
+    grid_points = gp
+  )
+
+  list(pars = pars8, loglik = mle$loglik, loglik_var = NA_real_,
+       details = details)
+}
+
 # --------------------------------------------------------------------------- #
 #  Public API                                                                  #
 # --------------------------------------------------------------------------- #
@@ -307,6 +392,10 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
 #'       particle population randomly within the bounds and evolves it until
 #'       convergence (annealing exhausted, plateau, or \code{control$max_iter}
 #'       reached). Does not need \code{init_pars}.}
+#'     \item{\code{"gam"}}{GAM-based MLE. Evaluates the IS log-likelihood
+#'       on a grid spanning the bounds, fits a smooth GAM surface, and
+#'       optimises it via L-BFGS-B. One-shot (non-iterative); no
+#'       \code{init_pars} needed. Requires the \pkg{mgcv} package.}
 #'   }
 #' @param model Model specification. Accepts:
 #'   \itemize{
@@ -367,7 +456,7 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
 #' }
 #' @export
 estimate_rates <- function(tree,
-                           method    = c("mcem", "cem"),
+                           method    = c("mcem", "cem", "gam"),
                            model     = "cr",
                            init_pars = NULL,
                            control   = list(),
@@ -473,11 +562,16 @@ estimate_rates <- function(tree,
       else
         cat("  loglik_var   : NA (need num_trees >= 2)\n")
     }
+    if (method == "gam") {
+      cat(sprintf("  grid_points=%d  sample_size=%d  spline=%s\n",
+                  ctrl$grid_points, ctrl$sample_size, ctrl$spline_type))
+    }
   }
 
   raw <- switch(method,
     mcem = .run_mcem(brts, ip8, lb8, ub8, ctrl, model = model_bin, link = link_int),
-    cem  = .run_cem(brts, lb8, ub8, ctrl, model = model_bin, link = link_int)
+    cem  = .run_cem(brts, lb8, ub8, ctrl, model = model_bin, link = link_int),
+    gam  = .run_gam(brts, lb8, ub8, ctrl, model = model_bin, link = link_int)
   )
 
   # Contract 8-element result back to compact
