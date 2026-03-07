@@ -40,7 +40,7 @@ using namespace Rcpp;
 //'   \item{rejected_zero_weights}{Rejected: zero IS weight.}
 //'   \item{time}{Elapsed time (ms).}
 //' }
-//' @export
+//' @keywords internal
 // [[Rcpp::export(name = "augment_trees")]]
 List rcpp_mce(const std::vector<double>& brts,
               const std::vector<double>& pars,

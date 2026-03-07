@@ -44,7 +44,7 @@ generateNonHomogeneousExpCpp <- function(num_variates, covariates, parameters, s
 #'   \item{logf}{Numeric vector of \code{log p(obs, z_i | theta)}.}
 #'   \item{logg}{Numeric vector of \code{log q(z_i | obs, theta)}.}
 #' }
-#' @export
+#' @keywords internal
 eval_logf <- function(pars, trees, model = as.integer( c(0, 0, 0)), link = 0L) {
     .Call('_emphasis_eval_logf_cpp', PACKAGE = 'emphasis', pars, trees, model, link)
 }
@@ -79,7 +79,7 @@ eval_logf <- function(pars, trees, model = as.integer( c(0, 0, 0)), link = 0L) {
 #'   \item{rejected_zero_weights}{Rejected: zero IS weight.}
 #'   \item{time}{Elapsed time (ms).}
 #' }
-#' @export
+#' @keywords internal
 augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model = as.integer( c(0, 0, 0)), link = 0L) {
     .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link)
 }
@@ -116,7 +116,7 @@ augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda
 #'  \item{logf}{vector of log p(obs, z_i | theta) for each valid tree}
 #'  \item{logg}{vector of log q(z_i | obs, theta) for each valid tree}
 #' }
-#' @export
+#' @keywords internal
 em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model = as.integer( c(0, 0, 0)), link = 0L, rconditional = NULL) {
     .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model, link, rconditional)
 }
@@ -141,7 +141,7 @@ em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, 
 #'  \item{nlopt}{nlopt status}
 #'  \item{time}{used computation time}
 #' }
-#' @export
+#' @keywords internal
 m_cpp <- function(e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, model = as.integer( c(0, 0, 0)), link = 0L, rconditional = NULL) {
     .Call('_emphasis_rcpp_mcm', PACKAGE = 'emphasis', e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, model, link, rconditional)
 }

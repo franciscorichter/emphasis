@@ -58,7 +58,7 @@ emphasis::tree_t pack(const Rcpp::DataFrame& r_tree) {
 //'   \item{logf}{Numeric vector of \code{log p(obs, z_i | theta)}.}
 //'   \item{logg}{Numeric vector of \code{log q(z_i | obs, theta)}.}
 //' }
-//' @export
+//' @keywords internal
 // [[Rcpp::export(name = "eval_logf")]]
 Rcpp::List eval_logf_cpp(const std::vector<double>& pars,
                          const Rcpp::List& trees,

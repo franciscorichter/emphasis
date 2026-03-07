@@ -72,3 +72,4 @@ a list with the following components:
 \description{
 function to perform one step of the E-M algorithm
 }
+\keyword{internal}

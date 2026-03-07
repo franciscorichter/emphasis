@@ -106,16 +106,19 @@ The exponential utilities are standalone and unused by the inference pipeline.
 - `R/utils.R` -- all 13 functions were dead code (none called outside utils.R)
 - `get_required_sampling_size()` from `R/emphasis.R` -- dead code, allowed dropping `MASS`
 
-## C++ Exports (src/)
+## C++ Functions (src/)
 
-| C++ function | R name | File | Purpose |
-|---|---|---|---|
-| `simulate_div_tree_cpp()` | `simulate_div_tree_cpp` | div_tree.cpp | Forward tree simulation |
-| `generateNonHomogeneousExpCpp()` | `generateNonHomogeneousExpCpp` | generateNonHomogeneousExp.cpp | Non-homogeneous exponential |
-| `eval_logf_cpp()` | `eval_logf` | loglik.cpp | Evaluate logf and logg |
-| `rcpp_mce()` | `augment_trees` | rcpp_mce.cpp | E-step: augment trees |
-| `rcpp_mcem()` | `em_cpp` | rcpp_mcem.cpp | Full E+M step |
-| `rcpp_mcm()` | `m_cpp` | rcpp_mcm.cpp | M-step only |
+| C++ function | R name | File | Exported | Purpose |
+|---|---|---|---|---|
+| `simulate_div_tree_cpp()` | `simulate_div_tree_cpp` | div_tree.cpp | No* | Forward tree simulation |
+| `generateNonHomogeneousExpCpp()` | `generateNonHomogeneousExpCpp` | generateNonHomogeneousExp.cpp | No* | Non-homogeneous exponential |
+| `eval_logf_cpp()` | `eval_logf` | loglik.cpp | No | Evaluate logf and logg |
+| `rcpp_mce()` | `augment_trees` | rcpp_mce.cpp | No | E-step: augment trees |
+| `rcpp_mcem()` | `em_cpp` | rcpp_mcem.cpp | No | Full E+M step |
+| `rcpp_mcm()` | `m_cpp` | rcpp_mcm.cpp | No | M-step only |
+
+\*Available via `emphasis:::` but not user-facing. `augment_trees`, `em_cpp`,
+`m_cpp`, `eval_logf` were previously exported; made internal 2026-03-07.
 
 ## Augmentation Rejection Types -- Analysis
 

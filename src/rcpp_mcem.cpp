@@ -53,7 +53,7 @@ namespace {
 //'  \item{logf}{vector of log p(obs, z_i | theta) for each valid tree}
 //'  \item{logg}{vector of log q(z_i | obs, theta) for each valid tree}
 //' }
-//' @export
+//' @keywords internal
 // [[Rcpp::export(name = "em_cpp")]]
 List rcpp_mcem(const std::vector<double>& brts,
                const std::vector<double>& init_pars,

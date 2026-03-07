@@ -47,7 +47,7 @@ namespace {
 //'  \item{nlopt}{nlopt status}
 //'  \item{time}{used computation time}
 //' }
-//' @export
+//' @keywords internal
 // [[Rcpp::export(name = "m_cpp")]]
 List rcpp_mcm(List e_step,
               const std::vector<double>& init_pars,

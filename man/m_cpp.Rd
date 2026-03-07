@@ -52,3 +52,4 @@ list with the following entries:
 \description{
 function to perform one step of the E-M algorithm
 }
+\keyword{internal}
