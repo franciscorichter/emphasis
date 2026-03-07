@@ -9,11 +9,11 @@ Rcpp::List simulate_single_pd_tree_cpp(Rcpp::NumericVector pars,
   
   sim_tree::phylodiv simulation(max_t,  {pars[0], pars[1], pars[2], pars[3]}, max_N);
   
-  bool is_extinct = simulation.simulate_tree_ltable();
+  simulation.simulate_tree_ltable();
   size_t tries = 0;
   while (simulation.break_type == sim_tree::breaks::extinction ||
          simulation.break_type == sim_tree::breaks::maxN_exceeded) {
-    is_extinct = simulation.simulate_tree_ltable();
+    simulation.simulate_tree_ltable();
     tries++;
     if (tries > max_tries) break;
   }
