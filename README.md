@@ -149,10 +149,13 @@ the best fhat has plateaued, or `max_iter` is reached.
 set.seed(42)
 sim <- simulate_tree(pars = c(0.6, -0.05, 0.15, -0.03), model = "pd", max_t = 10)
 
+lb <- c(0.01, -0.5, 0, -0.5)
+ub <- c(2,     0.5, 1,  0.5)
+
 fit_cem <- estimate_rates(sim, method = "cem", model = "pd",
   control = list(
-    lower_bound   = c(0.01, -0.5, 0, -0.5),
-    upper_bound   = c(2,     0.5, 1,  0.5),
+    lower_bound   = lb,
+    upper_bound   = ub,
     max_iter      = 30,
     num_particles = 80,     # parameter vectors per iteration
     num_trees     = 5,      # IS trees per particle; >= 5 enables bootstrap variance
@@ -163,6 +166,11 @@ fit_cem$pars       # named estimates: beta_0, beta_P, gamma_0, gamma_P
 fit_cem$loglik     # IS log-likelihood
 fit_cem$loglik_var # MC variance of loglik (bootstrap, B=200); NA if num_trees = 1
 fit_cem$AIC
+
+# Convergence diagnostics: fhat trace, parameter traces, population spread, IS weights
+diag_cem <- diagnose_cem(fit_cem, lower_bound = lb, upper_bound = ub)
+diag_cem$convergence       # per-iteration: best_loglik, n_valid, rej_total
+diag_cem$IS_quality        # ESS, ESS fraction, mean/sd of IS log-weights
 ```
 
 | Control parameter | Default | Description |
@@ -178,8 +186,7 @@ fit_cem$AIC
 | `sd_vec` | NULL | Initial perturbation SDs; auto = `(upper - lower) / 4` |
 | `tol` | 1e-4 | Minimum fhat improvement to reset the plateau counter |
 | `patience` | 5 | Consecutive plateau iterations before stopping |
-| `max_missing` | 1e4 | Max missing lineages per augmentation |
-| `max_lambda` | 500 | Max speciation rate per augmentation |
+| `max_missing` | 1e4 | Max extinct lineages per augmented tree; trees exceeding this are discarded |
 | `num_threads` | 1 | Parallel threads |
 
 ### MCEM
@@ -194,8 +201,8 @@ below `tol`.
 fit_mcem <- estimate_rates(sim, method = "mcem", model = "pd",
   init_pars = fit_cem$pars,   # warm-start from CEM (recommended)
   control = list(
-    lower_bound = c(0.01, -0.5, 0, -0.5),
-    upper_bound = c(2,     0.5, 1,  0.5),
+    lower_bound = lb,
+    upper_bound = ub,
     num_trees   = 200,   # IS trees per EM iteration; bootstrap variance auto-computed
     tol         = 0.1,   # convergence: SE(fhat) < tol
     burnin      = 20,    # iterations excluded from convergence check
@@ -206,6 +213,11 @@ fit_mcem$pars
 fit_mcem$loglik
 fit_mcem$loglik_var  # bootstrap variance (B=200) from final E-step IS weights
 fit_mcem$AIC
+
+# Convergence diagnostics: fhat trace, parameter traces, SE convergence, IS weights
+diag_mcem <- diagnose_mcem(fit_mcem, lower_bound = lb, upper_bound = ub)
+diag_mcem$convergence  # per-iteration: fhat, num_trees, time
+diag_mcem$IS_quality   # ESS, mean/sd of log-weights, bootstrap variance
 ```
 
 | Control parameter | Default | Description |
@@ -217,8 +229,7 @@ fit_mcem$AIC
 | `tol` | 0.1 | Convergence: SE(fhat) < tol |
 | `burnin` | 20 | Burn-in iterations excluded from convergence check |
 | `xtol` | 1e-3 | Relative tolerance for the M-step optimiser |
-| `max_missing` | 1e4 | Max missing lineages per augmentation |
-| `max_lambda` | 500 | Max speciation rate per augmentation |
+| `max_missing` | 1e4 | Max extinct lineages per augmented tree; trees exceeding this are discarded |
 | `num_threads` | 1 | Parallel threads |
 
 ---
@@ -517,51 +528,28 @@ how often each candidate was chosen — useful for diagnosing systematic confusi
 
 ## Diagnostics — inference quality
 
-### CEM diagnostics
+Both `diagnose_cem()` and `diagnose_mcem()` produce four diagnostic plots
+and return the underlying data. See the CEM and MCEM subsections above for
+usage examples integrated with the estimation workflow.
 
-`diagnose_cem()` takes a fitted `"cem"` model and returns convergence
-statistics, IS quality metrics, and the full particle cloud at the final
-iteration. It produces diagnostic plots by default.
+**CEM diagnostic fields:**
 
-```r
-diag <- diagnose_cem(fit, lower_bound = lb, upper_bound = ub)
+| Field | Content |
+|-------|---------|
+| `convergence` | Per-iteration: `best_loglik`, `n_valid`, `rej_total` |
+| `population_spread` | Per-iteration: median/q25/q75 of all particle `fhat` values |
+| `IS_quality` | ESS, ESS fraction, mean/sd of IS log-weights |
+| `final_pop` | Parameter values + `fhat` for each particle at the final iteration |
+| `best_IS` | Raw IS data (`logf`, `log_q`, `lw`) at the best particle |
 
-diag$convergence       # per-iteration: best_loglik, n_valid, rej_lambda, rej_overruns, rej_total
-diag$population_spread # per-iteration: median/q25/q75/range of all fhat values
-diag$IS_quality        # ESS, ESS fraction, mean/sd of IS log-weights
-diag$final_pop         # data frame: parameter columns + fhat for each particle
-diag$best_IS           # raw IS data: logf, log_q, lw, trees at best pars
-```
+**MCEM diagnostic fields:**
 
-| Plot | What it shows |
-|------|--------------|
-| Log-likelihood | Best `fhat` per iteration with stop reason |
-| Parameter traces | Best particle's value per iteration; orange = lower bound, purple = upper bound, red = true value |
-| Population spread | Median with q25/q75 band of all valid `fhat` values per iteration |
-| IS weight distribution | Histogram of `logf - log_q` at the best particle; ESS in title |
-| Rejection rates | Per-iteration count of rejected trees (shown only when rejections occurred) |
-
-### MCEM diagnostics
-
-`diagnose_mcem()` provides analogous diagnostics for MCEM fits:
-log-likelihood trace, parameter traces, SE convergence trace, and IS
-weight histogram at the final E-step.
-
-```r
-diag <- diagnose_mcem(fit, lower_bound = lb, upper_bound = ub)
-
-diag$convergence  # per-iteration: fhat, num_trees, time
-diag$se_trace     # running SE of fhat (convergence criterion)
-diag$IS_quality   # ESS, mean/sd of log-weights, bootstrap variance
-diag$final_IS     # raw IS data: logf, logg, lw from last E-step
-```
-
-| Plot | What it shows |
-|------|--------------|
-| Log-likelihood trace | `fhat` vs. EM iteration |
-| Parameter traces | M-step estimates per iteration; orange/purple = bounds, red = true value |
-| SE trace | Running SE(fhat) — convergence declared when SE < tol |
-| IS weight distribution | Histogram of IS log-weights at the final E-step; ESS in title |
+| Field | Content |
+|-------|---------|
+| `convergence` | Per-iteration: `fhat`, `num_trees`, `time` |
+| `se_trace` | Running SE of `fhat` (convergence declared when SE < `tol`) |
+| `IS_quality` | ESS, mean/sd of log-weights, bootstrap variance |
+| `final_IS` | Raw IS data (`logf`, `logg`, `lw`) from the final E-step |
 
 ---
 

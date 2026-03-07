@@ -22,7 +22,7 @@ Override individual elements and pass the modified list via the
 Shared parameters (both methods): \code{lower_bound} (required, no
 default), \code{upper_bound} (required, no default),
 \code{verbose} (default FALSE), \code{max_missing} (default 1e4),
-\code{max_lambda} (default 500), \code{num_threads} (default 1).
+\code{num_threads} (default 1).
 
 MCEM-specific: \code{sampling} (default \code{"dynamic_fresh"}),
 \code{num_trees} (augmented trees per EM iteration, default 200;

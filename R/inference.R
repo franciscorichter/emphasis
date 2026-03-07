@@ -40,10 +40,9 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'   \item{\code{upper_bound}}{Numeric vector of upper parameter bounds
 #'     (same order). \strong{Required} (no default).}
 #'   \item{\code{verbose}}{Print progress messages. Default \code{FALSE}.}
-#'   \item{\code{max_missing}}{Max missing lineages tolerated during
-#'     augmentation. Default \code{1e4}.}
-#'   \item{\code{max_lambda}}{Max speciation rate for augmentation.
-#'     Default \code{500}.}
+#'   \item{\code{max_missing}}{Max extinct lineages per augmented tree.
+#'     Trees that require more than this many extinct lineages are discarded.
+#'     Default \code{1e4}.}
 #'   \item{\code{num_threads}}{Threads for parallel computation. Default
 #'     \code{1}.}
 #' }
@@ -94,7 +93,6 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
     upper_bound = NULL,
     verbose     = FALSE,
     max_missing = 1e4,
-    max_lambda  = 500,
     num_threads = 1L
   )
   if (method == "mcem") {
@@ -211,7 +209,7 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
       pars        = init_pars,
       sample_size = ctrl$sample_size,
       max_missing = ctrl$max_missing,
-      max_lambda  = ctrl$max_lambda,
+      max_lambda  = 1e6,
       lower_bound = lower_bound,
       upper_bound = upper_bound,
       xtol        = ctrl$xtol,
@@ -246,7 +244,7 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
     lower_bound  = lower_bound,
     upper_bound  = upper_bound,
     maxN         = ctrl$maxN,
-    max_lambda   = ctrl$max_lambda,
+    max_lambda   = 1e6,
     sample_size  = ctrl$sample_size,
     shared_trees = ctrl$shared_trees,
     disc_prop    = ctrl$disc_prop,

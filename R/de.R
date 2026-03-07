@@ -44,7 +44,7 @@
 #' estimators are identical; the truncation is the approximation.
 #'
 #' Only successfully augmented trees are used.  Rejected trees (those that
-#' hit \code{max_lambda} or \code{max_missing} limits) are computational
+#' hit \code{max_missing} limits) are computational
 #' failures, not zero-likelihood samples from the proposal, and are simply
 #' discarded.
 #'
@@ -447,7 +447,6 @@
 #' @param sd_vec Initial perturbation SD per parameter (8-element).
 #' @param lower_bound,upper_bound Search bounds (8-element).
 #' @param maxN Max augmentation attempts per particle. Default \code{10}.
-#' @param max_lambda Max speciation rate. Default \code{500}.
 #' @param sample_size Trees simulated per particle per evaluation. Default \code{1}.
 #' @param shared_trees If \code{TRUE}, use pooled-tree estimator (Mode 2).
 #'   Default \code{FALSE} (independent, Mode 1).
@@ -487,7 +486,6 @@ emphasis_cem <- function(brts,
                          lower_bound,
                          upper_bound,
                          maxN         = 10L,
-                         max_lambda   = 500,
                          sample_size  = 1L,
                          shared_trees = FALSE,
                          bias_correct = FALSE,
@@ -514,7 +512,7 @@ emphasis_cem <- function(brts,
     sample_size  = sample_size,
     maxN         = maxN,
     max_missing  = max_missing,
-    max_lambda   = max_lambda,
+    max_lambda   = 1e6,
     lower_bound  = lower_bound,
     upper_bound  = upper_bound,
     shared_trees = shared_trees,
@@ -555,7 +553,6 @@ emphasis_cem <- function(brts,
     while (all(is.na(pop$fhat))) {
       input$maxN        <- input$maxN        * 10L
       input$max_missing <- input$max_missing * 10L
-      input$max_lambda  <- input$max_lambda  * 10
       if (input$maxN > 10000L) {
         warning("emphasis_cem: all particles failed even after escalating limits. ",
                 "Try increasing num_particles or widening the parameter bounds.")
@@ -571,7 +568,6 @@ emphasis_cem <- function(brts,
     }
 
     # Adaptive limit escalation
-    if (result$rej_lambda   > 0L) input$max_lambda  <- input$max_lambda  * 1.1
     if (result$rej_overruns > 0L) input$max_missing <- input$max_missing * 1.1
 
     valid      <- !is.na(pop$fhat)
