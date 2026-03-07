@@ -34,6 +34,7 @@
   sde <- Inf
   i <- 0
   mcem <- NULL
+  last_results <- NULL  # keep last iteration's E-step output for bootstrap
 
   while (is.infinite(sde) || sde > tol) {
     i <- i + 1
@@ -60,45 +61,56 @@
     )
     if (is.null(results)) break
 
+    last_results <- results
     pars <- results$estimates
     par_df <- as.data.frame(as.list(stats::setNames(pars, paste0("par", seq_along(pars)))))
     step <- cbind(par_df, data.frame(
       fhat = results$fhat,
-      sample_size = sample_size,
+      num_trees = sample_size,
       time = results$time
     ))
     mcem <- rbind(mcem, step)
 
     if (verbose) {
-      message(sprintf("Iteration %d: log-likelihood estimate = %f", i, results$fhat))
+      message(sprintf("Iteration %d: fhat = %.4f", i, results$fhat))
     }
 
     if (i > burnin) {
       mcem_est <- mcem[max(1, floor(nrow(mcem) / 2)):nrow(mcem), , drop = FALSE]
       mcem_est <- mcem_est[is.finite(mcem_est$fhat), , drop = FALSE]
       if (nrow(mcem_est) == 0) {
-        warning("No finite log-likelihood estimates after burn-in; stopping .mcem_dynamic_fresh().")
+        warning("No finite fhat after burn-in; stopping .mcem_dynamic_fresh().")
         break
       }
       sde <- stats::sd(mcem_est$fhat) / sqrt(nrow(mcem_est))
       if (verbose) {
-        message(sprintf("Iteration %d: log-likelihood SE = %f", i, sde))
+        message(sprintf("  SE(fhat) = %.4f  (tol = %.4f)", sde, tol))
       }
     } else if (verbose) {
-      message(sprintf("Burn-in iteration %d/%d", i, burnin))
+      message(sprintf("  burn-in %d/%d", i, burnin))
     }
 
     if (i >= 1000) {
-      warning(".mcem_dynamic_fresh reached 1000 iterations without meeting tolerance.")
+      warning(".mcem_dynamic_fresh reached 1000 iterations without convergence.")
       break
     }
   }
 
+  # Bootstrap variance from the last iteration's IS weights
+  loglik_var <- NA_real_
+  if (!is.null(last_results) &&
+      length(last_results$logf) >= 2L &&
+      all(is.finite(last_results$logf))) {
+    loglik_var <- .bootstrap_fhat_var(last_results$logf, last_results$logg,
+                                      K = 2L, B = 200L)
+  }
+
   list(
-    mcem = mcem,
-    pars = pars,
+    mcem       = mcem,
+    pars       = pars,
     iterations = i,
-    se = sde
+    se         = sde,
+    loglik_var = loglik_var
   )
 }
 

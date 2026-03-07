@@ -112,5 +112,7 @@ List rcpp_mcem(const std::vector<double>& brts,
   ret["fhat"]  = mcem.e.info.fhat;
   ret["time"]  = mcem.e.info.elapsed + mcem.m.elapsed;
   ret["weights"] = mcem.e.weights;
+  ret["logf"] = NumericVector(mcem.e.logf_.begin(), mcem.e.logf_.end());
+  ret["logg"] = NumericVector(mcem.e.logg_.begin(), mcem.e.logg_.end());
   return ret;
 }

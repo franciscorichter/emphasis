@@ -260,9 +260,10 @@ estimate_rates(sim, method = "cem", model = "pd",
 | `lower_bound` | — | **Required.** Lower parameter bounds vector |
 | `upper_bound` | — | **Required.** Upper parameter bounds vector |
 | `verbose` | FALSE | Print progress messages |
-| `num_trees` | 200 | Augmented trees per EM iteration. Alias: `sample_size` |
-| `tol` | 0.1 | Convergence tolerance on loglik improvement |
+| `num_trees` | 200 | Augmented trees per EM iteration. Alias: `sample_size`. Bootstrap variance of `loglik` computed automatically (B = 200) |
+| `tol` | 0.1 | Convergence: SE of fhat across post-burnin iterations |
 | `burnin` | 20 | Burn-in iterations before convergence is checked |
+| `xtol` | 1e-3 | Relative tolerance for the M-step optimizer |
 | `max_missing` | 1e4 | Max missing lineages during augmentation |
 | `max_lambda` | 500 | Max speciation rate during augmentation |
 | `num_threads` | 1 | Parallel threads |

@@ -25,10 +25,11 @@ default), \code{upper_bound} (required, no default),
 \code{max_lambda} (default 500), \code{num_threads} (default 1).
 
 MCEM-specific: \code{sampling} (default \code{"dynamic_fresh"}),
-\code{num_trees} (augmented trees per iteration, default 200;
+\code{num_trees} (augmented trees per EM iteration, default 200;
 alias: \code{sample_size}), \code{xtol} (default 1e-3),
 \code{tol} (log-likelihood SE convergence threshold, default 0.1),
-\code{burnin} (default 20).
+\code{burnin} (default 20). Bootstrap variance (\code{loglik_var}) is
+computed automatically from the final iteration's IS weights (B = 200).
 
 CEM-specific: \code{max_iter} (default 20), \code{num_particles}
 (particles per iteration, default 50; alias: \code{num_points}),

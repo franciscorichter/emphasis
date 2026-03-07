@@ -229,7 +229,8 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
   fhat_vec <- raw$mcem$fhat
   loglik   <- if (any(is.finite(fhat_vec)))
     utils::tail(fhat_vec[is.finite(fhat_vec)], 1L) else NA_real_
-  list(pars = raw$pars, loglik = loglik, details = raw)
+  loglik_var <- if (!is.null(raw$loglik_var)) raw$loglik_var else NA_real_
+  list(pars = raw$pars, loglik = loglik, loglik_var = loglik_var, details = raw)
 }
 
 #' @keywords internal
@@ -329,8 +330,9 @@ estimate_rates_control <- function(method = c("mcem", "cem"), n_pars = 4) {
 #'     \item{\code{pars}}{Named numeric vector of parameter estimates.}
 #'     \item{\code{loglik}}{Final log-likelihood estimate.}
 #'     \item{\code{loglik_var}}{Bootstrap variance of \code{loglik} due to
-#'       Monte Carlo noise. Populated automatically when \code{method = "cem"}
-#'       and \code{control$num_trees > 1}; \code{NA} otherwise.}
+#'       Monte Carlo noise. Populated automatically when
+#'       \code{control$num_trees >= 2} (B = 200 replicates); \code{NA}
+#'       when \code{num_trees = 1}.}
 #'     \item{\code{n_pars}}{Number of free parameters (used for AIC).}
 #'     \item{\code{AIC}}{Akaike Information Criterion: \code{-2 * loglik + 2 * n_pars}.}
 #'     \item{\code{method}}{Method used (\code{"mcem"} or \code{"cem"}).}
@@ -427,9 +429,14 @@ estimate_rates <- function(tree,
       cat(sprintf("  tree mode      : %s\n  max_iter=%d\n",
                   mode, ctrl$max_iter))
     }
-    if (method == "mcem")
-      cat(sprintf("  num_trees=%d  tol=%.4g  burnin=%d\n",
-                  ctrl$num_trees, ctrl$tol, ctrl$burnin))
+    if (method == "mcem") {
+      cat(sprintf("  num_trees=%d  tol=%.4g  burnin=%d  xtol=%.1e\n",
+                  ctrl$num_trees, ctrl$tol, ctrl$burnin, ctrl$xtol))
+      if (ctrl$num_trees >= 2L)
+        cat("  loglik_var   : bootstrapped automatically (B=200)\n")
+      else
+        cat("  loglik_var   : NA (need num_trees >= 2)\n")
+    }
   }
 
   raw <- switch(method,

@@ -55,10 +55,16 @@ midpoint of the bounds is used.}
 uses \code{max(0, eta)}; \code{"exponential"} uses \code{exp(eta)}.}
 }
 \value{
-A list with:
+A list with class \code{"emphasis_fit"} containing:
 \describe{
   \item{\code{pars}}{Named numeric vector of parameter estimates.}
   \item{\code{loglik}}{Final log-likelihood estimate.}
+  \item{\code{loglik_var}}{Bootstrap variance of \code{loglik} due to
+    IS Monte Carlo noise. Computed automatically when
+    \code{num_trees >= 2} (B = 200 replicates); \code{NA}
+    when \code{num_trees = 1}.}
+  \item{\code{n_pars}}{Number of free parameters (used for AIC).}
+  \item{\code{AIC}}{Akaike Information Criterion: \code{-2 * loglik + 2 * n_pars}.}
   \item{\code{method}}{Method used (\code{"mcem"} or \code{"cem"}).}
   \item{\code{model}}{Resolved binary model vector.}
   \item{\code{details}}{Full output from the back-end function
