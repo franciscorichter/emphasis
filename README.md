@@ -1,6 +1,6 @@
 # emphasis — Evolutionary Modeling for Phylogenetic Inference
 
-[![License: GPL-3](https://img.shields.io/badge/license-GPL--3-blue.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 ![Lifecycle: Experimental](https://img.shields.io/badge/lifecycle-experimental-orange)
 
 `emphasis` is an R package for studying species diversification and its ecological
@@ -9,7 +9,7 @@ drivers. It provides:
 - **Simulation** — stochastic phylogenies under flexible diversification models
 - **Inference** — parameter estimation via MCEM and Cross-Entropy Method (CEM)
 - **Model selection** — AIC-based comparison across competing models
-- **Diagnostics** — survival-probability estimation via GAM
+- **Diagnostics** — convergence and importance-sampling quality checks
 
 ## Installation
 
@@ -553,36 +553,15 @@ usage examples integrated with the estimation workflow.
 
 ---
 
-## Diagnostics — survival probability via GAM
-
-`train_GAM()` estimates P(clade survives to present | parameters) by fitting a
-binomial GAM to batch forward simulations. Run with `max_tries = 0` to keep
-extinct realisations alongside successful ones.
-
-```r
-set.seed(1)
-pars_mat <- cbind(beta_0  = runif(300, 0.3, 1.5),
-                  beta_N  = -0.02,
-                  gamma_0 = runif(300, 0.05, 0.6),
-                  gamma_N =  0.0)
-sims <- simulate_tree(pars = pars_mat, max_t = 10,
-                      model = "dd", max_tries = 0, useDDD = FALSE)
-
-gam_fit <- train_GAM(sims, pars_mat, model = "dd")
-
-newpars <- data.frame(beta_0 = 0.8, beta_N = -0.02,
-                      gamma_0 = 0.2, gamma_N = 0.0)
-predict_survival(gam_fit, newpars)  # estimated survival probability
-```
-
----
-
 ## Authors
 
 **Francisco Richter** (author & maintainer) — <richtf@usi.ch>
+
+### Former contributors
+
 Thijs Janzen — <t.janzen@rug.nl>
 Hanno Hildenbrandt — <h.hildenbrandt@rug.nl>
 
 ## License
 
-GPL-3. See [LICENSE](LICENSE) for details.
+MIT. See [LICENSE](LICENSE) for details.
