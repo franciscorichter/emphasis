@@ -420,13 +420,18 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
     spline_type = ctrl$spline_type
   )
 
-  # Optimize to find MLE
+  # Optimize to find MLE (only over varying dimensions)
+  varying_mask  <- compact_lb != compact_ub
+  varying_names <- par_names[varying_mask]
   mle <- find_MLE(gam_fit,
-                  lower_bound = compact_lb,
-                  upper_bound = compact_ub,
-                  par_names   = par_names)
+                  lower_bound = compact_lb[varying_mask],
+                  upper_bound = compact_ub[varying_mask],
+                  par_names   = varying_names)
 
-  pars8 <- .expand_pars(mle$pars, model_bin)
+  # Reconstruct full compact pars (fixed params keep their bound value)
+  full_compact <- compact_lb
+  full_compact[varying_mask] <- mle$pars
+  pars8 <- .expand_pars(full_compact, model_bin)
 
   details <- list(
     surface     = surface,

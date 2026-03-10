@@ -267,7 +267,9 @@ train_likelihood_GAM <- function(surface,
 find_MLE <- function(gam_fit, lower_bound, upper_bound,
                      start = NULL, par_names = NULL) {
   if (is.null(par_names)) {
-    par_names <- all.vars(stats::formula(gam_fit))[-1L]
+    # Use var.summary (robust for GAMs with s()/te() terms)
+    # all.vars() can pick up spurious names like 'k' from s(x, k=10)
+    par_names <- names(gam_fit$var.summary)
   }
   if (length(lower_bound) != length(par_names) ||
       length(upper_bound) != length(par_names))
