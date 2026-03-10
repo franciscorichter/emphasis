@@ -9,7 +9,7 @@ simulate_tree(
   max_t = 1,
   model = "cr",
   max_lin = 1e+06,
-  max_tries = 100,
+  max_tries = 1,
   useDDD = TRUE,
   n_trees = 1L,
   link = "linear",
@@ -38,7 +38,7 @@ Default \code{"cr"}.}
 Default \code{1e6}.}
 
 \item{max_tries}{Maximum additional attempts after extinction or overflow
-(forward simulation only). Default \code{100}.}
+(forward simulation only). Default \code{1}.}
 
 \item{useDDD}{Convert L-table to \code{phylo} via \pkg{DDD}.
 Default \code{TRUE}.}
