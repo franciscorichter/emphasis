@@ -195,6 +195,7 @@ diag_cem$IS_quality        # ESS, ESS fraction, mean/sd of IS log-weights
 | `tol` | 1e-4 | Minimum fhat improvement to reset the plateau counter |
 | `patience` | 5 | Consecutive plateau iterations before stopping |
 | `max_missing` | 1e4 | Max extinct lineages per augmented tree; trees exceeding this are discarded |
+| `max_time` | 3600 | Max wall-clock seconds; NULL disables |
 | `num_threads` | 1 | Parallel threads |
 
 ### MCEM
@@ -239,6 +240,7 @@ diag_mcem$IS_quality   # ESS, mean/sd of log-weights, bootstrap variance
 | `xtol` | 1e-3 | Relative tolerance for the M-step optimiser |
 | `maxN` | 10 | Max augmentation attempts per tree before rejection |
 | `max_missing` | 1e4 | Max extinct lineages per augmented tree; trees exceeding this are discarded |
+| `max_time` | 3600 | Max wall-clock seconds; NULL disables |
 | `num_threads` | 1 | Parallel threads |
 
 ### GAM-based MLE
@@ -246,25 +248,40 @@ diag_mcem$IS_quality   # ESS, mean/sd of log-weights, bootstrap variance
 The GAM method evaluates the IS log-likelihood on a parameter grid, fits a
 smooth GAM surface (via `mgcv`), and optimises it with L-BFGS-B. It is a
 one-shot (non-iterative) approach — no starting values or convergence tuning
-needed. Best suited for low-dimensional models (CR, DD) where the grid can
-cover the space densely.
+needed.
+
+For models with 2 parameters (CR), use `grid_points` for a factorial grid.
+For models with 3+ parameters (DD, PD, EP), use `n_grid` for a Latin
+Hypercube Sampling grid to avoid the curse of dimensionality.
 
 ```r
-fit_gam <- estimate_rates(sim, method = "gam", model = "pd", link = "exponential",
+# CR model (2 params) — factorial grid
+fit_cr <- estimate_rates(sim, method = "gam", model = "cr",
   control = list(
-    lower_bound  = lb,
-    upper_bound  = ub,
-    grid_points  = 15,    # resolution per parameter axis
-    sample_size  = 200,   # IS trees per grid point
+    lower_bound  = c(0.1, 0.01),
+    upper_bound  = c(2.0, 0.5),
+    grid_points  = 15,       # 15^2 = 225 grid points
+    sample_size  = 200,
     verbose      = TRUE
   ))
 
-fit_gam$pars
-fit_gam$loglik
-fit_gam$AIC
+# DD model (4 params, gamma_N fixed) — LHS grid with survival conditioning
+gam_surv <- train_GAM(sims, pars_mat, model = "dd")  # see GAM-based methods
+fit_dd <- estimate_rates(sim, method = "gam", model = "dd", cond = gam_surv,
+  control = list(
+    lower_bound  = c(0.5, -0.15, 0.01, 0),
+    upper_bound  = c(5.0, -0.001, 1.0, 0),  # gamma_N fixed at 0 (lb = ub)
+    n_grid       = 200,      # 200 LHS points (replaces factorial grid)
+    sample_size  = 50,
+    verbose      = TRUE
+  ))
+
+fit_dd$pars
+fit_dd$loglik    # conditioned log-likelihood
+fit_dd$AIC
 
 # Diagnostics: surface coverage, GAM fit quality, MLE location
-diag_gam <- diagnose_gam(fit_gam)
+diag_gam <- diagnose_gam(fit_dd)
 ```
 
 | Control parameter | Default | Description |
@@ -272,8 +289,10 @@ diag_gam <- diagnose_gam(fit_gam)
 | `lower_bound` | — | **Required.** Lower bounds vector |
 | `upper_bound` | — | **Required.** Upper bounds vector |
 | `verbose` | FALSE | Print progress |
-| `grid_points` | 20 | Number of points per parameter axis |
+| `grid_points` | 20 | Points per parameter axis (factorial grid). Use for <= 2 free params |
+| `n_grid` | NULL | Total LHS grid points (overrides `grid_points`). Use for 3+ free params |
 | `sample_size` | 200 | IS trees per grid point |
+| `max_time` | 3600 | Max wall-clock seconds; NULL disables |
 | `maxN` | NULL | Max augmentation attempts (NULL = auto) |
 | `max_lambda` | 500 | Max speciation rate for thinning |
 | `max_missing` | 1e4 | Max extinct lineages per augmented tree |
@@ -586,24 +605,32 @@ require the `mgcv` package.
 ### Use case 1: Survival conditioning
 
 Estimate the probability that a forward simulation survives (doesn't go
-extinct), as a function of parameters. Useful for conditioning likelihoods
-on tree survival.
+extinct), as a function of parameters. Pass the trained GAM to
+`estimate_rates(cond = ...)` to condition the likelihood on survival.
 
 ```r
 library(emphasis)
 set.seed(1)
 
-# Batch simulation: one tree per parameter row, no retries
-pars_mat <- cbind(beta_0  = runif(200, 0.3, 1.2),
-                  gamma_0 = runif(200, 0.05, 0.5))
+# 1. Batch simulation: one tree per parameter row, no retries
+pars_mat <- cbind(beta_0  = runif(1000, 0.3, 1.2),
+                  gamma_0 = runif(1000, 0.05, 0.5))
 sims <- simulate_tree(pars = pars_mat, max_t = 8, model = "cr", max_tries = 0)
 
-# Fit survival GAM
-gam_surv <- train_GAM(sims, pars_mat, model = "cr")
+# 2. Fit survival GAM (once — reuse across all trees)
+gam_surv <- train_GAM(sims$simulations, pars_mat, model = "cr")
 
-# Predict survival probability at new parameter values
+# 3. Predict survival probability at new parameter values
 predict_survival(gam_surv, data.frame(beta_0 = 0.8, gamma_0 = 0.2))
+
+# 4. Use in estimation — conditioned log-likelihood
+fit <- estimate_rates(tree, method = "gam", model = "cr", cond = gam_surv,
+                      control = list(lower_bound = c(0.3, 0.05),
+                                     upper_bound = c(1.2, 0.5)))
+fit$loglik  # conditioned: ell_IS - log(P_tree)
 ```
+
+The `cond` parameter works with all three methods (`"mcem"`, `"cem"`, `"gam"`).
 
 ### Use case 2: GAM-based MLE
 
