@@ -13,7 +13,8 @@
                       verbose = FALSE,
                       conditional = NULL,
                       model = c(0L, 0L, 0L),
-                      link = 0L) {
+                      link = 0L,
+                      max_time = NULL) {
   if (inherits(brts, "phylo")) {
     brts <- sort(ape::branching.times(brts), decreasing = TRUE)
   }
@@ -32,6 +33,7 @@
   mcem        <- NULL
   last_results <- NULL
   stop_reason <- "max_iter"
+  t0_mcem     <- proc.time()[3]
 
   for (i in seq_len(max_iter)) {
     results <- tryCatch(
@@ -97,6 +99,16 @@
       }
     } else {
       streak <- 0L
+    }
+
+    # Time budget check
+    if (!is.null(max_time)) {
+      elapsed <- proc.time()[3] - t0_mcem
+      if (elapsed > max_time) {
+        stop_reason <- "time_budget"
+        if (verbose) message(sprintf("Time budget reached (%.0fs > %ds)", elapsed, as.integer(max_time)))
+        break
+      }
     }
   }
 

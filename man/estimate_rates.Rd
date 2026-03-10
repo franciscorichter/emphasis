@@ -9,7 +9,8 @@ estimate_rates(
   model = "cr",
   init_pars = NULL,
   control = list(),
-  link = "linear"
+  link = "linear",
+  cond = NULL
 )
 }
 \arguments{
@@ -58,6 +59,11 @@ ignored for \code{"cem"} and \code{"gam"}. If \code{NULL} with
 
 \item{link}{Link function for rate computation: \code{"linear"} (default)
 uses \code{max(0, eta)}; \code{"exponential"} uses \code{exp(eta)}.}
+
+\item{cond}{A GAM object from \code{\link{train_GAM}} for conditioning on
+survival, or \code{NULL} (default, no conditioning). When provided, the
+log-likelihood is conditioned: \eqn{\ell_{\mathrm{cond}} = \ell -
+\log\hat{P}_{\mathrm{tree}}(\theta)}.}
 }
 \value{
 A list with class \code{"emphasis_fit"} containing:

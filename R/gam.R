@@ -105,6 +105,9 @@ predict_survival <- function(gam_fit, newpars) {
 #' @param maxN Total augmentation attempts per grid point.  If \code{NULL},
 #'   set automatically.
 #' @param num_threads Number of threads for the C++ E-step.
+#' @param bias_correct Logical; if \code{TRUE}, use the moment-based
+#'   bias-corrected IS estimator (truncated at order \code{K}).
+#'   Default \code{FALSE} uses the standard log-mean-exp estimator.
 #' @param verbose Print progress (default \code{TRUE}).
 #' @return A data frame with columns for each parameter plus \code{fhat}
 #'   (IS log-likelihood) and \code{n_trees} (number of valid trees obtained).
@@ -118,7 +121,9 @@ estimate_likelihood_surface <- function(tree, pars_mat, model = "cr",
                                         max_lambda = 500,
                                         maxN = NULL,
                                         num_threads = 1L,
-                                        verbose = TRUE) {
+                                        bias_correct = FALSE,
+                                        verbose = TRUE,
+                                        max_time = NULL) {
   model_bin <- .resolve_model(model)
   link_int  <- .resolve_link(link)
   brts      <- .extract_brts(tree)
@@ -140,6 +145,7 @@ estimate_likelihood_surface <- function(tree, pars_mat, model = "cr",
       total = n_pts, clear = FALSE)
   }
 
+  t0_grid <- proc.time()[3]
   for (i in seq_len(n_pts)) {
     pars8 <- .expand_pars(pars_mat[i, ], model_bin)
     maxN_i <- if (is.null(maxN)) max(2000L, 200L * as.integer(sample_size))
@@ -160,10 +166,12 @@ estimate_likelihood_surface <- function(tree, pars_mat, model = "cr",
                           model = as.integer(model_bin),
                           link = as.integer(link_int))
       fhat[i]    <- .is_fhat(logf_i$logf, logf_i$logg,
+                             bias_correct = bias_correct,
                              n_zero_weight = .n0(raw$rejected_zero_weights))
       n_trees[i] <- length(logf_i$logf)
     }
     if (verbose) pb$tick()
+    .check_time_budget(t0_grid, i, n_pts, max_time, label = "grid point")
   }
 
   cbind(pars_df, fhat = fhat, n_trees = n_trees)

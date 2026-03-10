@@ -14,6 +14,7 @@ estimate_likelihood_surface(
   max_lambda = 500,
   maxN = NULL,
   num_threads = 1L,
+  bias_correct = FALSE,
   verbose = TRUE
 )
 }
@@ -39,6 +40,10 @@ accepted by \code{\link{estimate_rates}}.}
 set automatically.}
 
 \item{num_threads}{Number of threads for the C++ E-step.}
+
+\item{bias_correct}{Logical; if \code{TRUE}, use the moment-based
+bias-corrected IS estimator (truncated at order \code{K}).
+Default \code{FALSE} uses the standard log-mean-exp estimator.}
 
 \item{verbose}{Print progress (default \code{TRUE}).}
 }

@@ -7,7 +7,7 @@
 drivers. It provides:
 
 - **Simulation** — stochastic phylogenies under flexible diversification models
-- **Inference** — parameter estimation via MCEM and Cross-Entropy Method (CEM)
+- **Inference** — parameter estimation via MCEM, Cross-Entropy Method (CEM), and GAM-based MLE
 - **Model selection** — AIC-based comparison across competing models
 - **Diagnostics** — convergence and importance-sampling quality checks
 
@@ -239,6 +239,44 @@ diag_mcem$IS_quality   # ESS, mean/sd of log-weights, bootstrap variance
 | `xtol` | 1e-3 | Relative tolerance for the M-step optimiser |
 | `maxN` | 10 | Max augmentation attempts per tree before rejection |
 | `max_missing` | 1e4 | Max extinct lineages per augmented tree; trees exceeding this are discarded |
+| `num_threads` | 1 | Parallel threads |
+
+### GAM-based MLE
+
+The GAM method evaluates the IS log-likelihood on a parameter grid, fits a
+smooth GAM surface (via `mgcv`), and optimises it with L-BFGS-B. It is a
+one-shot (non-iterative) approach — no starting values or convergence tuning
+needed. Best suited for low-dimensional models (CR, DD) where the grid can
+cover the space densely.
+
+```r
+fit_gam <- estimate_rates(sim, method = "gam", model = "pd", link = "exponential",
+  control = list(
+    lower_bound  = lb,
+    upper_bound  = ub,
+    grid_points  = 15,    # resolution per parameter axis
+    sample_size  = 200,   # IS trees per grid point
+    verbose      = TRUE
+  ))
+
+fit_gam$pars
+fit_gam$loglik
+fit_gam$AIC
+
+# Diagnostics: surface coverage, GAM fit quality, MLE location
+diag_gam <- diagnose_gam(fit_gam)
+```
+
+| Control parameter | Default | Description |
+|-------------------|---------|-------------|
+| `lower_bound` | — | **Required.** Lower bounds vector |
+| `upper_bound` | — | **Required.** Upper bounds vector |
+| `verbose` | FALSE | Print progress |
+| `grid_points` | 20 | Number of points per parameter axis |
+| `sample_size` | 200 | IS trees per grid point |
+| `maxN` | NULL | Max augmentation attempts (NULL = auto) |
+| `max_lambda` | 500 | Max speciation rate for thinning |
+| `max_missing` | 1e4 | Max extinct lineages per augmented tree |
 | `num_threads` | 1 | Parallel threads |
 
 ---

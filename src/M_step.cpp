@@ -55,7 +55,10 @@ namespace emphasis {
       if (nullptr == psd->conditional) {
         return -Q;
       }
-      return -Q * psd->conditional->operator()(pars);
+      // conditional(pars) returns log(P_tree(pars)).
+      // Conditioned MLE maximizes Q - log(P_tree), so we minimize
+      // -(Q - log(P_tree)) = -Q + log(P_tree).
+      return -Q + psd->conditional->operator()(pars);
     }
   }
 

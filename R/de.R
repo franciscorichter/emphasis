@@ -515,7 +515,9 @@ emphasis_cem <- function(brts,
                          verbose      = FALSE,
                          num_threads  = 1L,
                          model        = c(0L, 0L, 0L),
-                         link         = 0L) {
+                         link         = 0L,
+                         cond_fun     = NULL,
+                         max_time     = NULL) {
 
   if (!is.numeric(lower_bound) || !is.numeric(upper_bound))
     stop("lower_bound and upper_bound must be numeric vectors.")
@@ -568,6 +570,13 @@ emphasis_cem <- function(brts,
     result <- .eval_particles(pop, input, num_threads)
     pop    <- result$pop
 
+    # Apply conditioning correction: fhat_cond = fhat - log(P_tree)
+    if (!is.null(cond_fun)) {
+      for (i in which(!is.na(pop$fhat))) {
+        pop$fhat[i] <- pop$fhat[i] - cond_fun(as.numeric(pop$pars[i, ]))
+      }
+    }
+
     # Rescue: if ALL particles still have NA fhat, escalate limits
     all_failed <- FALSE
     while (all(is.na(pop$fhat))) {
@@ -615,6 +624,16 @@ emphasis_cem <- function(brts,
     if (plateau_count >= patience) {
       stop_reason <- "plateau"
       break
+    }
+
+    # Time budget check
+    if (!is.null(max_time)) {
+      elapsed <- (proc.time() - init_time)[3]
+      if (elapsed > max_time) {
+        stop_reason <- "time_budget"
+        if (verbose) cat(sprintf("Time budget reached (%.0fs > %ds)\n", elapsed, as.integer(max_time)))
+        break
+      }
     }
 
     pop    <- .resample_particles(pop, num_points, disc_prop,
@@ -681,13 +700,18 @@ emphasis_cem <- function(brts,
   loglik_var <- NA_real_
   if (!is.null(raw_best) && length(raw_best$logf) > 0L) {
     lw_all <- raw_best$logf - raw_best$logg
+    fhat_best <- .is_fhat(raw_best$logf, raw_best$logg,
+                           n_zero_weight = .n0(raw_best$rejected_zero_weights))
+    # Apply conditioning correction
+    if (!is.null(cond_fun) && is.finite(fhat_best)) {
+      fhat_best <- fhat_best - cond_fun(as.numeric(best_pars_v))
+    }
     best_IS <- list(
       logf       = raw_best$logf,
       log_q      = raw_best$logg,
       lw         = lw_all,
       trees      = raw_best$trees,
-      fhat       = .is_fhat(raw_best$logf, raw_best$logg,
-                             n_zero_weight = .n0(raw_best$rejected_zero_weights)),
+      fhat       = fhat_best,
       ESS        = .ess_from_lw(lw_all),
       n_trees    = as.integer(sample_size),
       n_rejected = .total_rejected(raw_best)

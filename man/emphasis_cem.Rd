@@ -22,7 +22,8 @@ emphasis_cem(
   verbose = FALSE,
   num_threads = 1L,
   model = c(0L, 0L, 0L),
-  link = 0L
+  link = 0L,
+  cond_fun = NULL
 )
 }
 \arguments{
@@ -63,6 +64,10 @@ Default \code{5}.}
 \item{model}{Length-3 binary integer vector \code{c(use_N, use_P, use_E)}.}
 
 \item{link}{Integer link code: \code{0} = linear, \code{1} = exponential.}
+
+\item{cond_fun}{Optional conditioning function (8-element pars -> log P_tree),
+or \code{NULL} (no conditioning). Built internally by
+\code{\link{estimate_rates}} from a trained survival GAM.}
 }
 \value{
 A list:

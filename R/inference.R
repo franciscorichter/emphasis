@@ -101,7 +101,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
     upper_bound = NULL,
     verbose     = FALSE,
     max_missing = 1e4,
-    num_threads = 1L
+    num_threads = 1L,
+    max_time    = 3600    # seconds; NULL disables
   )
   if (method == "mcem") {
     c(common, list(
@@ -139,6 +140,28 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 }
 
 # --------------------------------------------------------------------------- #
+#  Time budget helper                                                          #
+# --------------------------------------------------------------------------- #
+
+#' @keywords internal
+.check_time_budget <- function(t_start, i, n_total, max_time,
+                                warmup = 3L, label = "unit") {
+  if (is.null(max_time) || i < warmup) return(invisible(NULL))
+  elapsed   <- proc.time()[3] - t_start
+  rate      <- elapsed / i
+  projected <- rate * n_total
+  if (projected > max_time) {
+    stop(sprintf(
+      paste0("Time budget exceeded: completed %d/%d %ss in %.1fs (%.2fs each); ",
+             "projected total %.0fs exceeds max_time=%ds.\n",
+             "  Increase max_time in control, or set max_time=NULL to disable."),
+      i, n_total, label, elapsed, rate, projected, as.integer(max_time)),
+      call. = FALSE)
+  }
+  invisible(NULL)
+}
+
+# --------------------------------------------------------------------------- #
 #  Internal helpers                                                            #
 # --------------------------------------------------------------------------- #
 
@@ -166,7 +189,12 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       ctrl[[old_nm]] <- ctrl[[new_nm]]
     } else {
       # Both from defaults, or both from user -> new name wins; sync to old
-      ctrl[[old_nm]] <- ctrl[[new_nm]]
+      # But only if the new name actually exists
+      if (!is.null(ctrl[[new_nm]])) {
+        ctrl[[old_nm]] <- ctrl[[new_nm]]
+      } else if (!is.null(ctrl[[old_nm]])) {
+        ctrl[[new_nm]] <- ctrl[[old_nm]]
+      }
     }
     ctrl
   }
@@ -212,6 +240,25 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   c(lam, mu)
 }
 
+#' Build a conditioning function from a survival GAM
+#'
+#' Returns a function that takes an 8-element parameter vector (C++ layout)
+#' and returns \code{log(P_tree(pars))}, the log-probability that both basal
+#' lineages survive to the present.
+#' @keywords internal
+.build_cond_fun <- function(gam_fit, model_bin) {
+  force(gam_fit)
+  force(model_bin)
+  par_names <- .par_names(model_bin)
+  function(pars8) {
+    compact <- .contract_pars(pars8, model_bin)
+    nd <- as.data.frame(t(compact))
+    colnames(nd) <- par_names
+    p_tree <- predict_survival(gam_fit, nd)
+    log(max(p_tree, 1e-300))
+  }
+}
+
 #' @keywords internal
 .contract_pars <- function(pars8, model_bin) {
   active <- which(model_bin == 1L)
@@ -221,7 +268,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 }
 
 #' @keywords internal
-.run_mcem <- function(brts, init_pars, lower_bound, upper_bound, ctrl, model = c(0L, 0L, 0L), link = 0L) {
+.run_mcem <- function(brts, init_pars, lower_bound, upper_bound, ctrl,
+                      model = c(0L, 0L, 0L), link = 0L, cond_fun = NULL) {
   raw <- switch(ctrl$sampling,
     dynamic_fresh   = .mcem_dynamic_fresh(
       brts        = brts,
@@ -237,8 +285,10 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       patience    = ctrl$patience,
       num_threads = ctrl$num_threads,
       verbose     = ctrl$verbose,
+      conditional = cond_fun,
       model       = model,
-      link        = link
+      link        = link,
+      max_time    = ctrl$max_time
     ),
     dynamic_recycle = stop("'dynamic_recycle' sampling not yet implemented."),
     dynamic_mixed   = stop("'dynamic_mixed' sampling not yet implemented."),
@@ -252,7 +302,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 }
 
 #' @keywords internal
-.run_cem <- function(brts, lower_bound, upper_bound, ctrl, model = c(0L, 0L, 0L), link = 0L) {
+.run_cem <- function(brts, lower_bound, upper_bound, ctrl,
+                     model = c(0L, 0L, 0L), link = 0L, cond_fun = NULL) {
   sd_vec <- ctrl$sd_vec
   if (is.null(sd_vec)) sd_vec <- (upper_bound - lower_bound) / 4
   raw <- emphasis_cem(
@@ -273,7 +324,9 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
     verbose      = ctrl$verbose,
     num_threads  = ctrl$num_threads,
     model        = model,
-    link         = link
+    link         = link,
+    cond_fun     = cond_fun,
+    max_time     = ctrl$max_time
   )
   if (identical(raw$converged, "all_failed"))
     warning("CEM failed: all particles were rejected at every attempt. ",
@@ -290,7 +343,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 
 #' @keywords internal
 .run_gam <- function(brts, lower_bound, upper_bound, ctrl,
-                     model = c(0L, 0L, 0L), link = 0L) {
+                     model = c(0L, 0L, 0L), link = 0L, cond = NULL) {
   if (!requireNamespace("mgcv", quietly = TRUE))
     stop("Package 'mgcv' is required for method=\"gam\". ",
          "Install it with install.packages(\"mgcv\").")
@@ -302,17 +355,34 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   compact_lb <- .contract_pars(lower_bound, model_bin)
   compact_ub <- .contract_pars(upper_bound, model_bin)
 
-  # Build parameter grid (uniform grid per dimension)
+  # Build parameter grid
   gp <- as.integer(ctrl$grid_points)
-  grid_list <- lapply(seq_len(n_par), function(j) {
-    seq(compact_lb[j], compact_ub[j], length.out = gp)
-  })
-  names(grid_list) <- par_names
-  pars_grid <- as.matrix(expand.grid(grid_list))
+  n_total <- as.integer(ctrl$n_grid %||% 0L)
 
-  if (ctrl$verbose)
-    cat(sprintf("  GAM grid: %d points (%d per parameter, %d parameters)\n",
-                nrow(pars_grid), gp, n_par))
+  if (n_total > 0L) {
+    # Latin Hypercube Sampling: n_total points spread over parameter space
+    pars_grid <- matrix(NA_real_, n_total, n_par)
+    for (j in seq_len(n_par)) {
+      cuts <- seq(0, 1, length.out = n_total + 1L)
+      u <- runif(n_total, cuts[-(n_total + 1L)], cuts[-1L])
+      pars_grid[, j] <- compact_lb[j] + u * (compact_ub[j] - compact_lb[j])
+    }
+    pars_grid[, ] <- pars_grid[sample(n_total), ]  # shuffle columns independently
+    colnames(pars_grid) <- par_names
+    grid_label <- sprintf("  GAM grid: %d LHS points (%d parameters)\n",
+                          n_total, n_par)
+  } else {
+    # Factorial grid: gp points per dimension
+    grid_list <- lapply(seq_len(n_par), function(j) {
+      seq(compact_lb[j], compact_ub[j], length.out = gp)
+    })
+    names(grid_list) <- par_names
+    pars_grid <- as.matrix(expand.grid(grid_list))
+    grid_label <- sprintf("  GAM grid: %d points (%d per parameter, %d parameters)\n",
+                          nrow(pars_grid), gp, n_par)
+  }
+
+  if (ctrl$verbose) cat(grid_label)
 
   # Evaluate IS log-likelihood at each grid point
   surface <- estimate_likelihood_surface(
@@ -325,8 +395,15 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
     max_lambda  = ctrl$max_lambda,
     maxN        = ctrl$maxN,
     num_threads = ctrl$num_threads,
-    verbose     = ctrl$verbose
+    verbose     = ctrl$verbose,
+    max_time    = ctrl$max_time
   )
+
+  # Apply conditioning correction before fitting GAM
+  if (!is.null(cond)) {
+    p_tree <- predict_survival(cond, pars_grid)
+    surface$fhat <- surface$fhat - log(p_tree)
+  }
 
   n_valid <- sum(is.finite(surface$fhat))
   if (n_valid < 10L)
@@ -423,6 +500,10 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'   }
 #' @param link Link function for rate computation: \code{"linear"} (default)
 #'   uses \code{max(0, eta)}; \code{"exponential"} uses \code{exp(eta)}.
+#' @param cond A GAM object from \code{\link{train_GAM}} for conditioning on
+#'   survival, or \code{NULL} (default, no conditioning). When provided, the
+#'   log-likelihood is conditioned: \eqn{\ell_{\rm cond} = \ell -
+#'   \log\hat{P}_{\rm tree}(\theta)}.
 #' @return A list with class \code{"emphasis_fit"} containing:
 #'   \describe{
 #'     \item{\code{pars}}{Named numeric vector of parameter estimates.}
@@ -460,7 +541,8 @@ estimate_rates <- function(tree,
                            model     = "cr",
                            init_pars = NULL,
                            control   = list(),
-                           link      = "linear") {
+                           link      = "linear",
+                           cond      = NULL) {
   method    <- match.arg(method)
 
   model_bin <- .resolve_model(model)
@@ -487,6 +569,14 @@ estimate_rates <- function(tree,
     stop(.pars_error_msg(model_bin, expected_n))
 
   brts <- .extract_brts(tree)
+
+  # Build conditioning function from survival GAM
+  cond_fun <- NULL
+  if (!is.null(cond)) {
+    if (!inherits(cond, "gam"))
+      stop("'cond' must be a GAM object from train_GAM() or NULL.")
+    cond_fun <- .build_cond_fun(cond, model_bin)
+  }
 
   if (is.null(init_pars) && method == "mcem") {
     init_pars <- (lower_bound + upper_bound) / 2
@@ -569,27 +659,39 @@ estimate_rates <- function(tree,
   }
 
   raw <- switch(method,
-    mcem = .run_mcem(brts, ip8, lb8, ub8, ctrl, model = model_bin, link = link_int),
-    cem  = .run_cem(brts, lb8, ub8, ctrl, model = model_bin, link = link_int),
-    gam  = .run_gam(brts, lb8, ub8, ctrl, model = model_bin, link = link_int)
+    mcem = .run_mcem(brts, ip8, lb8, ub8, ctrl, model = model_bin, link = link_int,
+                     cond_fun = cond_fun),
+    cem  = .run_cem(brts, lb8, ub8, ctrl, model = model_bin, link = link_int,
+                    cond_fun = cond_fun),
+    gam  = .run_gam(brts, lb8, ub8, ctrl, model = model_bin, link = link_int,
+                    cond = cond)
   )
 
   # Contract 8-element result back to compact
   compact_pars <- .contract_pars(as.numeric(raw$pars), model_bin)
   pars <- stats::setNames(compact_pars, .par_names(model_bin))
   n_pars <- length(pars)
-  aic <- if (is.finite(raw$loglik)) -2 * raw$loglik + 2 * n_pars else NA_real_
+
+  # For MCEM, the E-step fhat is unconditioned; apply correction here
+  loglik <- raw$loglik
+  if (!is.null(cond_fun) && method == "mcem" && is.finite(loglik)) {
+    loglik <- loglik - cond_fun(as.numeric(raw$pars))
+  }
+
+  aic <- if (is.finite(loglik)) -2 * loglik + 2 * n_pars else NA_real_
   loglik_var <- if (!is.null(raw$loglik_var)) raw$loglik_var else NA_real_
 
   if (ctrl$verbose) {
-    cat(sprintf("[estimate_rates] loglik=%.4f  AIC=%.4f  pars: %s\n",
-                raw$loglik, aic,
-                paste(names(pars), "=", round(pars, 4), collapse="  ")))
+    cat(sprintf("[estimate_rates] loglik=%.4f  AIC=%.4f  pars: %s%s\n",
+                loglik, aic,
+                paste(names(pars), "=", round(pars, 4), collapse="  "),
+                if (!is.null(cond)) "  (conditioned)" else ""))
   }
 
-  result <- list(pars = pars, loglik = raw$loglik, loglik_var = loglik_var,
+  result <- list(pars = pars, loglik = loglik, loglik_var = loglik_var,
                  n_pars = n_pars, AIC = aic,
-                 method = method, model = model_bin, details = raw$details)
+                 method = method, model = model_bin,
+                 cond = !is.null(cond), details = raw$details)
   class(result) <- "emphasis_fit"
   result
 }
@@ -602,7 +704,8 @@ estimate_rates <- function(tree,
 #' @export
 print.emphasis_fit <- function(x, ...) {
   model_str <- .model_label(x$model)
-  cat("emphasis fit (", x$method, ", model = ", model_str, ")\n\n", sep = "")
+  cond_str <- if (isTRUE(x$cond)) ", conditioned" else ""
+  cat("emphasis fit (", x$method, ", model = ", model_str, cond_str, ")\n\n", sep = "")
   cat("Parameters:\n")
   print(round(x$pars, 6))
   cat("\nLog-likelihood:", round(x$loglik, 4))
