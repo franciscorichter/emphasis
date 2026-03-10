@@ -364,7 +364,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
     pars_grid <- matrix(NA_real_, n_total, n_par)
     for (j in seq_len(n_par)) {
       cuts <- seq(0, 1, length.out = n_total + 1L)
-      u <- runif(n_total, cuts[-(n_total + 1L)], cuts[-1L])
+      u <- stats::runif(n_total, cuts[-(n_total + 1L)], cuts[-1L])
       pars_grid[, j] <- compact_lb[j] + u * (compact_ub[j] - compact_lb[j])
     }
     pars_grid[, ] <- pars_grid[sample(n_total), ]  # shuffle columns independently

@@ -15,7 +15,8 @@ estimate_likelihood_surface(
   maxN = NULL,
   num_threads = 1L,
   bias_correct = FALSE,
-  verbose = TRUE
+  verbose = TRUE,
+  max_time = NULL
 )
 }
 \arguments{
@@ -46,6 +47,10 @@ bias-corrected IS estimator (truncated at order \code{K}).
 Default \code{FALSE} uses the standard log-mean-exp estimator.}
 
 \item{verbose}{Print progress (default \code{TRUE}).}
+
+\item{max_time}{Maximum wall-clock time in seconds, or \code{NULL} (default)
+to disable.  Uses projective budgeting: after a warmup period, if the
+estimated total time exceeds \code{max_time}, stops early with an error.}
 }
 \value{
 A data frame with columns for each parameter plus \code{fhat}

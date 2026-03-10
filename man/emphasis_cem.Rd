@@ -23,7 +23,8 @@ emphasis_cem(
   num_threads = 1L,
   model = c(0L, 0L, 0L),
   link = 0L,
-  cond_fun = NULL
+  cond_fun = NULL,
+  max_time = NULL
 )
 }
 \arguments{
@@ -68,6 +69,10 @@ Default \code{5}.}
 \item{cond_fun}{Optional conditioning function (8-element pars -> log P_tree),
 or \code{NULL} (no conditioning). Built internally by
 \code{\link{estimate_rates}} from a trained survival GAM.}
+
+\item{max_time}{Maximum wall-clock time in seconds, or \code{NULL} (default)
+to disable. When the elapsed time exceeds this limit the loop exits early
+with \code{stop_reason = "time_budget"}.}
 }
 \value{
 A list:
