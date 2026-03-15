@@ -13,9 +13,16 @@ emphasis::tree_t pack(const Rcpp::DataFrame& r_tree) {
   Rcpp::NumericVector n         = r_tree["n"];
   Rcpp::NumericVector t_ext     = r_tree["t_ext"];
   Rcpp::NumericVector pd        = r_tree["pd"];
-  Rcpp::NumericVector tip_start_v;
+  Rcpp::NumericVector tip_start_v, focal_tip_start_v;
+  Rcpp::IntegerVector id_v, parent_id_v;
   bool has_tip_start = r_tree.containsElementNamed("tip_start");
+  bool has_focal_ts  = r_tree.containsElementNamed("focal_tip_start");
+  bool has_id        = r_tree.containsElementNamed("id");
+  bool has_parent_id = r_tree.containsElementNamed("parent_id");
   if (has_tip_start) tip_start_v = r_tree["tip_start"];
+  if (has_focal_ts)  focal_tip_start_v = r_tree["focal_tip_start"];
+  if (has_id)        id_v = r_tree["id"];
+  if (has_parent_id) parent_id_v = r_tree["parent_id"];
 
   for (int i = 0; i < r_tree.nrow(); ++i) {
     emphasis::node_t entry;
@@ -24,9 +31,10 @@ emphasis::tree_t pack(const Rcpp::DataFrame& r_tree) {
     entry.t_ext     = t_ext[i];
     entry.pd        = pd[i];
     entry.tip_start = has_tip_start ? tip_start_v[i] : 0.0;
+    entry.focal_tip_start = has_focal_ts ? focal_tip_start_v[i] : 0.0;
     entry.clade     = 0;
-    entry.id        = -1;
-    entry.parent_id = -1;
+    entry.id        = has_id ? id_v[i] : -1;
+    entry.parent_id = has_parent_id ? parent_id_v[i] : -1;
     new_tree.push_back(entry);
   }
   return new_tree;

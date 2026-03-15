@@ -18,7 +18,7 @@ namespace {
       auto n = as<NumericVector>(df["n"]);
       auto t_ext = as<NumericVector>(df["t_ext"]);
       for (auto i = 0; i < brts.size(); ++i) {
-        tree.push_back(emphasis::node_t{brts[i], n[i], t_ext[i], 0.0, 0.0, 0, -1, -1});
+        tree.push_back(emphasis::node_t{brts[i], n[i], t_ext[i], 0.0, 0.0, 0.0, 0, -1, -1});
       }
       trees.emplace_back(std::move(tree));
     }

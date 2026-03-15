@@ -23,7 +23,8 @@ namespace emphasis {
     inline IT make_node(IT it, double t, double n, double t_ext, int id = -1, int parent_id = -1)
     {
       it->brts = t; it->n = n; it->t_ext = t_ext; it->pd = 0.0;
-      it->tip_start = t; it->clade = 0; it->id = id; it->parent_id = parent_id;
+      it->tip_start = t; it->focal_tip_start = 0.0;
+      it->clade = 0; it->id = id; it->parent_id = parent_id;
       return it;
     }
 
@@ -32,7 +33,7 @@ namespace emphasis {
     inline IT make_extinct_node(IT it, double t, double n, double t_spec, int id = -1, int parent_id = -1)
     {
       it->brts = t; it->n = n; it->t_ext = t_ext_extinct; it->pd = 0.0;
-      it->tip_start = t_spec;  // E_s = brts - tip_start at extinction time
+      it->tip_start = t_spec; it->focal_tip_start = t_spec;
       it->clade = 0; it->id = id; it->parent_id = parent_id;
       return it;
     }
@@ -72,27 +73,38 @@ namespace emphasis {
     maximize_lambda thread_local tlml;
 
 
-    // After augmentation, assign tip_start for each speciation node and
-    // compute pendant PD per node.
-    // tip_start of a lineage = its birth time (brts of its speciation event).
-    // For initial tree nodes (no parent), tip_start = 0 (crown age start).
+    // After augmentation, assign tip_start, focal_tip_start, and pendant PD.
     void compute_pendant_pd(tree_t& tree)
     {
-      // First pass: set tip_start for speciation nodes.
-      // Speciation nodes are those that are NOT extinction nodes.
-      // tip_start = brts (birth time of the lineage).
-      // For initial tree nodes (parent_id == -1), tip_start = 0.
+      // Pass 1: set tip_start for speciation nodes, initialize focal_tip_start
       for (auto& node : tree) {
         if (!detail::is_extinction(node)) {
           node.tip_start = (node.parent_id == -1) ? 0.0 : node.brts;
         }
-        // extinction nodes: tip_start already set to t_spec by make_extinct_node — don't reset
+        node.focal_tip_start = 0.0;
       }
 
-      // Second pass: compute pendant PD for each node using
-      // calculate_pendant_pd which sums (brts - tip_start_i) for alive lineages.
+      // Pass 2: compute pendant PD per node
       for (auto& node : tree) {
         node.pd = detail::calculate_pendant_pd(node.brts, tree);
+      }
+
+      // Pass 3: compute focal_tip_start via lineage tracking (O(N))
+      std::unordered_map<int, double> alive_ts;
+      for (auto& node : tree) {
+        if (detail::is_extinction(node)) {
+          node.focal_tip_start = node.tip_start;
+          if (node.id >= 0) alive_ts.erase(node.id);
+        } else {
+          if (node.parent_id >= 0) {
+            auto pit = alive_ts.find(node.parent_id);
+            if (pit != alive_ts.end()) {
+              node.focal_tip_start = pit->second;
+              pit->second = node.brts;
+            }
+          }
+          if (node.id >= 0) alive_ts[node.id] = node.brts;
+        }
       }
     }
 

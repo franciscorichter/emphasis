@@ -54,13 +54,14 @@ namespace emphasis {
   struct node_t
   {
     double brts;
-    double n;         /* n[i] = number of species in [time_i-1, time_i) */
-    double t_ext;     /* emp_t_ext_tip for present-day species;  emp_t_ext_extinct for extinction nodes */
+    double n;             /* n[i] = number of species in [time_i-1, time_i) */
+    double t_ext;         /* emp_t_ext_tip for present-day species;  emp_t_ext_extinct for extinction nodes */
     double pd;
-    double tip_start; // birth time of this lineage (for pendant PD); 0.0 = unset
-    int clade;        // required for sim_tree
-    int id;           // unique stable lineage ID (assigned at creation); -1 = unset
-    int parent_id;    // id of parent lineage; -1 = root / initial tree
+    double tip_start;     // birth time of this lineage (for pendant PD); 0.0 = unset
+    double focal_tip_start; // tip_start of the lineage that caused this event (for exact EP likelihood)
+    int clade;            // required for sim_tree
+    int id;               // unique stable lineage ID (assigned at creation); -1 = unset
+    int parent_id;        // id of parent lineage; -1 = root / initial tree
   };
   
   

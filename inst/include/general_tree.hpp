@@ -140,6 +140,13 @@ struct general_div {
 
     // P(t) = N*t - sum_tip_start  (pendant PD of alive lineages)
     double sum_tip_start = 0.0;
+    // Running sums for O(1) total-rate under exponential EP:
+    //   sum_exp_bE = Σ_{alive s} exp(-β_E · tip_start_s)
+    //   sum_exp_gE = Σ_{alive s} exp(-γ_E · tip_start_s)
+    // Allows: total_λ = exp(β₀+β_N·N+β_P·P+β_E·t) · sum_exp_bE
+    const bool ep_exp = (model[2] == 1 && link == 1);
+    double sum_exp_bE = ep_exp ? 2.0 * std::exp(-pars[3] * 0.0) : 0.0;  // 2 lineages at ts=0
+    double sum_exp_gE = ep_exp ? 2.0 * std::exp(-pars[7] * 0.0) : 0.0;
 
     while (true) {
       N = N1 + N2;
@@ -154,12 +161,19 @@ struct general_div {
       double total_rate = 0.0;
 
       if (!model[2]) {
-        // No E-dependence: all lineages share the same per-lineage rates
+        // No E-dependence: all lineages share the same per-lineage rates — O(1)
         const double lam = compute_lambda(Nval, Pval, 0.0);
         const double mu  = compute_mu   (Nval, Pval, 0.0);
         total_rate = Nval * (lam + mu);
+      } else if (ep_exp) {
+        // EP + exponential link: O(1) using factored running sums.
+        // λ(s,t) = exp(β₀+β_N·N+β_P·P+β_E·t) · exp(-β_E·ts_s)
+        // Σ_s λ(s,t) = exp(A_λ+β_E·t) · sum_exp_bE
+        const double td = static_cast<double>(t);
+        total_rate = std::exp(pars[0] + pars[1]*Nval + pars[2]*Pval + pars[3]*td) * sum_exp_bE
+                   + std::exp(pars[4] + pars[5]*Nval + pars[6]*Pval + pars[7]*td) * sum_exp_gE;
       } else {
-        // E-dependence: sum per-lineage rates
+        // EP + linear link: O(N) per-lineage loop (max(0,·) clipping prevents factoring)
         for (const auto& br : ltable) {
           if (br.end_date != -1.f) continue;
           const double E = static_cast<double>(t) - static_cast<double>(br.tip_start);
@@ -223,8 +237,14 @@ struct general_div {
       if (is_spec) {
         // Speciation: parent continues (tip_start reset), new daughter added
         const double old_ts = static_cast<double>(ltable[focal].tip_start);
+        const double td = static_cast<double>(t);
         ltable[focal].tip_start = t;
-        sum_tip_start += -old_ts + static_cast<double>(t) + static_cast<double>(t);
+        sum_tip_start += -old_ts + td + td;
+        // Maintain exponential running sums: remove old parent, add parent+daughter at new ts
+        if (ep_exp) {
+          sum_exp_bE += -std::exp(-pars[3] * old_ts) + 2.0 * std::exp(-pars[3] * td);
+          sum_exp_gE += -std::exp(-pars[7] * old_ts) + 2.0 * std::exp(-pars[7] * td);
+        }
 
         int new_id = tree_id++;
         if (ltable[focal].label < 0) { new_id = -new_id; N2++; } else { N1++; }
@@ -232,7 +252,12 @@ struct general_div {
         ltable.push_back(gbranch(t, t, ltable[focal].label, new_id, -1.f));
       } else {
         // Extinction
-        sum_tip_start -= static_cast<double>(ltable[focal].tip_start);
+        const double dead_ts = static_cast<double>(ltable[focal].tip_start);
+        sum_tip_start -= dead_ts;
+        if (ep_exp) {
+          sum_exp_bE -= std::exp(-pars[3] * dead_ts);
+          sum_exp_gE -= std::exp(-pars[7] * dead_ts);
+        }
         ltable[focal].end_date = t;
         if (ltable[focal].label < 0) N2--; else N1--;
       }

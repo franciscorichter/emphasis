@@ -124,12 +124,22 @@ namespace emphasis {
       return apply_link(eta);
     }
 
-    // EP covariate E_s: exact for extinction nodes (stored t_spec), mean-field for others
+    // EP covariate E_s: exact pendant age of the focal lineage at event time.
+    //
+    // For extinction nodes: E = brts - tip_start (exact, stored t_spec).
+    // For speciation nodes with known parent (parent_id >= 0):
+    //   E = brts - focal_tip_start (exact parent pendant age).
+    // For initial tree nodes (parent_id == -1, unknown parent):
+    //   E = P/N (mean-field = correct marginalization over possible parents,
+    //   since Σ_s λ(s)/N = λ(E=P/N) for linear link).
     double e_s(const node_t& node) const {
       if (detail::is_extinction(node)) {
-        return node.brts - node.tip_start;  // exact: stored t_spec
+        return node.brts - node.tip_start;
       }
-      return (node.n > 0.0) ? (node.pd / node.n) : 0.0;  // mean-field: P/N
+      if (node.parent_id >= 0) {
+        return node.brts - node.focal_tip_start;
+      }
+      return (node.n > 0.0) ? (node.pd / node.n) : 0.0;
     }
 
     // EP-aware speciation rate (mean-field E for non-extinction nodes)
