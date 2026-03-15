@@ -17,16 +17,20 @@
 # Output: console tables + bird_analysis_results.RData
 # ============================================================================
 
-# ── Install emphasis from GitHub ─────────────────────────────────
-if (requireNamespace("emphasis", quietly = TRUE)) {
-  remove.packages("emphasis")
+# ── Install dependencies ─────────────────────────────────────────
+for (pkg in c("devtools", "ape", "mgcv")) {
+  if (!requireNamespace(pkg, quietly = TRUE)) {
+    install.packages(pkg)
+  }
 }
-if (!requireNamespace("devtools", quietly = TRUE)) {
-  install.packages("devtools")
+
+# Install emphasis from GitHub (always fresh)
+if (requireNamespace("emphasis", quietly = TRUE)) {
+  try(remove.packages("emphasis"), silent = TRUE)
 }
 devtools::install_github(
   "franciscorichter/emphasis",
-  force = TRUE
+  force = TRUE, upgrade = "never"
 )
 
 library(emphasis)
