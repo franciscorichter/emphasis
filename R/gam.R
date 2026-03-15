@@ -88,34 +88,33 @@ predict_survival <- function(gam_fit, newpars) {
 
 #' Automatically determine parameter bounds via forward simulation
 #'
-#' Explores parameter space by drawing random parameter vectors from a wide
-#' initial region, simulating trees at each, and identifying the subregion
-#' that produces "sensible" trees (survived, reasonable size).  Optionally
-#' trains a survival GAM over the feasible region.
+#' Starts from a safe center point (low rates, zero covariates) and expands
+#' outward along each parameter axis using bisection to find the feasibility
+#' boundary --- where trees transition from surviving with sensible size to
+#' going extinct or exploding.  Much more efficient than blanket LHS sampling
+#' over a wide box.  Optionally trains a survival GAM over the detected region.
 #'
 #' @param tree A \code{phylo} object or anything accepted by
-#'   \code{\link{estimate_rates}}.  Used to determine crown age and
-#'   target tree size.
+#'   \code{\link{estimate_rates}}.
 #' @param model Model specification: \code{"cr"}, \code{"dd"}, etc.
 #' @param link \code{"linear"} or \code{"exponential"}.
-#' @param n_probe Number of parameter vectors to simulate (default 500).
-#' @param margin Fractional expansion of the detected feasible range
-#'   (default 0.2 = 20\% on each side).
+#' @param n_test Number of replicate simulations per candidate point
+#'   to assess feasibility (default 5).
+#' @param bisect_steps Number of bisection steps per axis direction
+#'   (default 8; gives ~1/256 resolution).
+#' @param margin Fractional expansion of detected bounds (default 0.1).
 #' @param tip_range Multiplier range for acceptable tip counts relative
-#'   to the observed tree.  Default \code{c(0.1, 10)}: accept trees
-#'   with 10\% to 10x the observed number of tips.
+#'   to the observed tree.  Default \code{c(0.1, 10)}.
 #' @param train_surv_gam If \code{TRUE} (default), train a survival GAM
-#'   on the feasible region using a second round of simulations.
+#'   on the detected region.
+#' @param num_threads Parallel threads for batch simulation (default 1).
 #' @param verbose Print progress (default \code{TRUE}).
 #' @return A list with components:
 #'   \describe{
 #'     \item{lower_bound}{Numeric vector of lower bounds (compact layout).}
 #'     \item{upper_bound}{Numeric vector of upper bounds (compact layout).}
-#'     \item{survival_gam}{A \code{gam} object (if \code{train_surv_gam = TRUE}),
-#'       or \code{NULL}.}
-#'     \item{n_feasible}{Number of feasible parameter vectors found.}
-#'     \item{n_probed}{Total parameter vectors simulated.}
-#'     \item{feasible_pars}{Matrix of feasible parameter vectors.}
+#'     \item{survival_gam}{A \code{gam} object if trained, else \code{NULL}.}
+#'     \item{center}{The safe center point used as starting location.}
 #'   }
 #' @export
 #' @examples
@@ -130,7 +129,8 @@ predict_survival <- function(gam_fit, newpars) {
 #'          cond = ab$survival_gam)
 #' }
 auto_bounds <- function(tree, model = "cr", link = "linear",
-                        n_probe = 500L, margin = 0.2,
+                        n_test = 5L, bisect_steps = 8L,
+                        margin = 0.1,
                         tip_range = c(0.1, 10),
                         train_surv_gam = TRUE,
                         num_threads = 1L,
@@ -142,99 +142,127 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 
   # Crown age and target tips from observed tree
   if (inherits(tree, "phylo")) {
-    max_t   <- max(ape::branching.times(tree))
-    n_tips  <- ape::Ntip(tree)
+    max_t  <- max(ape::branching.times(tree))
+    n_tips <- ape::Ntip(tree)
   } else if (is.numeric(tree)) {
-    max_t   <- max(tree)
-    n_tips  <- length(tree) + 1L
+    max_t  <- max(tree)
+    n_tips <- length(tree) + 1L
   } else if (is.list(tree) && !is.null(tree$tes)) {
-    max_t   <- max(ape::branching.times(tree$tes))
-    n_tips  <- ape::Ntip(tree$tes)
+    max_t  <- max(ape::branching.times(tree$tes))
+    n_tips <- ape::Ntip(tree$tes)
   } else {
     stop("'tree' must be a phylo, branching times, or simulate_tree result.")
   }
 
-  tip_lo <- max(2, floor(n_tips * tip_range[1]))
-  tip_hi <- ceiling(n_tips * tip_range[2])
+  tip_lo  <- max(2, floor(n_tips * tip_range[1]))
+  tip_hi  <- ceiling(n_tips * tip_range[2])
+  max_lin <- as.integer(max(20 * n_tips, 500))
 
-  # ── Wide initial bounds (model + link + crown-age dependent) ─
-  wide <- .wide_bounds(model_bin, link_int, max_t, n_tips)
+  # ── Safe center: observed net rate, zero covariates ────────
+  r_hat  <- log(max(n_tips, 2) / 2) / max(max_t, 0.1)
+  mu_hat <- 0.2 * r_hat
+  lam_hat <- r_hat + mu_hat
 
-  # ── Phase 1: probe with LHS ────────────────────────────────
+  if (link_int == 0L) {
+    center_lam <- c(lam_hat)
+    center_mu  <- c(mu_hat)
+  } else {
+    center_lam <- c(log(max(lam_hat, 1e-4)))
+    center_mu  <- c(log(max(mu_hat, 1e-6)))
+  }
+  active <- which(model_bin == 1L)
+  center <- c(center_lam, rep(0, length(active)),
+              center_mu,  rep(0, length(active)))
+  names(center) <- pnames
+
+  # Verify center is feasible
   if (verbose) cat(sprintf(
-    "auto_bounds: probing %d points (%s, link=%s, %d pars)...\n",
-    n_probe, paste(model_bin, collapse = ","),
-    if (link_int == 0L) "linear" else "exponential", n_pars
+    "auto_bounds: %s link=%s (%d pars)\n",
+    paste(model_bin, collapse = ","),
+    if (link_int == 0L) "linear" else "exponential",
+    n_pars
+  ))
+  if (verbose) cat(sprintf(
+    "  center: %s\n",
+    paste(round(center, 4), collapse = ", ")
   ))
 
-  pars_mat <- .lhs_sample(n_probe, wide$lb, wide$ub)
-  colnames(pars_mat) <- pnames
-
-  max_lin <- as.integer(max(20 * n_tips, 500))
-  sims <- simulate_tree(
-    pars = pars_mat, max_t = max_t,
-    model = model, link = link,
-    max_tries = 0,
-    max_lin = max_lin,
+  center_ok <- .test_feasibility(
+    center, model, link, max_t, max_lin,
+    n_test = 10L, tip_lo = tip_lo, tip_hi = tip_hi,
     num_threads = num_threads
   )
 
-  # ── Classify outcomes ──────────────────────────────────────
-  status <- sapply(sims$simulations, function(s) s$status)
-  ntips  <- sapply(sims$simulations, function(s) {
-    if (s$status == "done" && !is.null(s$tes)) {
-      length(s$tes$tip.label)
-    } else {
-      0L
-    }
-  })
-
-  feasible <- (status == "done") & (ntips >= tip_lo) & (ntips <= tip_hi)
-  n_feasible <- sum(feasible)
-
-  if (verbose) cat(sprintf(
-    "  survived: %d/%d, sensible tips [%.0f, %.0f]: %d\n",
-    sum(status == "done"), n_probe, tip_lo, tip_hi, n_feasible
-  ))
-
-  if (n_feasible < 5L) {
-    warning(
-      "auto_bounds: only ", n_feasible,
-      " feasible points found. Returning wide bounds. ",
-      "Try increasing n_probe or relaxing tip_range."
+  if (!center_ok) {
+    # Try a grid of centers near r_hat
+    if (verbose) cat("  center infeasible, searching...\n")
+    center <- .find_feasible_center(
+      model_bin, link_int, max_t, n_tips, model, link,
+      max_lin, tip_lo, tip_hi, num_threads
     )
-    return(list(
-      lower_bound  = wide$lb,
-      upper_bound  = wide$ub,
-      survival_gam = NULL,
-      n_feasible   = n_feasible,
-      n_probed     = n_probe,
-      feasible_pars = pars_mat[feasible, , drop = FALSE]
+    if (is.null(center)) {
+      warning("auto_bounds: could not find a feasible center point.")
+      wide <- .wide_bounds(model_bin, link_int, max_t, n_tips)
+      return(list(
+        lower_bound = wide$lb, upper_bound = wide$ub,
+        survival_gam = NULL, center = NULL
+      ))
+    }
+    names(center) <- pnames
+    if (verbose) cat(sprintf(
+      "  found center: %s\n",
+      paste(round(center, 4), collapse = ", ")
     ))
+  } else {
+    if (verbose) cat("  center feasible\n")
   }
 
-  # ── Narrow bounds to feasible region + margin ──────────────
-  feas_mat <- pars_mat[feasible, , drop = FALSE]
-  col_min  <- apply(feas_mat, 2, min)
-  col_max  <- apply(feas_mat, 2, max)
-  span     <- col_max - col_min
-  span     <- pmax(span, 1e-6)  # avoid zero-width
+  # ── Bisection expansion along each axis ────────────────────
+  wide <- .wide_bounds(model_bin, link_int, max_t, n_tips)
+  lb <- center
+  ub <- center
 
-  lb <- pmax(col_min - margin * span, wide$lb)
-  ub <- pmin(col_max + margin * span, wide$ub)
+  for (j in seq_len(n_pars)) {
+    if (verbose) cat(sprintf("  axis %s: ", pnames[j]))
+
+    # Expand upward
+    hi <- .bisect_boundary(
+      center, j, center[j], wide$ub[j],
+      model, link, max_t, max_lin,
+      n_test, bisect_steps, tip_lo, tip_hi,
+      num_threads
+    )
+    # Expand downward
+    lo <- .bisect_boundary(
+      center, j, center[j], wide$lb[j],
+      model, link, max_t, max_lin,
+      n_test, bisect_steps, tip_lo, tip_hi,
+      num_threads
+    )
+
+    lb[j] <- lo
+    ub[j] <- hi
+    if (verbose) cat(sprintf("[%.4f, %.4f]\n", lo, hi))
+  }
+
+  # Add margin
+  span <- ub - lb
+  span <- pmax(span, 1e-6)
+  lb <- pmax(lb - margin * span, wide$lb)
+  ub <- pmin(ub + margin * span, wide$ub)
 
   if (verbose) {
-    cat("  bounds:\n")
+    cat("  final bounds:\n")
     for (j in seq_len(n_pars)) {
       cat(sprintf("    %s: [%.4f, %.4f]\n", pnames[j], lb[j], ub[j]))
     }
   }
 
-  # ── Phase 2: survival GAM on narrowed region ───────────────
+  # ── Survival GAM on detected region ────────────────────────
   surv_gam <- NULL
   if (train_surv_gam) {
-    if (verbose) cat("  training survival GAM on narrowed region...\n")
-    n_gam   <- max(500L, n_probe)
+    if (verbose) cat("  training survival GAM...\n")
+    n_gam   <- 500L
     gam_mat <- .lhs_sample(n_gam, lb, ub)
     colnames(gam_mat) <- pnames
 
@@ -246,17 +274,102 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
       num_threads = num_threads
     )
 
-    surv_gam <- train_GAM(gam_sims$simulations, gam_mat, model = model)
+    surv_gam <- train_GAM(
+      gam_sims$simulations, gam_mat, model = model
+    )
   }
 
   list(
-    lower_bound   = stats::setNames(lb, pnames),
-    upper_bound   = stats::setNames(ub, pnames),
-    survival_gam  = surv_gam,
-    n_feasible    = n_feasible,
-    n_probed      = n_probe,
-    feasible_pars = feas_mat
+    lower_bound  = stats::setNames(lb, pnames),
+    upper_bound  = stats::setNames(ub, pnames),
+    survival_gam = surv_gam,
+    center       = center
   )
+}
+
+
+# Test whether a parameter vector produces feasible trees.
+# Returns TRUE if >= 50% of n_test sims survive with sensible tips.
+.test_feasibility <- function(pars, model, link, max_t, max_lin,
+                              n_test = 5L, tip_lo = 2, tip_hi = 500,
+                              num_threads = 1L) {
+  pars_mat <- matrix(rep(pars, n_test), nrow = n_test, byrow = TRUE)
+  sims <- simulate_tree(
+    pars = pars_mat, max_t = max_t,
+    model = model, link = link,
+    max_tries = 0, max_lin = max_lin,
+    num_threads = num_threads
+  )
+  ntips <- sapply(sims$simulations, function(s) {
+    if (s$status == "done" && !is.null(s$tes))
+      length(s$tes$tip.label) else 0L
+  })
+  sum(ntips >= tip_lo & ntips <= tip_hi) >= ceiling(n_test / 2)
+}
+
+
+# Search for a feasible center by trying a grid of rate values.
+.find_feasible_center <- function(model_bin, link_int, max_t, n_tips,
+                                  model, link, max_lin, tip_lo, tip_hi,
+                                  num_threads) {
+  r_hat  <- log(max(n_tips, 2) / 2) / max(max_t, 0.1)
+  active <- which(model_bin == 1L)
+
+  # Try a grid of baseline rate multipliers
+  mults <- c(1, 0.5, 2, 0.25, 3, 0.1, 5)
+  mu_fracs <- c(0.2, 0.0, 0.5, 0.1)
+
+  for (m in mults) {
+    for (mf in mu_fracs) {
+      lam <- r_hat * m / (1 - mf)
+      mu  <- lam * mf
+      if (link_int == 0L) {
+        cand <- c(max(lam, 1e-4), rep(0, length(active)),
+                  max(mu, 0), rep(0, length(active)))
+      } else {
+        cand <- c(log(max(lam, 1e-4)), rep(0, length(active)),
+                  log(max(mu, 1e-6)), rep(0, length(active)))
+      }
+      ok <- .test_feasibility(
+        cand, model, link, max_t, max_lin,
+        n_test = 5L, tip_lo = tip_lo, tip_hi = tip_hi,
+        num_threads = num_threads
+      )
+      if (ok) return(cand)
+    }
+  }
+  NULL
+}
+
+
+# Bisection to find the boundary of feasibility along one axis.
+# Starts from center[j] (feasible) and probes toward `target`.
+# Returns the last feasible value found.
+.bisect_boundary <- function(center, j, safe, target,
+                             model, link, max_t, max_lin,
+                             n_test, steps, tip_lo, tip_hi,
+                             num_threads) {
+  lo <- safe
+  hi <- target
+
+  for (s in seq_len(steps)) {
+    mid <- (lo + hi) / 2
+    cand <- center
+    cand[j] <- mid
+
+    ok <- .test_feasibility(
+      cand, model, link, max_t, max_lin,
+      n_test = n_test, tip_lo = tip_lo, tip_hi = tip_hi,
+      num_threads = num_threads
+    )
+
+    if (ok) {
+      lo <- mid   # feasible — push further
+    } else {
+      hi <- mid   # infeasible — pull back
+    }
+  }
+  lo  # last known feasible value
 }
 
 

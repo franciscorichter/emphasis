@@ -8,33 +8,38 @@ auto_bounds(
   tree,
   model = "cr",
   link = "linear",
-  n_probe = 500L,
-  margin = 0.2,
+  n_test = 5L,
+  bisect_steps = 8L,
+  margin = 0.1,
   tip_range = c(0.1, 10),
   train_surv_gam = TRUE,
+  num_threads = 1L,
   verbose = TRUE
 )
 }
 \arguments{
 \item{tree}{A \code{phylo} object or anything accepted by
-\code{\link{estimate_rates}}.  Used to determine crown age and
-target tree size.}
+\code{\link{estimate_rates}}.}
 
 \item{model}{Model specification: \code{"cr"}, \code{"dd"}, etc.}
 
 \item{link}{\code{"linear"} or \code{"exponential"}.}
 
-\item{n_probe}{Number of parameter vectors to simulate (default 500).}
+\item{n_test}{Number of replicate simulations per candidate point
+to assess feasibility (default 5).}
 
-\item{margin}{Fractional expansion of the detected feasible range
-(default 0.2 = 20\% on each side).}
+\item{bisect_steps}{Number of bisection steps per axis direction
+(default 8; gives ~1/256 resolution).}
+
+\item{margin}{Fractional expansion of detected bounds (default 0.1).}
 
 \item{tip_range}{Multiplier range for acceptable tip counts relative
-to the observed tree.  Default \code{c(0.1, 10)}: accept trees
-with 10\% to 10x the observed number of tips.}
+to the observed tree.  Default \code{c(0.1, 10)}.}
 
 \item{train_surv_gam}{If \code{TRUE} (default), train a survival GAM
-on the feasible region using a second round of simulations.}
+on the detected region.}
+
+\item{num_threads}{Parallel threads for batch simulation (default 1).}
 
 \item{verbose}{Print progress (default \code{TRUE}).}
 }
@@ -43,18 +48,16 @@ A list with components:
   \describe{
     \item{lower_bound}{Numeric vector of lower bounds (compact layout).}
     \item{upper_bound}{Numeric vector of upper bounds (compact layout).}
-    \item{survival_gam}{A \code{gam} object (if \code{train_surv_gam = TRUE}),
-      or \code{NULL}.}
-    \item{n_feasible}{Number of feasible parameter vectors found.}
-    \item{n_probed}{Total parameter vectors simulated.}
-    \item{feasible_pars}{Matrix of feasible parameter vectors.}
+    \item{survival_gam}{A \code{gam} object if trained, else \code{NULL}.}
+    \item{center}{The safe center point used as starting location.}
   }
 }
 \description{
-Explores parameter space by drawing random parameter vectors from a wide
-initial region, simulating trees at each, and identifying the subregion
-that produces "sensible" trees (survived, reasonable size).  Optionally
-trains a survival GAM over the feasible region.
+Starts from a safe center point (low rates, zero covariates) and expands
+outward along each parameter axis using bisection to find the feasibility
+boundary --- where trees transition from surviving with sensible size to
+going extinct or exploding.  Much more efficient than blanket LHS sampling
+over a wide box.  Optionally trains a survival GAM over the detected region.
 }
 \examples{
 \dontrun{
