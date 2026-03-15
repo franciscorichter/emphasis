@@ -83,6 +83,228 @@ predict_survival <- function(gam_fit, newpars) {
 
 
 # =========================================================================== #
+#  Automatic bound detection                                                    #
+# =========================================================================== #
+
+#' Automatically determine parameter bounds via forward simulation
+#'
+#' Explores parameter space by drawing random parameter vectors from a wide
+#' initial region, simulating trees at each, and identifying the subregion
+#' that produces "sensible" trees (survived, reasonable size).  Optionally
+#' trains a survival GAM over the feasible region.
+#'
+#' @param tree A \code{phylo} object or anything accepted by
+#'   \code{\link{estimate_rates}}.  Used to determine crown age and
+#'   target tree size.
+#' @param model Model specification: \code{"cr"}, \code{"dd"}, etc.
+#' @param link \code{"linear"} or \code{"exponential"}.
+#' @param n_probe Number of parameter vectors to simulate (default 500).
+#' @param margin Fractional expansion of the detected feasible range
+#'   (default 0.2 = 20\% on each side).
+#' @param tip_range Multiplier range for acceptable tip counts relative
+#'   to the observed tree.  Default \code{c(0.1, 10)}: accept trees
+#'   with 10\% to 10x the observed number of tips.
+#' @param train_surv_gam If \code{TRUE} (default), train a survival GAM
+#'   on the feasible region using a second round of simulations.
+#' @param verbose Print progress (default \code{TRUE}).
+#' @return A list with components:
+#'   \describe{
+#'     \item{lower_bound}{Numeric vector of lower bounds (compact layout).}
+#'     \item{upper_bound}{Numeric vector of upper bounds (compact layout).}
+#'     \item{survival_gam}{A \code{gam} object (if \code{train_surv_gam = TRUE}),
+#'       or \code{NULL}.}
+#'     \item{n_feasible}{Number of feasible parameter vectors found.}
+#'     \item{n_probed}{Total parameter vectors simulated.}
+#'     \item{feasible_pars}{Matrix of feasible parameter vectors.}
+#'   }
+#' @export
+#' @examples
+#' \dontrun{
+#' library(ape)
+#' data(bird.orders)
+#' ab <- auto_bounds(bird.orders, model = "dd", link = "exponential")
+#' fit <- estimate_rates(bird.orders, method = "gam", model = "dd",
+#'          link = "exponential",
+#'          control = list(lower_bound = ab$lower_bound,
+#'                         upper_bound = ab$upper_bound),
+#'          cond = ab$survival_gam)
+#' }
+auto_bounds <- function(tree, model = "cr", link = "linear",
+                        n_probe = 500L, margin = 0.2,
+                        tip_range = c(0.1, 10),
+                        train_surv_gam = TRUE,
+                        verbose = TRUE) {
+  model_bin <- .resolve_model(model)
+  link_int  <- .resolve_link(link)
+  n_pars    <- 2L + 2L * sum(model_bin)
+  pnames    <- .par_names(model_bin)
+
+  # Crown age and target tips from observed tree
+  if (inherits(tree, "phylo")) {
+    max_t   <- max(ape::branching.times(tree))
+    n_tips  <- ape::Ntip(tree)
+  } else if (is.numeric(tree)) {
+    max_t   <- max(tree)
+    n_tips  <- length(tree) + 1L
+  } else if (is.list(tree) && !is.null(tree$tes)) {
+    max_t   <- max(ape::branching.times(tree$tes))
+    n_tips  <- ape::Ntip(tree$tes)
+  } else {
+    stop("'tree' must be a phylo, branching times, or simulate_tree result.")
+  }
+
+  tip_lo <- max(2, floor(n_tips * tip_range[1]))
+  tip_hi <- ceiling(n_tips * tip_range[2])
+
+  # ── Wide initial bounds (model + link + crown-age dependent) ─
+  wide <- .wide_bounds(model_bin, link_int, max_t, n_tips)
+
+  # ── Phase 1: probe with LHS ────────────────────────────────
+  if (verbose) cat(sprintf(
+    "auto_bounds: probing %d points (%s, link=%s, %d pars)...\n",
+    n_probe, paste(model_bin, collapse = ","),
+    if (link_int == 0L) "linear" else "exponential", n_pars
+  ))
+
+  pars_mat <- .lhs_sample(n_probe, wide$lb, wide$ub)
+  colnames(pars_mat) <- pnames
+
+  max_lin <- as.integer(max(20 * n_tips, 500))
+  sims <- simulate_tree(
+    pars = pars_mat, max_t = max_t,
+    model = model, link = link,
+    max_tries = 0,
+    max_lin = max_lin
+  )
+
+  # ── Classify outcomes ──────────────────────────────────────
+  status <- sapply(sims$simulations, function(s) s$status)
+  ntips  <- sapply(sims$simulations, function(s) {
+    if (s$status == "done" && !is.null(s$tes)) {
+      length(s$tes$tip.label)
+    } else {
+      0L
+    }
+  })
+
+  feasible <- (status == "done") & (ntips >= tip_lo) & (ntips <= tip_hi)
+  n_feasible <- sum(feasible)
+
+  if (verbose) cat(sprintf(
+    "  survived: %d/%d, sensible tips [%.0f, %.0f]: %d\n",
+    sum(status == "done"), n_probe, tip_lo, tip_hi, n_feasible
+  ))
+
+  if (n_feasible < 5L) {
+    warning(
+      "auto_bounds: only ", n_feasible,
+      " feasible points found. Returning wide bounds. ",
+      "Try increasing n_probe or relaxing tip_range."
+    )
+    return(list(
+      lower_bound  = wide$lb,
+      upper_bound  = wide$ub,
+      survival_gam = NULL,
+      n_feasible   = n_feasible,
+      n_probed     = n_probe,
+      feasible_pars = pars_mat[feasible, , drop = FALSE]
+    ))
+  }
+
+  # ── Narrow bounds to feasible region + margin ──────────────
+  feas_mat <- pars_mat[feasible, , drop = FALSE]
+  col_min  <- apply(feas_mat, 2, min)
+  col_max  <- apply(feas_mat, 2, max)
+  span     <- col_max - col_min
+  span     <- pmax(span, 1e-6)  # avoid zero-width
+
+  lb <- pmax(col_min - margin * span, wide$lb)
+  ub <- pmin(col_max + margin * span, wide$ub)
+
+  if (verbose) {
+    cat("  bounds:\n")
+    for (j in seq_len(n_pars)) {
+      cat(sprintf("    %s: [%.4f, %.4f]\n", pnames[j], lb[j], ub[j]))
+    }
+  }
+
+  # ── Phase 2: survival GAM on narrowed region ───────────────
+  surv_gam <- NULL
+  if (train_surv_gam) {
+    if (verbose) cat("  training survival GAM on narrowed region...\n")
+    n_gam   <- max(500L, n_probe)
+    gam_mat <- .lhs_sample(n_gam, lb, ub)
+    colnames(gam_mat) <- pnames
+
+    gam_sims <- simulate_tree(
+      pars = gam_mat, max_t = max_t,
+      model = model, link = link,
+      max_tries = 0,
+      max_lin = max_lin
+    )
+
+    surv_gam <- train_GAM(gam_sims$simulations, gam_mat, model = model)
+  }
+
+  list(
+    lower_bound   = stats::setNames(lb, pnames),
+    upper_bound   = stats::setNames(ub, pnames),
+    survival_gam  = surv_gam,
+    n_feasible    = n_feasible,
+    n_probed      = n_probe,
+    feasible_pars = feas_mat
+  )
+}
+
+
+# Wide initial bounds, scaled by crown age and tree size.
+#
+# Key constraint: expected tips ~ 2*exp(r*T) where r = lambda - mu.
+# For observed N tips and crown age T: r_hat ~ log(N/2)/T.
+# Upper bound on net rate: r_max such that 2*exp(r_max*T) ~ 50*N.
+# This prevents the probe from wasting time on explosive combos.
+.wide_bounds <- function(model_bin, link_int, max_t, n_tips) {
+  active <- which(model_bin == 1L)
+  T <- max(max_t, 0.1)
+  N <- max(n_tips, 2)
+
+  r_hat  <- log(N / 2) / T                # observed net rate
+  r_max  <- log(50 * N / 2) / T           # net rate for 50x tips
+  lam_hi <- max(r_max + 0.5 * r_hat, 0.1) # allow some extinction
+  lam_lo <- max(0.1 * r_hat, 1e-4)
+  cov_hi <- max(0.3, 3 * abs(r_hat))
+
+  if (link_int == 0L) {
+    # Linear link: rates are direct (non-negative)
+    lb_lam <- c(lam_lo, rep(-cov_hi, length(active)))
+    ub_lam <- c(lam_hi, rep(cov_hi, length(active)))
+    lb_mu  <- c(0.0, rep(-cov_hi, length(active)))
+    ub_mu  <- c(lam_hi * 0.9, rep(cov_hi, length(active)))
+  } else {
+    # Exponential link: log-scale
+    lb_lam <- c(log(lam_lo), rep(-cov_hi, length(active)))
+    ub_lam <- c(log(lam_hi), rep(cov_hi, length(active)))
+    lb_mu  <- c(log(lam_lo) - 3, rep(-cov_hi, length(active)))
+    ub_mu  <- c(log(lam_hi), rep(cov_hi, length(active)))
+  }
+
+  list(lb = c(lb_lam, lb_mu), ub = c(ub_lam, ub_mu))
+}
+
+
+# Latin Hypercube Sample: n points in [lb, ub]
+.lhs_sample <- function(n, lb, ub) {
+  d <- length(lb)
+  mat <- matrix(0, nrow = n, ncol = d)
+  for (j in seq_len(d)) {
+    perm <- sample.int(n)
+    mat[, j] <- lb[j] + (perm - stats::runif(n)) / n * (ub[j] - lb[j])
+  }
+  mat
+}
+
+
+# =========================================================================== #
 #  Use case 2: GAM-based MLE                                                   #
 # =========================================================================== #
 
