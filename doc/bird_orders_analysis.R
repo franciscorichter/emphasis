@@ -2,9 +2,9 @@
 # ============================================================================
 # Bird phylogenies model comparison — emphasis package
 #
-# 4 models (CR, DD, PD, EP) x 2 links (linear, exponential) x
+# 3 models (DD, PD, EP) x 2 links (linear, exponential) x
 # 2 phylogenies (bird.orders 23 tips, bird.families 137 tips)
-# = 16 fits via GAM method, ranked by AIC per dataset.
+# = 12 fits via GAM method, ranked by AIC per dataset.
 #
 # EP + exponential link is not yet supported in inference and
 # will be skipped gracefully.
@@ -46,19 +46,9 @@ datasets <- list(
   families = bird.families
 )
 
-# ── 4 models x 2 links = 8 configurations ───────────────────────
+# ── 3 models x 2 links = 6 configurations ───────────────────────
 
 models <- list(
-  CR_lin = list(
-    model = "cr", link = "linear",
-    lb = c(0.01, 0),
-    ub = c(2.0, 1.0)
-  ),
-  CR_exp = list(
-    model = "cr", link = "exponential",
-    lb = c(-5, -8),
-    ub = c(1, 0)
-  ),
   DD_lin = list(
     model = "dd", link = "linear",
     lb = c(0.1, -0.15, 0, -0.01),
