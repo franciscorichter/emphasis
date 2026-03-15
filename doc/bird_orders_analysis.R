@@ -1,21 +1,20 @@
 #!/usr/bin/env Rscript
 # ============================================================================
-# Bird orders model comparison — emphasis package
+# Bird phylogenies model comparison — emphasis package
 #
-# Fits CR, DD, PD, EP models to ape::bird.orders (23 tips) and
-# ape::bird.families (137 tips) via GAM method.
+# 4 models (CR, DD, PD, EP) x 2 links (linear, exponential) x
+# 2 phylogenies (bird.orders 23 tips, bird.families 137 tips)
+# = 16 fits via GAM method, ranked by AIC per dataset.
 #
-# DDD reference values (dd_ML, conditioned on survival):
-#   bird.orders:   lambda_0=0.693, mu~0,    K=23
-#   bird.families: lambda_0=0.795, mu=0.102, K=201
+# EP + exponential link is not yet supported in inference and
+# will be skipped gracefully.
 #
-# Translation to emphasis linear-link DD:
-#   beta_0=lambda_0, beta_N=-(lambda_0-mu)/K, gamma_0=mu, gamma_N=0
-#   bird.orders:   (0.693, -0.030, ~0,    0)
-#   bird.families: (0.795, -0.0035, 0.102, 0)
+# DDD reference (dd_ML, cond=1):
+#   bird.orders:   lam0=0.693, mu~0,    K=23
+#   bird.families: lam0=0.795, mu=0.102, K=201
 #
 # Usage:  Rscript bird_orders_analysis.R
-# Output: console table + bird_analysis_results.RData
+# Output: console tables + bird_analysis_results.RData
 # ============================================================================
 
 # ── Install emphasis from GitHub ─────────────────────────────────
@@ -47,22 +46,18 @@ datasets <- list(
   families = bird.families
 )
 
-# ── Model specifications ─────────────────────────────────────────
-#
-# DD_lin: linear link, directly comparable to DDD parametrization
-#   lambda(N) = max(0, beta_0 + beta_N * N)
-#   mu(N)     = max(0, gamma_0 + gamma_N * N)
-#
-# DD_exp: exponential link (recommended for IS stability)
-#   lambda(N) = exp(beta_0 + beta_N * N)
-#
-# Bounds are set to cover DDD reference values with margin.
+# ── 4 models x 2 links = 8 configurations ───────────────────────
 
 models <- list(
-  CR = list(
+  CR_lin = list(
     model = "cr", link = "linear",
     lb = c(0.01, 0),
     ub = c(2.0, 1.0)
+  ),
+  CR_exp = list(
+    model = "cr", link = "exponential",
+    lb = c(-5, -8),
+    ub = c(1, 0)
   ),
   DD_lin = list(
     model = "dd", link = "linear",
@@ -74,21 +69,29 @@ models <- list(
     lb = c(-2, -0.5, -8, -0.1),
     ub = c(2, 0.0, 0, 0.1)
   ),
-  PD = list(
+  PD_lin = list(
+    model = "pd", link = "linear",
+    lb = c(0.01, -0.5, 0, -0.5),
+    ub = c(2.0, 0.5, 1.0, 0.5)
+  ),
+  PD_exp = list(
     model = "pd", link = "exponential",
     lb = c(-2, -0.5, -8, -0.5),
     ub = c(2, 0.5, 0, 0.5)
   ),
-  EP = list(
+  EP_lin = list(
     model = "ep", link = "linear",
     lb = c(0.01, -0.2, 0, -0.2),
-    ub = c(2.0, 0.5, 1, 0.5)
+    ub = c(2.0, 0.5, 1.0, 0.5)
+  ),
+  EP_exp = list(
+    model = "ep", link = "exponential",
+    lb = c(-2, -0.5, -8, -0.5),
+    ub = c(2, 0.5, 0, 0.5)
   )
 )
 
 # ── GAM control ──────────────────────────────────────────────────
-# CR: 2 params -> factorial grid (grid_points^2)
-# Others: 4 params -> LHS grid (n_grid points)
 
 gam_ctrl_2p <- list(
   grid_points = 10,
@@ -99,7 +102,7 @@ gam_ctrl_4p <- list(
   sample_size = 50
 )
 
-# ── Fit all models on all datasets ───────────────────────────────
+# ── Fit all 8 models on both datasets (16 fits) ─────────────────
 
 all_results <- list()
 set.seed(2026)
@@ -134,12 +137,13 @@ for (ds_name in names(datasets)) {
         control = ctrl
       ),
       error = function(e) {
-        cat("ERROR:", e$message, "\n")
+        cat("SKIP:", e$message, "\n")
         NULL
       }
     )
     elapsed <- (proc.time() - t0)[3]
 
+    key <- paste(ds_name, mod_name, sep = "_")
     if (!is.null(fit)) {
       cat(sprintf("%.1fs\n", elapsed))
       pars_str <- paste(
@@ -152,7 +156,6 @@ for (ds_name in names(datasets)) {
         "    loglik=%.2f  AIC=%.2f\n\n",
         fit$loglik, fit$AIC
       ))
-      key <- paste(ds_name, mod_name, sep = "_")
       all_results[[key]] <- list(
         dataset = ds_name,
         model   = mod_name,
@@ -165,8 +168,7 @@ for (ds_name in names(datasets)) {
         elapsed = elapsed
       )
     } else {
-      cat(sprintf("FAILED (%.1fs)\n\n", elapsed))
-      key <- paste(ds_name, mod_name, sep = "_")
+      cat(sprintf("  (%.1fs)\n\n", elapsed))
       all_results[[key]] <- list(
         dataset = ds_name,
         model   = mod_name,
@@ -182,12 +184,12 @@ for (ds_name in names(datasets)) {
   }
 }
 
-# ── Summary tables ───────────────────────────────────────────────
+# ── Summary tables (per dataset, ranked by AIC) ─────────────────
 
 cat("\n")
-cat("====================================\n")
-cat("         RESULTS SUMMARY\n")
-cat("====================================\n")
+cat("============================================\n")
+cat("           RESULTS SUMMARY\n")
+cat("============================================\n")
 
 for (ds_name in names(datasets)) {
   n_tips <- Ntip(datasets[[ds_name]])
@@ -201,11 +203,12 @@ for (ds_name in names(datasets)) {
     all_results
   )
   aics <- sapply(ds_res, function(r) r$AIC)
+  valid <- is.finite(aics)
   ord <- order(aics)
   best_aic <- min(aics, na.rm = TRUE)
 
   hdr <- sprintf(
-    "%-10s %-6s %4s %10s %10s %10s %7s",
+    "%-10s %-5s %3s %10s %10s %10s %7s",
     "Model", "Link", "nP", "loglik",
     "AIC", "dAIC", "Time"
   )
@@ -214,12 +217,36 @@ for (ds_name in names(datasets)) {
 
   for (i in ord) {
     r <- ds_res[[i]]
-    daic <- r$AIC - best_aic
+    if (is.na(r$AIC)) {
+      cat(sprintf(
+        "%-10s %-5s %3d %10s %10s %10s %6.1fs\n",
+        r$model, r$link, r$n_pars,
+        "---", "---", "---", r$elapsed
+      ))
+    } else {
+      cat(sprintf(
+        "%-10s %-5s %3d %10.2f %10.2f %10.2f %6.1fs\n",
+        r$model, r$link, r$n_pars,
+        r$loglik, r$AIC, r$AIC - best_aic,
+        r$elapsed
+      ))
+    }
+  }
+
+  # Best model summary
+  if (any(valid)) {
+    best_key <- names(ds_res)[which.min(aics)]
+    best <- ds_res[[best_key]]
     cat(sprintf(
-      "%-10s %-6s %4d %10.2f %10.2f %10.2f %6.1fs\n",
-      r$model, r$link, r$n_pars,
-      r$loglik, r$AIC, daic, r$elapsed
+      "\nBest model: %s (link=%s)\n",
+      best$model, best$link
     ))
+    for (j in seq_along(best$pars)) {
+      cat(sprintf(
+        "  %s = %.4f\n",
+        names(best$pars)[j], best$pars[j]
+      ))
+    }
   }
 }
 
