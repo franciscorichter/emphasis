@@ -133,6 +133,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
                         n_probe = 500L, margin = 0.2,
                         tip_range = c(0.1, 10),
                         train_surv_gam = TRUE,
+                        num_threads = 1L,
                         verbose = TRUE) {
   model_bin <- .resolve_model(model)
   link_int  <- .resolve_link(link)
@@ -174,7 +175,8 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     pars = pars_mat, max_t = max_t,
     model = model, link = link,
     max_tries = 0,
-    max_lin = max_lin
+    max_lin = max_lin,
+    num_threads = num_threads
   )
 
   # ── Classify outcomes ──────────────────────────────────────
@@ -240,7 +242,8 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
       pars = gam_mat, max_t = max_t,
       model = model, link = link,
       max_tries = 0,
-      max_lin = max_lin
+      max_lin = max_lin,
+      num_threads = num_threads
     )
 
     surv_gam <- train_GAM(gam_sims$simulations, gam_mat, model = model)

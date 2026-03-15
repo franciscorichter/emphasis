@@ -134,10 +134,16 @@ simulate_tree <- function(tree        = NULL,
   # ---------------------------------------------------------------------- #
   if (is.matrix(pars)) {
     if (nrow(pars) == 0L) stop("'pars' matrix must have at least one row.")
-    sims <- lapply(seq_len(nrow(pars)), function(i)
+    do_sim <- function(i)
       simulate_tree(tree, pars[i, ], max_t, model_bin,
                     max_lin, max_tries, useDDD, n_trees, link_int,
-                    max_missing, max_lambda, maxN, num_threads))
+                    max_missing, max_lambda, maxN, 1L)
+    if (num_threads > 1L && .Platform$OS.type == "unix") {
+      sims <- parallel::mclapply(seq_len(nrow(pars)), do_sim,
+                                 mc.cores = num_threads)
+    } else {
+      sims <- lapply(seq_len(nrow(pars)), do_sim)
+    }
     if (is.null(tree)) {
       # Forward batch: aggregate survival_prob
       surv <- mean(vapply(sims, `[[`, 0.0, "survival_prob"))
