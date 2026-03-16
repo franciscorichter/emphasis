@@ -263,7 +263,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   if (verbose) cat("  IS feasibility check...\n")
   is_result <- .tighten_bounds_is(
     center, lb, ub, brts, model_bin, link_int,
-    bisect_steps = 6L, verbose = verbose
+    bisect_steps = 4L, verbose = verbose
   )
   lb <- is_result$lb
   ub <- is_result$ub
@@ -383,49 +383,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 }
 
 
-# Spot-check IS feasibility near boundary corners.
-# Samples a few points near the lower/upper edges of the detected bounds
-# and attempts a quick IS evaluation via augment_trees(). Returns diagnostic messages.
-.test_is_feasibility <- function(center, lb, ub, brts, model_bin, link_int) {
-  msgs <- character(0L)
-  n_pars <- length(center)
 
-  # Test a few boundary-adjacent points: center with one axis near each edge
-  n_check <- min(n_pars, 4L)  # don't test too many axes
-  for (j in seq_len(n_check)) {
-    for (side in c("lo", "hi")) {
-      test_pt <- center
-      if (side == "lo") {
-        test_pt[j] <- lb[j] + 0.1 * (center[j] - lb[j])
-      } else {
-        test_pt[j] <- ub[j] - 0.1 * (ub[j] - center[j])
-      }
-
-      pars8 <- .expand_pars(test_pt, model_bin)
-      ok <- tryCatch({
-        raw <- augment_trees(
-          brts = brts, pars = pars8,
-          sample_size = 3L, maxN = 300L,
-          max_missing = 1e4L, max_lambda = 1e6,
-          num_threads = 1L,
-          model = as.integer(model_bin),
-          link  = as.integer(link_int)
-        )
-        length(raw$trees) > 0L
-      }, error = function(e) FALSE)
-
-      if (!ok) {
-        msgs <- c(msgs, sprintf(
-          "IS infeasible near %s %s bound (may still work with more samples)",
-          names(center)[j], side
-        ))
-      }
-    }
-  }
-
-  if (length(msgs) == 0L) msgs <- "all boundary probes OK"
-  msgs
-}
 
 
 # Tighten bounds by bisecting inward when IS augmentation fails near edges.
@@ -491,15 +449,16 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 
 
 # Test IS feasibility at a single parameter point.
-# Returns TRUE if at least 1 out of 5 augmented trees has non-zero IS weight.
+# Returns TRUE if at least 1 out of 3 augmented trees has non-zero IS weight.
+# Uses small maxN and a timeout to fail fast.
 .is_feasible_at <- function(pars, brts, model_bin, link_int,
-                             sample_size = 5L, maxN = 500L) {
+                             sample_size = 3L, maxN = 100L) {
   pars8 <- .expand_pars(pars, model_bin)
   ok <- tryCatch({
     raw <- augment_trees(
       brts = brts, pars = pars8,
       sample_size = sample_size, maxN = maxN,
-      max_missing = 1e4L, max_lambda = 1e6,
+      max_missing = 500L, max_lambda = 1e6,
       num_threads = 1L,
       model = as.integer(model_bin),
       link  = as.integer(link_int)
