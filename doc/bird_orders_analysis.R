@@ -64,6 +64,7 @@ configs <- list(
 # ── GAM control ──────────────────────────────────────────────────
 
 gam_ctrl <- list(n_grid = 100, sample_size = 50)
+n_cores  <- max(1L, parallel::detectCores() - 1L)
 
 # ── Fit all models on both datasets ─────────────────────────────
 
@@ -86,13 +87,13 @@ for (ds_name in names(datasets)) {
       cfg_name, cfg$model, cfg$link
     ))
 
-    # Auto-detect bounds
+    # Auto-detect bounds (bisection from safe center)
     cat("    detecting bounds... ")
     t0 <- proc.time()
     ab <- tryCatch(
       auto_bounds(
         tree, model = cfg$model, link = cfg$link,
-        n_probe = 300, verbose = FALSE
+        num_threads = n_cores, verbose = FALSE
       ),
       error = function(e) {
         cat("SKIP:", e$message, "\n")
