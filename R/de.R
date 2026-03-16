@@ -211,30 +211,77 @@
 #' @keywords internal
 .eval_independent <- function(pop, input, num_threads) {
   to_eval  <- which(is.na(pop$fhat))
-  rej_lam  <- rep(0L, length(to_eval))
-  rej_over <- rep(0L, length(to_eval))
+  if (length(to_eval) == 0L) {
+    return(list(pop = pop, rej_lambda = 0L, rej_overruns = 0L,
+                n_simulated = 0L))
+  }
 
-  for (idx in seq_along(to_eval)) {
+  # Adaptive: parallelize at R level only when there's enough work per
+  # particle.  When R-parallel, each worker uses 1 C++ thread.
+  # When sequential, pass all threads to C++ TBB.
+  use_r_parallel <- (num_threads > 1L &&
+                     .Platform$OS.type == "unix" &&
+                     input$sample_size >= 10L &&
+                     length(to_eval) >= num_threads)
+  cpp_threads <- if (use_r_parallel) 1L else num_threads
+
+  # Worker: evaluate one particle
+  eval_one <- function(idx) {
     i   <- to_eval[idx]
     raw <- .simulate_particle(
       input$brts, as.numeric(pop$pars[i, ]), input$model, input$link,
       input$sample_size, input$maxN,
-      input$max_missing, input$max_lambda, num_threads
+      input$max_missing, input$max_lambda, cpp_threads
     )
     if (!is.null(raw) && length(raw$logf) > 0L && !anyNA(raw$logf)) {
-      pop$fhat[i]    <- .is_fhat(raw$logf, raw$logg,
-                                 bias_correct = isTRUE(input$bias_correct),
-                                 n_zero_weight = .n0(raw$rejected_zero_weights))
-      pop$log_q[[i]] <- raw$logg    # log q(z | obs, theta_i) per tree
-      pop$trees[[i]] <- raw$trees   # raw data frames for cross-evaluation
+      fhat_i  <- .is_fhat(raw$logf, raw$logg,
+                          bias_correct = isTRUE(input$bias_correct),
+                          n_zero_weight = .n0(raw$rejected_zero_weights))
+      log_q_i <- raw$logg
+      trees_i <- raw$trees
+    } else {
+      fhat_i  <- NA_real_
+      log_q_i <- NULL
+      trees_i <- NULL
     }
-    rej_lam[idx]  <- if (!is.null(raw)) raw$rejected_lambda   else 0L
-    rej_over[idx] <- if (!is.null(raw)) raw$rejected_overruns else 0L
+    list(
+      i        = i,
+      fhat     = fhat_i,
+      log_q    = log_q_i,
+      trees    = trees_i,
+      rej_lam  = if (!is.null(raw)) raw$rejected_lambda   else 0L,
+      rej_over = if (!is.null(raw)) raw$rejected_overruns else 0L
+    )
+  }
+
+  if (use_r_parallel) {
+    results <- parallel::mclapply(
+      seq_along(to_eval), eval_one,
+      mc.cores = num_threads
+    )
+  } else {
+    results <- lapply(seq_along(to_eval), eval_one)
+  }
+
+  # Collect results back into pop
+  rej_lam  <- 0L
+  rej_over <- 0L
+  for (res in results) {
+    if (!inherits(res, "try-error") && !is.null(res)) {
+      i <- res$i
+      if (!is.na(res$fhat)) {
+        pop$fhat[i]    <- res$fhat
+        pop$log_q[[i]] <- res$log_q
+        pop$trees[[i]] <- res$trees
+      }
+      rej_lam  <- rej_lam  + res$rej_lam
+      rej_over <- rej_over + res$rej_over
+    }
   }
 
   list(pop          = pop,
-       rej_lambda   = sum(rej_lam),
-       rej_overruns = sum(rej_over),
+       rej_lambda   = rej_lam,
+       rej_overruns = rej_over,
        n_simulated  = length(to_eval))
 }
 

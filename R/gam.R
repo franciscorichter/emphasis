@@ -477,14 +477,8 @@ estimate_likelihood_surface <- function(tree, pars_mat, model = "cr",
   fhat    <- rep(NA_real_, n_pts)
   n_trees <- rep(0L, n_pts)
 
-  if (verbose) {
-    pb <- progress::progress_bar$new(
-      format = "  IS grid [:bar] :current/:total (:percent) eta: :eta",
-      total = n_pts, clear = FALSE)
-  }
-
-  t0_grid <- proc.time()[3]
-  for (i in seq_len(n_pts)) {
+  # Worker function: evaluate IS log-likelihood at one grid point
+  eval_one_point <- function(i) {
     pars8 <- .expand_pars(pars_mat[i, ], model_bin)
     maxN_i <- if (is.null(maxN)) max(2000L, 200L * as.integer(sample_size))
               else as.integer(maxN)
@@ -494,7 +488,7 @@ estimate_likelihood_surface <- function(tree, pars_mat, model = "cr",
         sample_size = as.integer(sample_size), maxN = maxN_i,
         max_missing = as.integer(max_missing),
         max_lambda = as.numeric(max_lambda),
-        num_threads = as.integer(num_threads),
+        num_threads = if (use_r_parallel) 1L else as.integer(num_threads),
         model = as.integer(model_bin), link = as.integer(link_int)
       ),
       error = function(e) NULL
@@ -503,14 +497,64 @@ estimate_likelihood_surface <- function(tree, pars_mat, model = "cr",
       logf_i <- eval_logf(pars8, raw$trees,
                           model = as.integer(model_bin),
                           link = as.integer(link_int))
-      fhat[i]    <- .is_fhat(logf_i$logf, logf_i$logg,
-                             bias_correct = bias_correct,
-                             n_zero_weight = .n0(raw$rejected_zero_weights))
-      n_trees[i] <- length(logf_i$logf)
+      list(
+        fhat = .is_fhat(logf_i$logf, logf_i$logg,
+                        bias_correct = bias_correct,
+                        n_zero_weight = .n0(raw$rejected_zero_weights)),
+        n_trees = length(logf_i$logf)
+      )
+    } else {
+      list(fhat = NA_real_, n_trees = 0L)
     }
-    if (verbose) pb$tick()
-    .check_time_budget(t0_grid, i, n_pts, max_time, label = "grid point")
   }
+
+  t0_grid <- proc.time()[3]
+
+  # Adaptive: parallelize at R level when there's enough work per point
+  # (sample_size >= 10 and enough points to fill cores).
+  # Otherwise pass num_threads to C++ TBB for within-point parallelism.
+  use_r_parallel <- (num_threads > 1L &&
+                     .Platform$OS.type == "unix" &&
+                     sample_size >= 10L &&
+                     n_pts >= num_threads)
+
+  if (use_r_parallel) {
+    if (verbose) cat(sprintf(
+      "  IS grid: %d points x %d trees (%d cores)...\n",
+      n_pts, sample_size, num_threads
+    ))
+    results_list <- parallel::mclapply(
+      seq_len(n_pts), eval_one_point,
+      mc.cores = num_threads
+    )
+    for (i in seq_len(n_pts)) {
+      res <- results_list[[i]]
+      if (!inherits(res, "try-error") && !is.null(res)) {
+        fhat[i]    <- res$fhat
+        n_trees[i] <- res$n_trees
+      }
+    }
+  } else {
+    # Sequential with progress bar
+    if (verbose) {
+      pb <- progress::progress_bar$new(
+        format = "  IS grid [:bar] :current/:total (:percent) eta: :eta",
+        total = n_pts, clear = FALSE)
+    }
+    for (i in seq_len(n_pts)) {
+      res <- eval_one_point(i)
+      fhat[i]    <- res$fhat
+      n_trees[i] <- res$n_trees
+      if (verbose) pb$tick()
+      .check_time_budget(t0_grid, i, n_pts, max_time,
+                         label = "grid point")
+    }
+  }
+
+  if (verbose) cat(sprintf(
+    "  grid done: %.1fs, %d/%d valid\n",
+    proc.time()[3] - t0_grid, sum(is.finite(fhat)), n_pts
+  ))
 
   cbind(pars_df, fhat = fhat, n_trees = n_trees)
 }
