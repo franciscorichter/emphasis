@@ -70,7 +70,7 @@
       pars <- pmin(pars, upper_bound)
 
       if (verbose) message(sprintf(
-        "Iteration %d: E-step failed (%d consecutive) — recovery: maxN=%d, perturbed toward center",
+        "Iteration %d: E-step failed (%d consecutive) - recovery: maxN=%d, perturbed toward center",
         i, fail_streak, maxN
       ))
 

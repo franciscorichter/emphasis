@@ -259,7 +259,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     }
   }
 
-  # ── IS feasibility spot-check near boundaries ──────────────
+  # -- IS feasibility spot-check near boundaries ---------------
   if (verbose) {
     is_diag <- .test_is_feasibility(
       center, lb, ub, brts, model_bin, link_int
