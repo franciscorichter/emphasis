@@ -10,7 +10,7 @@ auto_bounds(
   link = "linear",
   n_test = 5L,
   bisect_steps = 8L,
-  margin = 0.1,
+  margin = 0.5,
   tip_range = c(0.1, 10),
   train_surv_gam = TRUE,
   num_threads = 1L,
@@ -31,7 +31,7 @@ to assess feasibility (default 5).}
 \item{bisect_steps}{Number of bisection steps per axis direction
 (default 8; gives ~1/256 resolution).}
 
-\item{margin}{Fractional expansion of detected bounds (default 0.1).}
+\item{margin}{Fractional expansion of detected bounds (default 0.5).}
 
 \item{tip_range}{Multiplier range for acceptable tip counts relative
 to the observed tree.  Default \code{c(0.1, 10)}.}

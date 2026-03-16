@@ -240,6 +240,81 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   c(lam, mu)
 }
 
+#' Validate init_pars for linear link models
+#'
+#' For linear link, lambda = max(0, beta_0 + beta_X * X). If the slope is
+#' too negative, lambda becomes zero at observed covariate values, causing
+#' IS collapse. This clamps slopes so lambda stays positive at the maximum
+#' covariate value seen in the tree.
+#' @keywords internal
+.validate_linear_init_pars <- function(init_pars, model_bin, brts,
+                                        lower_bound, upper_bound,
+                                        verbose = FALSE) {
+  n_tips <- length(brts) + 1L
+  max_t  <- max(brts)
+
+  # Maximum covariate values for each active covariate
+  # N: maximum number of tips; PD: rough upper bound; EP: crown age
+  max_covs <- c(
+    N = n_tips,
+    P = sum(brts),         # rough upper bound for phylogenetic diversity
+    E = max_t              # crown age (max pendant edge)
+  )
+
+  n_pars   <- length(init_pars)
+  n_lam    <- n_pars %/% 2L    # number of lambda params (beta_0 + slopes)
+  active   <- which(model_bin == 1L)
+  cov_names <- c("N", "P", "E")
+  changed  <- FALSE
+
+  for (k in seq_along(active)) {
+    cov_idx <- active[k]
+    max_X   <- max_covs[cov_idx]
+    if (is.na(max_X) || max_X <= 0) next
+
+    # Lambda slope is at compact position 1 + k
+    slope_pos <- 1L + k
+    beta_0    <- init_pars[1L]
+    beta_X    <- init_pars[slope_pos]
+
+    # Check: beta_0 + beta_X * max_X > 0
+    if (beta_0 + beta_X * max_X <= 0) {
+      # Clamp: keep 10% lambda margin at max covariate
+      new_slope <- -0.9 * beta_0 / max_X
+      new_slope <- max(lower_bound[slope_pos], min(upper_bound[slope_pos], new_slope))
+      if (verbose) {
+        message(sprintf(
+          "  init_pars: clamping beta_%s from %.4f to %.4f (lambda>0 at %s=%.0f)",
+          cov_names[cov_idx], beta_X, new_slope, cov_names[cov_idx], max_X
+        ))
+      }
+      init_pars[slope_pos] <- new_slope
+      changed <- TRUE
+    }
+
+    # Same check for mu slope: gamma_0 + gamma_X * max_X > 0
+    mu_slope_pos <- n_lam + 1L + k
+    gamma_0  <- init_pars[n_lam + 1L]
+    gamma_X  <- init_pars[mu_slope_pos]
+
+    if (gamma_0 + gamma_X * max_X < 0) {
+      new_slope <- -0.9 * gamma_0 / max_X
+      new_slope <- max(lower_bound[mu_slope_pos], min(upper_bound[mu_slope_pos], new_slope))
+      if (verbose) {
+        message(sprintf(
+          "  init_pars: clamping gamma_%s from %.4f to %.4f (mu>=0 at %s=%.0f)",
+          cov_names[cov_idx], gamma_X, new_slope, cov_names[cov_idx], max_X
+        ))
+      }
+      init_pars[mu_slope_pos] <- new_slope
+      changed <- TRUE
+    }
+  }
+
+  init_pars
+}
+
+
 #' Build a conditioning function from a survival GAM
 #'
 #' Returns a function that takes an 8-element parameter vector (C++ layout)
@@ -600,6 +675,13 @@ estimate_rates <- function(tree,
         init_pars[j] <- max(lower_bound[j], min(upper_bound[j], 0))
       }
     }
+  }
+
+  # Validate init_pars: for linear link, ensure lambda > 0 at max covariate values
+  if (!is.null(init_pars) && link_int == 0L && any(model_bin != 0L)) {
+    init_pars <- .validate_linear_init_pars(
+      init_pars, model_bin, brts, lower_bound, upper_bound, verbose = ctrl$verbose
+    )
   }
 
   # Warn if PD/EP model with linear link — IS collapse is very likely

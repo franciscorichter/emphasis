@@ -102,7 +102,7 @@ predict_survival <- function(gam_fit, newpars) {
 #'   to assess feasibility (default 5).
 #' @param bisect_steps Number of bisection steps per axis direction
 #'   (default 8; gives ~1/256 resolution).
-#' @param margin Fractional expansion of detected bounds (default 0.1).
+#' @param margin Fractional expansion of detected bounds (default 0.5).
 #' @param tip_range Multiplier range for acceptable tip counts relative
 #'   to the observed tree.  Default \code{c(0.1, 10)}.
 #' @param train_surv_gam If \code{TRUE} (default), train a survival GAM
@@ -130,7 +130,7 @@ predict_survival <- function(gam_fit, newpars) {
 #' }
 auto_bounds <- function(tree, model = "cr", link = "linear",
                         n_test = 5L, bisect_steps = 8L,
-                        margin = 0.1,
+                        margin = 0.5,
                         tip_range = c(0.1, 10),
                         train_surv_gam = TRUE,
                         num_threads = 1L,
@@ -154,6 +154,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     stop("'tree' must be a phylo, branching times, or simulate_tree result.")
   }
 
+  brts    <- .extract_brts(tree)
   tip_lo  <- max(2, floor(n_tips * tip_range[1]))
   tip_hi  <- ceiling(n_tips * tip_range[2])
   max_lin <- as.integer(max(20 * n_tips, 500))
@@ -255,6 +256,17 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     cat("  final bounds:\n")
     for (j in seq_len(n_pars)) {
       cat(sprintf("    %s: [%.4f, %.4f]\n", pnames[j], lb[j], ub[j]))
+    }
+  }
+
+  # ── IS feasibility spot-check near boundaries ──────────────
+  if (verbose) {
+    is_diag <- .test_is_feasibility(
+      center, lb, ub, brts, model_bin, link_int
+    )
+    if (length(is_diag) > 0L) {
+      cat("  IS feasibility:\n")
+      for (msg in is_diag) cat("    ", msg, "\n")
     }
   }
 
@@ -370,6 +382,51 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     }
   }
   lo  # last known feasible value
+}
+
+
+# Spot-check IS feasibility near boundary corners.
+# Samples a few points near the lower/upper edges of the detected bounds
+# and attempts a quick IS evaluation via augment_trees(). Returns diagnostic messages.
+.test_is_feasibility <- function(center, lb, ub, brts, model_bin, link_int) {
+  msgs <- character(0L)
+  n_pars <- length(center)
+
+  # Test a few boundary-adjacent points: center with one axis near each edge
+  n_check <- min(n_pars, 4L)  # don't test too many axes
+  for (j in seq_len(n_check)) {
+    for (side in c("lo", "hi")) {
+      test_pt <- center
+      if (side == "lo") {
+        test_pt[j] <- lb[j] + 0.1 * (center[j] - lb[j])
+      } else {
+        test_pt[j] <- ub[j] - 0.1 * (ub[j] - center[j])
+      }
+
+      pars8 <- .expand_pars(test_pt, model_bin)
+      ok <- tryCatch({
+        raw <- augment_trees(
+          brts = brts, pars = pars8,
+          sample_size = 3L, maxN = 300L,
+          max_missing = 1e4L, max_lambda = 1e6,
+          num_threads = 1L,
+          model = as.integer(model_bin),
+          link  = as.integer(link_int)
+        )
+        length(raw$trees) > 0L
+      }, error = function(e) FALSE)
+
+      if (!ok) {
+        msgs <- c(msgs, sprintf(
+          "IS infeasible near %s %s bound (may still work with more samples)",
+          names(center)[j], side
+        ))
+      }
+    }
+  }
+
+  if (length(msgs) == 0L) msgs <- "all boundary probes OK"
+  msgs
 }
 
 

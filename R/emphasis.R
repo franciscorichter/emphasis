@@ -35,6 +35,10 @@
   stop_reason <- "max_iter"
   t0_mcem     <- proc.time()[3]
 
+  # E-step recovery state
+  orig_maxN    <- maxN
+  center_pars  <- (lower_bound + upper_bound) / 2
+
   for (i in seq_len(max_iter)) {
     results <- tryCatch(
       em_cpp(brts = brts,
@@ -54,19 +58,33 @@
       error = function(e) NULL
     )
 
-    # Handle E-step failure (all trees rejected)
+    # Handle E-step failure with adaptive recovery
     if (is.null(results)) {
       fail_streak <- fail_streak + 1L
-      if (verbose) message(sprintf("Iteration %d: E-step failed (%d consecutive)", i, fail_streak))
-      if (fail_streak >= 5L) {
+
+      # Recovery: double maxN and perturb parameters toward center
+      maxN <- as.integer(min(maxN * 2L, 50000L))
+      pars <- 0.8 * pars + 0.2 * center_pars
+      # Clamp back within bounds
+      pars <- pmax(pars, lower_bound)
+      pars <- pmin(pars, upper_bound)
+
+      if (verbose) message(sprintf(
+        "Iteration %d: E-step failed (%d consecutive) — recovery: maxN=%d, perturbed toward center",
+        i, fail_streak, maxN
+      ))
+
+      if (fail_streak >= 8L) {
         stop_reason <- "e_step_failure"
-        # Try to diagnose why by extracting the last error
         .mcem_warn_estep(brts, pars, lower_bound, upper_bound, model, link)
         break
       }
       next
     }
+
+    # Success: reset recovery state
     fail_streak <- 0L
+    maxN <- orig_maxN
 
     last_results <- results
     pars <- results$estimates
@@ -189,8 +207,8 @@
     )
   } else {
     warning(
-      "MCEM: 5 consecutive E-step failures; stopping. ",
-      "Try widening bounds or increasing max_missing.",
+      "MCEM: 8 consecutive E-step failures (with adaptive maxN recovery); stopping. ",
+      "Try widening bounds, increasing max_missing, or using link=\"exponential\".",
       call. = FALSE
     )
   }
