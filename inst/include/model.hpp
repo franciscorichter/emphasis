@@ -74,10 +74,6 @@ namespace emphasis {
         link_(static_cast<LinkType>(link))
     {
       if (model_bin_.size() != 3) model_bin_ = {0, 0, 0};
-      if (model_bin_[2] == 1 && link_ == LinkType::exponential) {
-        throw std::runtime_error(
-          "EP model with exponential link not yet supported in inference");
-      }
     }
 
     // Legacy constructor: maps old 4-param rpd5c layout to 8-param

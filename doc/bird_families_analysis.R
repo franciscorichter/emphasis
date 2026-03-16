@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # ============================================================================
-# Bird orders: 6 models (DD/PD/EP x linear/exponential)
+# Bird families: 6 models (DD/PD/EP x linear/exponential)
 # Pipeline: auto_bounds -> GAM(sample_size=1) -> MCEM(sample_size=1)
 # All conditioned on survival. Detailed logging.
 # ============================================================================
@@ -14,10 +14,10 @@ LOG <- function(...) {
   flush.console()
 }
 
-LOG("bird.orders analysis — emphasis %s", as.character(packageVersion("emphasis")))
+LOG("bird.families analysis — emphasis %s", as.character(packageVersion("emphasis")))
 
-data(bird.orders)
-tree <- bird.orders
+data(bird.families)
+tree <- bird.families
 LOG("Tree: %d tips, crown age=%.1f", Ntip(tree), max(branching.times(tree)))
 
 configs <- list(
@@ -138,7 +138,7 @@ for (cfg_name in names(configs)) {
     elapsed = elapsed, status = stage,
     t_bounds = t_bounds, t_gam = t_gam, t_mcem = t_mcem
   )
-  save(results, file = "doc/bird_orders_results.RData")
+  save(results, file = "doc/bird_families_results.RData")
 }
 
 # DDD reference
@@ -148,7 +148,7 @@ if (requireNamespace("DDD", quietly = TRUE)) {
   t0 <- proc.time()[3]
   ddd_fit <- tryCatch(
     DDD::dd_ML(brts = branching.times(tree), cond = 1, btorph = 1,
-               initparsopt = c(0.7, 0.01, 30)),
+               initparsopt = c(0.8, 0.1, 200)),
     error = function(e) { LOG("DDD failed: %s", e$message); NULL }
   )
   if (!is.null(ddd_fit)) {
@@ -160,7 +160,7 @@ if (requireNamespace("DDD", quietly = TRUE)) {
   }
 } else {
   LOG("DDD not installed")
-  ddd_ref <- list(lambda = 0.693, mu = 0, K = 23, loglik = -49.19, AIC = 104.37)
+  ddd_ref <- list(lambda = 0.795, mu = 0.102, K = 201, loglik = -458.8, AIC = 923.6)
 }
 
 # Summary
@@ -199,5 +199,5 @@ for (nm in names(results)) {
                 paste(names(r$pars), "=", round(r$pars, 5), collapse = ", ")))
 }
 
-save(results, ddd_ref, file = "doc/bird_orders_results.RData")
-LOG("Saved doc/bird_orders_results.RData")
+save(results, ddd_ref, file = "doc/bird_families_results.RData")
+LOG("Saved doc/bird_families_results.RData")
