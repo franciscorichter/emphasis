@@ -218,33 +218,117 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     if (verbose) cat("  center feasible\n")
   }
 
-  # ── Bisection expansion along each axis ────────────────────
+  # -- Collect all feasible points to determine bounds ---------
   wide <- .wide_bounds(model_bin, link_int, max_t, n_tips)
-  lb <- center
-  ub <- center
+  feasible_pts <- list(center)  # center is known feasible
 
+  # Phase 1: Axis-aligned bisection (original method)
+  if (verbose) cat("  Phase 1: axis-aligned bisection\n")
   for (j in seq_len(n_pars)) {
-    if (verbose) cat(sprintf("  axis %s: ", pnames[j]))
-
-    # Expand upward
-    hi <- .bisect_boundary(
-      center, j, center[j], wide$ub[j],
-      model, link, max_t, max_lin,
-      n_test, bisect_steps, tip_lo, tip_hi,
-      num_threads
-    )
-    # Expand downward
-    lo <- .bisect_boundary(
-      center, j, center[j], wide$lb[j],
-      model, link, max_t, max_lin,
-      n_test, bisect_steps, tip_lo, tip_hi,
-      num_threads
-    )
-
-    lb[j] <- lo
-    ub[j] <- hi
+    if (verbose) cat(sprintf("    axis %s: ", pnames[j]))
+    hi <- .bisect_boundary(center, j, center[j], wide$ub[j],
+                           model, link, max_t, max_lin,
+                           n_test, bisect_steps, tip_lo, tip_hi, num_threads)
+    lo <- .bisect_boundary(center, j, center[j], wide$lb[j],
+                           model, link, max_t, max_lin,
+                           n_test, bisect_steps, tip_lo, tip_hi, num_threads)
     if (verbose) cat(sprintf("[%.4f, %.4f]\n", lo, hi))
+    # Record the feasible boundary points
+    pt_hi <- center; pt_hi[j] <- hi; feasible_pts[[length(feasible_pts) + 1L]] <- pt_hi
+    pt_lo <- center; pt_lo[j] <- lo; feasible_pts[[length(feasible_pts) + 1L]] <- pt_lo
   }
+
+  # Phase 2: Compensatory diagonals
+  # For each active covariate, explore the direction where the intercept
+  # and the covariate coefficient compensate each other, keeping the
+  # predicted rate at the observed covariate value roughly constant.
+  # This is general: eta = intercept + coeff * X_obs = const means
+  # d(intercept) = -X_obs * d(coeff), i.e. direction (1, -X_obs) in
+  # the (intercept, coeff) subspace.
+  obs_covs <- .observed_covariates(brts, model_bin)
+
+  if (length(obs_covs) > 0L) {
+    if (verbose) cat("  Phase 2: compensatory diagonals\n")
+
+    for (cov_info in obs_covs) {
+      i_int  <- cov_info$intercept_idx
+      i_coef <- cov_info$coeff_idx
+      X_obs  <- cov_info$X_obs
+
+      if (verbose) cat(sprintf("    %s (X_obs=%.2f):\n", cov_info$name, X_obs))
+
+      # Explore multiple compensatory slopes:
+      # The exact compensatory slope is X_obs, but we also explore
+      # shallower slopes (X_obs/2, X_obs/5, 1) to push the intercept further.
+      # Each slope s means: direction = (1, -s) in the (intercept, coeff) subspace.
+      slopes <- unique(c(X_obs, X_obs / 2, X_obs / 5, X_obs / 20, 1, 0.1))
+
+      for (s in slopes) {
+        direction <- rep(0, n_pars)
+        direction[i_int]  <- 1
+        direction[i_coef] <- -s
+        direction <- direction / sqrt(sum(direction^2))
+
+        hi_pt <- .bisect_direction(center, direction, wide, 1,
+                                   model, link, max_t, max_lin,
+                                   n_test, bisect_steps, tip_lo, tip_hi, num_threads)
+        lo_pt <- .bisect_direction(center, direction, wide, -1,
+                                   model, link, max_t, max_lin,
+                                   n_test, bisect_steps, tip_lo, tip_hi, num_threads)
+
+        if (!is.null(hi_pt)) feasible_pts[[length(feasible_pts) + 1L]] <- hi_pt
+        if (!is.null(lo_pt)) feasible_pts[[length(feasible_pts) + 1L]] <- lo_pt
+
+        if (verbose) {
+          hi_str <- if (!is.null(hi_pt)) sprintf("(%.4f, %.4f)", hi_pt[i_int], hi_pt[i_coef]) else "---"
+          lo_str <- if (!is.null(lo_pt)) sprintf("(%.4f, %.4f)", lo_pt[i_int], lo_pt[i_coef]) else "---"
+          cat(sprintf("      slope=%.1f: %s .. %s\n", s, lo_str, hi_str))
+        }
+      }
+
+      # Same for the extinction side
+      i_int_mu  <- cov_info$mu_intercept_idx
+      i_coef_mu <- cov_info$mu_coeff_idx
+
+      for (s in slopes) {
+        dir_mu <- rep(0, n_pars)
+        dir_mu[i_int_mu]  <- 1
+        dir_mu[i_coef_mu] <- -s
+        dir_mu <- dir_mu / sqrt(sum(dir_mu^2))
+
+        hi_mu <- .bisect_direction(center, dir_mu, wide, 1,
+                                   model, link, max_t, max_lin,
+                                   n_test, bisect_steps, tip_lo, tip_hi, num_threads)
+        lo_mu <- .bisect_direction(center, dir_mu, wide, -1,
+                                   model, link, max_t, max_lin,
+                                   n_test, bisect_steps, tip_lo, tip_hi, num_threads)
+        if (!is.null(hi_mu)) feasible_pts[[length(feasible_pts) + 1L]] <- hi_mu
+        if (!is.null(lo_mu)) feasible_pts[[length(feasible_pts) + 1L]] <- lo_mu
+      }
+    }
+  }
+
+  # Phase 3: Random directions
+  n_random <- max(4L, n_pars)
+  if (verbose) cat(sprintf("  Phase 3: %d random directions\n", n_random))
+  set.seed(12345L)  # reproducible
+  for (k in seq_len(n_random)) {
+    direction <- stats::rnorm(n_pars)
+    direction <- direction / sqrt(sum(direction^2))
+    hi_pt <- .bisect_direction(center, direction, wide, 1,
+                               model, link, max_t, max_lin,
+                               n_test, bisect_steps, tip_lo, tip_hi, num_threads)
+    lo_pt <- .bisect_direction(center, direction, wide, -1,
+                               model, link, max_t, max_lin,
+                               n_test, bisect_steps, tip_lo, tip_hi, num_threads)
+    if (!is.null(hi_pt)) feasible_pts[[length(feasible_pts) + 1L]] <- hi_pt
+    if (!is.null(lo_pt)) feasible_pts[[length(feasible_pts) + 1L]] <- lo_pt
+  }
+
+  # -- Compute bounds as component-wise min/max of all feasible points --
+  feas_mat <- do.call(rbind, feasible_pts)
+  lb <- apply(feas_mat, 2, min)
+  ub <- apply(feas_mat, 2, max)
 
   # Add margin
   span <- ub - lb
@@ -253,6 +337,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   ub <- pmin(ub + margin * span, wide$ub)
 
   if (verbose) {
+    cat(sprintf("  %d feasible points collected\n", nrow(feas_mat)))
     cat("  final bounds:\n")
     for (j in seq_len(n_pars)) {
       cat(sprintf("    %s: [%.4f, %.4f]\n", pnames[j], lb[j], ub[j]))
@@ -260,9 +345,6 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   }
 
   # -- IS feasibility diagnostic (informational only) ----------
-  # We do NOT tighten bounds here: IS can fail at boundary points
-  # tested one-axis-at-a-time while succeeding at the actual optimum.
-  # Tightening risks excluding the true parameter region.
   if (verbose) {
     cat("  IS feasibility check...\n")
     .diagnose_is_bounds(center, lb, ub, brts, model_bin, link_int, verbose)
@@ -430,6 +512,119 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 
   if (verbose && !any_issues) cat("    all boundary probes OK\n")
   invisible(any_issues)
+}
+
+
+# Compute typical covariate values at the observed tree.
+# Returns a list of lists, one per active covariate, each with:
+#   intercept_idx, coeff_idx, mu_intercept_idx, mu_coeff_idx, X_obs, name
+.observed_covariates <- function(brts, model_bin) {
+  n_tips <- length(brts) + 1L
+  max_t  <- max(brts)
+  active <- which(model_bin == 1L)
+  if (length(active) == 0L) return(list())
+
+  # Typical covariate values at the present for the observed tree:
+  #   N: number of tips
+  #   P: total pendant branch length (sum of pendant ages at present)
+  #   E: mean pendant age
+  # For pendant ages at the present: each tip's pendant age is
+  # (crown_age - most_recent_branching_time_on_its_path).
+  # A rough estimate: mean pendant age ~ crown_age / n_tips (for balanced trees)
+  # or use the actual branching times.
+
+  # Pendant ages at the present: for each of the n_tips tips,
+  # the pendant age is the time from the most recent internal node to the present.
+  # The n_tips smallest branching times give the parent nodes of tips.
+  sorted_brts <- sort(brts)
+  # The youngest n_tips-1 branching times each contribute 2 pendant branches
+  # minus the ones that are internal. Approximate: mean pendant age.
+  if (length(sorted_brts) >= 1L) {
+    pendant_ages <- sorted_brts[seq_len(min(n_tips, length(sorted_brts)))]
+    mean_pendant <- mean(pendant_ages)
+  } else {
+    mean_pendant <- max_t / 2
+  }
+
+  result <- list()
+  # Parameter layout: [beta_0, (beta_N), (beta_P), (beta_E), gamma_0, ...]
+  # Speciation intercept is always index 1
+  # Extinction intercept is at 1 + length(active) + 1 = length(active) + 2
+  n_lam_pars <- 1L + length(active)
+  mu_int_idx <- n_lam_pars + 1L
+
+  for (k in seq_along(active)) {
+    cov_type <- active[k]  # 1=N, 2=P, 3=E
+    coeff_idx    <- 1L + k           # position in lambda block
+    mu_coeff_idx <- mu_int_idx + k   # position in mu block
+
+    X_obs <- switch(cov_type,
+      n_tips,                                  # N
+      n_tips * mean_pendant,                   # P ~ N * mean_E
+      mean_pendant                             # E
+    )
+    cov_name <- switch(cov_type, "N", "P", "E")
+
+    result[[length(result) + 1L]] <- list(
+      intercept_idx    = 1L,
+      coeff_idx        = coeff_idx,
+      mu_intercept_idx = mu_int_idx,
+      mu_coeff_idx     = mu_coeff_idx,
+      X_obs            = X_obs,
+      name             = cov_name
+    )
+  }
+  result
+}
+
+
+# Bisect along an arbitrary direction in parameter space.
+# Starts at center, moves in `sign * direction` until infeasible.
+# Returns the last feasible point, or NULL if center itself fails along this direction.
+# Clamps all probes to the wide bounds box.
+.bisect_direction <- function(center, direction, wide, sign = 1,
+                               model, link, max_t, max_lin,
+                               n_test, steps, tip_lo, tip_hi,
+                               num_threads) {
+  n_pars <- length(center)
+  # Find maximum step size before hitting any wide bound
+  max_step <- Inf
+  for (j in seq_len(n_pars)) {
+    d <- sign * direction[j]
+    if (d > 1e-12) {
+      max_step <- min(max_step, (wide$ub[j] - center[j]) / d)
+    } else if (d < -1e-12) {
+      max_step <- min(max_step, (wide$lb[j] - center[j]) / d)
+    }
+  }
+  if (!is.finite(max_step) || max_step <= 0) return(NULL)
+
+  safe_step <- 0
+  far_step  <- max_step
+
+  for (s in seq_len(steps)) {
+    mid_step <- (safe_step + far_step) / 2
+    cand <- center + sign * mid_step * direction
+    # Clamp to wide bounds (safety)
+    cand <- pmax(cand, wide$lb)
+    cand <- pmin(cand, wide$ub)
+
+    ok <- .test_feasibility(cand, model, link, max_t, max_lin,
+                            n_test = n_test, tip_lo = tip_lo, tip_hi = tip_hi,
+                            num_threads = num_threads)
+    if (ok) {
+      safe_step <- mid_step
+    } else {
+      far_step <- mid_step
+    }
+  }
+
+  if (safe_step > 0) {
+    pt <- center + sign * safe_step * direction
+    pmax(pmin(pt, wide$ub), wide$lb)
+  } else {
+    NULL
+  }
 }
 
 
