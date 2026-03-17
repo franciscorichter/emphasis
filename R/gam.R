@@ -439,6 +439,12 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 # For observed N tips and crown age T: r_hat ~ log(N/2)/T.
 # Upper bound on net rate: r_max such that 2*exp(r_max*T) ~ 50*N.
 # This prevents the probe from wasting time on explosive combos.
+#
+# When covariates are active (DD/PD/EP), the intercept can be much higher
+# than the CR feasibility limit because covariate slopes regulate growth.
+# E.g. DD with lambda_0=0.7 and beta_N=-0.03 has K~23, perfectly feasible.
+# We multiply lam_hi by 5x for covariate models to avoid excluding the
+# true parameter region.
 .wide_bounds <- function(model_bin, link_int, max_t, n_tips) {
   active <- which(model_bin == 1L)
   T <- max(max_t, 0.1)
@@ -447,6 +453,10 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   r_hat  <- log(N / 2) / T                # observed net rate
   r_max  <- log(50 * N / 2) / T           # net rate for 50x tips
   lam_hi <- max(r_max + 0.5 * r_hat, 0.1) # allow some extinction
+
+  # Covariate models can have much higher intercepts (slopes regulate growth)
+  if (length(active) > 0L) lam_hi <- lam_hi * 5
+
   lam_lo <- max(0.1 * r_hat, 1e-4)
   cov_hi <- max(0.3, 3 * abs(r_hat))
 
