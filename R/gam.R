@@ -259,14 +259,14 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     }
   }
 
-  # -- IS feasibility: tighten bounds where IS fails -----------
-  if (verbose) cat("  IS feasibility check...\n")
-  is_result <- .tighten_bounds_is(
-    center, lb, ub, brts, model_bin, link_int,
-    bisect_steps = 4L, verbose = verbose
-  )
-  lb <- is_result$lb
-  ub <- is_result$ub
+  # -- IS feasibility diagnostic (informational only) ----------
+  # We do NOT tighten bounds here: IS can fail at boundary points
+  # tested one-axis-at-a-time while succeeding at the actual optimum.
+  # Tightening risks excluding the true parameter region.
+  if (verbose) {
+    cat("  IS feasibility check...\n")
+    .diagnose_is_bounds(center, lb, ub, brts, model_bin, link_int, verbose)
+  }
 
   # ── Survival GAM on detected region ────────────────────────
   surv_gam <- NULL
@@ -386,91 +386,50 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 
 
 
-# Tighten bounds by bisecting inward when IS augmentation fails near edges.
-# For each axis and side, if IS is infeasible near the boundary, bisect
-# between center and the boundary to find the last IS-feasible value.
-.tighten_bounds_is <- function(center, lb, ub, brts, model_bin, link_int,
-                                bisect_steps = 6L, verbose = TRUE) {
+# Diagnostic: report which boundary corners have IS issues.
+# Does NOT modify bounds -- just prints warnings.
+.diagnose_is_bounds <- function(center, lb, ub, brts, model_bin, link_int,
+                                 verbose = TRUE) {
   n_pars <- length(center)
-  any_tightened <- FALSE
+  any_issues <- FALSE
 
   for (j in seq_len(n_pars)) {
     for (side in c("lo", "hi")) {
-      # Test IS near the current boundary
       boundary <- if (side == "lo") lb[j] else ub[j]
       test_pt <- center
       test_pt[j] <- boundary
 
-      is_ok <- .is_feasible_at(test_pt, brts, model_bin, link_int)
+      pars8 <- .expand_pars(test_pt, model_bin)
+      is_ok <- tryCatch({
+        raw <- augment_trees(
+          brts = brts, pars = pars8,
+          sample_size = 3L, maxN = 100L,
+          max_missing = 500L, max_lambda = 1e6,
+          num_threads = 1L,
+          model = as.integer(model_bin),
+          link  = as.integer(link_int)
+        )
+        if (length(raw$trees) == 0L) FALSE
+        else {
+          logf <- eval_logf(pars8, raw$trees,
+                            model = as.integer(model_bin),
+                            link  = as.integer(link_int))
+          any(is.finite(logf$logf) & is.finite(logf$logg))
+        }
+      }, error = function(e) FALSE)
 
       if (!is_ok) {
-        # Bisect between center (IS feasible) and boundary (IS infeasible)
-        safe <- center[j]
-        bad  <- boundary
-
-        for (s in seq_len(bisect_steps)) {
-          mid <- (safe + bad) / 2
-          cand <- center
-          cand[j] <- mid
-          if (.is_feasible_at(cand, brts, model_bin, link_int)) {
-            safe <- mid  # feasible - push further
-          } else {
-            bad <- mid   # infeasible - pull back
-          }
-        }
-
-        if (side == "lo") {
-          if (safe > lb[j]) {
-            if (verbose) cat(sprintf(
-              "    IS tightened %s lo: %.4f -> %.4f\n",
-              names(center)[j], lb[j], safe
-            ))
-            lb[j] <- safe
-            any_tightened <- TRUE
-          }
-        } else {
-          if (safe < ub[j]) {
-            if (verbose) cat(sprintf(
-              "    IS tightened %s hi: %.4f -> %.4f\n",
-              names(center)[j], ub[j], safe
-            ))
-            ub[j] <- safe
-            any_tightened <- TRUE
-          }
-        }
+        if (verbose) cat(sprintf(
+          "    IS warning: %s %s bound (%.4f) - augmentation may struggle here\n",
+          names(center)[j], side, boundary
+        ))
+        any_issues <- TRUE
       }
     }
   }
 
-  if (verbose && !any_tightened) cat("    all boundary probes OK\n")
-
-  list(lb = lb, ub = ub)
-}
-
-
-# Test IS feasibility at a single parameter point.
-# Returns TRUE if at least 1 out of 3 augmented trees has non-zero IS weight.
-# Uses small maxN and a timeout to fail fast.
-.is_feasible_at <- function(pars, brts, model_bin, link_int,
-                             sample_size = 3L, maxN = 100L) {
-  pars8 <- .expand_pars(pars, model_bin)
-  ok <- tryCatch({
-    raw <- augment_trees(
-      brts = brts, pars = pars8,
-      sample_size = sample_size, maxN = maxN,
-      max_missing = 500L, max_lambda = 1e6,
-      num_threads = 1L,
-      model = as.integer(model_bin),
-      link  = as.integer(link_int)
-    )
-    # Check that we got at least one tree with non-zero weight
-    if (length(raw$trees) == 0L) return(FALSE)
-    logf <- eval_logf(pars8, raw$trees,
-                      model = as.integer(model_bin),
-                      link = as.integer(link_int))
-    any(is.finite(logf$logf) & is.finite(logf$logg))
-  }, error = function(e) FALSE)
-  ok
+  if (verbose && !any_issues) cat("    all boundary probes OK\n")
+  invisible(any_issues)
 }
 
 

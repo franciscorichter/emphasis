@@ -221,16 +221,19 @@ emphasis_pipeline <- function(tree,
   }
 
   # ── Pick best init for MCEM ─────────────────────────────────
+  # Prefer CEM over GAM for init: CEM is a proper global search,
+  # GAM with low sample_size can produce misleading optima.
   best_init     <- NULL
   best_init_ll  <- -Inf
   best_init_src <- "midpoint"
 
-  for (stage_name in c("gam", "cem")) {
+  for (stage_name in c("cem", "gam")) {
     f <- fits[[stage_name]]
-    if (!is.null(f) && is.finite(f$loglik) && f$loglik > best_init_ll) {
+    if (!is.null(f) && is.finite(f$loglik)) {
       best_init    <- f$pars
       best_init_ll <- f$loglik
       best_init_src <- stage_name
+      break  # take first available (CEM preferred)
     }
   }
 
@@ -282,16 +285,18 @@ emphasis_pipeline <- function(tree,
   }
 
   # ── Select best result ──────────────────────────────────────
+  # Prefer later stages (more refined): MCEM > CEM > GAM.
+  # GAM with sample_size=1 can produce garbage logliks from extrapolation,
+  # so we only fall back to GAM if CEM and MCEM both failed.
   best_fit   <- NULL
   best_stage <- "none"
 
   for (stage_name in c("mcem", "cem", "gam")) {
     f <- fits[[stage_name]]
     if (!is.null(f) && is.finite(f$loglik)) {
-      if (is.null(best_fit) || f$loglik > best_fit$loglik) {
-        best_fit   <- f
-        best_stage <- stage_name
-      }
+      best_fit   <- f
+      best_stage <- stage_name
+      break  # take the first (most refined) available
     }
   }
 
