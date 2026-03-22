@@ -494,17 +494,26 @@
 #' Implements the Cross-Entropy Method (CEM) with an IS log-likelihood
 #' objective.  A population of parameter particles is evaluated via IS
 #' (\code{fhat}), the elite fraction is retained, and the remainder is
-#' refilled by perturbing elite copies.  The perturbation SD is annealed
-#' linearly from \code{sd_vec} to zero over at most \code{max_iter}
-#' iterations.
+#' refilled by perturbing elite copies.
+#'
+#' \strong{Adaptive SD annealing:} The perturbation SD is decayed
+#' multiplicatively (factor \code{sd_decay}, default 0.85) only when the
+#' best log-likelihood has not improved by more than \code{tol} in the
+#' current iteration.  When the likelihood is still improving, the SD is
+#' held constant to maintain exploration.  A minimum SD floor
+#' (\code{sd_min_frac * initial_sd}, default 1\% of initial) prevents
+#' complete collapse.  This replaces the former linear annealing schedule
+#' which coupled the SD decay to \code{max_iter} and could cause
+#' premature collapse on easy problems or insufficient exploration on
+#' hard ones.
 #'
 #' \strong{Stopping rules} (first triggered wins):
 #' \enumerate{
-#'   \item Annealing exhausted: \code{all(sd_vec <= 0)} -- the population has
-#'     fully collapsed; further iterations produce identical particles.
 #'   \item Plateau: best \code{fhat} has not improved by more than \code{tol}
-#'     for \code{patience} consecutive iterations.
-#'   \item Hard cap: \code{max_iter} iterations reached.
+#'     for \code{patience} consecutive iterations \emph{and} the SD has
+#'     reached its floor -- the population has both converged in likelihood
+#'     and exhausted its perturbation budget.
+#'   \item Hard cap: \code{max_iter} iterations reached (safety limit).
 #' }
 #'
 #' @param brts Numeric vector of branching times.
@@ -524,6 +533,11 @@
 #'   incrementing the plateau counter.  Default \code{1e-4}.
 #' @param patience Consecutive plateau iterations before early stopping.
 #'   Default \code{5}.
+#' @param sd_decay Multiplicative factor applied to \code{sd_vec} when the
+#'   best log-likelihood has not improved.  Default \code{0.85}.  Set to
+#'   \code{NULL} to use the legacy linear annealing schedule.
+#' @param sd_min_frac Minimum SD as a fraction of the initial \code{sd_vec}.
+#'   Default \code{0.01} (1\%).  SD will not decay below this floor.
 #' @param verbose Print iteration summaries. Default \code{FALSE}.
 #' @param num_threads Parallel threads. Default \code{1}.
 #' @param model Length-3 binary integer vector \code{c(use_N, use_P, use_E)}.
@@ -559,6 +573,8 @@ emphasis_cem <- function(brts,
                          disc_prop    = 0.5,
                          tol          = 1e-4,
                          patience     = 5L,
+                         sd_decay     = 0.85,
+                         sd_min_frac  = 0.01,
                          verbose      = FALSE,
                          num_threads  = 1L,
                          model        = c(0L, 0L, 0L),
@@ -574,7 +590,14 @@ emphasis_cem <- function(brts,
     stop("sd_vec must have the same length as lower_bound.")
 
   init_time <- proc.time()
-  alpha <- sd_vec / max_iter   # linear annealing step
+
+  # Annealing schedule: adaptive (default) or legacy linear
+  use_adaptive <- !is.null(sd_decay)
+  if (use_adaptive) {
+    sd_floor <- sd_vec * sd_min_frac   # minimum SD per parameter
+  } else {
+    alpha <- sd_vec / max_iter          # legacy linear annealing step
+  }
 
   input <- list(
     brts         = brts,
@@ -608,8 +631,8 @@ emphasis_cem <- function(brts,
 
   for (k in seq_len(max_iter)) {
 
-    # --- Stop rule 1: annealing exhausted -----------------------------------
-    if (all(sd_vec <= 0)) {
+    # --- Stop rule 1: annealing exhausted (legacy only) ---------------------
+    if (!use_adaptive && all(sd_vec <= 0)) {
       stop_reason <- "annealing"
       break
     }
@@ -664,13 +687,25 @@ emphasis_cem <- function(brts,
     final_pop <- pop   # snapshot before resample -- has fhat, log_q, trees
 
     # --- Stop rule 2: plateau -----------------------------------------------
+    improving <- FALSE
     if (k > 1L && is.finite(best_loglik[k]) && is.finite(best_loglik[k - 1L])) {
       improvement <- best_loglik[k] - best_loglik[k - 1L]
-      plateau_count <- if (improvement < tol) plateau_count + 1L else 0L
+      improving <- (improvement >= tol)
+      plateau_count <- if (improving) 0L else plateau_count + 1L
     }
-    if (plateau_count >= patience) {
-      stop_reason <- "plateau"
-      break
+    if (use_adaptive) {
+      # Adaptive: require plateau AND SD at floor
+      sd_at_floor <- all(sd_vec <= sd_floor * (1 + 1e-8))
+      if (plateau_count >= patience && sd_at_floor) {
+        stop_reason <- "plateau"
+        break
+      }
+    } else {
+      # Legacy: plateau alone suffices
+      if (plateau_count >= patience) {
+        stop_reason <- "plateau"
+        break
+      }
     }
 
     # Time budget check
@@ -686,15 +721,28 @@ emphasis_cem <- function(brts,
     pop    <- .resample_particles(pop, num_points, disc_prop,
                                   lower_bound, upper_bound, sd_vec,
                                   clear_cache = isTRUE(shared_trees))
-    sd_vec <- sd_vec - alpha
+
+    # SD annealing
+    if (use_adaptive) {
+      # Adaptive: decay only when not improving, respect floor
+      if (!improving) {
+        sd_vec <- pmax(sd_vec * sd_decay, sd_floor)
+      }
+    } else {
+      # Legacy: linear decay every iteration
+      sd_vec <- sd_vec - alpha
+    }
 
     if (verbose) {
       lbl <- if (sample_size <= 1L) "best_lw" else "loglik*"
+      sd_frac <- if (use_adaptive) mean(sd_vec / (sd_floor / sd_min_frac)) else
+                 mean(sd_vec / (sd_vec + alpha))
       cat(sprintf(
-        "Iter %3d/%d  %s=%8.4f  valid=%d/%d  plateau=%d/%d\n",
+        "Iter %3d/%d  %s=%8.4f  valid=%d/%d  plateau=%d/%d  sd=%.1f%%\n",
         k, max_iter, lbl, best_loglik[k],
         sum(valid), num_points,
-        plateau_count, patience))
+        plateau_count, patience,
+        sd_frac * 100))
     }
   }
 

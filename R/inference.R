@@ -116,7 +116,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
     ))
   } else if (method == "cem") {
     c(common, list(
-      max_iter     = 20L,
+      max_iter     = 50L,       # safety cap (adaptive SD stops earlier)
       num_particles = 50L,      # alias: num_points
       sd_vec       = NULL,
       maxN         = 10L,
@@ -125,6 +125,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       disc_prop    = 0.5,
       tol          = 1e-4,
       patience     = 5L,
+      sd_decay     = 0.85,      # adaptive SD decay factor
+      sd_min_frac  = 0.01,      # SD floor as fraction of initial
       bias_correct = FALSE
     ))
   } else {
@@ -395,6 +397,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
     disc_prop    = ctrl$disc_prop,
     tol          = ctrl$tol,
     patience     = ctrl$patience,
+    sd_decay     = ctrl$sd_decay,
+    sd_min_frac  = ctrl$sd_min_frac,
     bias_correct = ctrl$bias_correct,
     verbose      = ctrl$verbose,
     num_threads  = ctrl$num_threads,
