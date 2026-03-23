@@ -109,7 +109,8 @@ namespace emphasis {
                   const Model& model,
                   int max_missing = default_max_missing_branches,
                   double max_lambda = default_max_aug_lambda,
-                  int num_threads = 0);
+                  int num_threads = 0,
+                  double max_time_seconds = 0);  // 0 = no time limit
 
 
   // results from m

@@ -47,7 +47,8 @@ namespace emphasis {
                   const Model& model,
                   int max_missing,
                   double max_lambda,
-                  int num_threads)
+                  int num_threads,
+                  double max_time_seconds)  // 0 = default 120s safety limit
   {
     if (!model.is_threadsafe()) num_threads = 1;
     num_threads = std::max(1, std::min(num_threads, static_cast<int>(std::thread::hardware_concurrency())));
@@ -65,6 +66,18 @@ namespace emphasis {
       for (unsigned i = r.begin(); i < r.end(); ++i) {
         try {
           if (!stop) {
+            // Time budget: prevent infinite spinning when IS collapse
+            // causes nearly all augmentations to fail.
+            // Default 120s safety limit; set max_time_seconds > 0 to override.
+            {
+              double limit = (max_time_seconds > 0) ? max_time_seconds : 120.0;
+              auto now = std::chrono::high_resolution_clock::now();
+              double elapsed = std::chrono::duration<double>(now - T0).count();
+              if (elapsed > limit) {
+                stop = true;
+                break;
+              }
+            }
             // reuse tree from pool
             auto& pool_tree = detail::pooled_tree;
 
