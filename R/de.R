@@ -774,18 +774,77 @@ emphasis_cem <- function(brts,
     ))
   }
 
-  # Use the final iteration's best particle, not the global max.
-  # The global max over all iterations selects lucky single-tree spikes rather
-  # than the converged estimate.
-  best_pars_v <- best_pars[k_ran, ]
+  # ── Stable final estimation: re-evaluate top elites with many trees ──────
+  #
+  # During the CEM search, each particle is evaluated with few trees
+  # (often just 1), making fhat extremely noisy.  For the final estimate,
+  # re-evaluate the top-k elites with num_trees draws each, producing
+  # stable fhat values.  The final parameter estimate is the fhat-weighted
+  # mean of these elites, not just the single best particle.
 
-  # Final evaluation of best particle using num_trees draws.
-  # Bootstrap variance is computed automatically from these draws whenever
-  # num_trees > 1 (B = 200 bootstrap replicates, bias-corrected estimator).
+  # Collect elite particles from the final population
+  n_elites <- max(1L, ceiling(disc_prop * sum(!is.na(final_pop$fhat))))
+  valid_ix <- which(!is.na(final_pop$fhat))
+  elite_order <- valid_ix[order(final_pop$fhat[valid_ix], decreasing = TRUE)]
+  elite_ix <- elite_order[seq_len(min(n_elites, length(elite_order)))]
+  elite_pars_mat <- final_pop$pars[elite_ix, , drop = FALSE]
+
+  # Number of trees for final re-evaluation (at least 20, use sample_size if larger)
+  n_final_trees <- max(20L, as.integer(sample_size))
+
+  if (verbose)
+    cat(sprintf("Re-evaluating %d elites with %d trees each...\n",
+                nrow(elite_pars_mat), n_final_trees))
+
+  elite_fhats <- numeric(nrow(elite_pars_mat))
+  elite_raw   <- vector("list", nrow(elite_pars_mat))
+  for (ei in seq_len(nrow(elite_pars_mat))) {
+    raw_ei <- .simulate_particle(
+      input$brts, as.numeric(elite_pars_mat[ei, ]), input$model, input$link,
+      sample_size = n_final_trees,
+      maxN        = max(input$maxN, n_final_trees * 5L),
+      max_missing = input$max_missing,
+      max_lambda  = input$max_lambda,
+      num_threads = num_threads
+    )
+    if (!is.null(raw_ei) && length(raw_ei$logf) > 0L) {
+      fh <- .is_fhat(raw_ei$logf, raw_ei$logg,
+                      n_zero_weight = .n0(raw_ei$rejected_zero_weights))
+      if (!is.null(cond_fun) && is.finite(fh))
+        fh <- fh - cond_fun(as.numeric(elite_pars_mat[ei, ]))
+      elite_fhats[ei] <- fh
+      elite_raw[[ei]] <- raw_ei
+    } else {
+      elite_fhats[ei] <- NA_real_
+    }
+  }
+
+  # Weighted mean of elites (softmax weights from fhat)
+  valid_elites <- is.finite(elite_fhats)
+  if (sum(valid_elites) >= 2L) {
+    fh_valid <- elite_fhats[valid_elites]
+    pars_valid <- elite_pars_mat[valid_elites, , drop = FALSE]
+    # Softmax weights: w_i = exp(fhat_i - max) / sum(exp(fhat - max))
+    fh_max <- max(fh_valid)
+    w <- exp(fh_valid - fh_max)
+    w <- w / sum(w)
+    best_pars_v <- as.numeric(colSums(pars_valid * w))
+    if (verbose)
+      cat(sprintf("Weighted mean of %d elites (top fhat=%.2f, weights entropy=%.2f)\n",
+                  sum(valid_elites), max(fh_valid),
+                  -sum(w * log(pmax(w, 1e-300)))))
+  } else if (sum(valid_elites) == 1L) {
+    best_pars_v <- as.numeric(elite_pars_mat[which(valid_elites), ])
+  } else {
+    # Fallback: use last iteration's best
+    best_pars_v <- best_pars[k_ran, ]
+  }
+
+  # Final IS evaluation of the weighted-mean estimate
   raw_best <- .simulate_particle(
     input$brts, as.numeric(best_pars_v), input$model, input$link,
-    sample_size = as.integer(sample_size),
-    maxN        = input$maxN,
+    sample_size = n_final_trees,
+    maxN        = max(input$maxN, n_final_trees * 5L),
     max_missing = input$max_missing,
     max_lambda  = input$max_lambda,
     num_threads = num_threads
@@ -797,7 +856,6 @@ emphasis_cem <- function(brts,
     lw_all <- raw_best$logf - raw_best$logg
     fhat_best <- .is_fhat(raw_best$logf, raw_best$logg,
                            n_zero_weight = .n0(raw_best$rejected_zero_weights))
-    # Apply conditioning correction
     if (!is.null(cond_fun) && is.finite(fhat_best)) {
       fhat_best <- fhat_best - cond_fun(as.numeric(best_pars_v))
     }
@@ -808,7 +866,7 @@ emphasis_cem <- function(brts,
       trees      = raw_best$trees,
       fhat       = fhat_best,
       ESS        = .ess_from_lw(lw_all),
-      n_trees    = as.integer(sample_size),
+      n_trees    = n_final_trees,
       n_rejected = .total_rejected(raw_best)
     )
     lw_fin <- lw_all[is.finite(lw_all)]
