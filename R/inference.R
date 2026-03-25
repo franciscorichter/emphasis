@@ -924,7 +924,7 @@ compare_models <- function(...) {
 #' @param upper_bound Length-4 numeric vector of upper parameter bounds.
 #'   Default \code{c(3, 0.5, 1, 0.5)}.
 #' @param link Link function: \code{"linear"} (default) or
-#'   \code{"exponential"} (EP not supported with exponential).
+#'   \code{"exponential"}.
 #' @param control Named list with optional sub-lists \code{cem} and
 #'   \code{mcem} to override tuning defaults for each stage. Bounds and
 #'   verbose are taken from the outer arguments; no need to repeat them here.
