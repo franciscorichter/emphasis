@@ -25,7 +25,7 @@ select_diversification_model(
 Default \code{c(3, 0.5, 1, 0.5)}.}
 
 \item{link}{Link function: \code{"linear"} (default) or
-\code{"exponential"} (EP not supported with exponential).}
+\code{"exponential"}.}
 
 \item{control}{Named list with optional sub-lists \code{cem} and
 \code{mcem} to override tuning defaults for each stage. Bounds and

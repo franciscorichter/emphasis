@@ -19,6 +19,8 @@ emphasis_cem(
   disc_prop = 0.5,
   tol = 1e-04,
   patience = 5L,
+  sd_decay = 0.85,
+  sd_min_frac = 0.01,
   verbose = FALSE,
   num_threads = 1L,
   model = c(0L, 0L, 0L),
@@ -58,6 +60,13 @@ incrementing the plateau counter.  Default \code{1e-4}.}
 \item{patience}{Consecutive plateau iterations before early stopping.
 Default \code{5}.}
 
+\item{sd_decay}{Multiplicative factor applied to \code{sd_vec} when the
+best log-likelihood has not improved.  Default \code{0.85}.  Set to
+\code{NULL} to use the legacy linear annealing schedule.}
+
+\item{sd_min_frac}{Minimum SD as a fraction of the initial \code{sd_vec}.
+Default \code{0.01} (1\%).  SD will not decay below this floor.}
+
 \item{verbose}{Print iteration summaries. Default \code{FALSE}.}
 
 \item{num_threads}{Parallel threads. Default \code{1}.}
@@ -84,18 +93,27 @@ A list:
 Implements the Cross-Entropy Method (CEM) with an IS log-likelihood
 objective.  A population of parameter particles is evaluated via IS
 (\code{fhat}), the elite fraction is retained, and the remainder is
-refilled by perturbing elite copies.  The perturbation SD is annealed
-linearly from \code{sd_vec} to zero over at most \code{max_iter}
-iterations.
+refilled by perturbing elite copies.
 }
 \details{
+\strong{Adaptive SD annealing:} The perturbation SD is decayed
+multiplicatively (factor \code{sd_decay}, default 0.85) only when the
+best log-likelihood has not improved by more than \code{tol} in the
+current iteration.  When the likelihood is still improving, the SD is
+held constant to maintain exploration.  A minimum SD floor
+(\code{sd_min_frac * initial_sd}, default 1\% of initial) prevents
+complete collapse.  This replaces the former linear annealing schedule
+which coupled the SD decay to \code{max_iter} and could cause
+premature collapse on easy problems or insufficient exploration on
+hard ones.
+
 \strong{Stopping rules} (first triggered wins):
 \enumerate{
-  \item Annealing exhausted: \code{all(sd_vec <= 0)} -- the population has
-    fully collapsed; further iterations produce identical particles.
   \item Plateau: best \code{fhat} has not improved by more than \code{tol}
-    for \code{patience} consecutive iterations.
-  \item Hard cap: \code{max_iter} iterations reached.
+    for \code{patience} consecutive iterations \emph{and} the SD has
+    reached its floor -- the population has both converged in likelihood
+    and exhausted its perturbation budget.
+  \item Hard cap: \code{max_iter} iterations reached (safety limit).
 }
 }
 \keyword{internal}
