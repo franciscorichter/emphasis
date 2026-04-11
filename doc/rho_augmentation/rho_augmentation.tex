@@ -1,0 +1,184 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{natbib}
+
+\newcommand{\btheta}{\boldsymbol{\theta}}
+\newcommand{\Tobs}{T_{\mathrm{obs}}}
+\newcommand{\Nobs}{N_{\mathrm{obs}}}
+\newcommand{\Ntot}{N_{\mathrm{tot}}}
+
+\title{Incomplete Taxon Sampling via Data Augmentation\\in the Emphasis Importance Sampling Framework}
+\author{Francisco Richter}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Problem Statement}
+
+The current \texttt{emphasis} importance sampling framework augments an observed phylogenetic tree $\Tobs$ with latent \emph{extinct} lineages $z_{\mathrm{ext}}$ to compute the marginal likelihood:
+\begin{equation}
+L(\btheta \mid \Tobs) = \int p(\Tobs, z_{\mathrm{ext}} \mid \btheta) \, dz_{\mathrm{ext}}.
+\end{equation}
+This assumes that $\Tobs$ contains \emph{all extant species} ($\rho = 1$). In practice, many phylogenies are incomplete: only a fraction $\rho \in (0,1]$ of extant species are sampled. The $\Nobs$ tips in the observed tree represent only a subset of the true $\Ntot = \Nobs / \rho$ extant species. The remaining
+\begin{equation}
+m = \Ntot - \Nobs = \Nobs \cdot \frac{1 - \rho}{\rho}
+\end{equation}
+species are extant but unsampled. These unsampled lineages are \emph{not} extinct---they are alive at the present and contribute to diversity $N(t)$ throughout their existence. Ignoring them biases the likelihood, especially for diversity-dependent models where rates depend on $N(t)$.
+
+\section{Extended Augmentation Space}
+
+We extend the latent space to include both extinct lineages and unsampled extant lineages:
+\begin{equation}
+z = (z_{\mathrm{ext}},\; z_{\mathrm{unsamp}})
+\end{equation}
+where $z_{\mathrm{ext}} = \{(s_j, e_j)\}_{j=1}^{n_e}$ are speciation--extinction time pairs with $e_j < T$, and $z_{\mathrm{unsamp}} = \{s_k\}_{k=1}^{n_u}$ are speciation times of lineages that survive to the present but were not sampled. The marginal likelihood becomes:
+\begin{equation}\label{eq:marginal}
+L(\btheta \mid \Tobs, \rho) = \int p(\Tobs, z_{\mathrm{ext}}, z_{\mathrm{unsamp}} \mid \btheta, \rho) \, dz_{\mathrm{ext}} \, dz_{\mathrm{unsamp}}.
+\end{equation}
+
+\section{Complete-Data Likelihood}
+
+Let $\tilde{T} = (\Tobs, z_{\mathrm{ext}}, z_{\mathrm{unsamp}})$ denote the fully augmented tree. This tree has:
+\begin{itemize}
+\item $\Nobs$ observed tips (extant, sampled),
+\item $n_u$ unsampled tips (extant, not sampled),
+\item $n_e$ extinct lineages (speciated and went extinct before $T$).
+\end{itemize}
+Let $N(t)$ denote the number of lineages alive at time $t$ in $\tilde{T}$, which now includes the unsampled extant lineages.
+
+The complete-data log-likelihood decomposes as:
+\begin{equation}\label{eq:loglik}
+\log p(\tilde{T} \mid \btheta, \rho) = \underbrace{\sum_{\text{spec}} \log \lambda_i + \sum_{\text{ext}} \log \mu_i - \int_0^T N(t)\bigl[\lambda(t) + \mu(t)\bigr] dt}_{\text{birth--death process}} + \underbrace{\Nobs \log \rho + n_u \log(1 - \rho)}_{\text{sampling at present}}.
+\end{equation}
+
+The first part is the standard birth--death likelihood over the complete tree. The sampling terms arise because each extant lineage at time $T$ is independently sampled with probability $\rho$ or missed with probability $1 - \rho$.
+
+\paragraph{Key point.} The unsampled species affect $N(t)$ from their speciation time $s_k$ to the present $T$. For diversity-dependent models ($\lambda = \lambda(N)$), this changes the speciation and extinction rates throughout the tree. This is why simply adjusting the thinning rate analytically (the current approach) is insufficient---the unsampled lineages must be \emph{explicitly placed} in the tree so that $N(t)$ is correct.
+
+\section{Proposal Distribution}
+
+\subsection{Current Approach (Recap)}
+
+The thinning algorithm sweeps from root to present. In each interval $[t_k, t_{k+1})$ between consecutive events:
+\begin{enumerate}
+\item Compute the thinning envelope $\Lambda_{\max} = \max_{t \in [t_k, t_{k+1}]} N(t) \cdot \lambda(t;\btheta) \cdot (1 - \rho\, e^{-\mu(t)(T-t)})$.
+\item Propose next event: $t^* = t_k - \log(u_1) / \Lambda_{\max}$, $u_1 \sim \mathrm{Unif}(0,1)$.
+\item If $t^* < t_{k+1}$, accept with probability $p_{\mathrm{thin}} = N(t^*) \lambda(t^*) (1 - \rho\, e^{-\mu(t^*)(T-t^*)}) / \Lambda_{\max}$.
+\item If accepted, draw extinction time $e^* \sim \mathrm{TruncExp}(\mu(t^*), T - t^*)$.
+\end{enumerate}
+Currently, if $e^* \geq T$ (lineage survives), the event is \emph{skipped} and not inserted into the tree.
+
+\subsection{New Approach: Insert Unsampled Extant Species}
+
+We modify step 4. After accepting a speciation event at $t^*$:
+\begin{enumerate}
+\item[4a.] Draw whether the new lineage goes extinct or survives. The probability that a lineage born at $t^*$ goes extinct before $T$ is:
+\begin{equation}
+P_{\mathrm{ext}}(t^*) = 1 - e^{-\mu(t^*)(T - t^*)}.
+\end{equation}
+With incomplete sampling, a surviving lineage is unsampled with probability $1 - \rho$. So the three outcomes and their probabilities are:
+\begin{align}
+\text{Extinct:} \quad & P_{\mathrm{ext}}(t^*) = 1 - e^{-\mu(T-t^*)} \\
+\text{Extant, unsampled:} \quad & (1-\rho) \cdot e^{-\mu(T-t^*)} \\
+\text{Extant, sampled:} \quad & \rho \cdot e^{-\mu(T-t^*)} \quad \text{(impossible---already observed)}
+\end{align}
+The thinning rate $N \lambda (1 - \rho\, e^{-\mu(T-t)})$ already excludes the ``extant, sampled'' outcome, so conditionally:
+\begin{align}
+P(\text{extinct} \mid \text{accepted}) &= \frac{1 - e^{-\mu(T-t^*)}}{1 - \rho\, e^{-\mu(T-t^*)}} \\[4pt]
+P(\text{unsampled extant} \mid \text{accepted}) &= \frac{(1-\rho)\, e^{-\mu(T-t^*)}}{1 - \rho\, e^{-\mu(T-t^*)}}.
+\end{align}
+
+\item[4b.] \textbf{If extinct:} draw $e^* \sim \mathrm{TruncExp}(\mu, T - t^*)$ and insert both a speciation node at $t^*$ and an extinction node at $e^*$. Update $N(t)$ for $t \in [t^*, e^*)$.
+
+\item[4c.] \textbf{If unsampled extant:} insert a speciation node at $t^*$ with the lineage surviving to $T$. Update $N(t)$ for $t \in [t^*, T]$ (increment by 1 for all subsequent events).
+\end{enumerate}
+
+\paragraph{Remark.} This is precisely what the existing \texttt{extinction\_time()} function already computes: it returns $e^* \geq T$ with probability $(1-\rho) e^{-\mu(T-t^*)} / (1 - \rho\, e^{-\mu(T-t^*)})$. The only change is that when $e^* \geq T$, we \emph{insert} the unsampled species into the tree (via \texttt{insert\_unsampled\_species()}) instead of skipping it.
+
+\section{Sampling Probability $\log q(z \mid \Tobs, \btheta, \rho)$}
+
+The proposal probability $q$ for the augmented tree decomposes into contributions from the thinning process (the integral term) and from each inserted lineage:
+
+\begin{equation}\label{eq:logg}
+\log q = \sum_{j \in \mathcal{E}} \log q_j^{\mathrm{ext}} + \sum_{k \in \mathcal{U}} \log q_k^{\mathrm{unsamp}} - \int_0^T N(t) \lambda(t) \bigl(1 - \rho\, e^{-\mu(t)(T-t)}\bigr) \, dt
+\end{equation}
+
+where $\mathcal{E}$ indexes extinct augmented lineages and $\mathcal{U}$ indexes unsampled extant augmented lineages.
+
+For an \textbf{extinct} augmented lineage $j$ with speciation at $s_j$, extinction at $e_j$, parent chosen uniformly from $K_j$ alive lineages:
+\begin{equation}
+\log q_j^{\mathrm{ext}} = \log\bigl(N(s_j) \cdot \lambda(s_j) \cdot \mu(s_j)\bigr) - \mu(s_j)(e_j - s_j) - \log K_j + \log \frac{1 - e^{-\mu(s_j)(T-s_j)}}{1 - \rho\, e^{-\mu(s_j)(T-s_j)}}.
+\end{equation}
+The last term is the log-probability of choosing the ``extinct'' branch (step 4a), conditional on acceptance.
+
+For an \textbf{unsampled extant} lineage $k$ with speciation at $s_k$:
+\begin{equation}
+\log q_k^{\mathrm{unsamp}} = \log\bigl(N(s_k) \cdot \lambda(s_k)\bigr) - \log K_k + \log \frac{(1-\rho)\, e^{-\mu(s_k)(T-s_k)}}{1 - \rho\, e^{-\mu(s_k)(T-s_k)}}.
+\end{equation}
+
+\paragraph{Simplification when $\rho = 1$.} When $\rho = 1$, the unsampled probability is zero, the conditional extinct probability is 1, and Eq.~\eqref{eq:logg} reduces to the current implementation. The thinning rate becomes $N\lambda(1 - e^{-\mu(T-t)})$ and the per-lineage terms simplify to $\log(N\lambda\mu) - \mu\ell - \log K$, recovering the existing \texttt{sampling\_prob()}.
+
+\section{Importance Weight}
+
+The importance weight for augmented tree $i$ is:
+\begin{equation}
+w_i = \exp\bigl(\log f_i - \log g_i\bigr)
+\end{equation}
+where $\log f_i = \log p(\tilde{T}_i \mid \btheta, \rho)$ from Eq.~\eqref{eq:loglik} and $\log g_i = \log q(z_i \mid \Tobs, \btheta, \rho)$ from Eq.~\eqref{eq:logg}. The log-likelihood estimate is:
+\begin{equation}
+\hat{\ell}(\btheta) = \log \frac{1}{S} \sum_{i=1}^{S} w_i.
+\end{equation}
+
+\section{Implementation Strategy}
+
+The required changes are minimal because the infrastructure already exists:
+
+\begin{enumerate}
+\item \textbf{\texttt{augment\_tree.cpp}, \texttt{do\_augment\_tree()}}: When \texttt{extinction\_time()} returns $e^* \geq T$, call \texttt{insert\_unsampled\_species()} instead of skipping. This function already exists and correctly updates $N(t)$ for all subsequent nodes.
+
+\item \textbf{\texttt{model.hpp}, \texttt{loglik()}}: Add the sampling terms $\Nobs \log \rho + n_u \log(1-\rho)$ to the log-likelihood. Also ensure that unsampled extant lineages (identified by \texttt{is\_unsampled(node)}) contribute to the integral via their effect on $N(t)$ but do \emph{not} generate an extinction event term.
+
+\item \textbf{\texttt{model.hpp}, \texttt{sampling\_prob()}}: Update the per-lineage contribution for unsampled extant lineages to match Eq.~\eqref{eq:logg}. The existing \texttt{is\_unsampled()} branch needs correction: include the conditional probability term $\log\frac{(1-\rho) e^{-\mu(T-s)}}{1 - \rho\, e^{-\mu(T-s)}}$ and remove the bare $\mu(T-s)$ subtraction. Similarly update the extinct branch to include $\log\frac{1 - e^{-\mu(T-s)}}{1 - \rho\, e^{-\mu(T-s)}}$.
+
+\item \textbf{R layer}: No changes needed---\texttt{rho} is already threaded through \texttt{simulate\_tree()}, \texttt{estimate\_rates()}, and all control lists.
+\end{enumerate}
+
+\paragraph{Default behavior.} When $\rho = 1$ (default), $m = 0$, the unsampled probability is zero, \texttt{extinction\_time()} never returns $e^* \geq T$, and the algorithm reduces exactly to the current implementation.
+
+\section{Algorithm Summary}
+
+\begin{algorithm}[H]
+\caption{Tree augmentation with incomplete taxon sampling}
+\begin{algorithmic}[1]
+\Require Observed tree $\Tobs$, parameters $\btheta$, sampling fraction $\rho$
+\State Initialize augmented tree $\tilde{T} \gets \Tobs$
+\State $t \gets 0$
+\While{$t < T$}
+  \State $t_{\mathrm{next}} \gets$ next event time in $\tilde{T}$ after $t$
+  \State $\Lambda_{\max} \gets \max_{s \in [t, t_{\mathrm{next}}]} N(s) \lambda(s; \btheta) (1 - \rho\, e^{-\mu(s)(T-s)})$
+  \State $t^* \gets t - \log(u_1) / \Lambda_{\max}$
+  \If{$t^* < t_{\mathrm{next}}$}
+    \State $p_{\mathrm{thin}} \gets N(t^*) \lambda(t^*) (1 - \rho\, e^{-\mu(t^*)(T-t^*)}) / \Lambda_{\max}$
+    \If{$u_2 < p_{\mathrm{thin}}$} \Comment{Accept speciation}
+      \State Draw $e^*$ from \textsc{ExtinctionTime}$(t^*, \mu, T, \rho)$
+      \If{$e^* < T$} \Comment{Extinct lineage}
+        \State Insert speciation at $t^*$, extinction at $e^*$ into $\tilde{T}$
+        \State Update $N(t)$ for $t \in [t^*, e^*)$
+      \Else \Comment{Unsampled extant lineage}
+        \State Insert speciation at $t^*$ into $\tilde{T}$ (survives to $T$)
+        \State Update $N(t)$ for $t \in [t^*, T]$
+      \EndIf
+    \EndIf
+  \EndIf
+  \State $t \gets \min(t^*, t_{\mathrm{next}})$
+\EndWhile
+\State Compute pendant PD for all nodes
+\State \Return $\tilde{T}$
+\end{algorithmic}
+\end{algorithm}
+
+\end{document}

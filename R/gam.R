@@ -97,7 +97,7 @@ predict_survival <- function(gam_fit, newpars) {
 #' @param tree A \code{phylo} object or anything accepted by
 #'   \code{\link{estimate_rates}}.
 #' @param model Model specification: \code{"cr"}, \code{"dd"}, etc.
-#' @param link \code{"linear"} or \code{"exponential"}.
+#' @param link \code{"linear"}, \code{"exponential"}, or \code{"gaussian"}.
 #' @param n_test Number of replicate simulations per candidate point
 #'   to assess feasibility (default 5).
 #' @param bisect_steps Number of bisection steps per axis direction
@@ -109,6 +109,8 @@ predict_survival <- function(gam_fit, newpars) {
 #'   on the detected region.
 #' @param num_threads Parallel threads for batch simulation (default 1).
 #' @param verbose Print progress (default \code{TRUE}).
+#' @param rho Sampling fraction (0, 1]. Default \code{1} (complete sampling).
+#'   Passed through to IS feasibility diagnostics.
 #' @return A list with components:
 #'   \describe{
 #'     \item{lower_bound}{Numeric vector of lower bounds (compact layout).}
@@ -134,7 +136,8 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
                         tip_range = c(0.1, 10),
                         train_surv_gam = TRUE,
                         num_threads = 1L,
-                        verbose = TRUE) {
+                        verbose = TRUE,
+                        rho = 1.0) {
   model_bin <- .resolve_model(model)
   link_int  <- .resolve_link(link)
   n_pars    <- 2L + 2L * sum(model_bin)
@@ -180,7 +183,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   if (verbose) cat(sprintf(
     "auto_bounds: %s link=%s (%d pars)\n",
     paste(model_bin, collapse = ","),
-    if (link_int == 0L) "linear" else "exponential",
+    c("linear", "exponential", "gaussian")[link_int + 1L],
     n_pars
   ))
   if (verbose) cat(sprintf(
@@ -347,7 +350,8 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   # -- IS feasibility diagnostic (informational only) ----------
   if (verbose) {
     cat("  IS feasibility check...\n")
-    .diagnose_is_bounds(center, lb, ub, brts, model_bin, link_int, verbose)
+    .diagnose_is_bounds(center, lb, ub, brts, model_bin, link_int, verbose,
+                        rho = rho)
   }
 
   # ── Survival GAM on detected region ────────────────────────
@@ -471,7 +475,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 # Diagnostic: report which boundary corners have IS issues.
 # Does NOT modify bounds -- just prints warnings.
 .diagnose_is_bounds <- function(center, lb, ub, brts, model_bin, link_int,
-                                 verbose = TRUE) {
+                                 verbose = TRUE, rho = 1.0) {
   n_pars <- length(center)
   any_issues <- FALSE
 
@@ -489,13 +493,15 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
           max_missing = 500L, max_lambda = 1e6,
           num_threads = 1L,
           model = as.integer(model_bin),
-          link  = as.integer(link_int)
+          link  = as.integer(link_int),
+          rho   = as.numeric(rho)
         )
         if (length(raw$trees) == 0L) FALSE
         else {
           logf <- eval_logf(pars8, raw$trees,
                             model = as.integer(model_bin),
-                            link  = as.integer(link_int))
+                            link  = as.integer(link_int),
+                            rho   = as.numeric(rho))
           any(is.finite(logf$logf) & is.finite(logf$logg))
         }
       }, error = function(e) FALSE)
@@ -526,19 +532,19 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 
   # Typical covariate values at the present for the observed tree:
   #   N: number of tips
-  #   P: total pendant branch length (sum of pendant ages at present)
-  #   E: mean pendant age
-  # For pendant ages at the present: each tip's pendant age is
+  #   P: total isolation time branch length (sum of isolation times at present)
+  #   E: mean isolation time
+  # For isolation times at the present: each tip's isolation time is
   # (crown_age - most_recent_branching_time_on_its_path).
-  # A rough estimate: mean pendant age ~ crown_age / n_tips (for balanced trees)
+  # A rough estimate: mean isolation time ~ crown_age / n_tips (for balanced trees)
   # or use the actual branching times.
 
-  # Pendant ages at the present: for each of the n_tips tips,
-  # the pendant age is the time from the most recent internal node to the present.
+  # Isolation times at the present: for each of the n_tips tips,
+  # the isolation time is the time from the most recent internal node to the present.
   # The n_tips smallest branching times give the parent nodes of tips.
   sorted_brts <- sort(brts)
-  # The youngest n_tips-1 branching times each contribute 2 pendant branches
-  # minus the ones that are internal. Approximate: mean pendant age.
+  # The youngest n_tips-1 branching times each contribute 2 isolation time branches
+  # minus the ones that are internal. Approximate: mean isolation time.
   if (length(sorted_brts) >= 1L) {
     pendant_ages <- sorted_brts[seq_len(min(n_tips, length(sorted_brts)))]
     mean_pendant <- mean(pendant_ages)
@@ -702,7 +708,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 #' @param model Model specification: \code{"cr"}, \code{"dd"}, \code{"pd"},
 #'   \code{"ep"}, or a length-3 binary integer vector.
 #' @param sample_size Number of augmented trees per grid point (default 200).
-#' @param link \code{"linear"} or \code{"exponential"}.
+#' @param link \code{"linear"}, \code{"exponential"}, or \code{"gaussian"}.
 #' @param max_missing Maximum missing lineages per augmentation (default 1e4).
 #' @param max_lambda Maximum speciation rate (default 500).
 #' @param maxN Total augmentation attempts per grid point.  If \code{NULL},
@@ -712,6 +718,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 #'   bias-corrected IS estimator (truncated at order \code{K}).
 #'   Default \code{FALSE} uses the standard log-mean-exp estimator.
 #' @param verbose Print progress (default \code{TRUE}).
+#' @param rho Sampling fraction (0, 1]. Default \code{1} (complete sampling).
 #' @return A data frame with columns for each parameter plus \code{fhat}
 #'   (IS log-likelihood) and \code{n_trees} (number of valid trees obtained).
 #'   Rows where IS failed have \code{fhat = NA}.
@@ -726,7 +733,8 @@ estimate_likelihood_surface <- function(tree, pars_mat, model = "cr",
                                         num_threads = 1L,
                                         bias_correct = FALSE,
                                         verbose = TRUE,
-                                        max_time = NULL) {
+                                        max_time = NULL,
+                                        rho = 1.0) {
   model_bin <- .resolve_model(model)
   link_int  <- .resolve_link(link)
   brts      <- .extract_brts(tree)
@@ -754,14 +762,16 @@ estimate_likelihood_surface <- function(tree, pars_mat, model = "cr",
         max_missing = as.integer(max_missing),
         max_lambda = as.numeric(max_lambda),
         num_threads = if (use_r_parallel) 1L else as.integer(num_threads),
-        model = as.integer(model_bin), link = as.integer(link_int)
+        model = as.integer(model_bin), link = as.integer(link_int),
+        rho = as.numeric(rho)
       ),
       error = function(e) NULL
     )
     if (!is.null(raw)) {
       logf_i <- eval_logf(pars8, raw$trees,
                           model = as.integer(model_bin),
-                          link = as.integer(link_int))
+                          link = as.integer(link_int),
+                          rho = as.numeric(rho))
       list(
         fhat = .is_fhat(logf_i$logf, logf_i$logg,
                         bias_correct = bias_correct,

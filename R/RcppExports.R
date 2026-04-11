@@ -35,14 +35,15 @@ simulate_div_tree_cpp <- function(pars, model, max_t, max_N, max_tries, link = 0
 #'   \code{\link{augment_trees}}).
 #' @param model Integer vector \code{c(use_N, use_P, use_E)}.
 #' @param link Link function: \code{0} = linear, \code{1} = exponential.
+#' @param rho Sampling fraction (0, 1]. Default \code{1} (complete sampling).
 #' @return A named list:
 #' \describe{
 #'   \item{logf}{Numeric vector of \code{log p(obs, z_i | theta)}.}
 #'   \item{logg}{Numeric vector of \code{log q(z_i | obs, theta)}.}
 #' }
 #' @keywords internal
-eval_logf <- function(pars, trees, model = as.integer( c(0, 0, 0)), link = 0L) {
-    .Call('_emphasis_eval_logf_cpp', PACKAGE = 'emphasis', pars, trees, model, link)
+eval_logf <- function(pars, trees, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0) {
+    .Call('_emphasis_eval_logf_cpp', PACKAGE = 'emphasis', pars, trees, model, link, rho)
 }
 
 #' Draw augmented trees via importance sampling
@@ -64,6 +65,7 @@ eval_logf <- function(pars, trees, model = as.integer( c(0, 0, 0)), link = 0L) {
 #' @param num_threads Threads for parallel augmentation.
 #' @param model Integer vector \code{c(use_N, use_P, use_E)}.
 #' @param link Link function: \code{0} = linear, \code{1} = exponential.
+#' @param rho Sampling fraction (0, 1]. Default \code{1} (complete sampling).
 #' @return A named list:
 #' \describe{
 #'   \item{trees}{List of augmented-tree data frames.}
@@ -76,8 +78,8 @@ eval_logf <- function(pars, trees, model = as.integer( c(0, 0, 0)), link = 0L) {
 #'   \item{time}{Elapsed time (ms).}
 #' }
 #' @keywords internal
-augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model = as.integer( c(0, 0, 0)), link = 0L) {
-    .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link)
+augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0) {
+    .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link, rho)
 }
 
 #' function to perform one step of the E-M algorithm
@@ -96,6 +98,7 @@ augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda
 #' @param copy_trees if set to true, the trees generated are returned as well
 #' @param model integer vector of length 3: c(use_N, use_P, use_E)
 #' @param link link function: 0 = linear (max(0,...)), 1 = exponential
+#' @param rho Sampling fraction (0, 1]. Default \code{1} (complete sampling).
 #' @param rconditional R function that evaluates the GAM function.
 #' @return a list with the following components:
 #' \describe{
@@ -113,8 +116,8 @@ augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda
 #'  \item{logg}{vector of log q(z_i | obs, theta) for each valid tree}
 #' }
 #' @keywords internal
-em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model = as.integer( c(0, 0, 0)), link = 0L, rconditional = NULL) {
-    .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model, link, rconditional)
+em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, rconditional = NULL) {
+    .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model, link, rho, rconditional)
 }
 
 #' function to perform one step of the E-M algorithm
@@ -130,6 +133,7 @@ em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, 
 #' @param num_threads number of threads used.
 #' @param model integer vector of length 3: c(use_N, use_P, use_E)
 #' @param link link function: 0 = linear (max(0,...)), 1 = exponential
+#' @param rho Sampling fraction (0, 1]. Default \code{1} (complete sampling).
 #' @param rconditional R function that evaluates the GAM function.
 #' @return list with the following entries:
 #' \describe{
@@ -138,7 +142,7 @@ em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, 
 #'  \item{time}{used computation time}
 #' }
 #' @keywords internal
-m_cpp <- function(e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, model = as.integer( c(0, 0, 0)), link = 0L, rconditional = NULL) {
-    .Call('_emphasis_rcpp_mcm', PACKAGE = 'emphasis', e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, model, link, rconditional)
+m_cpp <- function(e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, rconditional = NULL) {
+    .Call('_emphasis_rcpp_mcm', PACKAGE = 'emphasis', e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, model, link, rho, rconditional)
 }
 

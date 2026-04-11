@@ -16,7 +16,8 @@ estimate_likelihood_surface(
   num_threads = 1L,
   bias_correct = FALSE,
   verbose = TRUE,
-  max_time = NULL
+  max_time = NULL,
+  rho = 1
 )
 }
 \arguments{
@@ -31,7 +32,7 @@ accepted by \code{\link{estimate_rates}}.}
 
 \item{sample_size}{Number of augmented trees per grid point (default 200).}
 
-\item{link}{\code{"linear"} or \code{"exponential"}.}
+\item{link}{\code{"linear"}, \code{"exponential"}, or \code{"gaussian"}.}
 
 \item{max_missing}{Maximum missing lineages per augmentation (default 1e4).}
 
@@ -47,6 +48,8 @@ bias-corrected IS estimator (truncated at order \code{K}).
 Default \code{FALSE} uses the standard log-mean-exp estimator.}
 
 \item{verbose}{Print progress (default \code{TRUE}).}
+
+\item{rho}{Sampling fraction (0, 1]. Default \code{1} (complete sampling).}
 }
 \value{
 A data frame with columns for each parameter plus \code{fhat}

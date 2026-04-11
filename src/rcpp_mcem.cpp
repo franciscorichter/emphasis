@@ -68,10 +68,11 @@ List rcpp_mcem(const std::vector<double>& brts,
                bool copy_trees,
                Rcpp::IntegerVector model = Rcpp::IntegerVector::create(0, 0, 0),
                int link = 0,
+               double rho = 1.0,
                Nullable<Function> rconditional = R_NilValue)
 {
   std::vector<int> model_bin = {model[0], model[1], model[2]};
-  auto mdl = emphasis::Model(lower_bound, upper_bound, model_bin, link);
+  auto mdl = emphasis::Model(lower_bound, upper_bound, model_bin, link, rho);
 
   emphasis::conditional_fun_t conditional{};
   if (rconditional.isNotNull()) {

@@ -14,6 +14,7 @@ m_cpp(
   num_threads,
   model = as.integer(c(0, 0, 0)),
   link = 0L,
+  rho = 1,
   rconditional = NULL
 )
 }
@@ -38,6 +39,8 @@ be equal in length to the vector of init_pars}
 \item{model}{integer vector of length 3: c(use_N, use_P, use_E)}
 
 \item{link}{link function: 0 = linear (max(0,...)), 1 = exponential}
+
+\item{rho}{Sampling fraction (0, 1]. Default \code{1} (complete sampling).}
 
 \item{rconditional}{R function that evaluates the GAM function.}
 }

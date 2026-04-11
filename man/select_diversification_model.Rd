@@ -24,8 +24,8 @@ select_diversification_model(
 \item{upper_bound}{Length-4 numeric vector of upper parameter bounds.
 Default \code{c(3, 0.5, 1, 0.5)}.}
 
-\item{link}{Link function: \code{"linear"} (default) or
-\code{"exponential"}.}
+\item{link}{Link function: \code{"linear"} (default),
+\code{"exponential"}, or \code{"gaussian"}.}
 
 \item{control}{Named list with optional sub-lists \code{cem} and
 \code{mcem} to override tuning defaults for each stage. Bounds and
@@ -51,7 +51,7 @@ A list of class \code{"model_selection"} with:
 \description{
 Fits three 4-parameter models -- diversity dependence (DD, covariate N),
 phylogenetic diversity dependence (PD, covariate P), and evolutionary
-pendant (EP, covariate E) -- to the same tree using a two-stage
+isolation time (ID, covariate I) -- to the same tree using a two-stage
 MCDE -> MCEM workflow, then ranks them by AIC and computes AIC weights.
 }
 \details{

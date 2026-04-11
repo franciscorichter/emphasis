@@ -16,7 +16,8 @@ simulate_tree(
   max_missing = 1e+04,
   max_lambda = 500,
   maxN = NULL,
-  num_threads = 1L
+  num_threads = 1L,
+  rho = 1
 )
 }
 \arguments{
@@ -59,6 +60,11 @@ Default \code{500}.}
 to \code{max(2000, 200 * n_trees)}.}
 
 \item{num_threads}{Threads for parallel augmentation. Default \code{1L}.}
+
+\item{rho}{Sampling fraction: proportion of extant species observed
+(0, 1]. Default \code{1} (complete sampling). When \code{rho < 1},
+forward simulation randomly drops extant tips; augmentation adds
+unsampled extant lineages.}
 }
 \value{
 For forward simulation (single \code{pars} vector), a named list:

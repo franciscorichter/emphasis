@@ -14,7 +14,8 @@
                       conditional = NULL,
                       model = c(0L, 0L, 0L),
                       link = 0L,
-                      max_time = NULL) {
+                      max_time = NULL,
+                      rho = 1.0) {
   if (inherits(brts, "phylo")) {
     brts <- sort(ape::branching.times(brts), decreasing = TRUE)
   }
@@ -54,6 +55,7 @@
              copy_trees = FALSE,
              model = as.integer(model),
              link = as.integer(link),
+             rho = as.numeric(rho),
              rconditional = conditional),
       error = function(e) NULL
     )

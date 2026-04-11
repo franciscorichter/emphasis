@@ -21,7 +21,7 @@
 #'   \code{\link{simulate_tree}} result.
 #' @param model Model specification: \code{"cr"}, \code{"dd"}, \code{"pd"},
 #'   \code{"ep"}, a formula, or a binary vector.
-#' @param link \code{"linear"} (default) or \code{"exponential"}.
+#' @param link \code{"linear"} (default), \code{"exponential"}, or \code{"gaussian"}.
 #' @param stages Character vector of stages to run.  Default
 #'   \code{c("bounds", "gam", "cem", "mcem")}.  Remove stages to skip them,
 #'   e.g. \code{c("bounds", "gam")} for a quick exploratory fit.
@@ -64,7 +64,7 @@ emphasis_pipeline <- function(tree,
   model_bin <- .resolve_model(model)
   model_str <- .model_label(model_bin)
   link_int  <- .resolve_link(link)
-  link_str  <- if (link_int == 0L) "linear" else "exponential"
+  link_str  <- c("linear", "exponential", "gaussian")[link_int + 1L]
   brts      <- .extract_brts(tree)
   n_brts    <- length(brts)
 
@@ -121,7 +121,8 @@ emphasis_pipeline <- function(tree,
                   num_threads = num_threads,
                   margin  = control$bounds$margin %||% 0.5,
                   n_test  = control$bounds$n_test %||% 5L,
-                  verbose = verbose),
+                  verbose = verbose,
+                  rho     = control$rho %||% 1.0),
       error = function(e) {
         if (verbose) cat(sprintf("  bounds FAILED: %s\n", e$message))
         NULL

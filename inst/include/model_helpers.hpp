@@ -45,8 +45,9 @@
 #define EMPHASIS_LOGSUM_UPPER_TRESHOLD 10e+20
 #endif
 
-#define t_ext_tip 10e10     /* t_ext for present nodes */
-#define t_ext_extinct 0.0   /* t_ext for extinction nodes */
+#define t_ext_tip 10e10         /* t_ext for present nodes (observed tips) */
+#define t_ext_extinct 0.0       /* t_ext for extinction nodes */
+#define t_ext_unsampled 5e10    /* t_ext for unsampled extant species (rho < 1) */
 
 
 namespace emphasis {
@@ -103,7 +104,8 @@ namespace emphasis {
 
     inline bool is_extinction(const node_t& node) { return node.t_ext == t_ext_extinct; }
     inline bool is_tip(const node_t& node) { return node.t_ext == t_ext_tip; }
-    inline bool is_missing(const node_t& node) { return !(is_extinction(node) || is_tip(node)); }
+    inline bool is_unsampled(const node_t& node) { return node.t_ext == t_ext_unsampled; }
+    inline bool is_missing(const node_t& node) { return !(is_extinction(node) || is_tip(node) || is_unsampled(node)); }
 
 
     struct node_less

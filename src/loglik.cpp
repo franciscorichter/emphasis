@@ -71,10 +71,11 @@ emphasis::tree_t pack(const Rcpp::DataFrame& r_tree) {
 Rcpp::List eval_logf_cpp(const std::vector<double>& pars,
                          const Rcpp::List& trees,
                          Rcpp::IntegerVector model = Rcpp::IntegerVector::create(0, 0, 0),
-                         int link = 0) {
+                         int link = 0,
+                         double rho = 1.0) {
   std::vector<int> model_bin = {model[0], model[1], model[2]};
   emphasis::param_t lb8(8, -1e6), ub8(8, 1e6);
-  auto mdl = emphasis::Model(lb8, ub8, model_bin, link);
+  auto mdl = emphasis::Model(lb8, ub8, model_bin, link, rho);
 
   std::vector<double> logf(trees.size());
   std::vector<double> logg(trees.size());

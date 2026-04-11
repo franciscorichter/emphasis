@@ -12,7 +12,8 @@ augment_trees(
   max_lambda,
   num_threads,
   model = as.integer(c(0, 0, 0)),
-  link = 0L
+  link = 0L,
+  rho = 1
 )
 }
 \arguments{
@@ -37,6 +38,9 @@ decreasing).}
 
 \item{link}{Link function: \code{0} = linear (\code{max(0,eta)}),
 \code{1} = exponential. Default \code{0}.}
+
+\item{rho}{Sampling fraction (0, 1]. Default \code{1} (complete sampling).
+When \code{rho < 1}, augmented trees may include unsampled extant lineages.}
 }
 \value{
 A named list:

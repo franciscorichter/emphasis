@@ -12,7 +12,7 @@
 #'   \code{"cr"} \tab \code{c(0,0,0)} constant rate\cr
 #'   \code{"dd"} \tab \code{c(1,0,0)} diversity dependence\cr
 #'   \code{"pd"} \tab \code{c(0,1,0)} phylogenetic diversity dependence\cr
-#'   \code{"ep"} \tab \code{c(0,0,1)} evolutionary pendant\cr
+#'   \code{"ep"} \tab \code{c(0,0,1)} isolation time\cr
 #' }
 #' Mixed models (e.g. \code{c(1,1,0)}) are fully supported.
 #'
@@ -75,8 +75,8 @@
 #'   Default \code{TRUE}.
 #' @param n_trees Number of augmented trees to draw (augmentation only).
 #'   Default \code{1L}.
-#' @param link Link function: \code{"linear"} (default) or
-#'   \code{"exponential"}.
+#' @param link Link function: \code{"linear"} (default),
+#'   \code{"exponential"}, or \code{"gaussian"}.
 #' @param max_missing Maximum extinct lineages per augmented tree.
 #'   Default \code{1e4}.
 #' @param max_lambda Maximum speciation rate (thinning bound) for augmentation.
@@ -108,6 +108,7 @@
 #' augN$log_q          # vector of length 100
 #' augN$trees[[1]]     # first augmented phylo
 #' }
+#' @importFrom stats rbinom
 #' @export
 simulate_tree <- function(tree        = NULL,
                           pars,
@@ -121,7 +122,8 @@ simulate_tree <- function(tree        = NULL,
                           max_missing = 1e4,
                           max_lambda  = 500,
                           maxN        = NULL,
-                          num_threads = 1L) {
+                          num_threads = 1L,
+                          rho         = 1.0) {
 
   model_bin <- .resolve_model(model)
   link_int  <- .resolve_link(link)
@@ -137,7 +139,7 @@ simulate_tree <- function(tree        = NULL,
     do_sim <- function(i)
       simulate_tree(tree, pars[i, ], max_t, model_bin,
                     max_lin, max_tries, useDDD, n_trees, link_int,
-                    max_missing, max_lambda, maxN, 1L)
+                    max_missing, max_lambda, maxN, 1L, rho)
     if (num_threads > 1L && .Platform$OS.type == "unix") {
       sims <- parallel::mclapply(seq_len(nrow(pars)), do_sim,
                                  mc.cores = num_threads)
@@ -160,7 +162,7 @@ simulate_tree <- function(tree        = NULL,
     return(.sim_tree_conditional(tree, pars, model_bin,
                                  as.integer(n_trees), useDDD, link_int,
                                  max_missing, max_lambda, maxN,
-                                 as.integer(num_threads)))
+                                 as.integer(num_threads), rho = rho))
   }
 
   # ---------------------------------------------------------------------- #
@@ -188,17 +190,30 @@ simulate_tree <- function(tree        = NULL,
 
   survival_prob <- if (raw$status == "done") 1.0 / n_attempts else 0.0
 
+  # Apply incomplete sampling: randomly drop (1-rho) of extant tips
+  L <- if (raw$status == "done") raw$Ltable else NULL
+  if (!is.null(L) && rho < 1.0) {
+    extant_idx <- which(L[, 4] == -1)
+    # Must keep at least 2 tips for a valid tree
+    n_drop <- rbinom(1, length(extant_idx), 1.0 - rho)
+    n_drop <- min(n_drop, length(extant_idx) - 2L)
+    if (n_drop > 0L) {
+      drop <- sample(extant_idx, n_drop)
+      L[drop, 4] <- max_t  # mark as "extinct at present" = removed
+    }
+  }
+
   tes <- tas <- NULL
-  if (raw$status == "done" && useDDD) {
-    tes <- tryCatch(DDD::L2phylo(raw$Ltable, dropextinct = TRUE),
+  if (!is.null(L) && useDDD) {
+    tes <- tryCatch(DDD::L2phylo(L, dropextinct = TRUE),
                     error = function(e) NULL)
-    tas <- tryCatch(DDD::L2phylo(raw$Ltable, dropextinct = FALSE),
+    tas <- tryCatch(DDD::L2phylo(L, dropextinct = FALSE),
                     error = function(e) NULL)
   }
 
   list(tes           = tes,
        tas           = tas,
-       L             = if (raw$status == "done") raw$Ltable else NULL,
+       L             = L,
        status        = raw$status,
        survival_prob = survival_prob)
 }
@@ -211,8 +226,8 @@ simulate_tree <- function(tree        = NULL,
 #' @keywords internal
 .resolve_link <- function(link) {
   if (is.numeric(link)) return(as.integer(link))
-  link <- match.arg(link, c("linear", "exponential"))
-  switch(link, linear = 0L, exponential = 1L)
+  link <- match.arg(link, c("linear", "exponential", "gaussian"))
+  switch(link, linear = 0L, exponential = 1L, gaussian = 2L)
 }
 
 #' @keywords internal
@@ -290,7 +305,8 @@ simulate_tree <- function(tree        = NULL,
 .sim_tree_conditional <- function(tree, pars, model_bin,
                                   n_trees = 1L, useDDD = TRUE, link = 0L,
                                   max_missing = 1e4, max_lambda = 500,
-                                  maxN = NULL, num_threads = 1L) {
+                                  maxN = NULL, num_threads = 1L,
+                                  rho = 1.0) {
   brts  <- .extract_brts(tree)
   max_t <- brts[1L]
 
@@ -303,7 +319,8 @@ simulate_tree <- function(tree        = NULL,
     .augment_tree_internal(tree, pars = pars, model_bin = model_bin,
                            sample_size = n_trees,
                            max_missing = max_missing, max_lambda = max_lambda,
-                           maxN = maxN, num_threads = num_threads, link = link),
+                           maxN = maxN, num_threads = num_threads, link = link,
+                           rho = rho),
     error = function(e) NULL
   )
 
@@ -358,7 +375,8 @@ simulate_tree <- function(tree        = NULL,
 .aug_to_Ltable <- function(df, max_t, brts, L_extant) {
   if (is.null(L_extant)) return(NULL)
 
-  t_ext_tip <- 1e11
+  t_ext_tip      <- 1e11
+  t_ext_unsampled <- 5e10
   aug <- df[df$t_ext != 0.0 &
               df$parent_id != -1L &
               df$t_ext < t_ext_tip, , drop = FALSE]
@@ -385,8 +403,10 @@ simulate_tree <- function(tree        = NULL,
     lbl      <- if (p_lbl < 0L) -next_lbl else next_lbl
     next_lbl <- next_lbl + 1L
 
-    new_rows[k, ] <- c(max_t - aug$brts[k], p_lbl, lbl,
-                       max_t - aug$t_ext[k])
+    # Unsampled extant species (t_ext == t_ext_unsampled) are alive at present:
+    # set L-table extinction time to -1 (DDD convention for extant tips)
+    ext_k <- if (aug$t_ext[k] == t_ext_unsampled) -1 else max_t - aug$t_ext[k]
+    new_rows[k, ] <- c(max_t - aug$brts[k], p_lbl, lbl, ext_k)
     aug_labels[as.character(aug$id[k])] <- lbl
   }
 
@@ -409,7 +429,8 @@ simulate_tree <- function(tree        = NULL,
                                    max_lambda  = 500,
                                    maxN        = NULL,
                                    num_threads = 1L,
-                                   link        = 0L) {
+                                   link        = 0L,
+                                   rho         = 1.0) {
   brts  <- .extract_brts(tree)
   pars8 <- .expand_pars(pars, model_bin)
   if (is.null(maxN)) maxN <- max(2000L, 200L * as.integer(sample_size))
@@ -422,6 +443,7 @@ simulate_tree <- function(tree        = NULL,
     max_lambda  = as.numeric(max_lambda),
     num_threads = as.integer(num_threads),
     model       = as.integer(model_bin),
-    link        = as.integer(link)
+    link        = as.integer(link),
+    rho         = as.numeric(rho)
   )
 }

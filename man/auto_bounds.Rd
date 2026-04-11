@@ -14,7 +14,8 @@ auto_bounds(
   tip_range = c(0.1, 10),
   train_surv_gam = TRUE,
   num_threads = 1L,
-  verbose = TRUE
+  verbose = TRUE,
+  rho = 1
 )
 }
 \arguments{
@@ -23,7 +24,7 @@ auto_bounds(
 
 \item{model}{Model specification: \code{"cr"}, \code{"dd"}, etc.}
 
-\item{link}{\code{"linear"} or \code{"exponential"}.}
+\item{link}{\code{"linear"}, \code{"exponential"}, or \code{"gaussian"}.}
 
 \item{n_test}{Number of replicate simulations per candidate point
 to assess feasibility (default 5).}
@@ -42,6 +43,9 @@ on the detected region.}
 \item{num_threads}{Parallel threads for batch simulation (default 1).}
 
 \item{verbose}{Print progress (default \code{TRUE}).}
+
+\item{rho}{Sampling fraction (0, 1]. Default \code{1} (complete sampling).
+Passed through to IS feasibility diagnostics.}
 }
 \value{
 A list with components:

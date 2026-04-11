@@ -26,7 +26,8 @@ emphasis_cem(
   model = c(0L, 0L, 0L),
   link = 0L,
   cond_fun = NULL,
-  max_time = NULL
+  max_time = NULL,
+  rho = 1
 )
 }
 \arguments{
@@ -74,6 +75,8 @@ Default \code{0.01} (1\%).  SD will not decay below this floor.}
 \item{model}{Length-3 binary integer vector \code{c(use_N, use_P, use_E)}.}
 
 \item{link}{Integer link code: \code{0} = linear, \code{1} = exponential.}
+
+\item{rho}{Sampling fraction (0, 1]. Default \code{1} (complete sampling).}
 }
 \value{
 A list:

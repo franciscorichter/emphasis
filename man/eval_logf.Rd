@@ -7,7 +7,8 @@ eval_logf(
   pars,
   trees,
   model = as.integer(c(0, 0, 0)),
-  link = 0L
+  link = 0L,
+  rho = 1
 )
 }
 \arguments{
@@ -21,6 +22,8 @@ eval_logf(
 
 \item{link}{Link function: \code{0} = linear, \code{1} = exponential.
 Default \code{0}.}
+
+\item{rho}{Sampling fraction (0, 1]. Default \code{1} (complete sampling).}
 }
 \value{
 A named list:

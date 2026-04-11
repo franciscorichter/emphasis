@@ -85,7 +85,7 @@ struct general_div {
   size_t max_N, N;
   std::array<double, 8> pars;   // beta_0..beta_E, gamma_0..gamma_E
   std::array<int, 3>    model;  // {use_N, use_P, use_E}
-  int    link;                  // 0 = linear (max(0,...)), 1 = exponential
+  int    link;                  // 0 = linear, 1 = exponential, 2 = gaussian
 
   std::vector<gbranch> ltable;
   breaks break_type;
@@ -99,20 +99,34 @@ struct general_div {
     : max_t(total_time), t(0.f), max_N(maxN), N(0),
       pars(p), model(m), link(link_type), break_type(none), rndgen() {}
 
-  // Apply link function to linear predictor
+  // Apply link function to linear predictor (linear and exponential only)
   double apply_link(double eta) const {
     if (link == 1) return std::exp(eta);
     return eta < 0.0 ? 0.0 : eta;
   }
 
+  // Gaussian link: rate = intercept * exp(-(eta_cov - 1)^2 / 2)
+  double gaussian_rate(double intercept, double eta_cov) const {
+    const double d = eta_cov - 1.0;
+    return intercept * std::exp(-0.5 * d * d);
+  }
+
   // Per-lineage speciation rate
   double compute_lambda(double Nval, double Pval, double Eval) const {
+    if (link == 2) {
+      double eta_cov = pars[1] * Nval + pars[2] * Pval + pars[3] * Eval;
+      return gaussian_rate(pars[0], eta_cov);
+    }
     double eta = pars[0] + pars[1] * Nval + pars[2] * Pval + pars[3] * Eval;
     return apply_link(eta);
   }
 
   // Per-lineage extinction rate
   double compute_mu(double Nval, double Pval, double Eval) const {
+    if (link == 2) {
+      double eta_cov = pars[5] * Nval + pars[6] * Pval + pars[7] * Eval;
+      return gaussian_rate(pars[4], eta_cov);
+    }
     double eta = pars[4] + pars[5] * Nval + pars[6] * Pval + pars[7] * Eval;
     return apply_link(eta);
   }

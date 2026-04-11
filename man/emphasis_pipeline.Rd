@@ -20,7 +20,7 @@ emphasis_pipeline(
 \item{model}{Model specification: \code{"cr"}, \code{"dd"}, \code{"pd"},
 \code{"ep"}, a formula, or a binary vector.}
 
-\item{link}{\code{"linear"} (default) or \code{"exponential"}.}
+\item{link}{\code{"linear"} (default), \code{"exponential"}, or \code{"gaussian"}.}
 
 \item{stages}{Character vector of stages to run.  Default
 \code{c("bounds", "gam", "cem", "mcem")}.  Remove stages to skip them,

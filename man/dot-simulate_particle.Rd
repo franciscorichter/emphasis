@@ -13,7 +13,8 @@
   maxN,
   max_missing,
   max_lambda,
-  num_threads
+  num_threads,
+  rho = 1
 )
 }
 \description{

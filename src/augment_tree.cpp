@@ -137,6 +137,26 @@ namespace emphasis {
     }
 
 
+    // Insert an unsampled extant species: speciation node only (no extinction),
+    // marked with t_ext_unsampled so sampling_prob can identify it.
+    // Lineage stays alive from t_spec to T (increases n for all subsequent nodes).
+    void insert_unsampled_species(double t_spec, tree_t& tree, int id = -1, int parent_id = -1)
+    {
+      auto n_after = [](tree_t::iterator it) {
+        const auto to = detail::is_extinction(*it) ? -1.0 : 1.0;
+        return it->n + to;
+      };
+      tree.reserve(tree.size() + 1);
+      auto first = std::lower_bound(tree.begin(), tree.end(), t_spec, detail::node_less{});
+      auto n = (first != tree.begin()) ? n_after(first - 1) : tree.front().n;
+      first = make_node(tree.emplace(first), t_spec, n, t_ext_unsampled, id, parent_id);
+      // recalculate n for all subsequent nodes (lineage stays alive to T)
+      for (++first; first != tree.end(); ++first) {
+        first->n = n_after(first - 1);
+      }
+    }
+
+
     void do_augment_tree(const param_t& pars, tree_t& tree, const Model& model, int max_missing, double max_lambda, int& next_id)
     {
       double cbt = 0;
@@ -158,7 +178,7 @@ namespace emphasis {
           // calc pd(next_speciation_time)
           double pt = std::max(0.0, model.nh_rate(next_speciation_time, pars, tree)) / lambda_max;
           if (u2 < pt) {
-            double extinction_time = model.extinction_time(next_speciation_time, pars, tree);
+            double ext_time = model.extinction_time(next_speciation_time, pars, tree);
             // find lineages alive at next_speciation_time and pick one as parent
             std::vector<int> alive_ids;
             for (const auto& node : tree) {
@@ -173,11 +193,22 @@ namespace emphasis {
               std::uniform_int_distribution<size_t> uid(0, alive_ids.size() - 1);
               chosen_parent_id = alive_ids[uid(reng)];
             }
-            int new_id = next_id++;
-            insert_species(next_speciation_time, extinction_time, tree, new_id, chosen_parent_id);
-            num_missing_branches++;
-            if (num_missing_branches > max_missing) {
-              throw augmentation_overrun{};
+            if (ext_time >= b) {
+              // Unsampled extant species (rho < 1): insert into tree
+              // so that N(t) is correct for diversity-dependent models.
+              int new_id = next_id++;
+              insert_unsampled_species(next_speciation_time, tree, new_id, chosen_parent_id);
+              num_missing_branches++;
+              if (num_missing_branches > max_missing) {
+                throw augmentation_overrun{};
+              }
+            } else {
+              int new_id = next_id++;
+              insert_species(next_speciation_time, ext_time, tree, new_id, chosen_parent_id);
+              num_missing_branches++;
+              if (num_missing_branches > max_missing) {
+                throw augmentation_overrun{};
+              }
             }
           }
         }
@@ -211,7 +242,7 @@ namespace emphasis {
           double u2 = std::uniform_real_distribution<>()(reng);
           double pt = std::max(0.0, model.nh_rate(next_speciation_time, pars, tree)) / lambda_max;
           if (u2 < pt) {
-            double extinction_time = model.extinction_time(next_speciation_time, pars, tree);
+            double ext_time = model.extinction_time(next_speciation_time, pars, tree);
             // find lineages alive at next_speciation_time and pick one as parent
             std::vector<int> alive_ids;
             for (const auto& node : tree) {
@@ -226,13 +257,25 @@ namespace emphasis {
               std::uniform_int_distribution<size_t> uid(0, alive_ids.size() - 1);
               chosen_parent_id = alive_ids[uid(reng)];
             }
-            int new_id = next_id++;
-            insert_species(next_speciation_time, extinction_time, tree, new_id, chosen_parent_id);
-            num_missing_branches++;
-            if (num_missing_branches > max_missing) {
-              throw augmentation_overrun{};
+            if (ext_time >= b) {
+              // Unsampled extant species (rho < 1): insert into tree
+              // so that N(t) is correct for diversity-dependent models.
+              int new_id = next_id++;
+              insert_unsampled_species(next_speciation_time, tree, new_id, chosen_parent_id);
+              num_missing_branches++;
+              if (num_missing_branches > max_missing) {
+                throw augmentation_overrun{};
+              }
+              dirty = true;   // tree changed
+            } else {
+              int new_id = next_id++;
+              insert_species(next_speciation_time, ext_time, tree, new_id, chosen_parent_id);
+              num_missing_branches++;
+              if (num_missing_branches > max_missing) {
+                throw augmentation_overrun{};
+              }
+              dirty = true;   // tree changed
             }
-            dirty = true;   // tree changed
           }
         }
         cbt = std::min(next_speciation_time, next_bt);

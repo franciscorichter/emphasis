@@ -132,7 +132,7 @@
 #' @keywords internal
 .simulate_particle <- function(brts, pars8, model_bin, link,
                                sample_size, maxN, max_missing, max_lambda,
-                               num_threads) {
+                               num_threads, rho = 1.0) {
   maxN_int <- if (is.null(maxN) || is.na(maxN))
     max(2000L, 200L * as.integer(sample_size)) else as.integer(maxN)
   tryCatch(
@@ -145,7 +145,8 @@
       max_lambda  = as.numeric(max_lambda),
       num_threads = as.integer(num_threads),
       model       = as.integer(model_bin),
-      link        = as.integer(link)
+      link        = as.integer(link),
+      rho         = as.numeric(rho)
     ),
     error = function(e) NULL
   )
@@ -231,7 +232,8 @@
     raw <- .simulate_particle(
       input$brts, as.numeric(pop$pars[i, ]), input$model, input$link,
       input$sample_size, input$maxN,
-      input$max_missing, input$max_lambda, cpp_threads
+      input$max_missing, input$max_lambda, cpp_threads,
+      rho = input$rho
     )
     if (!is.null(raw) && length(raw$logf) > 0L && !anyNA(raw$logf)) {
       fhat_i  <- .is_fhat(raw$logf, raw$logg,
@@ -316,7 +318,8 @@
     raw <- .simulate_particle(
       input$brts, as.numeric(pop$pars[i, ]), input$model, input$link,
       input$sample_size, input$maxN,
-      input$max_missing, input$max_lambda, num_threads
+      input$max_missing, input$max_lambda, num_threads,
+      rho = input$rho
     )
     if (!is.null(raw) && length(raw$logf) > 0L && !anyNA(raw$logf)) {
       pop$log_q[[i]] <- raw$logg
@@ -343,7 +346,8 @@
         pars  = as.numeric(pop$pars[j, ]),
         trees = all_trees,
         model = as.integer(input$model),
-        link  = as.integer(input$link)
+        link  = as.integer(input$link),
+        rho   = as.numeric(input$rho)
       ),
       error = function(e) NULL
     )
@@ -542,6 +546,7 @@
 #' @param num_threads Parallel threads. Default \code{1}.
 #' @param model Length-3 binary integer vector \code{c(use_N, use_P, use_E)}.
 #' @param link Integer link code: \code{0} = linear, \code{1} = exponential.
+#' @param rho Sampling fraction (0, 1]. Default \code{1} (complete sampling).
 #' @return A list:
 #'   \describe{
 #'     \item{\code{best_loglik}}{fhat of best particle per completed iteration
@@ -580,7 +585,8 @@ emphasis_cem <- function(brts,
                          model        = c(0L, 0L, 0L),
                          link         = 0L,
                          cond_fun     = NULL,
-                         max_time     = NULL) {
+                         max_time     = NULL,
+                         rho          = 1.0) {
 
   if (!is.numeric(lower_bound) || !is.numeric(upper_bound))
     stop("lower_bound and upper_bound must be numeric vectors.")
@@ -610,7 +616,8 @@ emphasis_cem <- function(brts,
     shared_trees = shared_trees,
     bias_correct = bias_correct,
     model        = model,
-    link         = link
+    link         = link,
+    rho          = rho
   )
 
   n_pars      <- length(lower_bound)
@@ -805,7 +812,8 @@ emphasis_cem <- function(brts,
       maxN        = max(input$maxN, n_final_trees * 5L),
       max_missing = input$max_missing,
       max_lambda  = input$max_lambda,
-      num_threads = num_threads
+      num_threads = num_threads,
+      rho         = input$rho
     )
     if (!is.null(raw_ei) && length(raw_ei$logf) > 0L) {
       fh <- .is_fhat(raw_ei$logf, raw_ei$logg,
@@ -847,7 +855,8 @@ emphasis_cem <- function(brts,
     maxN        = max(input$maxN, n_final_trees * 5L),
     max_missing = input$max_missing,
     max_lambda  = input$max_lambda,
-    num_threads = num_threads
+    num_threads = num_threads,
+    rho         = input$rho
   )
 
   best_IS    <- NULL

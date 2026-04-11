@@ -50,12 +50,13 @@ List rcpp_mce(const std::vector<double>& brts,
               double max_lambda,
               int num_threads,
               Rcpp::IntegerVector model = Rcpp::IntegerVector::create(0, 0, 0),
-              int link = 0)
+              int link = 0,
+              double rho = 1.0)
 {
   std::vector<int> model_bin = {model[0], model[1], model[2]};
   // Bounds are only needed for M-step (nlopt); E-step does not use them.
   std::vector<double> lb8(8, -1e6), ub8(8, 1e6);
-  auto mdl = emphasis::Model(lb8, ub8, model_bin, link);
+  auto mdl = emphasis::Model(lb8, ub8, model_bin, link, rho);
 
   auto E = emphasis::E_step(sample_size,
                             maxN,

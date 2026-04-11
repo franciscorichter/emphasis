@@ -102,7 +102,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
     verbose     = FALSE,
     max_missing = 1e4,
     num_threads = 1L,
-    max_time    = 3600    # seconds; NULL disables
+    max_time    = 3600,   # seconds; NULL disables
+    rho         = 1.0     # sampling fraction (1 = complete sampling)
   )
   if (method == "mcem") {
     c(common, list(
@@ -260,7 +261,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   max_covs <- c(
     N = n_tips,
     P = sum(brts),         # rough upper bound for phylogenetic diversity
-    E = max_t              # crown age (max pendant edge)
+    E = max_t              # crown age (max isolation time)
   )
 
   n_pars   <- length(init_pars)
@@ -365,7 +366,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       conditional = cond_fun,
       model       = model,
       link        = link,
-      max_time    = ctrl$max_time
+      max_time    = ctrl$max_time,
+      rho         = ctrl$rho
     ),
     dynamic_recycle = stop("'dynamic_recycle' sampling not yet implemented."),
     dynamic_mixed   = stop("'dynamic_mixed' sampling not yet implemented."),
@@ -405,7 +407,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
     model        = model,
     link         = link,
     cond_fun     = cond_fun,
-    max_time     = ctrl$max_time
+    max_time     = ctrl$max_time,
+    rho          = ctrl$rho
   )
   if (identical(raw$converged, "all_failed"))
     warning("CEM failed: all particles were rejected at every attempt. ",
@@ -469,13 +472,14 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
     pars_mat    = pars_grid,
     model       = model_bin,
     sample_size = as.integer(ctrl$sample_size),
-    link        = if (link_int == 0L) "linear" else "exponential",
+    link        = c("linear", "exponential", "gaussian")[link_int + 1L],
     max_missing = ctrl$max_missing,
     max_lambda  = ctrl$max_lambda,
     maxN        = ctrl$maxN,
     num_threads = ctrl$num_threads,
     verbose     = ctrl$verbose,
-    max_time    = ctrl$max_time
+    max_time    = ctrl$max_time,
+    rho         = ctrl$rho
   )
 
   # Apply conditioning correction before fitting GAM
@@ -583,7 +587,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'     \item{\code{verbose}}{Print progress messages. Default \code{FALSE}.}
 #'   }
 #' @param link Link function for rate computation: \code{"linear"} (default)
-#'   uses \code{max(0, eta)}; \code{"exponential"} uses \code{exp(eta)}.
+#'   uses \code{max(0, eta)}; \code{"exponential"} uses \code{exp(eta)};
+#'   \code{"gaussian"} uses \code{beta_0 * exp(-(eta_cov - 1)^2 / 2)}.
 #' @param cond A GAM object from \code{\link{train_GAM}} for conditioning on
 #'   survival, or \code{NULL} (default, no conditioning). When provided, the
 #'   log-likelihood is conditioned: \eqn{\ell_{\rm cond} = \ell -
@@ -709,7 +714,7 @@ estimate_rates <- function(tree,
     cat(sprintf(
       "[estimate_rates] method=%s  model=%s  n_brts=%d  link=%s\n",
       toupper(method), model_str, length(brts),
-      if (link_int == 0L) "linear" else "exponential"
+      c("linear", "exponential", "gaussian")[link_int + 1L]
     ))
     if (method == "cem") {
       ss   <- ctrl$num_trees
@@ -909,7 +914,7 @@ compare_models <- function(...) {
 #'
 #' Fits three 4-parameter models -- diversity dependence (DD, covariate N),
 #' phylogenetic diversity dependence (PD, covariate P), and evolutionary
-#' pendant (EP, covariate E) -- to the same tree using a two-stage
+#' isolation time (ID, covariate I) -- to the same tree using a two-stage
 #' MCDE -> MCEM workflow, then ranks them by AIC and computes AIC weights.
 #'
 #' All three models share the same parameter layout:
@@ -923,8 +928,8 @@ compare_models <- function(...) {
 #'   \code{c(0.1, -0.5, 0, -0.5)}.
 #' @param upper_bound Length-4 numeric vector of upper parameter bounds.
 #'   Default \code{c(3, 0.5, 1, 0.5)}.
-#' @param link Link function: \code{"linear"} (default) or
-#'   \code{"exponential"}.
+#' @param link Link function: \code{"linear"} (default),
+#'   \code{"exponential"}, or \code{"gaussian"}.
 #' @param control Named list with optional sub-lists \code{cem} and
 #'   \code{mcem} to override tuning defaults for each stage. Bounds and
 #'   verbose are taken from the outer arguments; no need to repeat them here.
