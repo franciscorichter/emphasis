@@ -60,7 +60,7 @@ test_that("estimate_rates EP smoke test", {
     lower_bound = c(0.1, -0.5, 0,  -0.5),
     upper_bound = c(2,    0.5, 0.5, 0.5),
     control = list(sample_size = 50, tol = 0.5, burnin = 3))
-  expect_named(fit$pars, c("beta_0", "beta_E", "gamma_0", "gamma_E"))
+  expect_named(fit$pars, c("beta_0", "beta_D", "gamma_0", "gamma_D"))
   expect_true(is.numeric(fit$loglik))
 })
 
@@ -72,6 +72,6 @@ test_that("estimate_rates EP + exponential link smoke test", {
     lower_bound = c(-5, -5, -5, -5),
     upper_bound = c(2, 2, 2, 2),
     control = list(sample_size = 20, tol = 0.5, burnin = 2))
-  expect_named(fit$pars, c("beta_0", "beta_E", "gamma_0", "gamma_E"))
+  expect_named(fit$pars, c("beta_0", "beta_D", "gamma_0", "gamma_D"))
   expect_true(is.numeric(fit$loglik))
 })

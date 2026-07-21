@@ -40,8 +40,6 @@ be equal in length to the vector of init_pars}
 
 \item{link}{link function: 0 = linear (max(0,...)), 1 = exponential}
 
-\item{rho}{Sampling fraction (0, 1]. Default \code{1} (complete sampling).}
-
 \item{rconditional}{R function that evaluates the GAM function.}
 }
 \value{

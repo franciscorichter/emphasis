@@ -130,6 +130,12 @@ namespace emphasis {
     }
   
     const double max_log_w = *std::max_element(E.weights.cbegin(), E.weights.cend());
+    // NOTE: calc_sum_w has a deliberate side-effect — it OVERWRITES each
+    // E.weights[i] in place, converting it from a LOG weight (log w_i, as
+    // stored during augmentation) to a LINEAR weight exp(log w_i - max_log_w).
+    // After this call E.weights holds linear (max-scaled) weights, which is
+    // exactly what the M-step objective expects. The M-step maximizer is
+    // invariant to the omitted exp(-max_log_w) and normalization factors.
     double sum_w = calc_sum_w(E.weights.begin(), E.weights.end(), max_log_w);
     // Denominator includes zero-weight trees (completed augmentations with
     // w=0 due to lambda=0).  Overrun/lambda rejections are excluded: those

@@ -1,20 +1,21 @@
 //
 //  general_tree.hpp
 //
-//  General diversification model with optional N, P, E dependence.
+//  General diversification model with optional N, M, D dependence.
+//
+//  Orthogonal covariate basis:
+//    N(t)     = number of alive lineages
+//    M(t)=P/N = mean pendant age, P(t) = sum of pendant lengths = N*t - sum(tip_start)
+//    D(s,t)   = E(s,t) - M(t),  E(s,t) = t - tip_start(s)   (Sum_s D = 0)
 //
 //  Rates:
-//    lambda(s,t) = max(0, beta_0  + beta_N  * N(t) + beta_P  * P(t) + beta_E  * E(s,t))
-//    mu(s,t)     = max(0, gamma_0 + gamma_N * N(t) + gamma_P * P(t) + gamma_E * E(s,t))
+//    lambda(s,t) = max(0, beta_0  + beta_N  * N + beta_M  * M + beta_D  * D)
+//    mu(s,t)     = max(0, gamma_0 + gamma_N * N + gamma_M * M + gamma_D * D)
 //
-//  where E(s,t) = t - tip_start(s) is the current pendant edge length of lineage s,
-//  P(t) = sum of pendant lengths of alive lineages = N*t - sum(tip_start),
-//  and the model binary vector selects which covariates are active.
-//
-//  Parameters (always 8, zero-padded for inactive terms):
-//    pars = { beta_0, beta_N, beta_P, beta_E, gamma_0, gamma_N, gamma_P, gamma_E }
+//  Parameters (always 8, zero-padded for inactive terms); slots 2/6 -> M, 3/7 -> D:
+//    pars = { beta_0, beta_N, beta_M, beta_D, gamma_0, gamma_N, gamma_M, gamma_D }
 //  Model:
-//    model = { use_N, use_P, use_E }  (each 0 or 1)
+//    model = { use_N, use_M, use_D }  (each 0 or 1)
 //
 
 #ifndef general_tree_h
@@ -111,23 +112,30 @@ struct general_div {
     return intercept * std::exp(-0.5 * d * d);
   }
 
+  // Orthogonal covariate basis {N, M=P/N, D=E-M}. Inputs are still (N, P, E);
+  // the transform to (M, D) happens here so callers pass raw covariates.
+
   // Per-lineage speciation rate
   double compute_lambda(double Nval, double Pval, double Eval) const {
+    const double M = (Nval > 0.0) ? Pval / Nval : 0.0;
+    const double D = Eval - M;
     if (link == 2) {
-      double eta_cov = pars[1] * Nval + pars[2] * Pval + pars[3] * Eval;
+      double eta_cov = pars[1] * Nval + pars[2] * M + pars[3] * D;
       return gaussian_rate(pars[0], eta_cov);
     }
-    double eta = pars[0] + pars[1] * Nval + pars[2] * Pval + pars[3] * Eval;
+    double eta = pars[0] + pars[1] * Nval + pars[2] * M + pars[3] * D;
     return apply_link(eta);
   }
 
   // Per-lineage extinction rate
   double compute_mu(double Nval, double Pval, double Eval) const {
+    const double M = (Nval > 0.0) ? Pval / Nval : 0.0;
+    const double D = Eval - M;
     if (link == 2) {
-      double eta_cov = pars[5] * Nval + pars[6] * Pval + pars[7] * Eval;
+      double eta_cov = pars[5] * Nval + pars[6] * M + pars[7] * D;
       return gaussian_rate(pars[4], eta_cov);
     }
-    double eta = pars[4] + pars[5] * Nval + pars[6] * Pval + pars[7] * Eval;
+    double eta = pars[4] + pars[5] * Nval + pars[6] * M + pars[7] * D;
     return apply_link(eta);
   }
 
@@ -180,12 +188,15 @@ struct general_div {
         const double mu  = compute_mu   (Nval, Pval, 0.0);
         total_rate = Nval * (lam + mu);
       } else if (ep_exp) {
-        // EP + exponential link: O(1) using factored running sums.
-        // λ(s,t) = exp(β₀+β_N·N+β_P·P+β_E·t) · exp(-β_E·ts_s)
-        // Σ_s λ(s,t) = exp(A_λ+β_E·t) · sum_exp_bE
+        // EP + exponential link, orthogonal basis {N, M=P/N, D=E-M}: O(1) via
+        // factored running sums.  With D = (t - ts_s) - M,
+        //   λ(s,t) = exp(β₀+β_N·N+(β_M-β_D)·M+β_D·t) · exp(-β_D·ts_s)
+        //   Σ_s λ(s,t) = exp(A'_λ + β_D·t) · sum_exp_bE,
+        //   A'_λ = β₀+β_N·N+(β_M-β_D)·M,   M = P/N.
         const double td = static_cast<double>(t);
-        total_rate = std::exp(pars[0] + pars[1]*Nval + pars[2]*Pval + pars[3]*td) * sum_exp_bE
-                   + std::exp(pars[4] + pars[5]*Nval + pars[6]*Pval + pars[7]*td) * sum_exp_gE;
+        const double M = (Nval > 0.0) ? Pval / Nval : 0.0;
+        total_rate = std::exp(pars[0] + pars[1]*Nval + (pars[2]-pars[3])*M + pars[3]*td) * sum_exp_bE
+                   + std::exp(pars[4] + pars[5]*Nval + (pars[6]-pars[7])*M + pars[7]*td) * sum_exp_gE;
       } else {
         // EP + linear link: O(N) per-lineage loop (max(0,·) clipping prevents factoring)
         for (const auto& br : ltable) {

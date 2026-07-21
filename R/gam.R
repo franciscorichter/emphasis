@@ -311,10 +311,15 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     }
   }
 
-  # Phase 3: Random directions
+  # Phase 3: Random directions.
+  # Use a fixed seed for reproducible feasibility directions, but save and
+  # restore the caller's global RNG state so auto_bounds() does not silently
+  # reset the user's random stream mid-analysis.
   n_random <- max(4L, n_pars)
   if (verbose) cat(sprintf("  Phase 3: %d random directions\n", n_random))
-  set.seed(12345L)  # reproducible
+  .ab_old_seed <- if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE))
+    get(".Random.seed", envir = .GlobalEnv) else NULL
+  set.seed(12345L)  # reproducible feasibility directions
   for (k in seq_len(n_random)) {
     direction <- stats::rnorm(n_pars)
     direction <- direction / sqrt(sum(direction^2))
@@ -326,6 +331,13 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
                                n_test, bisect_steps, tip_lo, tip_hi, num_threads)
     if (!is.null(hi_pt)) feasible_pts[[length(feasible_pts) + 1L]] <- hi_pt
     if (!is.null(lo_pt)) feasible_pts[[length(feasible_pts) + 1L]] <- lo_pt
+  }
+  # Restore the caller's RNG state (see note above the Phase 3 seed).
+  if (is.null(.ab_old_seed)) {
+    if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE))
+      rm(".Random.seed", envir = .GlobalEnv)
+  } else {
+    assign(".Random.seed", .ab_old_seed, envir = .GlobalEnv)
   }
 
   # -- Compute bounds as component-wise min/max of all feasible points --
@@ -530,14 +542,14 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   active <- which(model_bin == 1L)
   if (length(active) == 0L) return(list())
 
-  # Typical covariate values at the present for the observed tree:
+  # Typical covariate values at the present for the observed tree (orthogonal
+  # basis {N, M = P/N, D = E - M}):
   #   N: number of tips
-  #   P: total isolation time branch length (sum of isolation times at present)
-  #   E: mean isolation time
-  # For isolation times at the present: each tip's isolation time is
-  # (crown_age - most_recent_branching_time_on_its_path).
-  # A rough estimate: mean isolation time ~ crown_age / n_tips (for balanced trees)
-  # or use the actual branching times.
+  #   M: mean pendant age (= P/N)
+  #   D: focal deviation from the mean; its typical magnitude is the spread of
+  #      pendant ages, ~ mean_pendant as a rough scale.
+  # Pendant ages at the present: for each tip, the time from its most recent
+  # internal node to the present. Approximated from the youngest branching times.
 
   # Isolation times at the present: for each of the n_tips tips,
   # the isolation time is the time from the most recent internal node to the present.
@@ -553,23 +565,23 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   }
 
   result <- list()
-  # Parameter layout: [beta_0, (beta_N), (beta_P), (beta_E), gamma_0, ...]
+  # Parameter layout: [beta_0, (beta_N), (beta_M), (beta_D), gamma_0, ...]
   # Speciation intercept is always index 1
   # Extinction intercept is at 1 + length(active) + 1 = length(active) + 2
   n_lam_pars <- 1L + length(active)
   mu_int_idx <- n_lam_pars + 1L
 
   for (k in seq_along(active)) {
-    cov_type <- active[k]  # 1=N, 2=P, 3=E
+    cov_type <- active[k]  # 1=N, 2=M, 3=D
     coeff_idx    <- 1L + k           # position in lambda block
     mu_coeff_idx <- mu_int_idx + k   # position in mu block
 
     X_obs <- switch(cov_type,
       n_tips,                                  # N
-      n_tips * mean_pendant,                   # P ~ N * mean_E
-      mean_pendant                             # E
+      mean_pendant,                            # M = P/N (mean pendant age)
+      mean_pendant                             # D scale ~ pendant-age spread
     )
-    cov_name <- switch(cov_type, "N", "P", "E")
+    cov_name <- switch(cov_type, "N", "M", "D")
 
     result[[length(result) + 1L]] <- list(
       intercept_idx    = 1L,

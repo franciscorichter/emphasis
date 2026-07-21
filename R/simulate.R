@@ -6,19 +6,24 @@
 #' augmented with stochastically drawn extinct lineages.
 #'
 #' @section Model specification:
-#' The model is specified by a 3-element binary vector
-#' \code{c(use_N, use_P, use_E)}. Named shortcuts:
+#' The model uses the orthogonal covariate basis \{N, M = P/N, D = E - M\},
+#' selected by a 3-element binary vector \code{c(use_N, use_M, use_D)}. Named
+#' shortcuts:
 #' \tabular{ll}{
 #'   \code{"cr"} \tab \code{c(0,0,0)} constant rate\cr
-#'   \code{"dd"} \tab \code{c(1,0,0)} diversity dependence\cr
-#'   \code{"pd"} \tab \code{c(0,1,0)} phylogenetic diversity dependence\cr
-#'   \code{"ep"} \tab \code{c(0,0,1)} isolation time\cr
+#'   \code{"dd"} \tab \code{c(1,0,0)} diversity (N)\cr
+#'   \code{"ma"} \tab \code{c(0,1,0)} mean pendant age / maturity (M)\cr
+#'   \code{"rd"} \tab \code{c(0,0,1)} relative deviation (D)\cr
 #' }
-#' Mixed models (e.g. \code{c(1,1,0)}) are fully supported.
+#' \code{"pd"} and \code{"ep"} are accepted as aliases for \code{"ma"} and
+#' \code{"rd"}. Mixed models (e.g. \code{c(1,1,0)}) and formulas
+#' (e.g. \code{~ N + M}) are fully supported.
 #'
 #' @section Parameter vector:
-#' \preformatted{c(beta_0,  [beta_N],  [beta_P],  [beta_E],
-#'   gamma_0, [gamma_N], [gamma_P], [gamma_E])}
+#' Orthogonal covariate basis \{N, M = P/N, D = E - M\}: slot 2 is the mean-age
+#' coefficient (\code{beta_M}) and slot 3 the deviation coefficient (\code{beta_D}).
+#' \preformatted{c(beta_0,  [beta_N],  [beta_M],  [beta_D],
+#'   gamma_0, [gamma_N], [gamma_M], [gamma_D])}
 #' Only active covariates are included; length = \code{2 + 2 * sum(model)}.
 #'
 #' @section Output -- forward simulation (single):
@@ -70,7 +75,7 @@
 #'   Default \code{1e6}.
 #' @param max_tries Maximum additional attempts after extinction or overflow
 #'   (forward simulation only). Retries are tracked at the R level to
-#'   compute \code{survival_prob}. Default \code{100}.
+#'   compute \code{survival_prob}. Default \code{1}.
 #' @param useDDD Convert L-table to \code{phylo} via \pkg{DDD}.
 #'   Default \code{TRUE}.
 #' @param n_trees Number of augmented trees to draw (augmentation only).
@@ -84,6 +89,11 @@
 #' @param maxN Maximum total augmentation attempts. \code{NULL} (default)
 #'   sets this to \code{max(2000, 200 * n_trees)}.
 #' @param num_threads Threads for parallel augmentation. Default \code{1L}.
+#' @param method Augmentation method: \code{"thinning"} (default, C++
+#'   thinning proposal) or \code{"bdi"} (exact BDI sampler).  The BDI
+#'   sampler draws from the exact conditional distribution under constant
+#'   rates (ESS = S, zero variance) and uses a self-consistent
+#'   backward-forward iteration under diversity dependence.
 #' @examples
 #' \dontrun{
 #' # --- Forward simulation ---
@@ -123,7 +133,8 @@ simulate_tree <- function(tree        = NULL,
                           max_lambda  = 500,
                           maxN        = NULL,
                           num_threads = 1L,
-                          rho         = 1.0) {
+                          rho         = 1.0,
+                          method      = "bdi") {
 
   model_bin <- .resolve_model(model)
   link_int  <- .resolve_link(link)
@@ -139,7 +150,7 @@ simulate_tree <- function(tree        = NULL,
     do_sim <- function(i)
       simulate_tree(tree, pars[i, ], max_t, model_bin,
                     max_lin, max_tries, useDDD, n_trees, link_int,
-                    max_missing, max_lambda, maxN, 1L, rho)
+                    max_missing, max_lambda, maxN, 1L, rho, method)
     if (num_threads > 1L && .Platform$OS.type == "unix") {
       sims <- parallel::mclapply(seq_len(nrow(pars)), do_sim,
                                  mc.cores = num_threads)
@@ -158,11 +169,14 @@ simulate_tree <- function(tree        = NULL,
   # ---------------------------------------------------------------------- #
   #  Conditional simulation (augmentation)                                  #
   # ---------------------------------------------------------------------- #
+  method <- match.arg(method, c("thinning", "bdi"))
+
   if (!is.null(tree)) {
     return(.sim_tree_conditional(tree, pars, model_bin,
                                  as.integer(n_trees), useDDD, link_int,
                                  max_missing, max_lambda, maxN,
-                                 as.integer(num_threads), rho = rho))
+                                 as.integer(num_threads), rho = rho,
+                                 method = method))
   }
 
   # ---------------------------------------------------------------------- #
@@ -232,7 +246,12 @@ simulate_tree <- function(tree        = NULL,
 
 #' @keywords internal
 .resolve_model <- function(model) {
+  # Orthogonal covariate slots c(use_N, use_M, use_D) where
+  #   N = diversity, M = P/N mean pendant age, D = E - M focal deviation.
+  # Shortcut strings: "dd" -> N, "ma" -> M, "rd" -> D.
+  # Legacy aliases kept: "pd" -> M slot, "ep" -> D slot.
   shortcuts <- list(cr = c(0L, 0L, 0L), dd = c(1L, 0L, 0L),
+                    ma = c(0L, 1L, 0L), rd = c(0L, 0L, 1L),
                     pd = c(0L, 1L, 0L), ep = c(0L, 0L, 1L))
   if (is.character(model)) {
     return(shortcuts[[match.arg(model, names(shortcuts))]])
@@ -242,8 +261,8 @@ simulate_tree <- function(tree        = NULL,
   }
   model <- as.integer(model)
   if (length(model) != 3L || !all(model %in% 0:1)) {
-    stop(paste0("'model' must be a formula (e.g. ~ N + PD), a string ",
-                "(\"cr\", \"dd\", \"pd\", \"ep\"), or a length-3 binary ",
+    stop(paste0("'model' must be a formula (e.g. ~ N + M), a string ",
+                "(\"cr\", \"dd\", \"ma\", \"rd\"), or a length-3 binary ",
                 "integer vector."))
   }
   model
@@ -252,13 +271,14 @@ simulate_tree <- function(tree        = NULL,
 #' @keywords internal
 .parse_model_formula <- function(formula) {
   terms <- attr(stats::terms(formula), "term.labels")
-  known <- c(N = 1L, PD = 2L, EP = 3L, E = 3L)
+  # Primary covariate names N, M, D; legacy aliases PD (=M), EP/E (=D).
+  known <- c(N = 1L, M = 2L, D = 3L, PD = 2L, EP = 3L, E = 3L)
   terms_upper <- toupper(terms)
   model_bin <- c(0L, 0L, 0L)
   for (tm in terms_upper) {
     idx <- known[tm]
     if (is.na(idx)) {
-      stop(sprintf("Unknown covariate '%s' in model formula. Use N, PD, and/or EP.", tm))
+      stop(sprintf("Unknown covariate '%s' in model formula. Use N, M, and/or D.", tm))
     }
     model_bin[idx] <- 1L
   }
@@ -266,7 +286,7 @@ simulate_tree <- function(tree        = NULL,
 }
 
 # Expand compact pars to full 8-element vector for C++.
-# Layout: c(beta_0, beta_N, beta_P, beta_E, gamma_0, gamma_N, gamma_P, gamma_E)
+# Layout: c(beta_0, beta_N, beta_M, beta_D, gamma_0, gamma_N, gamma_M, gamma_D)
 #' @keywords internal
 .expand_pars <- function(pars, model_bin) {
   expected_n <- 2L + 2L * sum(model_bin)
@@ -286,12 +306,12 @@ simulate_tree <- function(tree        = NULL,
 .pars_error_msg <- function(model_bin, expected_n) {
   lam <- paste(c("beta_0",
                  if (model_bin[1]) "beta_N",
-                 if (model_bin[2]) "beta_P",
-                 if (model_bin[3]) "beta_E"), collapse = ", ")
+                 if (model_bin[2]) "beta_M",
+                 if (model_bin[3]) "beta_D"), collapse = ", ")
   mu  <- paste(c("gamma_0",
                  if (model_bin[1]) "gamma_N",
-                 if (model_bin[2]) "gamma_P",
-                 if (model_bin[3]) "gamma_E"), collapse = ", ")
+                 if (model_bin[2]) "gamma_M",
+                 if (model_bin[3]) "gamma_D"), collapse = ", ")
   sprintf("model = c(%s) requires %d parameters: c(%s, %s)",
           paste(model_bin, collapse = ", "), expected_n, lam, mu)
 }
@@ -306,7 +326,7 @@ simulate_tree <- function(tree        = NULL,
                                   n_trees = 1L, useDDD = TRUE, link = 0L,
                                   max_missing = 1e4, max_lambda = 500,
                                   maxN = NULL, num_threads = 1L,
-                                  rho = 1.0) {
+                                  rho = 1.0, method = "thinning") {
   brts  <- .extract_brts(tree)
   max_t <- brts[1L]
 
@@ -315,14 +335,24 @@ simulate_tree <- function(tree        = NULL,
 
   L_extant <- .extract_Ltable(tree)
 
-  aug <- tryCatch(
-    .augment_tree_internal(tree, pars = pars, model_bin = model_bin,
-                           sample_size = n_trees,
-                           max_missing = max_missing, max_lambda = max_lambda,
-                           maxN = maxN, num_threads = num_threads, link = link,
-                           rho = rho),
-    error = function(e) NULL
-  )
+  if (method == "bdi") {
+    aug <- tryCatch(
+      .augment_tree_bdi(tree, pars = pars, model_bin = model_bin,
+                        sample_size = n_trees,
+                        max_missing = max_missing, link = link,
+                        rho = rho),
+      error = function(e) NULL
+    )
+  } else {
+    aug <- tryCatch(
+      .augment_tree_internal(tree, pars = pars, model_bin = model_bin,
+                             sample_size = n_trees,
+                             max_missing = max_missing, max_lambda = max_lambda,
+                             maxN = maxN, num_threads = num_threads, link = link,
+                             rho = rho),
+      error = function(e) NULL
+    )
+  }
 
   # Failure path
   if (is.null(aug) || length(aug$trees) == 0L) {

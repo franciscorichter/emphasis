@@ -8,7 +8,7 @@ simulate_div_tree_cpp(pars, model, max_t, max_N, max_tries, link = 0L)
 }
 \arguments{
 \item{pars}{Numeric vector of length 8:
-\code{c(beta_0, beta_N, beta_P, beta_E, gamma_0, gamma_N, gamma_P, gamma_E)}.
+\code{c(beta_0, beta_N, beta_M, beta_D, gamma_0, gamma_N, gamma_M, gamma_D)}.
 Inactive parameters (those not selected by \code{model}) should be set to 0.}
 
 \item{model}{Integer vector of length 3: \code{c(use_N, use_P, use_E)} (each 0 or 1).}

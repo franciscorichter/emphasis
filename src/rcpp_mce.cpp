@@ -21,7 +21,7 @@ using namespace Rcpp;
 //' @param brts Numeric vector of branching times (crown age first,
 //'   sorted decreasing).
 //' @param pars Numeric vector of 8 model parameters
-//'   \code{c(beta_0, beta_N, beta_P, beta_E, gamma_0, gamma_N, gamma_P, gamma_E)}.
+//'   \code{c(beta_0, beta_N, beta_M, beta_D, gamma_0, gamma_N, gamma_M, gamma_D)}.
 //' @param sample_size Number of valid augmented trees to collect.
 //' @param maxN Maximum total augmentation attempts (including failures).
 //' @param max_missing Maximum extinct lineages per augmented tree.

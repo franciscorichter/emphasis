@@ -4,7 +4,7 @@
 #' Simulate a single phylogenetic tree under the general diversification model
 #'
 #' @param pars Numeric vector of length 8:
-#'   \code{c(beta_0, beta_N, beta_P, beta_E, gamma_0, gamma_N, gamma_P, gamma_E)}.
+#'   \code{c(beta_0, beta_N, beta_M, beta_D, gamma_0, gamma_N, gamma_M, gamma_D)}.
 #'   Inactive parameters (those not selected by \code{model}) should be set to 0.
 #' @param model Integer vector of length 3: \code{c(use_N, use_P, use_E)} (each 0 or 1).
 #' @param max_t Crown age (forward simulation end time).
@@ -35,7 +35,6 @@ simulate_div_tree_cpp <- function(pars, model, max_t, max_N, max_tries, link = 0
 #'   \code{\link{augment_trees}}).
 #' @param model Integer vector \code{c(use_N, use_P, use_E)}.
 #' @param link Link function: \code{0} = linear, \code{1} = exponential.
-#' @param rho Sampling fraction (0, 1]. Default \code{1} (complete sampling).
 #' @return A named list:
 #' \describe{
 #'   \item{logf}{Numeric vector of \code{log p(obs, z_i | theta)}.}
@@ -57,7 +56,7 @@ eval_logf <- function(pars, trees, model = as.integer( c(0, 0, 0)), link = 0L, r
 #' @param brts Numeric vector of branching times (crown age first,
 #'   sorted decreasing).
 #' @param pars Numeric vector of 8 model parameters
-#'   \code{c(beta_0, beta_N, beta_P, beta_E, gamma_0, gamma_N, gamma_P, gamma_E)}.
+#'   \code{c(beta_0, beta_N, beta_M, beta_D, gamma_0, gamma_N, gamma_M, gamma_D)}.
 #' @param sample_size Number of valid augmented trees to collect.
 #' @param maxN Maximum total augmentation attempts (including failures).
 #' @param max_missing Maximum extinct lineages per augmented tree.
@@ -65,7 +64,6 @@ eval_logf <- function(pars, trees, model = as.integer( c(0, 0, 0)), link = 0L, r
 #' @param num_threads Threads for parallel augmentation.
 #' @param model Integer vector \code{c(use_N, use_P, use_E)}.
 #' @param link Link function: \code{0} = linear, \code{1} = exponential.
-#' @param rho Sampling fraction (0, 1]. Default \code{1} (complete sampling).
 #' @return A named list:
 #' \describe{
 #'   \item{trees}{List of augmented-tree data frames.}
@@ -98,7 +96,6 @@ augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda
 #' @param copy_trees if set to true, the trees generated are returned as well
 #' @param model integer vector of length 3: c(use_N, use_P, use_E)
 #' @param link link function: 0 = linear (max(0,...)), 1 = exponential
-#' @param rho Sampling fraction (0, 1]. Default \code{1} (complete sampling).
 #' @param rconditional R function that evaluates the GAM function.
 #' @return a list with the following components:
 #' \describe{
@@ -133,7 +130,6 @@ em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, 
 #' @param num_threads number of threads used.
 #' @param model integer vector of length 3: c(use_N, use_P, use_E)
 #' @param link link function: 0 = linear (max(0,...)), 1 = exponential
-#' @param rho Sampling fraction (0, 1]. Default \code{1} (complete sampling).
 #' @param rconditional R function that evaluates the GAM function.
 #' @return list with the following entries:
 #' \describe{

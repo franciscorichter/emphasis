@@ -28,7 +28,8 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #' Override individual elements and pass the modified list via the
 #' \code{control} argument.
 #'
-#' @param method Which method's defaults to return: \code{"mcem"} or \code{"cem"}.
+#' @param method Which method's defaults to return: \code{"mcem"},
+#'   \code{"cem"}, or \code{"gam"}.
 #' @param n_pars Number of parameters (used to set the default \code{sd_vec}
 #'   for CEM when \code{NULL}).
 #' @return A named list of control parameters.
@@ -107,10 +108,10 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   )
   if (method == "mcem") {
     c(common, list(
-      sampling    = "dynamic_fresh",
+      sampling    = "bdi",      # BDI exact sampler (default); "dynamic_fresh" for thinning
       sample_size = 200L,       # alias: num_trees
       max_iter    = 200L,
-      maxN        = 2000L,      # total augmentation attempts; must exceed sample_size
+      maxN        = 2000L,      # total augmentation attempts; must exceed sample_size (thinning only)
       xtol        = 1e-3,
       tol         = 1e-3,
       patience    = 3L
@@ -232,14 +233,16 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 
 #' @keywords internal
 .par_names <- function(model_bin) {
+  # Orthogonal covariate basis {N, M = P/N, D = E - M}: slot 2 is the mean-age
+  # coefficient (beta_M), slot 3 the deviation coefficient (beta_D).
   lam <- c("beta_0",
            if (model_bin[1]) "beta_N",
-           if (model_bin[2]) "beta_P",
-           if (model_bin[3]) "beta_E")
+           if (model_bin[2]) "beta_M",
+           if (model_bin[3]) "beta_D")
   mu <- c("gamma_0",
           if (model_bin[1]) "gamma_N",
-          if (model_bin[2]) "gamma_P",
-          if (model_bin[3]) "gamma_E")
+          if (model_bin[2]) "gamma_M",
+          if (model_bin[3]) "gamma_D")
   c(lam, mu)
 }
 
@@ -256,18 +259,21 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   n_tips <- length(brts) + 1L
   max_t  <- max(brts)
 
-  # Maximum covariate values for each active covariate
-  # N: maximum number of tips; PD: rough upper bound; EP: crown age
+  # Maximum covariate magnitude for each active covariate (orthogonal basis
+  # {N, M = P/N, D = E - M}). M (mean pendant age) and D (focal deviation) are
+  # both bounded in magnitude by the crown age. This is a rough init-feasibility
+  # guard; MCEM refines from here. D is centred (can be negative), so this only
+  # guards the positive extreme.
   max_covs <- c(
     N = n_tips,
-    P = sum(brts),         # rough upper bound for phylogenetic diversity
-    E = max_t              # crown age (max isolation time)
+    M = max_t,             # mean pendant age <= crown age
+    D = max_t              # focal deviation magnitude ~ crown age
   )
 
   n_pars   <- length(init_pars)
   n_lam    <- n_pars %/% 2L    # number of lambda params (beta_0 + slopes)
   active   <- which(model_bin == 1L)
-  cov_names <- c("N", "P", "E")
+  cov_names <- c("N", "M", "D")
   changed  <- FALSE
 
   for (k in seq_along(active)) {
@@ -348,7 +354,33 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #' @keywords internal
 .run_mcem <- function(brts, init_pars, lower_bound, upper_bound, ctrl,
                       model = c(0L, 0L, 0L), link = 0L, cond_fun = NULL) {
+  # BDI supports CR and DD (N-dependent); PD/EP need thinning for pd/tip_start
+  if (identical(ctrl$sampling, "bdi") && (model[2] == 1L || model[3] == 1L)) {
+    if (isTRUE(ctrl$verbose))
+      message("BDI sampler does not support PD/EP models; falling back to thinning.")
+    ctrl$sampling <- "dynamic_fresh"
+    if (is.null(ctrl$maxN)) ctrl$maxN <- max(2000L, 10L * as.integer(ctrl$sample_size))
+  }
   raw <- switch(ctrl$sampling,
+    bdi             = .mcem_bdi(
+      brts        = brts,
+      pars        = init_pars,
+      sample_size = ctrl$sample_size,
+      max_missing = ctrl$max_missing,
+      lower_bound = lower_bound,
+      upper_bound = upper_bound,
+      max_iter    = ctrl$max_iter,
+      xtol        = ctrl$xtol,
+      tol         = ctrl$tol,
+      patience    = ctrl$patience,
+      num_threads = ctrl$num_threads,
+      verbose     = ctrl$verbose,
+      conditional = cond_fun,
+      model       = model,
+      link        = link,
+      max_time    = ctrl$max_time,
+      rho         = ctrl$rho
+    ),
     dynamic_fresh   = .mcem_dynamic_fresh(
       brts        = brts,
       pars        = init_pars,
@@ -414,11 +446,19 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
     warning("CEM failed: all particles were rejected at every attempt. ",
             "Try increasing num_particles (e.g. >= 20) or widening the ",
             "parameter bounds.")
-  # Use the final iteration's best fhat, not the global max over all iterations.
-  # The global max picks lucky single-tree spikes; the final iteration reflects
-  # the converged population.
-  loglik <- if (length(raw$best_loglik) > 0)
-    raw$best_loglik[length(raw$best_loglik)] else NA_real_
+  # Report the stable importance-sampling fhat of the RETURNED parameter vector
+  # (best_IS$fhat, a fresh re-evaluation of obtained_estim with the same
+  # conditioning), so that pars, loglik, and loglik_var all describe the same
+  # estimate. The per-iteration best_loglik is a noisy search value belonging to
+  # a different vector and must not be reported as the fit's log-likelihood; it
+  # is kept only as a fallback when the stable re-evaluation is unavailable.
+  loglik <- if (!is.null(raw$best_IS) && is.finite(raw$best_IS$fhat)) {
+    raw$best_IS$fhat
+  } else if (length(raw$best_loglik) > 0) {
+    raw$best_loglik[length(raw$best_loglik)]
+  } else {
+    NA_real_
+  }
   list(pars = raw$obtained_estim, loglik = loglik,
        loglik_var = raw$loglik_var, details = raw)
 }
@@ -442,14 +482,13 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   n_total <- as.integer(ctrl$n_grid %||% 0L)
 
   if (n_total > 0L) {
-    # Latin Hypercube Sampling: n_total points spread over parameter space
-    pars_grid <- matrix(NA_real_, n_total, n_par)
-    for (j in seq_len(n_par)) {
-      cuts <- seq(0, 1, length.out = n_total + 1L)
-      u <- stats::runif(n_total, cuts[-(n_total + 1L)], cuts[-1L])
-      pars_grid[, j] <- compact_lb[j] + u * (compact_ub[j] - compact_lb[j])
-    }
-    pars_grid[, ] <- pars_grid[sample(n_total), ]  # shuffle columns independently
+    # Latin Hypercube Sampling via the shared .lhs_sample() helper, which
+    # permutes EACH column with an independent sample.int(n) — the property
+    # that gives LHS its space-filling guarantee. The previous inline version
+    # stratified each column in order and then applied a single shared row
+    # permutation to the whole matrix; one shared permutation cannot decorrelate
+    # columns, so the design collapsed onto the diagonal of the parameter box.
+    pars_grid <- .lhs_sample(n_total, compact_lb, compact_ub)
     colnames(pars_grid) <- par_names
     grid_label <- sprintf("  GAM grid: %d LHS points (%d parameters)\n",
                           n_total, n_par)
@@ -580,8 +619,9 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'   \describe{
 #'     \item{\code{lower_bound}}{Numeric vector of lower parameter bounds.
 #'       Length must be \code{2 + 2*sum(model)}.
-#'       Order: \code{c(beta_0, [beta_N], [beta_P], [beta_E],
-#'       gamma_0, [gamma_N], [gamma_P], [gamma_E])}.}
+#'       Order: \code{c(beta_0, [beta_N], [beta_M], [beta_D],
+#'       gamma_0, [gamma_N], [gamma_M], [gamma_D])} (slot 2 = mean-age M,
+#'       slot 3 = deviation D).}
 #'     \item{\code{upper_bound}}{Numeric vector of upper parameter bounds
 #'       (same order).}
 #'     \item{\code{verbose}}{Print progress messages. Default \code{FALSE}.}
@@ -741,8 +781,9 @@ estimate_rates <- function(tree,
                   mode, ctrl$max_iter))
     }
     if (method == "mcem") {
-      cat(sprintf("  num_trees=%d  max_iter=%d  tol=%.1e  patience=%d  xtol=%.1e\n",
-                  ctrl$num_trees, ctrl$max_iter, ctrl$tol, ctrl$patience, ctrl$xtol))
+      sampling_str <- if (identical(ctrl$sampling, "bdi")) "BDI (exact)" else ctrl$sampling
+      cat(sprintf("  sampling=%s  num_trees=%d  max_iter=%d  tol=%.1e  patience=%d  xtol=%.1e\n",
+                  sampling_str, ctrl$num_trees, ctrl$max_iter, ctrl$tol, ctrl$patience, ctrl$xtol))
       if (ctrl$num_trees >= 2L)
         cat("  loglik_var   : bootstrapped automatically (B=200)\n")
       else
@@ -900,7 +941,8 @@ compare_models <- function(...) {
 
 #' @keywords internal
 .model_label <- function(model_bin) {
-  covs <- c("N", "PD", "EP")[which(model_bin == 1L)]
+  # {N = diversity, M = mean pendant age, D = focal deviation}
+  covs <- c("N", "M", "D")[which(model_bin == 1L)]
   if (length(covs) == 0L) return("CR")
   paste(covs, collapse = " + ")
 }
@@ -914,7 +956,7 @@ compare_models <- function(...) {
 #'
 #' Fits three 4-parameter models -- diversity dependence (DD, covariate N),
 #' phylogenetic diversity dependence (PD, covariate P), and evolutionary
-#' isolation time (ID, covariate I) -- to the same tree using a two-stage
+#' isolation time (EP, covariate E) -- to the same tree using a two-stage
 #' MCDE -> MCEM workflow, then ranks them by AIC and computes AIC weights.
 #'
 #' All three models share the same parameter layout:

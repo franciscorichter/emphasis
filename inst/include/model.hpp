@@ -50,23 +50,30 @@ namespace emphasis {
 
   // General diversification model
   //
-  // Parameters layout (always 8 elements):
-  //   {beta_0, beta_N, beta_P, beta_E, gamma_0, gamma_N, gamma_P, gamma_E}
+  // Orthogonal covariate basis (per lineage s at event time t):
+  //   N       = number of alive lineages          (diversity level)
+  //   M = P/N = mean pendant age of alive lineages (maturity; P = sum of pendant ages)
+  //   D = E - M                                    (focal isolation relative to the
+  //                                                 clade mean; Sum_s D = 0)
   //
-  // model_bin_ = {use_N, use_P, use_E} selects active covariates.
+  // Parameters layout (always 8 elements); slots 2/6 are coefficients on M and
+  // slots 3/7 on D:
+  //   {beta_0, beta_N, beta_M, beta_D, gamma_0, gamma_N, gamma_M, gamma_D}
+  //
+  // model_bin_ = {use_N, use_M, use_D} selects active covariates.
   // Inactive parameters should be 0 (and their bounds pinned to 0).
   //
   // Linear link (default):
-  //   lambda(N,P) = max(0, beta_0  + beta_N*N  + beta_P*P)
-  //   mu(N,P)     = max(0, gamma_0 + gamma_N*N + gamma_P*P)
+  //   lambda = max(0, beta_0  + beta_N*N  + beta_M*M  + beta_D*D)
+  //   mu     = max(0, gamma_0 + gamma_N*N + gamma_M*M + gamma_D*D)
   //
   // Exponential link:
-  //   lambda(N,P) = exp(beta_0  + beta_N*N  + beta_P*P)
-  //   mu(N,P)     = exp(gamma_0 + gamma_N*N + gamma_P*P)
+  //   lambda = exp(beta_0  + beta_N*N  + beta_M*M  + beta_D*D)
+  //   mu     = exp(gamma_0 + gamma_N*N + gamma_M*M + gamma_D*D)
   //
-  // Gaussian link:
-  //   lambda(N,P) = beta_0  * exp(-( beta_N*N +  beta_P*P +  beta_E*E - 1)^2 / 2)
-  //   mu(N,P)     = gamma_0 * exp(-(gamma_N*N + gamma_P*P + gamma_E*E - 1)^2 / 2)
+  // Gaussian link (eta_cov excludes the intercept):
+  //   lambda = beta_0  * exp(-( beta_N*N +  beta_M*M +  beta_D*D - 1)^2 / 2)
+  //   mu     = gamma_0 * exp(-(gamma_N*N + gamma_M*M + gamma_D*D - 1)^2 / 2)
   //
   class Model
   {
@@ -123,34 +130,51 @@ namespace emphasis {
       return intercept * std::exp(-0.5 * d * d);
     }
 
-    // Speciation rate
+    // ---------------------------------------------------------------------
+    // Orthogonal covariate basis {N, M, D}:
+    //   N       = node.n                     (lineage count / diversity level)
+    //   M = P/N = node.pd / node.n           (mean pendant age / "maturity")
+    //   D = E - M                            (focal lineage's isolation
+    //                                         relative to the clade mean; Σ_s D = 0)
+    // The parameter slots are reused: pars[2]/pars[6] are now coefficients on M
+    // (beta_M / gamma_M) and pars[3]/pars[7] on D (beta_D / gamma_D).
+    // ---------------------------------------------------------------------
+
+    // Mean pendant age M = P/N (global covariate).
+    double m_cov(const node_t& node) const {
+      return (node.n > 0.0) ? (node.pd / node.n) : 0.0;
+    }
+
+    // Speciation rate (no-D path: eta = beta_0 + beta_N*N + beta_M*M)
     double speciation_rate(const param_t& pars, const node_t& node) const {
+      const double M = m_cov(node);
       if (link_ == LinkType::gaussian) {
-        const double eta_cov = pars[1] * node.n + pars[2] * node.pd;
+        const double eta_cov = pars[1] * node.n + pars[2] * M;
         return gaussian_rate(pars[0], eta_cov);
       }
-      const double eta = pars[0] + pars[1] * node.n + pars[2] * node.pd;
+      const double eta = pars[0] + pars[1] * node.n + pars[2] * M;
       return apply_link(eta);
     }
 
-    // Extinction rate
+    // Extinction rate (no-D path)
     double extinction_rate(const param_t& pars, const node_t& node) const {
+      const double M = m_cov(node);
       if (link_ == LinkType::gaussian) {
-        const double eta_cov = pars[5] * node.n + pars[6] * node.pd;
+        const double eta_cov = pars[5] * node.n + pars[6] * M;
         return gaussian_rate(pars[4], eta_cov);
       }
-      const double eta = pars[4] + pars[5] * node.n + pars[6] * node.pd;
+      const double eta = pars[4] + pars[5] * node.n + pars[6] * M;
       return apply_link(eta);
     }
 
-    // EP covariate E_s: exact pendant age of the focal lineage at event time.
+    // Raw focal isolation E_s = pendant age of the focal lineage at event time.
     //
     // For extinction nodes: E = brts - tip_start (exact, stored t_spec).
     // For speciation nodes with known parent (parent_id >= 0):
     //   E = brts - focal_tip_start (exact parent pendant age).
     // For initial tree nodes (parent_id == -1, unknown parent):
-    //   E = P/N (mean-field = correct marginalization over possible parents,
-    //   since Σ_s λ(s)/N = λ(E=P/N) for linear link).
+    //   E = P/N = M (mean-field marginalization over possible parents), which
+    //   makes the deviation D = E - M = 0 for such nodes: the "average" lineage.
     double e_s(const node_t& node) const {
       if (detail::is_extinction(node)) {
         return node.brts - node.tip_start;
@@ -161,24 +185,31 @@ namespace emphasis {
       return (node.n > 0.0) ? (node.pd / node.n) : 0.0;
     }
 
-    // EP-aware speciation rate (mean-field E for non-extinction nodes)
-    double speciation_rate_ep(const param_t& pars, const node_t& node) const {
-      const double E = e_s(node);
-      if (link_ == LinkType::gaussian) {
-        const double eta_cov = pars[1] * node.n + pars[2] * node.pd + pars[3] * E;
-        return gaussian_rate(pars[0], eta_cov);
-      }
-      return apply_link(pars[0] + pars[1] * node.n + pars[2] * node.pd + pars[3] * E);
+    // Centered focal deviation D = E - M.
+    double d_cov(const node_t& node) const {
+      return e_s(node) - m_cov(node);
     }
 
-    // EP-aware extinction rate (exact E for extinction nodes, mean-field otherwise)
-    double extinction_rate_ep(const param_t& pars, const node_t& node) const {
-      const double E = e_s(node);
+    // D-aware speciation rate: eta = beta_0 + beta_N*N + beta_M*M + beta_D*D
+    double speciation_rate_ep(const param_t& pars, const node_t& node) const {
+      const double M = m_cov(node);
+      const double D = e_s(node) - M;
       if (link_ == LinkType::gaussian) {
-        const double eta_cov = pars[5] * node.n + pars[6] * node.pd + pars[7] * E;
+        const double eta_cov = pars[1] * node.n + pars[2] * M + pars[3] * D;
+        return gaussian_rate(pars[0], eta_cov);
+      }
+      return apply_link(pars[0] + pars[1] * node.n + pars[2] * M + pars[3] * D);
+    }
+
+    // D-aware extinction rate (exact D for extinction nodes, mean-field D=0 otherwise)
+    double extinction_rate_ep(const param_t& pars, const node_t& node) const {
+      const double M = m_cov(node);
+      const double D = e_s(node) - M;
+      if (link_ == LinkType::gaussian) {
+        const double eta_cov = pars[5] * node.n + pars[6] * M + pars[7] * D;
         return gaussian_rate(pars[4], eta_cov);
       }
-      return apply_link(pars[4] + pars[5] * node.n + pars[6] * node.pd + pars[7] * E);
+      return apply_link(pars[4] + pars[5] * node.n + pars[6] * M + pars[7] * D);
     }
 
     // Draw extinction time from truncated exponential with rate = mu at speciation time.
@@ -250,10 +281,13 @@ namespace emphasis {
             // ∫ Σ_s λ_s(t) * (1 - ρ*exp(-μ_s(t)*(T-t))) dt
             // Approximation: use node-level mu for the survival factor
             double int_segment = dt - rho_ * (1.0/mu) * (std::exp(-mu*(T - node.brts)) - std::exp(-mu*(T - prev_brts)));
-            // Use exact EP+exp rate sum for lambda * n part
+            // Use exact EP+exp rate sum for lambda * n part.
+            // Orthogonal basis: eta = beta_0 + beta_N*N + beta_M*M + beta_D*D,
+            // D = E - M constant within the segment, so the M-dependent part folds
+            // into the constant term as (beta_M - beta_D)*M with M = P/N.
             double N_seg = node.n;
-            double PD_seg = node.pd;
-            double A_lam = pars[0] + pars[1]*N_seg + pars[2]*PD_seg;
+            double M_seg = (N_seg > 0.0) ? node.pd / N_seg : 0.0;
+            double A_lam = pars[0] + pars[1]*N_seg + (pars[2] - pars[3])*M_seg;
             // Mean lambda over the segment using exact integral
             double lam_integral = sum_exp_bE * exp_integral(A_lam, pars[3], prev_brts, node.brts);
             double mean_lam_n = (dt > 0.0) ? lam_integral / dt : N_seg * lambda;
@@ -304,8 +338,13 @@ namespace emphasis {
 
     // Helper: integral of intercept * exp(-(A + b*t - 1)^2 / 2) from t1 to t2
     // where A = covariate sum excluding E, b = beta_E coefficient.
-    // Uses error function: = intercept * sqrt(pi/2) / |b| * [erf(z2) - erf(z1)]
-    // where z_i = (A + b*t_i - 1) / sqrt(2)
+    // Substituting u = (A + b*t - 1)/sqrt(2), dt = sqrt(2)/b du, gives
+    //   = intercept * sqrt(pi/2) / b * [erf(z2) - erf(z1)]
+    // where z_i = (A + b*t_i - 1) / sqrt(2).
+    // NOTE: divide by the SIGNED b, not |b|.  For b < 0 we have z2 < z1, so
+    // erf(z2) - erf(z1) < 0, and dividing by the negative b restores the
+    // correct positive integral (the integrand is strictly positive).  Using
+    // |b| would flip the sign of the hazard integral for negative beta_E.
     // Handles b→0 limit: intercept * exp(-(A-1)^2/2) * (t2 - t1)
     static double gauss_integral(double intercept, double A, double b, double t1, double t2) {
       if (std::abs(b) < 1e-12) {
@@ -315,7 +354,7 @@ namespace emphasis {
       const double inv_sqrt2 = 1.0 / std::sqrt(2.0);
       double z1 = (A + b * t1 - 1.0) * inv_sqrt2;
       double z2 = (A + b * t2 - 1.0) * inv_sqrt2;
-      return intercept * std::sqrt(M_PI / 2.0) / std::abs(b) * (std::erf(z2) - std::erf(z1));
+      return intercept * std::sqrt(M_PI / 2.0) / b * (std::erf(z2) - std::erf(z1));
     }
 
     double loglik(const param_t& pars, const tree_t& tree) const {
@@ -341,26 +380,42 @@ namespace emphasis {
         const double dt = node.brts - prev_brts;
 
         if (ep_exp && dt > 0.0) {
+          // Orthogonal basis {N, M=P/N, D=E-M}. D is constant within the
+          // segment, so eta = beta_0 + beta_N*N + beta_M*M + beta_D*(E - M)
+          //  = [beta_0 + beta_N*N + (beta_M - beta_D)*M] + beta_D*(t - ts_s).
+          // The bracketed constant is A_lam; the running sums over exp(-beta_D*ts)
+          // are unchanged (beta_D = pars[3], same slot).
           double N_seg = node.n;
-          double PD_seg = node.pd;
-          double A_lam = pars[0] + pars[1]*N_seg + pars[2]*PD_seg;
-          double A_mu  = pars[4] + pars[5]*N_seg + pars[6]*PD_seg;
+          double M_seg = (N_seg > 0.0) ? node.pd / N_seg : 0.0;
+          double A_lam = pars[0] + pars[1]*N_seg + (pars[2] - pars[3])*M_seg;
+          double A_mu  = pars[4] + pars[5]*N_seg + (pars[6] - pars[7])*M_seg;
           inte += sum_exp_bE * exp_integral(A_lam, pars[3], prev_brts, node.brts)
                 + sum_exp_gE * exp_integral(A_mu,  pars[7], prev_brts, node.brts);
         } else if (ep_gauss && dt > 0.0) {
-          // EP + Gaussian: per-lineage exact integrals via erf.
-          // For each alive lineage s with tip_start ts_s:
-          //   λ_s(t) = β₀ · exp(-(β_N·N + β_P·P + β_E·(t - ts_s) - 1)² / 2)
-          //          = β₀ · exp(-((A_lam + β_E·t) - β_E·ts_s - 1)² / 2)
-          //          = β₀ · exp(-((A_lam - β_E·ts_s) + β_E·t - 1)² / 2)
-          // So for each lineage, A_eff = A_lam_cov - β_E·ts_s
-          // We need to iterate over alive lineages (no factorization possible)
-          // But we can still use gauss_integral per lineage.
-          // NOTE: we don't have a direct list of alive lineages with tip_starts here,
-          // so we fall through to piecewise-constant approximation using the EP rate.
-          const double lambda = speciation_rate_ep(pars, node);
-          const double mu     = extinction_rate_ep(pars, node);
-          inte += dt * node.n * (lambda + mu);
+          // EP + Gaussian: exact per-lineage integral over the segment via erf.
+          // Orthogonal basis {N, M=P/N, D=E-M}; N and M are held constant per
+          // segment (M at the node value), and only D = (t - ts_s) - M carries an
+          // explicit time dependence.  For each lineage s alive throughout the
+          // segment (born at tip_start ts_s), the covariate argument is
+          //   eta_cov = beta_N*N + beta_M*M + beta_D*((t - ts_s) - M)
+          //           = [beta_N*N + (beta_M - beta_D)*M - beta_D*ts_s] + beta_D*t
+          // so A_lam,s = beta_N*N + (beta_M - beta_D)*M - beta_D*ts_s and b = beta_D.
+          // The Gaussian rate does not factor into a running sum (unlike the
+          // exponential link), so this is an O(alive) inner loop per segment.
+          const double N_seg  = node.n;
+          const double M_seg  = (N_seg > 0.0) ? node.pd / N_seg : 0.0;
+          const double base_lam = pars[1] * N_seg + (pars[2] - pars[3]) * M_seg;
+          const double base_mu  = pars[5] * N_seg + (pars[6] - pars[7]) * M_seg;
+          for (const auto& s : tree) {
+            if (is_extinction(s)) continue;
+            // lineage s alive throughout (prev_brts, node.brts)?
+            if (s.brts <= prev_brts && s.t_ext >= node.brts) {
+              const double A_lam = base_lam - pars[3] * s.tip_start;
+              const double A_mu  = base_mu  - pars[7] * s.tip_start;
+              inte += gauss_integral(pars[0], A_lam, pars[3], prev_brts, node.brts);
+              inte += gauss_integral(pars[4], A_mu,  pars[7], prev_brts, node.brts);
+            }
+          }
         } else {
           // Standard: piecewise constant rates
           const double lambda = model_bin_[2] ? speciation_rate_ep(pars, node)

@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>emphasis — diversification inference with endogenous drivers</title>
+<meta name="description" content="Monte Carlo conditional-likelihood inference for endogenous-covariate diversification models on phylogenetic trees.">
+<style>
+  :root{
+    --paper:#f7f8f7; --paper-2:#eef1ee; --card:#ffffff; --card-2:#f2f5f2;
+    --ink:#16201d; --ink-2:#3f4a45; --ink-3:#68736d; --line:#dde3de; --line-2:#ccd4ce;
+    --accent:#1d6d5a; --accent-2:#0f3d33; --accent-soft:#e2efe9;
+    --code-bg:#f2f4f1; --shadow:0 1px 2px rgba(20,40,34,.05),0 6px 20px rgba(20,40,34,.05);
+    --measure:70ch;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+    --mono:"SF Mono","JetBrains Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --paper:#0d1310; --paper-2:#121a16; --card:#141d18; --card-2:#101814;
+      --ink:#dde6e0; --ink-2:#a7b3ac; --ink-3:#7e8a83; --line:#243029; --line-2:#2e3c34;
+      --accent:#54b79b; --accent-2:#8fd6c1; --accent-soft:#16241e;
+      --code-bg:#0f1712; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--paper);color:var(--ink);font-family:var(--serif);
+    font-size:18px;line-height:1.62;-webkit-font-smoothing:antialiased;margin:0;
+    text-rendering:optimizeLegibility}
+  .layout{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:230px 1fr;gap:0}
+  /* sidebar */
+  aside{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;
+    padding:34px 22px 40px;border-right:1px solid var(--line)}
+  aside .brand{font-family:var(--mono);font-weight:600;font-size:20px;color:var(--accent-2);
+    letter-spacing:-.01em;margin-bottom:2px}
+  aside .tag{font-family:var(--sans);font-size:12px;color:var(--ink-3);margin-bottom:24px;display:block}
+  aside nav{font-family:var(--sans);font-size:14px}
+  aside nav a{display:block;color:var(--ink-2);text-decoration:none;padding:4px 0;border-left:2px solid transparent;padding-left:12px;margin-left:-2px}
+  aside nav a:hover{color:var(--accent);border-left-color:var(--accent)}
+  aside nav .grp{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);
+    font-weight:600;margin:20px 0 6px;padding-left:12px}
+  main{padding:0 44px 120px;min-width:0}
+  .wrap{max-width:860px}
+  /* hero */
+  header.hero{padding:70px 0 34px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-family:var(--sans);font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:600;margin:0 0 18px}
+  h1{font-family:var(--sans);font-weight:700;font-size:clamp(30px,4.6vw,44px);line-height:1.06;
+    letter-spacing:-.02em;margin:0;text-wrap:balance;color:var(--ink)}
+  .dek{font-size:20px;color:var(--ink-2);margin:18px 0 0;max-width:58ch;line-height:1.5}
+  .cta{margin-top:26px;display:flex;gap:10px;flex-wrap:wrap;font-family:var(--sans)}
+  .cta a{text-decoration:none;font-size:14.5px;font-weight:600;padding:9px 16px;border-radius:8px}
+  .cta a.primary{background:var(--accent);color:#fff}
+  .cta a.ghost{color:var(--accent);border:1px solid var(--line-2)}
+  section{padding-top:20px}
+  .sec-head{display:flex;align-items:baseline;gap:12px;margin:44px 0 8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .sec-head .num{font-family:var(--mono);font-size:14px;color:var(--accent);font-weight:600}
+  h2{font-family:var(--sans);font-size:25px;font-weight:700;letter-spacing:-.015em;margin:0;color:var(--ink);text-wrap:balance;scroll-margin-top:20px}
+  h3{font-family:var(--sans);font-size:18px;font-weight:650;margin:30px 0 6px;color:var(--ink);letter-spacing:-.01em}
+  p{margin:14px 0;max-width:var(--measure)}
+  .lead{font-size:19.5px;color:var(--ink-2);max-width:var(--measure)}
+  strong{font-weight:650;color:var(--ink)}
+  ul,ol{max-width:var(--measure);padding-left:1.3em}
+  li{margin:6px 0}
+  a.ref{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--line-2)}
+  a.ref:hover{border-bottom-color:var(--accent)}
+  code{font-family:var(--mono);font-size:.85em;background:var(--code-bg);padding:.1em .38em;border-radius:5px;border:1px solid var(--line);color:var(--accent-2)}
+  /* math */
+  .eq{margin:20px 0;padding:16px 20px;background:var(--card-2);border:1px solid var(--line);
+    border-left:3px solid var(--accent);border-radius:0 10px 10px 0;font-family:var(--serif);
+    font-size:18px;overflow-x:auto;line-height:2}
+  .m{font-style:italic}.op{font-style:normal}
+  .frac{display:inline-flex;flex-direction:column;text-align:center;vertical-align:-.55em;margin:0 .22em;font-size:.92em}
+  .frac>span{padding:0 .45em;line-height:1.25}
+  .frac>.den{border-top:1.4px solid currentColor;padding-top:.06em}
+  sub,sup{font-size:.72em;line-height:0}
+  .intg{font-style:normal;font-size:1.4em;vertical-align:-.28em}
+  .prodsum{font-style:normal;font-size:1.3em;vertical-align:-.3em}
+  /* callout */
+  .note{margin:20px 0;padding:16px 20px;border-radius:10px;background:var(--accent-soft);border:1px solid var(--line);font-size:16.5px}
+  .note p{max-width:none;margin:6px 0}
+  .note .k{font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:4px}
+  /* code blocks */
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:16px 18px;overflow-x:auto;margin:18px 0;line-height:1.55}
+  pre code{background:none;border:none;padding:0;font-size:13.5px;white-space:pre;color:var(--ink-2)}
+  pre .cm{color:var(--ink-3);font-style:italic}
+  pre .kw{color:var(--accent);font-weight:600}
+  pre .st{color:var(--accent-2)}
+  /* tables */
+  .tw{overflow-x:auto;margin:20px 0;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+  table{border-collapse:collapse;width:100%;font-size:14.5px;font-family:var(--sans)}
+  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--card-2);font-weight:640;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+  tbody tr:last-child td{border-bottom:none}
+  td code{font-size:12.5px;white-space:nowrap}
+  .foot{margin-top:60px;padding-top:24px;border-top:1px solid var(--line);font-family:var(--sans);font-size:13.5px;color:var(--ink-3)}
+  .foot a{color:var(--accent);text-decoration:none}
+  @media (max-width:820px){
+    .layout{grid-template-columns:1fr}
+    aside{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line)}
+    aside nav{columns:2}
+    main{padding:0 22px 80px}
+    header.hero{padding:44px 0 28px}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <div class="brand">emphasis</div>
+    <span class="tag">diversification inference</span>
+    <nav>
+      <div class="grp">Start</div>
+      <a href="#overview">Overview</a>
+      <a href="#install">Install</a>
+      <div class="grp">Model</div>
+      <a href="#model">The model</a>
+      <a href="#covariates">Covariates</a>
+      <a href="#links">Link functions</a>
+      <div class="grp">Inference</div>
+      <a href="#likelihood">The likelihood</a>
+      <a href="#is">Importance sampling</a>
+      <a href="#mcem">Monte Carlo EM</a>
+      <a href="#conditioning">Survival &amp; sampling</a>
+      <div class="grp">Using it</div>
+      <a href="#methods">Estimation methods</a>
+      <a href="#simulation">Simulation</a>
+      <a href="#usage">Usage</a>
+      <a href="#reference">Function reference</a>
+    </nav>
+  </aside>
+
+  <main>
+  <div class="wrap">
+    <header class="hero" id="overview">
+      <p class="eyebrow">R package · phylogenetic diversification</p>
+      <h1>Inference of diversification with endogenous drivers</h1>
+      <p class="dek">Monte Carlo conditional-likelihood inference for birth–death models whose speciation and extinction rates depend on covariates the diversification process generates itself.</p>
+      <div class="cta">
+        <a class="primary" href="#install">Install</a>
+        <a class="ghost" href="https://github.com/franciscorichter/emphasis">GitHub</a>
+        <a class="ghost" href="#usage">Usage</a>
+      </div>
+    </header>
+
+    <p class="lead">Given a dated phylogeny of the <em>surviving</em> species of a clade, <code>emphasis</code> estimates the speciation and extinction rates that generated it — and lets those rates depend on the state of the clade itself: how many lineages there are, how old they are, and how isolated each one is.</p>
+    <p>A reconstructed molecular phylogeny records only the lineages that survive to the present. The lineages that went extinct are exactly what carries the information about the extinction rate, so the likelihood of the observed tree is an integral over all possible histories of unobserved lineages. <code>emphasis</code> evaluates and maximizes that likelihood by <strong>data-augmentation importance sampling embedded in a Monte Carlo EM</strong>.</p>
+
+    <section id="install">
+      <div class="sec-head"><span class="num">§</span><h2>Install</h2></div>
+      <pre><code><span class="n">devtools</span>::<span class="n">install_github</span>(<span class="st">"franciscorichter/emphasis"</span>)</code></pre>
+      <p><strong>Depends</strong> on <code>Rcpp</code>, <code>RcppParallel</code>, <code>nloptr</code>, <code>ape</code>, and <code>DDD</code>; the survival-GAM and diagnostics use <code>mgcv</code> and the tidyverse plotting stack. Performance-critical evaluation is in C++ with TBB parallelism.</p>
+    </section>
+
+    <section id="model">
+      <div class="sec-head"><span class="num">§</span><h2>The model</h2></div>
+      <p>Time runs forward from the crown (age <span class="m">0</span>) to the present (age <span class="m">T</span>). At any moment the clade is a set of living lineages, each carrying an instantaneous speciation rate <span class="m">λ<sub>s</sub>(t)</span> and extinction rate <span class="m">μ<sub>s</sub>(t)</span> built from a linear predictor over covariates, passed through a link.</p>
+      <div class="eq">
+        <span class="m">η<sub>λ</sub> = β<sub>0</sub> + β<sub>N</sub>N + β<sub>M</sub>M + β<sub>D</sub>D</span>,&nbsp;&nbsp;&nbsp;
+        <span class="m">η<sub>μ</sub> = γ<sub>0</sub> + γ<sub>N</sub>N + γ<sub>M</sub>M + γ<sub>D</sub>D</span>
+      </div>
+    </section>
+
+    <section id="covariates">
+      <h3>Covariates — an orthogonal basis</h3>
+      <p>Let <span class="m">t<sub>s</sub></span> be when lineage <span class="m">s</span> last speciated and <span class="m">I<sub>s</sub>(t) = t − t<sub>s</sub></span> its <strong>isolation time</strong>. Their clade total is the pendant phylogenetic diversity <span class="m">P = Σ<sub>s</sub> I<sub>s</sub></span>. Because <span class="m">P = N·Ī</span> (richness times mean isolation), using <span class="m">P</span> directly makes it collinear with richness — so it is split into a global mean and a local deviation, giving three <strong>orthogonal</strong> covariates:</p>
+      <div class="tw"><table>
+        <thead><tr><th>Covariate</th><th>Definition</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><span class="m">N(t)</span></td><td>number of living lineages</td><td>diversity level</td></tr>
+          <tr><td><span class="m">M(t) = P/N = Ī</span></td><td>mean pendant age</td><td>clade maturity</td></tr>
+          <tr><td><span class="m">D<sub>s</sub>(t) = I<sub>s</sub> − M</span></td><td>focal deviation from the mean</td><td>per-lineage identity</td></tr>
+        </tbody>
+      </table></div>
+      <p>Because <span class="m">Σ<sub>s</sub> D<sub>s</sub> = 0</span> at every instant, <span class="m">D</span> is orthogonal to the intercept and to the global covariates <span class="m">N</span> and <span class="m">M</span>: the three axes measure distinct effects — <em>how many</em> lineages, <em>how old</em> on average, and whether <em>this</em> lineage is older or younger than its contemporaries.</p>
+      <p>A model is a mask over these covariates, given as a shortcut, a formula, or a length-3 binary vector:</p>
+      <div class="tw"><table>
+        <thead><tr><th>Shortcut</th><th>Active</th><th>Parameters</th><th>Hypothesis</th></tr></thead>
+        <tbody>
+          <tr><td><code>"cr"</code></td><td>none</td><td>(β₀, γ₀)</td><td>constant rates (null)</td></tr>
+          <tr><td><code>"dd"</code></td><td>N</td><td>(β₀, β<sub>N</sub>, γ₀, γ<sub>N</sub>)</td><td>ecological limits via richness</td></tr>
+          <tr><td><code>"ma"</code></td><td>M</td><td>(β₀, β<sub>M</sub>, γ₀, γ<sub>M</sub>)</td><td>regulation by clade maturity</td></tr>
+          <tr><td><code>"rd"</code></td><td>D</td><td>(β₀, β<sub>D</sub>, γ₀, γ<sub>D</sub>)</td><td>lineage-specific relative isolation</td></tr>
+        </tbody>
+      </table></div>
+      <p>Covariates combine: <code>model = ~ N + M</code> activates two (6 parameters). The names <code>pd</code> and <code>ep</code> are accepted as aliases for <code>ma</code> and <code>rd</code>.</p>
+    </section>
+
+    <section id="links">
+      <h3>Link functions</h3>
+      <p>The covariate predictor <span class="m">η<sub>cov</sub></span> is mapped to a non-negative rate, selected with <code>link = "linear" | "exponential" | "gaussian"</code>:</p>
+      <div class="tw"><table>
+        <thead><tr><th>Link</th><th>Rate</th><th>Behaviour</th></tr></thead>
+        <tbody>
+          <tr><td><b>Linear</b></td><td><span class="m">max(0, β<sub>0</sub> + η<sub>cov</sub>)</span></td><td>clipped at zero; can be exactly zero</td></tr>
+          <tr><td><b>Exponential</b></td><td><span class="m">exp(β<sub>0</sub> + η<sub>cov</sub>)</span></td><td>strictly positive; log-linear</td></tr>
+          <tr><td><b>Gaussian</b></td><td><span class="m">β<sub>0</sub>·exp(−(η<sub>cov</sub> − 1)²⁄2)</span></td><td>bounded, bell-shaped; peaks at η<sub>cov</sub>=1</td></tr>
+        </tbody>
+      </table></div>
+      <p>The Gaussian (quadratic-exponential) link expresses a non-monotone response — for instance a diversity level that is optimal for speciation, with the rate declining on either side.</p>
+    </section>
+
+    <section id="likelihood">
+      <div class="sec-head"><span class="num">§</span><h2>The likelihood</h2></div>
+      <p>Write the observed reconstructed tree as <span class="m">y<sub>obs</sub></span> and the latent extinct and unsampled lineages as <span class="m">z</span>. The complete configuration has a closed-form density <span class="m">f<sub>θ</sub>(y<sub>obs</sub>, z)</span>; only <span class="m">y<sub>obs</sub></span> is observed, so the likelihood is the intractable marginal</p>
+      <div class="eq"><span class="m">L<sub>θ</sub>(y<sub>obs</sub>) = <span class="intg">∫</span> f<sub>θ</sub>(y<sub>obs</sub>, z) &thinsp;dz</span></div>
+      <p>For a single augmented tree — a piecewise-homogeneous birth–death realization — the complete-data log-density is a log-rate for every event that happened, minus the integrated total hazard:</p>
+      <div class="eq">
+        <span class="m">log f<sub>θ</sub> = </span><span class="prodsum">∑</span><sub>spec</sub><span class="m">log λ</span> <span class="op">+</span> <span class="prodsum">∑</span><sub>ext</sub><span class="m">log μ</span> <span class="op">−</span> <span class="intg">∫</span><sub>0</sub><sup>T</sup><span class="m">N(t)[λ(t)+μ(t)]&thinsp;dt</span> <span class="op">+</span> <span class="m">S<sub>ρ</sub></span>
+      </div>
+      <p>When the deviation covariate <span class="m">D</span> is active each lineage has its own rate; because <span class="m">D = (t − t<sub>s</sub>) − M</span> is constant within each inter-event segment, the hazard integral is still evaluated in closed form under the exponential and Gaussian links.</p>
+    </section>
+
+    <section id="is">
+      <h3>Importance sampling</h3>
+      <p>The marginal is estimated by drawing latent histories from a tractable proposal and reweighting:</p>
+      <div class="eq">
+        <span class="m">L<sub>θ</sub> ≈ </span><span class="frac"><span>1</span><span class="den">S</span></span><span class="prodsum">∑</span><sub>i</sub><span class="m">w<sub>i</sub></span>,&nbsp;&nbsp; <span class="m">w<sub>i</sub> = f<sub>θ</sub>(y<sub>obs</sub>, z<sub>i</sub>) ⁄ q<sub>θ</sub>(z<sub>i</sub> | y<sub>obs</sub>)</span>,&nbsp; <span class="m">z<sub>i</sub> ∼ q<sub>θ</sub></span>
+      </div>
+      <p>The proposal augments the observed tree with extinct (and, under incomplete sampling, unsampled extant) lineages by <strong>Poisson thinning</strong>, at the intensity of speciations whose offspring do not survive as a sampled tip:</p>
+      <div class="eq"><span class="m">ν(t) = N(t)&thinsp;λ(t)&thinsp;(1 − ρ&thinsp;e<sup>−μ(t)(T−t)</sup>)</span></div>
+    </section>
+
+    <section id="mcem">
+      <h3>Monte Carlo EM</h3>
+      <p>To maximize the likelihood, <code>emphasis</code> runs EM on the latent lineages. The objective is the expected complete-data log-likelihood,</p>
+      <div class="eq"><span class="m">Q(θ | θ′) = 𝔼<sub>z | y<sub>obs</sub>, θ′</sub>[&thinsp;log f<sub>θ</sub>(y<sub>obs</sub>, z)&thinsp;] ≈ </span><span class="prodsum">∑</span><sub>i</sub><span class="m">w̃<sub>i</sub>&thinsp;log f<sub>θ</sub>(y<sub>obs</sub>, z<sub>i</sub>)</span></div>
+      <ul>
+        <li><strong>E-step</strong> — augment the observed tree many times in parallel, keeping augmentations with finite positive weight.</li>
+        <li><strong>M-step</strong> — maximize the weighted complete-data log-likelihood over <span class="m">θ</span>, optionally penalized by the survival term.</li>
+      </ul>
+      <p>Iterate until the parameter change falls below tolerance. The importance weights also yield <span class="m">f̂</span>, a log-mean-exp estimate of the observed-data log-likelihood, which drives model comparison.</p>
+    </section>
+
+    <section id="conditioning">
+      <h3>Conditioning on survival &amp; incomplete sampling</h3>
+      <p>A reconstructed tree exists only because the crown lineages left surviving, sampled descendants, so the likelihood is conditioned on that event:</p>
+      <div class="eq"><span class="m">ℓ<sub>cond</sub>(θ) = ℓ(θ) − log P<sub>θ</sub>(survival)</span></div>
+      <p>The survival probability has no closed form under endogenous rates; it is estimated by forward simulation and emulated with a binomial GAM for fast evaluation. When only a fraction <span class="m">ρ</span> of living species is sampled, set <code>rho</code>: the augmentation then also inserts unsampled extant lineages, and the likelihood gains a binomial sampling factor <span class="m">n<sub>obs</sub> log ρ + n<sub>unsamp</sub> log(1−ρ)</span>. With <code>rho = 1</code> the tree is completely sampled.</p>
+    </section>
+
+    <section id="methods">
+      <div class="sec-head"><span class="num">§</span><h2>Estimation methods</h2></div>
+      <p>The same likelihood machinery is driven by three optimizers, chained in one pipeline.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Method</th><th>Idea</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td><b>GAM</b></td><td>evaluate f̂ on a Latin-hypercube grid, fit a smooth surface, optimize it</td><td>fast exploration</td></tr>
+          <tr><td><b>CEM</b></td><td>cross-entropy: evolve a particle population, keep the elite fraction, anneal</td><td>global search</td></tr>
+          <tr><td><b>MCEM</b></td><td>Monte Carlo EM to the maximum-likelihood estimate</td><td>local refinement</td></tr>
+          <tr><td><b>Pipeline</b></td><td><code>auto_bounds → GAM → CEM → MCEM</code>, each seeding the next</td><td>recommended workflow</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="simulation">
+      <div class="sec-head"><span class="num">§</span><h2>Simulation</h2></div>
+      <p><code>simulate_tree()</code> generates trees by direct (Gillespie) forward simulation, starting from the crown and tracking the two crown clades so that loss of either is recorded as tree-wide extinction. It returns the reconstructed tree (<code>tes</code>), the full tree with extinct lineages (<code>tas</code>), and a <code>status</code> of <code>"done"</code>, <code>"extinct"</code>, or <code>"too_large"</code>.</p>
+      <pre><code><span class="n">sim</span> <span class="op">&lt;-</span> <span class="kw">simulate_tree</span>(
+  pars  <span class="op">=</span> <span class="kw">c</span>(<span class="n">0.8</span>, <span class="n">0.02</span>, <span class="n">0.1</span>, <span class="n">0</span>),   <span class="cm"># beta_0, beta_N, gamma_0, gamma_N</span>
+  max_t <span class="op">=</span> <span class="n">10</span>,
+  model <span class="op">=</span> <span class="st">"dd"</span>,
+  link  <span class="op">=</span> <span class="st">"gaussian"</span>              <span class="cm"># or "linear", "exponential"</span>
+)
+<span class="n">sim</span><span class="op">$</span><span class="n">status</span>      <span class="cm"># "done", "extinct", or "too_large"</span>
+<span class="kw">plot</span>(<span class="n">sim</span><span class="op">$</span><span class="n">tes</span>)   <span class="cm"># reconstructed (extant-only) tree</span></code></pre>
+    </section>
+
+    <section id="usage">
+      <div class="sec-head"><span class="num">§</span><h2>Usage</h2></div>
+      <h3>Full pipeline (recommended)</h3>
+      <pre><code><span class="kw">library</span>(<span class="n">emphasis</span>); <span class="kw">library</span>(<span class="n">ape</span>)
+<span class="kw">data</span>(<span class="n">bird.orders</span>)
+
+<span class="cm"># One call: bounds, GAM, CEM, MCEM</span>
+<span class="n">fit</span> <span class="op">&lt;-</span> <span class="kw">emphasis_pipeline</span>(<span class="n">bird.orders</span>, model <span class="op">=</span> <span class="st">"dd"</span>, link <span class="op">=</span> <span class="st">"gaussian"</span>)
+<span class="n">fit</span><span class="op">$</span><span class="n">pars</span>; <span class="n">fit</span><span class="op">$</span><span class="n">loglik</span>; <span class="n">fit</span><span class="op">$</span><span class="n">AIC</span></code></pre>
+
+      <h3>Simulate, then recover</h3>
+      <pre><code><span class="n">sim</span> <span class="op">&lt;-</span> <span class="kw">simulate_tree</span>(pars <span class="op">=</span> <span class="kw">c</span>(<span class="n">0.9</span>, <span class="op">-</span><span class="n">0.01</span>, <span class="n">0.1</span>, <span class="n">0</span>), max_t <span class="op">=</span> <span class="n">10</span>,
+                     model <span class="op">=</span> <span class="st">"dd"</span>, link <span class="op">=</span> <span class="st">"linear"</span>)
+
+<span class="n">fit</span> <span class="op">&lt;-</span> <span class="kw">estimate_rates</span>(<span class="n">sim</span><span class="op">$</span><span class="n">tes</span>, method <span class="op">=</span> <span class="st">"mcem"</span>, model <span class="op">=</span> <span class="st">"dd"</span>, link <span class="op">=</span> <span class="st">"linear"</span>,
+                      init_pars <span class="op">=</span> <span class="kw">c</span>(<span class="n">0.6</span>, <span class="op">-</span><span class="n">0.005</span>, <span class="n">0.15</span>, <span class="n">0</span>),
+                      control <span class="op">=</span> <span class="kw">list</span>(lower_bound <span class="op">=</span> <span class="kw">c</span>(<span class="n">1e-3</span>, <span class="op">-</span><span class="n">0.05</span>, <span class="n">1e-3</span>, <span class="op">-</span><span class="n">0.05</span>),
+                                     upper_bound <span class="op">=</span> <span class="kw">c</span>(<span class="n">3</span>, <span class="n">0.01</span>, <span class="n">3</span>, <span class="n">0.01</span>),
+                                     sample_size <span class="op">=</span> <span class="n">100</span>, max_iter <span class="op">=</span> <span class="n">25</span>))</code></pre>
+
+      <h3>Compare covariate hypotheses</h3>
+      <pre><code><span class="n">models</span> <span class="op">&lt;-</span> <span class="kw">c</span>(<span class="st">"cr"</span>, <span class="st">"dd"</span>, <span class="st">"ma"</span>, <span class="st">"rd"</span>)   <span class="cm"># constant, diversity, maturity, deviation</span>
+<span class="n">fits</span> <span class="op">&lt;-</span> <span class="kw">lapply</span>(<span class="n">models</span>, <span class="kw">function</span>(<span class="n">m</span>)
+  <span class="kw">emphasis_pipeline</span>(<span class="n">bird.orders</span>, model <span class="op">=</span> <span class="n">m</span>, link <span class="op">=</span> <span class="st">"gaussian"</span>,
+                    stages <span class="op">=</span> <span class="kw">c</span>(<span class="st">"bounds"</span>, <span class="st">"gam"</span>)))
+
+<span class="cm"># or let the package fit and rank them</span>
+<span class="kw">select_diversification_model</span>(<span class="n">bird.orders</span>, link <span class="op">=</span> <span class="st">"gaussian"</span>)</code></pre>
+    </section>
+
+    <section id="reference">
+      <div class="sec-head"><span class="num">§</span><h2>Function reference</h2></div>
+      <div class="tw"><table>
+        <thead><tr><th>Function</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>simulate_tree()</code></td><td>Forward simulation — single, batch, or conditional augmentation</td></tr>
+          <tr><td><code>estimate_rates()</code></td><td>Rate estimation via <code>method = "mcem" | "cem" | "gam"</code></td></tr>
+          <tr><td><code>emphasis_pipeline()</code></td><td>Full four-stage workflow, returns the best result across stages</td></tr>
+          <tr><td><code>auto_bounds()</code></td><td>Automatic parameter-bound detection + survival GAM</td></tr>
+          <tr><td><code>train_GAM()</code>, <code>predict_survival()</code></td><td>Fit / query the survival-probability GAM</td></tr>
+          <tr><td><code>compare_models()</code>, <code>select_diversification_model()</code></td><td>AIC-based comparison and selection</td></tr>
+          <tr><td><code>diagnose_mcem()</code>, <code>diagnose_cem()</code>, <code>diagnose_gam()</code></td><td>Diagnostic summaries and plots</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <div class="foot">
+      <p><strong>emphasis</strong> — Francisco Richter (richtf@usi.ch), with Thijs Janzen and Hanno Hildenbrandt. MIT license. Source and issues on <a href="https://github.com/franciscorichter/emphasis">GitHub</a>.</p>
+    </div>
+  </div>
+  </main>
+</div>
+</body>
+</html>
