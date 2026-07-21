@@ -5,11 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>emphasis — diversification inference with endogenous drivers</title>
 <meta name="description" content="Monte Carlo conditional-likelihood inference for endogenous-covariate diversification models on phylogenetic trees.">
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']] },
+    svg: { fontCache: 'global' },
+    startup: { ready: () => { MathJax.startup.defaultReady();
+      document.body.classList.remove('math-loading'); } }
+  };
+  setTimeout(function(){ document.body && document.body.classList.remove('math-loading'); }, 1600);
+</script>
 <style>
   :root{
     --paper:#f7f8f7; --paper-2:#eef1ee; --card:#ffffff; --card-2:#f2f5f2;
     --ink:#16201d; --ink-2:#3f4a45; --ink-3:#68736d; --line:#dde3de; --line-2:#ccd4ce;
-    --accent:#1d6d5a; --accent-2:#0f3d33; --accent-soft:#e2efe9;
+    --accent:#1d6d5a; --accent-2:#0f3d33; --accent-soft:#e2efe9; --accent-mute:#8fb7ab;
     --code-bg:#f2f4f1; --shadow:0 1px 2px rgba(20,40,34,.05),0 6px 20px rgba(20,40,34,.05);
     --measure:70ch;
     --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
@@ -20,42 +29,36 @@
     :root{
       --paper:#0d1310; --paper-2:#121a16; --card:#141d18; --card-2:#101814;
       --ink:#dde6e0; --ink-2:#a7b3ac; --ink-3:#7e8a83; --line:#243029; --line-2:#2e3c34;
-      --accent:#54b79b; --accent-2:#8fd6c1; --accent-soft:#16241e;
+      --accent:#54b79b; --accent-2:#8fd6c1; --accent-soft:#16241e; --accent-mute:#3f6a5e;
       --code-bg:#0f1712; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
     }
   }
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{background:var(--paper);color:var(--ink);font-family:var(--serif);
-    font-size:18px;line-height:1.62;-webkit-font-smoothing:antialiased;margin:0;
-    text-rendering:optimizeLegibility}
-  .layout{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:230px 1fr;gap:0}
-  /* sidebar */
-  aside{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;
-    padding:34px 22px 40px;border-right:1px solid var(--line)}
-  aside .brand{font-family:var(--mono);font-weight:600;font-size:20px;color:var(--accent-2);
-    letter-spacing:-.01em;margin-bottom:2px}
+    font-size:18px;line-height:1.62;-webkit-font-smoothing:antialiased;margin:0;text-rendering:optimizeLegibility}
+  body.math-loading main{opacity:0}
+  main{opacity:1;transition:opacity .18s ease}
+  .layout{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:236px 1fr;gap:0}
+  aside{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;padding:34px 22px 40px;border-right:1px solid var(--line)}
+  aside .brand{font-family:var(--mono);font-weight:600;font-size:20px;color:var(--accent-2);letter-spacing:-.01em;margin-bottom:2px}
   aside .tag{font-family:var(--sans);font-size:12px;color:var(--ink-3);margin-bottom:24px;display:block}
   aside nav{font-family:var(--sans);font-size:14px}
-  aside nav a{display:block;color:var(--ink-2);text-decoration:none;padding:4px 0;border-left:2px solid transparent;padding-left:12px;margin-left:-2px}
+  aside nav a{display:block;color:var(--ink-2);text-decoration:none;padding:4px 0 4px 12px;border-left:2px solid transparent;margin-left:-2px}
   aside nav a:hover{color:var(--accent);border-left-color:var(--accent)}
-  aside nav .grp{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);
-    font-weight:600;margin:20px 0 6px;padding-left:12px}
-  main{padding:0 44px 120px;min-width:0}
-  .wrap{max-width:860px}
-  /* hero */
+  aside nav .grp{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin:20px 0 6px;padding-left:12px}
+  main{padding:0 46px 120px;min-width:0}
+  .wrap{max-width:864px}
   header.hero{padding:70px 0 34px;border-bottom:1px solid var(--line)}
-  .eyebrow{font-family:var(--sans);font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;
-    color:var(--accent);font-weight:600;margin:0 0 18px}
-  h1{font-family:var(--sans);font-weight:700;font-size:clamp(30px,4.6vw,44px);line-height:1.06;
-    letter-spacing:-.02em;margin:0;text-wrap:balance;color:var(--ink)}
+  .eyebrow{font-family:var(--sans);font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:600;margin:0 0 18px}
+  h1{font-family:var(--sans);font-weight:700;font-size:clamp(30px,4.6vw,44px);line-height:1.06;letter-spacing:-.02em;margin:0;text-wrap:balance;color:var(--ink)}
   .dek{font-size:20px;color:var(--ink-2);margin:18px 0 0;max-width:58ch;line-height:1.5}
   .cta{margin-top:26px;display:flex;gap:10px;flex-wrap:wrap;font-family:var(--sans)}
   .cta a{text-decoration:none;font-size:14.5px;font-weight:600;padding:9px 16px;border-radius:8px}
   .cta a.primary{background:var(--accent);color:#fff}
   .cta a.ghost{color:var(--accent);border:1px solid var(--line-2)}
   section{padding-top:20px}
-  .sec-head{display:flex;align-items:baseline;gap:12px;margin:44px 0 8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .sec-head{display:flex;align-items:baseline;gap:12px;margin:46px 0 8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
   .sec-head .num{font-family:var(--mono);font-size:14px;color:var(--accent);font-weight:600}
   h2{font-family:var(--sans);font-size:25px;font-weight:700;letter-spacing:-.015em;margin:0;color:var(--ink);text-wrap:balance;scroll-margin-top:20px}
   h3{font-family:var(--sans);font-size:18px;font-weight:650;margin:30px 0 6px;color:var(--ink);letter-spacing:-.01em}
@@ -64,24 +67,41 @@
   strong{font-weight:650;color:var(--ink)}
   ul,ol{max-width:var(--measure);padding-left:1.3em}
   li{margin:6px 0}
-  a.ref{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--line-2)}
-  a.ref:hover{border-bottom-color:var(--accent)}
   code{font-family:var(--mono);font-size:.85em;background:var(--code-bg);padding:.1em .38em;border-radius:5px;border:1px solid var(--line);color:var(--accent-2)}
   /* math */
-  .eq{margin:20px 0;padding:16px 20px;background:var(--card-2);border:1px solid var(--line);
-    border-left:3px solid var(--accent);border-radius:0 10px 10px 0;font-family:var(--serif);
-    font-size:18px;overflow-x:auto;line-height:2}
-  .m{font-style:italic}.op{font-style:normal}
-  .frac{display:inline-flex;flex-direction:column;text-align:center;vertical-align:-.55em;margin:0 .22em;font-size:.92em}
-  .frac>span{padding:0 .45em;line-height:1.25}
-  .frac>.den{border-top:1.4px solid currentColor;padding-top:.06em}
-  sub,sup{font-size:.72em;line-height:0}
-  .intg{font-style:normal;font-size:1.4em;vertical-align:-.28em}
-  .prodsum{font-style:normal;font-size:1.3em;vertical-align:-.3em}
+  .eq{margin:22px 0;padding:6px 20px;background:var(--card-2);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;overflow-x:auto;overflow-y:hidden}
+  mjx-container[display="true"]{margin:12px 0 !important}
+  mjx-container{overflow-x:auto;overflow-y:hidden;max-width:100%}
   /* callout */
-  .note{margin:20px 0;padding:16px 20px;border-radius:10px;background:var(--accent-soft);border:1px solid var(--line);font-size:16.5px}
+  .note{margin:22px 0;padding:16px 20px;border-radius:10px;background:var(--accent-soft);border:1px solid var(--line);font-size:16.5px}
   .note p{max-width:none;margin:6px 0}
   .note .k{font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:4px}
+  /* figures */
+  figure{margin:26px 0}
+  .fig{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px 24px 8px;box-shadow:var(--shadow)}
+  .fig svg{width:100%;height:auto;display:block}
+  figcaption{font-family:var(--sans);font-size:13.5px;color:var(--ink-3);margin-top:12px;line-height:1.5;max-width:none;text-align:center}
+  figcaption b{color:var(--ink-2);font-weight:600}
+  /* svg diagram tokens */
+  .d-extant{stroke:var(--ink);stroke-width:2.4;fill:none;stroke-linecap:round}
+  .d-extinct{stroke:var(--accent);stroke-width:2;fill:none;stroke-dasharray:4 3.5;stroke-linecap:round}
+  .d-present{stroke:var(--line-2);stroke-width:1.4;stroke-dasharray:2 4}
+  .d-axis{stroke:var(--line-2);stroke-width:1.2}
+  .d-grid{stroke:var(--line);stroke-width:1}
+  .d-tip{fill:var(--ink)}
+  .d-x{stroke:var(--accent);stroke-width:1.8;stroke-linecap:round}
+  .d-curve{stroke:var(--accent);stroke-width:2.4;fill:none;stroke-linejoin:round}
+  .d-area{fill:var(--accent);opacity:.10}
+  .d-bar{fill:var(--accent-mute)}
+  .d-bar-pos{fill:var(--accent)}
+  .d-mean{stroke:var(--ink);stroke-width:1.6;stroke-dasharray:5 4}
+  .d-box{fill:var(--card-2);stroke:var(--line-2);stroke-width:1.3}
+  .d-flow{stroke:var(--accent);stroke-width:1.8;fill:none}
+  .d-t{fill:var(--ink-2);font-family:var(--sans);font-size:12.5px}
+  .d-t-sm{fill:var(--ink-3);font-family:var(--sans);font-size:11px}
+  .d-t-acc{fill:var(--accent);font-family:var(--sans);font-size:12.5px;font-weight:600}
+  .d-t-box{fill:var(--ink);font-family:var(--sans);font-size:13.5px;font-weight:650}
+  .d-t-mono{fill:var(--ink);font-family:var(--mono);font-size:12.5px;font-weight:600}
   /* code blocks */
   pre{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:16px 18px;overflow-x:auto;margin:18px 0;line-height:1.55}
   pre code{background:none;border:none;padding:0;font-size:13.5px;white-space:pre;color:var(--ink-2)}
@@ -106,7 +126,7 @@
   }
 </style>
 </head>
-<body>
+<body class="math-loading">
 <div class="layout">
   <aside>
     <div class="brand">emphasis</div>
@@ -148,6 +168,36 @@
     <p class="lead">Given a dated phylogeny of the <em>surviving</em> species of a clade, <code>emphasis</code> estimates the speciation and extinction rates that generated it — and lets those rates depend on the state of the clade itself: how many lineages there are, how old they are, and how isolated each one is.</p>
     <p>A reconstructed molecular phylogeny records only the lineages that survive to the present. The lineages that went extinct are exactly what carries the information about the extinction rate, so the likelihood of the observed tree is an integral over all possible histories of unobserved lineages. <code>emphasis</code> evaluates and maximizes that likelihood by <strong>data-augmentation importance sampling embedded in a Monte Carlo EM</strong>.</p>
 
+    <figure>
+      <div class="fig">
+        <svg viewBox="0 0 640 300" role="img" aria-label="Data augmentation: observed tree plus latent extinct lineages">
+          <!-- present line -->
+          <line class="d-present" x1="582" y1="34" x2="582" y2="276"/>
+          <text class="d-t-sm" x="582" y="292" text-anchor="middle">present (T)</text>
+          <text class="d-t-sm" x="40" y="292" text-anchor="middle">crown (0)</text>
+          <!-- extant (observed) tree -->
+          <path class="d-extant" d="M40,160 H92 M92,96 V226 M92,96 H232 M232,66 V142 M232,66 H582 M232,142 H582 M92,226 H180 M180,192 V266 M180,192 H582 M180,266 H582"/>
+          <!-- extant tips -->
+          <circle class="d-tip" cx="582" cy="66" r="4"/><circle class="d-tip" cx="582" cy="142" r="4"/>
+          <circle class="d-tip" cx="582" cy="192" r="4"/><circle class="d-tip" cx="582" cy="266" r="4"/>
+          <!-- latent extinct lineages -->
+          <path class="d-extinct" d="M166,96 V122 M166,122 H300"/>
+          <path class="d-extinct" d="M360,266 V236 M360,236 H490"/>
+          <path class="d-extinct" d="M300,142 V116 M300,116 H408"/>
+          <!-- extinction crosses -->
+          <path class="d-x" d="M295,117 l10,10 M305,117 l-10,10"/>
+          <path class="d-x" d="M485,231 l10,10 M495,231 l-10,10"/>
+          <path class="d-x" d="M403,111 l10,10 M413,111 l-10,10"/>
+          <!-- legend -->
+          <line class="d-extant" x1="360" y1="24" x2="386" y2="24"/>
+          <text class="d-t" x="392" y="28">observed (extant)</text>
+          <line class="d-extinct" x1="500" y1="24" x2="526" y2="24"/>
+          <text class="d-t" x="532" y="28">latent (extinct)</text>
+        </svg>
+      </div>
+      <figcaption><b>Data augmentation.</b> Importance sampling completes the observed tree (solid) with stochastically drawn extinct lineages (dashed) that terminate before the present. Averaging over many such completions estimates the marginal likelihood.</figcaption>
+    </figure>
+
     <section id="install">
       <div class="sec-head"><span class="num">§</span><h2>Install</h2></div>
       <pre><code><span class="n">devtools</span>::<span class="n">install_github</span>(<span class="st">"franciscorichter/emphasis"</span>)</code></pre>
@@ -156,33 +206,56 @@
 
     <section id="model">
       <div class="sec-head"><span class="num">§</span><h2>The model</h2></div>
-      <p>Time runs forward from the crown (age <span class="m">0</span>) to the present (age <span class="m">T</span>). At any moment the clade is a set of living lineages, each carrying an instantaneous speciation rate <span class="m">λ<sub>s</sub>(t)</span> and extinction rate <span class="m">μ<sub>s</sub>(t)</span> built from a linear predictor over covariates, passed through a link.</p>
-      <div class="eq">
-        <span class="m">η<sub>λ</sub> = β<sub>0</sub> + β<sub>N</sub>N + β<sub>M</sub>M + β<sub>D</sub>D</span>,&nbsp;&nbsp;&nbsp;
-        <span class="m">η<sub>μ</sub> = γ<sub>0</sub> + γ<sub>N</sub>N + γ<sub>M</sub>M + γ<sub>D</sub>D</span>
-      </div>
+      <p>Time runs forward from the crown (age \(0\)) to the present (age \(T\)). At any moment the clade is a set of living lineages, each carrying an instantaneous speciation rate \(\lambda_s(t)\) and extinction rate \(\mu_s(t)\) built from a linear predictor over covariates, passed through a link:</p>
+      <div class="eq">\[ \eta_\lambda = \beta_0 + \beta_N N + \beta_M M + \beta_D D, \qquad \eta_\mu = \gamma_0 + \gamma_N N + \gamma_M M + \gamma_D D. \]</div>
     </section>
 
     <section id="covariates">
       <h3>Covariates — an orthogonal basis</h3>
-      <p>Let <span class="m">t<sub>s</sub></span> be when lineage <span class="m">s</span> last speciated and <span class="m">I<sub>s</sub>(t) = t − t<sub>s</sub></span> its <strong>isolation time</strong>. Their clade total is the pendant phylogenetic diversity <span class="m">P = Σ<sub>s</sub> I<sub>s</sub></span>. Because <span class="m">P = N·Ī</span> (richness times mean isolation), using <span class="m">P</span> directly makes it collinear with richness — so it is split into a global mean and a local deviation, giving three <strong>orthogonal</strong> covariates:</p>
-      <div class="tw"><table>
-        <thead><tr><th>Covariate</th><th>Definition</th><th>Meaning</th></tr></thead>
-        <tbody>
-          <tr><td><span class="m">N(t)</span></td><td>number of living lineages</td><td>diversity level</td></tr>
-          <tr><td><span class="m">M(t) = P/N = Ī</span></td><td>mean pendant age</td><td>clade maturity</td></tr>
-          <tr><td><span class="m">D<sub>s</sub>(t) = I<sub>s</sub> − M</span></td><td>focal deviation from the mean</td><td>per-lineage identity</td></tr>
-        </tbody>
-      </table></div>
-      <p>Because <span class="m">Σ<sub>s</sub> D<sub>s</sub> = 0</span> at every instant, <span class="m">D</span> is orthogonal to the intercept and to the global covariates <span class="m">N</span> and <span class="m">M</span>: the three axes measure distinct effects — <em>how many</em> lineages, <em>how old</em> on average, and whether <em>this</em> lineage is older or younger than its contemporaries.</p>
-      <p>A model is a mask over these covariates, given as a shortcut, a formula, or a length-3 binary vector:</p>
+      <p>Let \(t_s\) be when lineage \(s\) last speciated and \(I_s(t) = t - t_s\) its <strong>isolation time</strong>. Their clade total is the pendant phylogenetic diversity \(P = \sum_s I_s\). Because \(P = N\bar I\) — richness times mean isolation — using \(P\) directly makes it collinear with richness, so it is split into a global mean and a local deviation:</p>
+      <div class="eq">\[ M(t) = \frac{P(t)}{N(t)} = \bar I(t), \qquad D_s(t) = I_s(t) - M(t), \qquad \sum_s D_s(t) = 0. \]</div>
+
+      <figure>
+        <div class="fig">
+          <svg viewBox="0 0 640 250" role="img" aria-label="Decomposition of isolation times into mean M and deviations D">
+            <!-- baseline origin -->
+            <line class="d-axis" x1="182" y1="30" x2="182" y2="222"/>
+            <text class="d-t-sm" x="182" y="238" text-anchor="middle">birth</text>
+            <!-- mean line M -->
+            <line class="d-mean" x1="344" y1="24" x2="344" y2="222"/>
+            <text class="d-t-box" x="344" y="18" text-anchor="middle">M</text>
+            <text class="d-t-sm" x="344" y="238" text-anchor="middle">mean age</text>
+            <!-- bars: I1..I5 (start x=182, 60 px/unit) -->
+            <rect class="d-bar" x="182" y="40"  width="120" height="20" rx="3"/>
+            <rect class="d-bar-pos" x="182" y="78"  width="210" height="20" rx="3"/>
+            <rect class="d-bar" x="182" y="116" width="72"  height="20" rx="3"/>
+            <rect class="d-bar-pos" x="182" y="154" width="240" height="20" rx="3"/>
+            <rect class="d-bar-pos" x="182" y="192" width="168" height="20" rx="3"/>
+            <!-- lineage labels -->
+            <text class="d-t" x="172" y="55"  text-anchor="end">I₁</text>
+            <text class="d-t" x="172" y="93"  text-anchor="end">I₂</text>
+            <text class="d-t" x="172" y="131" text-anchor="end">I₃</text>
+            <text class="d-t" x="172" y="169" text-anchor="end">I₄</text>
+            <text class="d-t" x="172" y="207" text-anchor="end">I₅</text>
+            <!-- deviation markers D = bar end - mean -->
+            <text class="d-t-sm" x="304"  y="36"  text-anchor="middle">D₁&lt;0</text>
+            <text class="d-t-acc" x="394" y="74" text-anchor="middle">D₂&gt;0</text>
+            <text class="d-t-acc" x="424" y="150" text-anchor="middle">D₄&gt;0</text>
+            <!-- N label -->
+            <text class="d-t-box" x="70" y="20">N = 5 lineages</text>
+          </svg>
+        </div>
+        <figcaption><b>The \(\{N, M, D\}\) basis.</b> Each bar is a lineage's isolation time \(I_s\). \(N\) counts them, \(M\) is their mean (dashed line), and \(D_s = I_s - M\) is each lineage's signed departure from that mean. Since \(\sum_s D_s = 0\), the deviation axis is orthogonal to the count and the mean.</figcaption>
+      </figure>
+
+      <p>Because \(\sum_s D_s = 0\) at every instant, \(D\) is orthogonal to the intercept and to the global covariates \(N\) and \(M\): the three axes measure distinct effects — <em>how many</em> lineages, <em>how old</em> on average, and whether <em>this</em> lineage is older or younger than its contemporaries. A model activates any subset, given as a shortcut, a formula, or a length-3 binary vector:</p>
       <div class="tw"><table>
         <thead><tr><th>Shortcut</th><th>Active</th><th>Parameters</th><th>Hypothesis</th></tr></thead>
         <tbody>
-          <tr><td><code>"cr"</code></td><td>none</td><td>(β₀, γ₀)</td><td>constant rates (null)</td></tr>
-          <tr><td><code>"dd"</code></td><td>N</td><td>(β₀, β<sub>N</sub>, γ₀, γ<sub>N</sub>)</td><td>ecological limits via richness</td></tr>
-          <tr><td><code>"ma"</code></td><td>M</td><td>(β₀, β<sub>M</sub>, γ₀, γ<sub>M</sub>)</td><td>regulation by clade maturity</td></tr>
-          <tr><td><code>"rd"</code></td><td>D</td><td>(β₀, β<sub>D</sub>, γ₀, γ<sub>D</sub>)</td><td>lineage-specific relative isolation</td></tr>
+          <tr><td><code>"cr"</code></td><td>none</td><td>\((\beta_0, \gamma_0)\)</td><td>constant rates (null)</td></tr>
+          <tr><td><code>"dd"</code></td><td>\(N\)</td><td>\((\beta_0, \beta_N, \gamma_0, \gamma_N)\)</td><td>ecological limits via richness</td></tr>
+          <tr><td><code>"ma"</code></td><td>\(M\)</td><td>\((\beta_0, \beta_M, \gamma_0, \gamma_M)\)</td><td>regulation by clade maturity</td></tr>
+          <tr><td><code>"rd"</code></td><td>\(D\)</td><td>\((\beta_0, \beta_D, \gamma_0, \gamma_D)\)</td><td>lineage-specific relative isolation</td></tr>
         </tbody>
       </table></div>
       <p>Covariates combine: <code>model = ~ N + M</code> activates two (6 parameters). The names <code>pd</code> and <code>ep</code> are accepted as aliases for <code>ma</code> and <code>rd</code>.</p>
@@ -190,67 +263,125 @@
 
     <section id="links">
       <h3>Link functions</h3>
-      <p>The covariate predictor <span class="m">η<sub>cov</sub></span> is mapped to a non-negative rate, selected with <code>link = "linear" | "exponential" | "gaussian"</code>:</p>
+      <p>The covariate predictor \(\eta_{\text{cov}}\) is mapped to a non-negative rate, selected with <code>link = "linear" | "exponential" | "gaussian"</code>:</p>
+      <figure>
+        <div class="fig">
+          <svg viewBox="0 0 640 200" role="img" aria-label="The three link functions">
+            <!-- Panel 1: Linear -->
+            <g transform="translate(20,26)">
+              <line class="d-axis" x1="0" y1="110" x2="160" y2="110"/>
+              <line class="d-axis" x1="0" y1="8" x2="0" y2="110"/>
+              <polygon class="d-area" points="0,102.0 4.8,102.0 9.6,102.0 14.4,102.0 19.2,102.0 24.0,102.0 28.8,102.0 33.6,102.0 38.4,102.0 43.2,102.0 48.0,102.0 52.8,102.0 57.6,102.0 62.4,102.0 67.2,98.9 72.0,94.2 76.8,89.5 81.6,84.8 86.4,80.1 91.2,75.4 96.0,70.7 100.8,66.0 105.6,61.3 110.4,56.6 115.2,51.9 120.0,47.2 124.8,42.5 129.6,37.8 134.4,33.1 139.2,28.4 144.0,23.7 148.8,19.0 153.6,14.3 158.4,9.6 158.4,110 0,110"/>
+              <polyline class="d-curve" points="0,102.0 4.8,102.0 9.6,102.0 14.4,102.0 19.2,102.0 24.0,102.0 28.8,102.0 33.6,102.0 38.4,102.0 43.2,102.0 48.0,102.0 52.8,102.0 57.6,102.0 62.4,102.0 67.2,98.9 72.0,94.2 76.8,89.5 81.6,84.8 86.4,80.1 91.2,75.4 96.0,70.7 100.8,66.0 105.6,61.3 110.4,56.6 115.2,51.9 120.0,47.2 124.8,42.5 129.6,37.8 134.4,33.1 139.2,28.4 144.0,23.7 148.8,19.0 153.6,14.3 158.4,9.6"/>
+              <text class="d-t-box" x="0" y="-8">Linear</text>
+              <text class="d-t-sm" x="64" y="124" text-anchor="middle">η = 0</text>
+            </g>
+            <!-- Panel 2: Exponential -->
+            <g transform="translate(240,26)">
+              <line class="d-axis" x1="0" y1="110" x2="160" y2="110"/>
+              <line class="d-axis" x1="0" y1="8" x2="0" y2="110"/>
+              <polygon class="d-area" points="0,101.4 24.0,100.7 48.0,99.2 72.0,96.0 96.0,89.3 110.4,82.0 120.0,75.1 129.6,65.6 139.2,52.9 148.8,35.8 158.4,12.6 158.4,110 0,110"/>
+              <polyline class="d-curve" points="0,101.4 4.8,101.3 9.6,101.1 14.4,101.0 19.2,100.8 24.0,100.7 28.8,100.4 33.6,100.2 38.4,99.9 43.2,99.6 48.0,99.2 52.8,98.7 57.6,98.2 62.4,97.5 67.2,96.8 72.0,96.0 76.8,95.0 81.6,93.9 86.4,92.6 91.2,91.1 96.0,89.3 100.8,87.2 105.6,84.8 110.4,82.0 115.2,78.8 120.0,75.1 124.8,70.7 129.6,65.6 134.4,59.8 139.2,52.9 144.0,45.0 148.8,35.8 153.6,25.0 158.4,12.6"/>
+              <text class="d-t-box" x="0" y="-8">Exponential</text>
+            </g>
+            <!-- Panel 3: Gaussian -->
+            <g transform="translate(460,26)">
+              <line class="d-axis" x1="0" y1="110" x2="160" y2="110"/>
+              <line class="d-axis" x1="0" y1="8" x2="0" y2="110"/>
+              <polygon class="d-area" points="0,101.0 24.0,94.5 43.2,77.9 62.4,47.8 81.6,17.1 91.2,9.1 96.0,8.0 100.8,9.1 110.4,17.1 129.6,47.8 148.8,77.9 158.4,88.0 158.4,110 0,110"/>
+              <polyline class="d-curve" points="0,101.0 4.8,100.4 9.6,99.5 14.4,98.4 19.2,96.7 24.0,94.5 28.8,91.6 33.6,88.0 38.4,83.4 43.2,77.9 48.0,71.5 52.8,64.2 57.6,56.2 62.4,47.8 67.2,39.3 72.0,31.0 76.8,23.5 81.6,17.1 86.4,12.1 91.2,9.1 96.0,8.0 100.8,9.1 105.6,12.1 110.4,17.1 115.2,23.5 120.0,31.0 124.8,39.3 129.6,47.8 134.4,56.2 139.2,64.2 144.0,71.5 148.8,77.9 153.6,83.4 158.4,88.0"/>
+              <line class="d-present" x1="96" y1="8" x2="96" y2="110"/>
+              <text class="d-t-box" x="0" y="-8">Gaussian</text>
+              <text class="d-t-sm" x="96" y="124" text-anchor="middle">peak η = 1</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption><b>Link functions</b>, rate vs. the covariate predictor \(\eta_{\text{cov}}\). Linear clips at zero, exponential is log-linear, and the Gaussian (quadratic-exponential) is bell-shaped with a peak at \(\eta_{\text{cov}} = 1\) — an intermediate optimum.</figcaption>
+      </figure>
       <div class="tw"><table>
         <thead><tr><th>Link</th><th>Rate</th><th>Behaviour</th></tr></thead>
         <tbody>
-          <tr><td><b>Linear</b></td><td><span class="m">max(0, β<sub>0</sub> + η<sub>cov</sub>)</span></td><td>clipped at zero; can be exactly zero</td></tr>
-          <tr><td><b>Exponential</b></td><td><span class="m">exp(β<sub>0</sub> + η<sub>cov</sub>)</span></td><td>strictly positive; log-linear</td></tr>
-          <tr><td><b>Gaussian</b></td><td><span class="m">β<sub>0</sub>·exp(−(η<sub>cov</sub> − 1)²⁄2)</span></td><td>bounded, bell-shaped; peaks at η<sub>cov</sub>=1</td></tr>
+          <tr><td><b>Linear</b></td><td>\(\max(0,\ \beta_0 + \eta_{\text{cov}})\)</td><td>clipped at zero; can be exactly zero</td></tr>
+          <tr><td><b>Exponential</b></td><td>\(\exp(\beta_0 + \eta_{\text{cov}})\)</td><td>strictly positive; log-linear</td></tr>
+          <tr><td><b>Gaussian</b></td><td>\(\beta_0 \cdot \exp\!\big(-(\eta_{\text{cov}} - 1)^2 / 2\big)\)</td><td>bounded, bell-shaped</td></tr>
         </tbody>
       </table></div>
-      <p>The Gaussian (quadratic-exponential) link expresses a non-monotone response — for instance a diversity level that is optimal for speciation, with the rate declining on either side.</p>
     </section>
 
     <section id="likelihood">
       <div class="sec-head"><span class="num">§</span><h2>The likelihood</h2></div>
-      <p>Write the observed reconstructed tree as <span class="m">y<sub>obs</sub></span> and the latent extinct and unsampled lineages as <span class="m">z</span>. The complete configuration has a closed-form density <span class="m">f<sub>θ</sub>(y<sub>obs</sub>, z)</span>; only <span class="m">y<sub>obs</sub></span> is observed, so the likelihood is the intractable marginal</p>
-      <div class="eq"><span class="m">L<sub>θ</sub>(y<sub>obs</sub>) = <span class="intg">∫</span> f<sub>θ</sub>(y<sub>obs</sub>, z) &thinsp;dz</span></div>
+      <p>Write the observed reconstructed tree as \(y_{\text{obs}}\) and the latent extinct and unsampled lineages as \(z\). The complete configuration has a closed-form density \(f_\theta(y_{\text{obs}}, z)\); only \(y_{\text{obs}}\) is observed, so the likelihood is the intractable marginal</p>
+      <div class="eq">\[ L_\theta(y_{\text{obs}}) = \int f_\theta(y_{\text{obs}}, z)\, dz. \]</div>
       <p>For a single augmented tree — a piecewise-homogeneous birth–death realization — the complete-data log-density is a log-rate for every event that happened, minus the integrated total hazard:</p>
-      <div class="eq">
-        <span class="m">log f<sub>θ</sub> = </span><span class="prodsum">∑</span><sub>spec</sub><span class="m">log λ</span> <span class="op">+</span> <span class="prodsum">∑</span><sub>ext</sub><span class="m">log μ</span> <span class="op">−</span> <span class="intg">∫</span><sub>0</sub><sup>T</sup><span class="m">N(t)[λ(t)+μ(t)]&thinsp;dt</span> <span class="op">+</span> <span class="m">S<sub>ρ</sub></span>
-      </div>
-      <p>When the deviation covariate <span class="m">D</span> is active each lineage has its own rate; because <span class="m">D = (t − t<sub>s</sub>) − M</span> is constant within each inter-event segment, the hazard integral is still evaluated in closed form under the exponential and Gaussian links.</p>
+      <div class="eq">\[ \log f_\theta = \sum_{\text{spec}} \log \lambda(t_b) + \sum_{\text{ext}} \log \mu(t_e) - \int_0^T N(t)\big[\lambda(t) + \mu(t)\big]\, dt \;+\; S_\rho, \]</div>
+      <p>where \(S_\rho\) is the incomplete-sampling correction (below). When the deviation covariate \(D\) is active each lineage has its own rate; because \(D = (t - t_s) - M\) is constant within each inter-event segment, the hazard integral is still evaluated in closed form under the exponential and Gaussian links.</p>
     </section>
 
     <section id="is">
       <h3>Importance sampling</h3>
       <p>The marginal is estimated by drawing latent histories from a tractable proposal and reweighting:</p>
-      <div class="eq">
-        <span class="m">L<sub>θ</sub> ≈ </span><span class="frac"><span>1</span><span class="den">S</span></span><span class="prodsum">∑</span><sub>i</sub><span class="m">w<sub>i</sub></span>,&nbsp;&nbsp; <span class="m">w<sub>i</sub> = f<sub>θ</sub>(y<sub>obs</sub>, z<sub>i</sub>) ⁄ q<sub>θ</sub>(z<sub>i</sub> | y<sub>obs</sub>)</span>,&nbsp; <span class="m">z<sub>i</sub> ∼ q<sub>θ</sub></span>
-      </div>
-      <p>The proposal augments the observed tree with extinct (and, under incomplete sampling, unsampled extant) lineages by <strong>Poisson thinning</strong>, at the intensity of speciations whose offspring do not survive as a sampled tip:</p>
-      <div class="eq"><span class="m">ν(t) = N(t)&thinsp;λ(t)&thinsp;(1 − ρ&thinsp;e<sup>−μ(t)(T−t)</sup>)</span></div>
+      <div class="eq">\[ L_\theta \approx \frac{1}{S}\sum_{i=1}^{S} w_i, \qquad w_i = \frac{f_\theta(y_{\text{obs}}, z_i)}{q_\theta(z_i \mid y_{\text{obs}})}, \qquad z_i \sim q_\theta. \]</div>
+      <p>The proposal augments the observed tree by <strong>Poisson thinning</strong>, at the intensity of speciations whose offspring do not survive as a sampled tip:</p>
+      <div class="eq">\[ \nu(t) = N(t)\,\lambda(t)\,\bigl(1 - \rho\, e^{-\mu(t)(T - t)}\bigr). \]</div>
     </section>
 
     <section id="mcem">
       <h3>Monte Carlo EM</h3>
       <p>To maximize the likelihood, <code>emphasis</code> runs EM on the latent lineages. The objective is the expected complete-data log-likelihood,</p>
-      <div class="eq"><span class="m">Q(θ | θ′) = 𝔼<sub>z | y<sub>obs</sub>, θ′</sub>[&thinsp;log f<sub>θ</sub>(y<sub>obs</sub>, z)&thinsp;] ≈ </span><span class="prodsum">∑</span><sub>i</sub><span class="m">w̃<sub>i</sub>&thinsp;log f<sub>θ</sub>(y<sub>obs</sub>, z<sub>i</sub>)</span></div>
+      <div class="eq">\[ Q(\theta \mid \theta') = \mathbb{E}_{z \mid y_{\text{obs}}, \theta'}\!\big[\log f_\theta(y_{\text{obs}}, z)\big] \approx \sum_i \tilde w_i \,\log f_\theta(y_{\text{obs}}, z_i), \]</div>
       <ul>
         <li><strong>E-step</strong> — augment the observed tree many times in parallel, keeping augmentations with finite positive weight.</li>
-        <li><strong>M-step</strong> — maximize the weighted complete-data log-likelihood over <span class="m">θ</span>, optionally penalized by the survival term.</li>
+        <li><strong>M-step</strong> — maximize the weighted complete-data log-likelihood over \(\theta\), optionally penalized by the survival term.</li>
       </ul>
-      <p>Iterate until the parameter change falls below tolerance. The importance weights also yield <span class="m">f̂</span>, a log-mean-exp estimate of the observed-data log-likelihood, which drives model comparison.</p>
+      <p>Iterate until the parameter change falls below tolerance. The importance weights also yield \(\hat f\), a log-mean-exp estimate of the observed-data log-likelihood, which drives model comparison.</p>
     </section>
 
     <section id="conditioning">
       <h3>Conditioning on survival &amp; incomplete sampling</h3>
       <p>A reconstructed tree exists only because the crown lineages left surviving, sampled descendants, so the likelihood is conditioned on that event:</p>
-      <div class="eq"><span class="m">ℓ<sub>cond</sub>(θ) = ℓ(θ) − log P<sub>θ</sub>(survival)</span></div>
-      <p>The survival probability has no closed form under endogenous rates; it is estimated by forward simulation and emulated with a binomial GAM for fast evaluation. When only a fraction <span class="m">ρ</span> of living species is sampled, set <code>rho</code>: the augmentation then also inserts unsampled extant lineages, and the likelihood gains a binomial sampling factor <span class="m">n<sub>obs</sub> log ρ + n<sub>unsamp</sub> log(1−ρ)</span>. With <code>rho = 1</code> the tree is completely sampled.</p>
+      <div class="eq">\[ \ell_{\text{cond}}(\theta) = \ell(\theta) - \log P_\theta(\text{survival}). \]</div>
+      <p>The survival probability has no closed form under endogenous rates; it is estimated by forward simulation and emulated with a binomial GAM for fast evaluation. When only a fraction \(\rho\) of living species is sampled, set <code>rho</code>: the augmentation then also inserts unsampled extant lineages, and the likelihood gains a binomial sampling factor</p>
+      <div class="eq">\[ S_\rho = n_{\text{obs}} \log \rho + n_{\text{unsamp}} \log(1 - \rho). \]</div>
+      <p>With <code>rho = 1</code> the tree is completely sampled and \(S_\rho = 0\).</p>
     </section>
 
     <section id="methods">
       <div class="sec-head"><span class="num">§</span><h2>Estimation methods</h2></div>
-      <p>The same likelihood machinery is driven by three optimizers, chained in one pipeline.</p>
+      <p>The same likelihood machinery is driven by three optimizers, chained in one pipeline that seeds each stage from the last.</p>
+      <figure>
+        <div class="fig">
+          <svg viewBox="0 0 640 132" role="img" aria-label="The four-stage estimation pipeline">
+            <defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" class="d-flow"/></marker></defs>
+            <g>
+              <rect class="d-box" x="8"   y="34" width="128" height="48" rx="9"/>
+              <rect class="d-box" x="176" y="34" width="128" height="48" rx="9"/>
+              <rect class="d-box" x="344" y="34" width="128" height="48" rx="9"/>
+              <rect class="d-box" x="512" y="34" width="120" height="48" rx="9"/>
+              <text class="d-t-mono" x="72"  y="55" text-anchor="middle">auto_bounds</text>
+              <text class="d-t-mono" x="240" y="55" text-anchor="middle">GAM</text>
+              <text class="d-t-mono" x="408" y="55" text-anchor="middle">CEM</text>
+              <text class="d-t-mono" x="572" y="55" text-anchor="middle">MCEM</text>
+              <text class="d-t-sm" x="72"  y="72" text-anchor="middle">bounds</text>
+              <text class="d-t-sm" x="240" y="72" text-anchor="middle">surface</text>
+              <text class="d-t-sm" x="408" y="72" text-anchor="middle">global search</text>
+              <text class="d-t-sm" x="572" y="72" text-anchor="middle">refinement</text>
+              <line class="d-flow" x1="138" y1="58" x2="172" y2="58" marker-end="url(#ah)"/>
+              <line class="d-flow" x1="306" y1="58" x2="340" y2="58" marker-end="url(#ah)"/>
+              <line class="d-flow" x1="474" y1="58" x2="508" y2="58" marker-end="url(#ah)"/>
+              <text class="d-t-sm" x="320" y="20" text-anchor="middle">each stage seeds the next</text>
+              <text class="d-t-acc" x="320" y="104" text-anchor="middle">the best result across stages is returned</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption><b>The pipeline.</b> <code>emphasis_pipeline()</code> runs bound detection, a GAM surface, cross-entropy global search, and Monte Carlo EM refinement in sequence.</figcaption>
+      </figure>
       <div class="tw"><table>
         <thead><tr><th>Method</th><th>Idea</th><th>Role</th></tr></thead>
         <tbody>
-          <tr><td><b>GAM</b></td><td>evaluate f̂ on a Latin-hypercube grid, fit a smooth surface, optimize it</td><td>fast exploration</td></tr>
+          <tr><td><b>GAM</b></td><td>evaluate \(\hat f\) on a Latin-hypercube grid, fit a smooth surface, optimize it</td><td>fast exploration</td></tr>
           <tr><td><b>CEM</b></td><td>cross-entropy: evolve a particle population, keep the elite fraction, anneal</td><td>global search</td></tr>
           <tr><td><b>MCEM</b></td><td>Monte Carlo EM to the maximum-likelihood estimate</td><td>local refinement</td></tr>
-          <tr><td><b>Pipeline</b></td><td><code>auto_bounds → GAM → CEM → MCEM</code>, each seeding the next</td><td>recommended workflow</td></tr>
+          <tr><td><b>Pipeline</b></td><td><code>auto_bounds → GAM → CEM → MCEM</code></td><td>recommended workflow</td></tr>
         </tbody>
       </table></div>
     </section>
@@ -290,11 +421,6 @@
 
       <h3>Compare covariate hypotheses</h3>
       <pre><code><span class="n">models</span> <span class="op">&lt;-</span> <span class="kw">c</span>(<span class="st">"cr"</span>, <span class="st">"dd"</span>, <span class="st">"ma"</span>, <span class="st">"rd"</span>)   <span class="cm"># constant, diversity, maturity, deviation</span>
-<span class="n">fits</span> <span class="op">&lt;-</span> <span class="kw">lapply</span>(<span class="n">models</span>, <span class="kw">function</span>(<span class="n">m</span>)
-  <span class="kw">emphasis_pipeline</span>(<span class="n">bird.orders</span>, model <span class="op">=</span> <span class="n">m</span>, link <span class="op">=</span> <span class="st">"gaussian"</span>,
-                    stages <span class="op">=</span> <span class="kw">c</span>(<span class="st">"bounds"</span>, <span class="st">"gam"</span>)))
-
-<span class="cm"># or let the package fit and rank them</span>
 <span class="kw">select_diversification_model</span>(<span class="n">bird.orders</span>, link <span class="op">=</span> <span class="st">"gaussian"</span>)</code></pre>
     </section>
 
@@ -320,5 +446,6 @@
   </div>
   </main>
 </div>
+<script defer src="assets/mathjax/tex-svg.js"></script>
 </body>
 </html>
