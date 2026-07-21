@@ -62,6 +62,11 @@ sets this to \code{max(2000, 200 * n_trees)}.}
 
 \item{num_threads}{Threads for parallel augmentation. Default \code{1L}.}
 
+\item{rho}{Sampling fraction in \code{(0, 1]}. Default \code{1} (complete
+sampling). With \code{rho < 1} a random fraction of extant tips is dropped
+(forward simulation) or unsampled extant lineages are inserted
+(augmentation), matching incomplete taxon sampling.}
+
 \item{method}{Augmentation method: \code{"thinning"} (default, C++
 thinning proposal) or \code{"bdi"} (exact BDI sampler).  The BDI
 sampler draws from the exact conditional distribution under constant

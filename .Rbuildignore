@@ -19,3 +19,6 @@
 ^doc$
 ^state\.md$
 ^analysis$
+^index\.html$
+^\.nojekyll$
+^assets$
