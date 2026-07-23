@@ -17,8 +17,8 @@ emphasis_pipeline(
 \item{tree}{A \code{phylo} object, branching-time vector, or
 \code{\link{simulate_tree}} result.}
 
-\item{model}{Model specification: \code{"cr"}, \code{"dd"}, \code{"pd"},
-\code{"ep"}, a formula, or a binary vector.}
+\item{model}{Model specification: \code{"cr"}, \code{"dd"}, \code{"d"},
+\code{"nd"}, a formula (e.g. \code{~ N + D}), or a binary vector.}
 
 \item{link}{\code{"linear"} (default), \code{"exponential"}, or \code{"gaussian"}.}
 

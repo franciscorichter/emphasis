@@ -19,7 +19,7 @@ simulate_tree(
   maxN = NULL,
   num_threads = 1L,
   rho = 1,
-  method = "bdi"
+  method = "thinning"
 )
 }
 \arguments{
@@ -67,11 +67,8 @@ sampling). With \code{rho < 1} a random fraction of extant tips is dropped
 (forward simulation) or unsampled extant lineages are inserted
 (augmentation), matching incomplete taxon sampling.}
 
-\item{method}{Augmentation method: \code{"thinning"} (default, C++
-thinning proposal) or \code{"bdi"} (exact BDI sampler).  The BDI
-sampler draws from the exact conditional distribution under constant
-rates (ESS = S, zero variance) and uses a self-consistent
-backward-forward iteration under diversity dependence.}
+\item{method}{Augmentation method. Only \code{"thinning"} (the C++ thinning
+proposal, the default) is supported.}
 }
 \description{
 Unified entry point for forward and conditional tree simulation.
@@ -81,26 +78,26 @@ augmented with stochastically drawn extinct lineages.
 }
 \section{Model specification}{
 
-The model uses the orthogonal covariate basis \{N, M = P/N, D = E - M\},
-selected by a 3-element binary vector \code{c(use_N, use_M, use_D)}. Named
-shortcuts:
+The model uses the orthogonal covariate basis \{N, D\}: diversity \code{N}
+and age-imbalance \code{D = E - M} (a lineage's isolation relative to the
+clade mean \code{M}, which is used only internally to centre \code{D}).
+Selected by named shortcuts or a formula:
 \tabular{ll}{
-  \code{"cr"} \tab \code{c(0,0,0)} constant rate\cr
-  \code{"dd"} \tab \code{c(1,0,0)} diversity (N)\cr
-  \code{"ma"} \tab \code{c(0,1,0)} mean pendant age / maturity (M)\cr
-  \code{"rd"} \tab \code{c(0,0,1)} relative deviation (D)\cr
+  \code{"cr"} \tab constant rate\cr
+  \code{"dd"} \tab diversity dependence (N)\cr
+  \code{"d"}  \tab age-imbalance (D)\cr
+  \code{"nd"} \tab N + D (recommended)\cr
 }
-\code{"pd"} and \code{"ep"} are accepted as aliases for \code{"ma"} and
-\code{"rd"}. Mixed models (e.g. \code{c(1,1,0)}) and formulas
-(e.g. \code{~ N + M}) are fully supported.
+Formulas \code{~ N} and \code{~ N + D} are also accepted (\code{ep} is a
+legacy alias for \code{d}).
 }
 
 \section{Parameter vector}{
 
-Orthogonal covariate basis \{N, M = P/N, D = E - M\}: slot 2 is the mean-age
-coefficient (\code{beta_M}) and slot 3 the deviation coefficient (\code{beta_D}).
-\preformatted{c(beta_0,  [beta_N],  [beta_M],  [beta_D],
-  gamma_0, [gamma_N], [gamma_M], [gamma_D])}
+Compact layout for the \{N, D\} basis; \code{beta_D} is the age-imbalance
+coefficient (\code{M} is internal only, never part of the user vector):
+\preformatted{c(beta_0,  [beta_N],  [beta_D],
+  gamma_0, [gamma_N], [gamma_D])}
 Only active covariates are included; length = \code{2 + 2 * sum(model)}.
 }
 

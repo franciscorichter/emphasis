@@ -6,24 +6,24 @@
 #' augmented with stochastically drawn extinct lineages.
 #'
 #' @section Model specification:
-#' The model uses the orthogonal covariate basis \{N, M = P/N, D = E - M\},
-#' selected by a 3-element binary vector \code{c(use_N, use_M, use_D)}. Named
-#' shortcuts:
+#' The model uses the orthogonal covariate basis \{N, D\}: diversity \code{N}
+#' and age-imbalance \code{D = E - M} (a lineage's isolation relative to the
+#' clade mean \code{M}, which is used only internally to centre \code{D}).
+#' Selected by named shortcuts or a formula:
 #' \tabular{ll}{
-#'   \code{"cr"} \tab \code{c(0,0,0)} constant rate\cr
-#'   \code{"dd"} \tab \code{c(1,0,0)} diversity (N)\cr
-#'   \code{"ma"} \tab \code{c(0,1,0)} mean pendant age / maturity (M)\cr
-#'   \code{"rd"} \tab \code{c(0,0,1)} relative deviation (D)\cr
+#'   \code{"cr"} \tab constant rate\cr
+#'   \code{"dd"} \tab diversity dependence (N)\cr
+#'   \code{"d"}  \tab age-imbalance (D)\cr
+#'   \code{"nd"} \tab N + D (recommended)\cr
 #' }
-#' \code{"pd"} and \code{"ep"} are accepted as aliases for \code{"ma"} and
-#' \code{"rd"}. Mixed models (e.g. \code{c(1,1,0)}) and formulas
-#' (e.g. \code{~ N + M}) are fully supported.
+#' Formulas \code{~ N} and \code{~ N + D} are also accepted (\code{ep} is a
+#' legacy alias for \code{d}).
 #'
 #' @section Parameter vector:
-#' Orthogonal covariate basis \{N, M = P/N, D = E - M\}: slot 2 is the mean-age
-#' coefficient (\code{beta_M}) and slot 3 the deviation coefficient (\code{beta_D}).
-#' \preformatted{c(beta_0,  [beta_N],  [beta_M],  [beta_D],
-#'   gamma_0, [gamma_N], [gamma_M], [gamma_D])}
+#' Compact layout for the \{N, D\} basis; \code{beta_D} is the age-imbalance
+#' coefficient (\code{M} is internal only, never part of the user vector):
+#' \preformatted{c(beta_0,  [beta_N],  [beta_D],
+#'   gamma_0, [gamma_N], [gamma_D])}
 #' Only active covariates are included; length = \code{2 + 2 * sum(model)}.
 #'
 #' @section Output -- forward simulation (single):
@@ -93,11 +93,8 @@
 #'   sampling). With \code{rho < 1} a random fraction of extant tips is dropped
 #'   (forward simulation) or unsampled extant lineages are inserted
 #'   (augmentation), matching incomplete taxon sampling.
-#' @param method Augmentation method: \code{"thinning"} (default, C++
-#'   thinning proposal) or \code{"bdi"} (exact BDI sampler).  The BDI
-#'   sampler draws from the exact conditional distribution under constant
-#'   rates (ESS = S, zero variance) and uses a self-consistent
-#'   backward-forward iteration under diversity dependence.
+#' @param method Augmentation method. Only \code{"thinning"} (the C++ thinning
+#'   proposal, the default) is supported.
 #' @examples
 #' \dontrun{
 #' # --- Forward simulation ---
@@ -138,7 +135,7 @@ simulate_tree <- function(tree        = NULL,
                           maxN        = NULL,
                           num_threads = 1L,
                           rho         = 1.0,
-                          method      = "bdi") {
+                          method      = "thinning") {
 
   model_bin <- .resolve_model(model)
   link_int  <- .resolve_link(link)
@@ -173,7 +170,7 @@ simulate_tree <- function(tree        = NULL,
   # ---------------------------------------------------------------------- #
   #  Conditional simulation (augmentation)                                  #
   # ---------------------------------------------------------------------- #
-  method <- match.arg(method, c("thinning", "bdi"))
+  method <- match.arg(method, c("thinning"))
 
   if (!is.null(tree)) {
     return(.sim_tree_conditional(tree, pars, model_bin,
@@ -250,13 +247,13 @@ simulate_tree <- function(tree        = NULL,
 
 #' @keywords internal
 .resolve_model <- function(model) {
-  # Orthogonal covariate slots c(use_N, use_M, use_D) where
-  #   N = diversity, M = P/N mean pendant age, D = E - M focal deviation.
-  # Shortcut strings: "dd" -> N, "ma" -> M, "rd" -> D.
-  # Legacy aliases kept: "pd" -> M slot, "ep" -> D slot.
+  # Canonical two-covariate basis, internal slots c(use_N, use_M, use_D):
+  #   N = diversity, D = E - M age-imbalance. M (slot 2) is retained only as the
+  #   internal centering reference for D and is not user-selectable.
+  # Shortcuts: "dd" -> N, "d" -> D, "nd" -> N + D. "ep"/"rd" are legacy D aliases.
   shortcuts <- list(cr = c(0L, 0L, 0L), dd = c(1L, 0L, 0L),
-                    ma = c(0L, 1L, 0L), rd = c(0L, 0L, 1L),
-                    pd = c(0L, 1L, 0L), ep = c(0L, 0L, 1L))
+                    d  = c(0L, 0L, 1L), nd = c(1L, 0L, 1L),
+                    rd = c(0L, 0L, 1L), ep = c(0L, 0L, 1L))
   if (is.character(model)) {
     return(shortcuts[[match.arg(model, names(shortcuts))]])
   }
@@ -265,8 +262,8 @@ simulate_tree <- function(tree        = NULL,
   }
   model <- as.integer(model)
   if (length(model) != 3L || !all(model %in% 0:1)) {
-    stop(paste0("'model' must be a formula (e.g. ~ N + M), a string ",
-                "(\"cr\", \"dd\", \"ma\", \"rd\"), or a length-3 binary ",
+    stop(paste0("'model' must be a formula (e.g. ~ N + D), a string ",
+                "(\"cr\", \"dd\", \"d\", \"nd\"), or a length-3 binary ",
                 "integer vector."))
   }
   model
@@ -275,14 +272,15 @@ simulate_tree <- function(tree        = NULL,
 #' @keywords internal
 .parse_model_formula <- function(formula) {
   terms <- attr(stats::terms(formula), "term.labels")
-  # Primary covariate names N, M, D; legacy aliases PD (=M), EP/E (=D).
-  known <- c(N = 1L, M = 2L, D = 3L, PD = 2L, EP = 3L, E = 3L)
+  # User covariates N and D (slot 3); legacy aliases EP/E for D. M (slot 2) is
+  # internal only and not user-selectable.
+  known <- c(N = 1L, D = 3L, EP = 3L, E = 3L)
   terms_upper <- toupper(terms)
   model_bin <- c(0L, 0L, 0L)
   for (tm in terms_upper) {
     idx <- known[tm]
     if (is.na(idx)) {
-      stop(sprintf("Unknown covariate '%s' in model formula. Use N, M, and/or D.", tm))
+      stop(sprintf("Unknown covariate '%s' in model formula. Use N and/or D.", tm))
     }
     model_bin[idx] <- 1L
   }
@@ -339,24 +337,14 @@ simulate_tree <- function(tree        = NULL,
 
   L_extant <- .extract_Ltable(tree)
 
-  if (method == "bdi") {
-    aug <- tryCatch(
-      .augment_tree_bdi(tree, pars = pars, model_bin = model_bin,
-                        sample_size = n_trees,
-                        max_missing = max_missing, link = link,
-                        rho = rho),
-      error = function(e) NULL
-    )
-  } else {
-    aug <- tryCatch(
-      .augment_tree_internal(tree, pars = pars, model_bin = model_bin,
-                             sample_size = n_trees,
-                             max_missing = max_missing, max_lambda = max_lambda,
-                             maxN = maxN, num_threads = num_threads, link = link,
-                             rho = rho),
-      error = function(e) NULL
-    )
-  }
+  aug <- tryCatch(
+    .augment_tree_internal(tree, pars = pars, model_bin = model_bin,
+                           sample_size = n_trees,
+                           max_missing = max_missing, max_lambda = max_lambda,
+                           maxN = maxN, num_threads = num_threads, link = link,
+                           rho = rho),
+    error = function(e) NULL
+  )
 
   # Failure path
   if (is.null(aug) || length(aug$trees) == 0L) {

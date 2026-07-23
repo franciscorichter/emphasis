@@ -544,7 +544,7 @@
 #'   Default \code{0.01} (1\%).  SD will not decay below this floor.
 #' @param verbose Print iteration summaries. Default \code{FALSE}.
 #' @param num_threads Parallel threads. Default \code{1}.
-#' @param model Length-3 binary integer vector \code{c(use_N, use_P, use_E)}.
+#' @param model Length-3 binary integer vector \code{c(use_N, use_M, use_D)}.
 #' @param link Integer link code: \code{0} = linear, \code{1} = exponential.
 #' @param rho Sampling fraction (0, 1]. Default \code{1} (complete sampling).
 #' @return A list:

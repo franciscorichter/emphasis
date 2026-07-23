@@ -653,7 +653,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 # Upper bound on net rate: r_max such that 2*exp(r_max*T) ~ 50*N.
 # This prevents the probe from wasting time on explosive combos.
 #
-# When covariates are active (DD/PD/EP), the intercept can be much higher
+# When covariates are active (DD/D/ND), the intercept can be much higher
 # than the CR feasibility limit because covariate slopes regulate growth.
 # E.g. DD with lambda_0=0.7 and beta_N=-0.03 has K~23, perfectly feasible.
 # We multiply lam_hi by 5x for covariate models to avoid excluding the
@@ -717,8 +717,8 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 #'   accepted by \code{\link{estimate_rates}}.
 #' @param pars_mat Numeric matrix whose rows are compact parameter vectors
 #'   (same layout as \code{pars} in \code{\link{estimate_rates}}).
-#' @param model Model specification: \code{"cr"}, \code{"dd"}, \code{"pd"},
-#'   \code{"ep"}, or a length-3 binary integer vector.
+#' @param model Model specification: \code{"cr"}, \code{"dd"}, \code{"d"},
+#'   \code{"nd"}, or a length-3 binary integer vector.
 #' @param sample_size Number of augmented trees per grid point (default 200).
 #' @param link \code{"linear"}, \code{"exponential"}, or \code{"gaussian"}.
 #' @param max_missing Maximum missing lineages per augmentation (default 1e4).

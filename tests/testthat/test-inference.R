@@ -6,12 +6,10 @@ test_that(".par_names returns correct names for each model", {
   expect_equal(emphasis:::.par_names(c(0L, 0L, 0L)), c("beta_0", "gamma_0"))
   expect_equal(emphasis:::.par_names(c(1L, 0L, 0L)),
                c("beta_0", "beta_N", "gamma_0", "gamma_N"))
-  expect_equal(emphasis:::.par_names(c(0L, 1L, 0L)),
-               c("beta_0", "beta_M", "gamma_0", "gamma_M"))
   expect_equal(emphasis:::.par_names(c(0L, 0L, 1L)),
                c("beta_0", "beta_D", "gamma_0", "gamma_D"))
-  expect_equal(emphasis:::.par_names(c(1L, 1L, 0L)),
-               c("beta_0", "beta_N", "beta_M", "gamma_0", "gamma_N", "gamma_M"))
+  expect_equal(emphasis:::.par_names(c(1L, 0L, 1L)),
+               c("beta_0", "beta_N", "beta_D", "gamma_0", "gamma_N", "gamma_D"))
 })
 
 test_that(".contract_pars and .expand_pars are inverses", {
@@ -26,9 +24,8 @@ test_that(".contract_pars and .expand_pars are inverses", {
 test_that(".model_label returns correct labels", {
   expect_equal(emphasis:::.model_label(c(0L, 0L, 0L)), "CR")
   expect_equal(emphasis:::.model_label(c(1L, 0L, 0L)), "N")
-  expect_equal(emphasis:::.model_label(c(0L, 1L, 0L)), "M")
   expect_equal(emphasis:::.model_label(c(0L, 0L, 1L)), "D")
-  expect_equal(emphasis:::.model_label(c(1L, 1L, 0L)), "N + M")
+  expect_equal(emphasis:::.model_label(c(1L, 0L, 1L)), "N + D")
 })
 
 test_that(".extract_brts handles different input types", {

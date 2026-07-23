@@ -41,12 +41,14 @@ estimate_rates(
 
 \item{model}{Model specification. Accepts:
 \itemize{
-  \item a formula such as \code{~ N}, \code{~ N + PD}, \code{~ PD + EP},
-  \item a string shortcut (\code{"cr"}, \code{"dd"}, \code{"pd"},
-    \code{"ep"}), or
-  \item a length-3 binary integer vector \code{c(use_N, use_P, use_E)}.
+  \item a formula such as \code{~ N} or \code{~ N + D},
+  \item a string shortcut (\code{"cr"}, \code{"dd"}, \code{"d"},
+    \code{"nd"}), or
+  \item a length-3 binary integer vector \code{c(use_N, use_M, use_D)}
+    (\code{use_M} is internal only and should be 0).
 }
-Default \code{"cr"} (constant rate).}
+Default \code{"cr"} (constant rate). The recommended covariate model is
+\code{"nd"} (\code{~ N + D}): diversity and age-imbalance.}
 
 \item{init_pars}{Starting parameter vector. Required for \code{"mcem"};
 ignored for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the
@@ -59,9 +61,9 @@ Key entries:
 \describe{
   \item{\code{lower_bound}}{Numeric vector of lower parameter bounds.
     Length must be \code{2 + 2*sum(model)}.
-    Order: \code{c(beta_0, [beta_N], [beta_M], [beta_D],
-    gamma_0, [gamma_N], [gamma_M], [gamma_D])} (slot 2 = mean-age M,
-    slot 3 = deviation D).}
+    Order: \code{c(beta_0, [beta_N], [beta_D],
+    gamma_0, [gamma_N], [gamma_D])} (D = age-imbalance covariate;
+    M is internal only).}
   \item{\code{upper_bound}}{Numeric vector of upper parameter bounds
     (same order).}
   \item{\code{verbose}}{Print progress messages. Default \code{FALSE}.}

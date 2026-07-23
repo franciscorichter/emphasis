@@ -149,6 +149,8 @@
       <a href="#simulation">Simulation</a>
       <a href="#usage">Usage</a>
       <a href="#reference">Function reference</a>
+      <div class="grp">More</div>
+      <a href="D.html">The meaning of D →</a>
     </nav>
   </aside>
 
@@ -165,7 +167,7 @@
       </div>
     </header>
 
-    <p class="lead">Given a dated phylogeny of the <em>surviving</em> species of a clade, <code>emphasis</code> estimates the speciation and extinction rates that generated it — and lets those rates depend on the state of the clade itself: how many lineages there are, how old they are, and how isolated each one is.</p>
+    <p class="lead">Given a dated phylogeny of the <em>surviving</em> species of a clade, <code>emphasis</code> estimates the speciation and extinction rates that generated it — and lets those rates depend on the state of the clade itself: how many lineages there are, and how isolated each lineage is relative to its contemporaries.</p>
     <p>A reconstructed molecular phylogeny records only the lineages that survive to the present. The lineages that went extinct are exactly what carries the information about the extinction rate, so the likelihood of the observed tree is an integral over all possible histories of unobserved lineages. <code>emphasis</code> evaluates and maximizes that likelihood by <strong>data-augmentation importance sampling embedded in a Monte Carlo EM</strong>.</p>
 
     <figure>
@@ -207,7 +209,7 @@
     <section id="model">
       <div class="sec-head"><span class="num">§</span><h2>The model</h2></div>
       <p>Time runs forward from the crown (age \(0\)) to the present (age \(T\)). At any moment the clade is a set of living lineages, each carrying an instantaneous speciation rate \(\lambda_s(t)\) and extinction rate \(\mu_s(t)\) built from a linear predictor over covariates, passed through a link:</p>
-      <div class="eq">\[ \eta_\lambda = \beta_0 + \beta_N N + \beta_M M + \beta_D D, \qquad \eta_\mu = \gamma_0 + \gamma_N N + \gamma_M M + \gamma_D D. \]</div>
+      <div class="eq">\[ \eta_\lambda = \beta_0 + \beta_N N + \beta_D D, \qquad \eta_\mu = \gamma_0 + \gamma_N N + \gamma_D D. \]</div>
     </section>
 
     <section id="covariates">
@@ -245,20 +247,20 @@
             <text class="d-t-box" x="70" y="20">N = 5 lineages</text>
           </svg>
         </div>
-        <figcaption><b>The \(\{N, M, D\}\) basis.</b> Each bar is a lineage's isolation time \(I_s\). \(N\) counts them, \(M\) is their mean (dashed line), and \(D_s = I_s - M\) is each lineage's signed departure from that mean. Since \(\sum_s D_s = 0\), the deviation axis is orthogonal to the count and the mean.</figcaption>
+        <figcaption><b>The \(\{N, D\}\) basis.</b> Each bar is a lineage's isolation time \(I_s\). \(N\) counts the lineages; \(M\) (dashed line) is their mean, used only to centre \(D_s = I_s - M\) — each lineage's signed departure from that mean. Since \(\sum_s D_s = 0\), the age-imbalance axis \(D\) is orthogonal to the diversity \(N\).</figcaption>
       </figure>
 
-      <p>Because \(\sum_s D_s = 0\) at every instant, \(D\) is orthogonal to the intercept and to the global covariates \(N\) and \(M\): the three axes measure distinct effects — <em>how many</em> lineages, <em>how old</em> on average, and whether <em>this</em> lineage is older or younger than its contemporaries. A model activates any subset, given as a shortcut, a formula, or a length-3 binary vector:</p>
+      <p>Because \(\sum_s D_s = 0\) at every instant, \(D\) is orthogonal to the diversity \(N\): the two covariates measure distinct effects — <em>how many</em> lineages there are (\(N\)), and whether a lineage is older or younger than its contemporaries (\(D\)). \(N\) reads the branching times; \(D\) reads the topology. A model activates a subset, given as a shortcut or a formula:</p>
       <div class="tw"><table>
         <thead><tr><th>Shortcut</th><th>Active</th><th>Parameters</th><th>Hypothesis</th></tr></thead>
         <tbody>
           <tr><td><code>"cr"</code></td><td>none</td><td>\((\beta_0, \gamma_0)\)</td><td>constant rates (null)</td></tr>
-          <tr><td><code>"dd"</code></td><td>\(N\)</td><td>\((\beta_0, \beta_N, \gamma_0, \gamma_N)\)</td><td>ecological limits via richness</td></tr>
-          <tr><td><code>"ma"</code></td><td>\(M\)</td><td>\((\beta_0, \beta_M, \gamma_0, \gamma_M)\)</td><td>regulation by clade maturity</td></tr>
-          <tr><td><code>"rd"</code></td><td>\(D\)</td><td>\((\beta_0, \beta_D, \gamma_0, \gamma_D)\)</td><td>lineage-specific relative isolation</td></tr>
+          <tr><td><code>"dd"</code></td><td>\(N\)</td><td>\((\beta_0, \beta_N, \gamma_0, \gamma_N)\)</td><td>diversity dependence</td></tr>
+          <tr><td><code>"d"</code></td><td>\(D\)</td><td>\((\beta_0, \beta_D, \gamma_0, \gamma_D)\)</td><td>age-dependent speciation</td></tr>
+          <tr><td><code>"nd"</code></td><td>\(N + D\)</td><td>\((\beta_0, \beta_N, \beta_D, \gamma_0, \gamma_N, \gamma_D)\)</td><td>both (recommended)</td></tr>
         </tbody>
       </table></div>
-      <p>Covariates combine: <code>model = ~ N + M</code> activates two (6 parameters). The names <code>pd</code> and <code>ep</code> are accepted as aliases for <code>ma</code> and <code>rd</code>.</p>
+      <p>The recommended model is <code>~ N + D</code> (6 parameters); <code>ep</code> is a legacy alias for <code>d</code>. See <a href="D.html" style="color:var(--accent)">the biological meaning of D</a> for what \(\beta_D\) tests (age-dependent speciation).</p>
     </section>
 
     <section id="links">
@@ -420,7 +422,7 @@
                                      sample_size <span class="op">=</span> <span class="n">100</span>, max_iter <span class="op">=</span> <span class="n">25</span>))</code></pre>
 
       <h3>Compare covariate hypotheses</h3>
-      <pre><code><span class="n">models</span> <span class="op">&lt;-</span> <span class="kw">c</span>(<span class="st">"cr"</span>, <span class="st">"dd"</span>, <span class="st">"ma"</span>, <span class="st">"rd"</span>)   <span class="cm"># constant, diversity, maturity, deviation</span>
+      <pre><code><span class="n">models</span> <span class="op">&lt;-</span> <span class="kw">c</span>(<span class="st">"cr"</span>, <span class="st">"dd"</span>, <span class="st">"d"</span>, <span class="st">"nd"</span>)   <span class="cm"># null, diversity, age-imbalance, both</span>
 <span class="kw">select_diversification_model</span>(<span class="n">bird.orders</span>, link <span class="op">=</span> <span class="st">"gaussian"</span>)</code></pre>
     </section>
 

@@ -9,7 +9,7 @@
 #' @return A \code{phylo} object with only extant tips retained.
 #' @examples
 #' \dontrun{
-#' sim <- simulate_tree(c(0.1, 0.5, -0.02, 0.01), max_t = 5, model = "pd")
+#' sim <- simulate_tree(c(0.1, 0.5, -0.02, 0.01), max_t = 5, model = "dd")
 #' extant <- prune_to_extant(sim$tas)
 #' }
 #' @keywords internal
@@ -59,7 +59,7 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'   \item{\code{max_iter}}{Maximum EM iterations. Default \code{200}.}
 #'   \item{\code{maxN}}{Total augmentation attempts per E-step (accepted
 #'     plus rejected). Must exceed \code{num_trees}; increase for models
-#'     with high rejection rates (e.g. PD/DD with strongly negative
+#'     with high rejection rates (e.g. D/DD with strongly negative
 #'     covariate slope). Default \code{2000}.}
 #'   \item{\code{tol}}{Parameter-stability convergence threshold. MCEM
 #'     is considered converged when the largest relative parameter change
@@ -108,7 +108,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   )
   if (method == "mcem") {
     c(common, list(
-      sampling    = "bdi",      # BDI exact sampler (default); "dynamic_fresh" for thinning
+      sampling    = "dynamic_fresh",  # thinning-based dynamic-fresh MCEM (only supported scheme)
       sample_size = 200L,       # alias: num_trees
       max_iter    = 200L,
       maxN        = 2000L,      # total augmentation attempts; must exceed sample_size (thinning only)
@@ -354,33 +354,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #' @keywords internal
 .run_mcem <- function(brts, init_pars, lower_bound, upper_bound, ctrl,
                       model = c(0L, 0L, 0L), link = 0L, cond_fun = NULL) {
-  # BDI supports CR and DD (N-dependent); PD/EP need thinning for pd/tip_start
-  if (identical(ctrl$sampling, "bdi") && (model[2] == 1L || model[3] == 1L)) {
-    if (isTRUE(ctrl$verbose))
-      message("BDI sampler does not support PD/EP models; falling back to thinning.")
-    ctrl$sampling <- "dynamic_fresh"
-    if (is.null(ctrl$maxN)) ctrl$maxN <- max(2000L, 10L * as.integer(ctrl$sample_size))
-  }
+  if (is.null(ctrl$maxN)) ctrl$maxN <- max(2000L, 10L * as.integer(ctrl$sample_size))
   raw <- switch(ctrl$sampling,
-    bdi             = .mcem_bdi(
-      brts        = brts,
-      pars        = init_pars,
-      sample_size = ctrl$sample_size,
-      max_missing = ctrl$max_missing,
-      lower_bound = lower_bound,
-      upper_bound = upper_bound,
-      max_iter    = ctrl$max_iter,
-      xtol        = ctrl$xtol,
-      tol         = ctrl$tol,
-      patience    = ctrl$patience,
-      num_threads = ctrl$num_threads,
-      verbose     = ctrl$verbose,
-      conditional = cond_fun,
-      model       = model,
-      link        = link,
-      max_time    = ctrl$max_time,
-      rho         = ctrl$rho
-    ),
     dynamic_fresh   = .mcem_dynamic_fresh(
       brts        = brts,
       pars        = init_pars,
@@ -603,12 +578,14 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'   }
 #' @param model Model specification. Accepts:
 #'   \itemize{
-#'     \item a formula such as \code{~ N}, \code{~ N + PD}, \code{~ PD + EP},
-#'     \item a string shortcut (\code{"cr"}, \code{"dd"}, \code{"pd"},
-#'       \code{"ep"}), or
-#'     \item a length-3 binary integer vector \code{c(use_N, use_P, use_E)}.
+#'     \item a formula such as \code{~ N} or \code{~ N + D},
+#'     \item a string shortcut (\code{"cr"}, \code{"dd"}, \code{"d"},
+#'       \code{"nd"}), or
+#'     \item a length-3 binary integer vector \code{c(use_N, use_M, use_D)}
+#'       (\code{use_M} is internal only and should be 0).
 #'   }
-#'   Default \code{"cr"} (constant rate).
+#'   Default \code{"cr"} (constant rate). The recommended covariate model is
+#'   \code{"nd"} (\code{~ N + D}): diversity and age-imbalance.
 #' @param init_pars Starting parameter vector. Required for \code{"mcem"};
 #'   ignored for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the
 #'   midpoint of the bounds is used.
@@ -619,9 +596,9 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'   \describe{
 #'     \item{\code{lower_bound}}{Numeric vector of lower parameter bounds.
 #'       Length must be \code{2 + 2*sum(model)}.
-#'       Order: \code{c(beta_0, [beta_N], [beta_M], [beta_D],
-#'       gamma_0, [gamma_N], [gamma_M], [gamma_D])} (slot 2 = mean-age M,
-#'       slot 3 = deviation D).}
+#'       Order: \code{c(beta_0, [beta_N], [beta_D],
+#'       gamma_0, [gamma_N], [gamma_D])} (D = age-imbalance covariate;
+#'       M is internal only).}
 #'     \item{\code{upper_bound}}{Numeric vector of upper parameter bounds
 #'       (same order).}
 #'     \item{\code{verbose}}{Print progress messages. Default \code{FALSE}.}
@@ -709,7 +686,7 @@ estimate_rates <- function(tree,
 
   if (is.null(init_pars) && method == "mcem") {
     init_pars <- (lower_bound + upper_bound) / 2
-    # For linear link with DD/PD/EP models, the midpoint of the slope bounds
+    # For linear link with DD/D models, the midpoint of the slope bounds
     # can push lambda to zero (lambda = max(0, beta_0 + beta_X * X)).
     # Start slopes near zero so lambda stays positive during early E-steps.
     if (link_int == 0L && any(model_bin != 0L)) {
@@ -733,8 +710,8 @@ estimate_rates <- function(tree,
     )
   }
 
-  # Warn if PD/EP model with linear link — IS collapse is very likely
-  if (link_int == 0L && (model_bin[2] == 1L || model_bin[3] == 1L) &&
+  # Warn if the D model with linear link — IS collapse is very likely
+  if (link_int == 0L && model_bin[3] == 1L &&
       any(lower_bound < 0)) {
     model_str <- .model_label(model_bin)
     message(
@@ -781,7 +758,7 @@ estimate_rates <- function(tree,
                   mode, ctrl$max_iter))
     }
     if (method == "mcem") {
-      sampling_str <- if (identical(ctrl$sampling, "bdi")) "BDI (exact)" else ctrl$sampling
+      sampling_str <- ctrl$sampling
       cat(sprintf("  sampling=%s  num_trees=%d  max_iter=%d  tol=%.1e  patience=%d  xtol=%.1e\n",
                   sampling_str, ctrl$num_trees, ctrl$max_iter, ctrl$tol, ctrl$patience, ctrl$xtol))
       if (ctrl$num_trees >= 2L)
@@ -949,19 +926,19 @@ compare_models <- function(...) {
 
 
 # --------------------------------------------------------------------------- #
-#  Three-model covariate comparison                                            #
+#  Single-covariate model comparison                                           #
 # --------------------------------------------------------------------------- #
 
-#' Fit and compare the three single-covariate diversification models
+#' Fit and compare the single-covariate diversification models
 #'
-#' Fits three 4-parameter models -- diversity dependence (DD, covariate N),
-#' phylogenetic diversity dependence (PD, covariate P), and evolutionary
-#' isolation time (EP, covariate E) -- to the same tree using a two-stage
-#' MCDE -> MCEM workflow, then ranks them by AIC and computes AIC weights.
+#' Fits the two 4-parameter single-covariate models -- diversity dependence
+#' (DD, covariate N) and age-imbalance dependence (D, covariate D = E - M) --
+#' to the same tree using a two-stage MCDE -> MCEM workflow, then ranks them by
+#' AIC and computes AIC weights.
 #'
-#' All three models share the same parameter layout:
+#' Both models share the same parameter layout:
 #' \code{c(beta_0, beta_X, gamma_0, gamma_X)}, so a single pair of bounds
-#' applies to all three.
+#' applies to both.
 #'
 #' @param tree Ultrametric tree. Accepts a \code{phylo} object, a
 #'   \code{\link{simulate_tree}} result, or a numeric branching-time vector.
@@ -984,10 +961,10 @@ compare_models <- function(...) {
 #'       \code{n_pars}, \code{loglik}, \code{AIC}, \code{delta_AIC},
 #'       \code{AICw}, sorted by AIC.}
 #'     \item{\code{best_model}}{Name of the best-supported model
-#'       (\code{"dd"}, \code{"pd"}, or \code{"ep"}).}
+#'       (\code{"dd"} or \code{"d"}).}
 #'     \item{\code{best_pars}}{Named parameter estimates of the best model.}
-#'     \item{\code{fits}}{Named list of the three \code{emphasis_fit}
-#'       objects (\code{$dd}, \code{$pd}, \code{$ep}).}
+#'     \item{\code{fits}}{Named list of the \code{emphasis_fit}
+#'       objects (\code{$dd}, \code{$d}).}
 #'   }
 #' @seealso \code{\link{estimate_rates}}, \code{\link{compare_models}}
 #' @examples
@@ -1024,8 +1001,10 @@ select_diversification_model <- function(tree,
   ctrl$cem  <- utils::modifyList(bounds, ctrl$cem)
   ctrl$mcem <- utils::modifyList(bounds, ctrl$mcem)
 
-  model_names <- c("dd", "pd", "ep")
-  fits <- vector("list", 3L)
+  # The two single-covariate models share the length-4 bound layout
+  # c(beta_0, beta_X, gamma_0, gamma_X): dd = diversity (N), d = age-imbalance (D).
+  model_names <- c("dd", "d")
+  fits <- vector("list", length(model_names))
   names(fits) <- model_names
 
   for (m in model_names) {

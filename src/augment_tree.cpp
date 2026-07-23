@@ -11,7 +11,6 @@
 #include "model.hpp"
 #include "augment_tree.hpp"
 #include "model_helpers.hpp"
-#include "sbplx.hpp"
 
 
 namespace emphasis {
@@ -39,38 +38,7 @@ namespace emphasis {
     }
 
 
-    class maximize_lambda
-    {
-      using ml_state = std::tuple<const param_t&, const tree_t&, const Model&>;
-
-      static double dx(unsigned int n, const double* x, double*, void* func_data)
-      {
-        auto ml = *reinterpret_cast<ml_state*>(func_data);
-        return std::max(0.0, std::get<2>(ml).nh_rate(*x, std::get<0>(ml), std::get<1>(ml)));
-      }
-
-    public:
-      explicit maximize_lambda() : nlopt_() {}
-
-      double operator()(double t0, double t1, const param_t& pars, tree_t& tree, const Model& model)
-      {
-        auto x0 = std::min(t0, t1);
-        auto x1 = std::max(t0, t1);
-        nlopt_.set_lower_bounds(x0);
-        nlopt_.set_upper_bounds(x1);
-        nlopt_.set_xtol_rel(0.0001);
-        ml_state mls(pars, tree, model);
-        nlopt_.set_max_objective(dx, &mls);
-        return nlopt_.optimize(x0);
-      }
-
-    private:
-      sbplx_1 nlopt_;
-    };
-
-
     auto thread_local reng = detail::make_random_engine<std::default_random_engine>();
-    maximize_lambda thread_local tlml;
 
 
     // After augmentation, assign tip_start, focal_tip_start, and pendant PD.
@@ -157,67 +125,6 @@ namespace emphasis {
     }
 
 
-    void do_augment_tree(const param_t& pars, tree_t& tree, const Model& model, int max_missing, double max_lambda, int& next_id)
-    {
-      double cbt = 0;
-      tree.reserve(5 * tree.size());    // just a guess, should cover most 'normal' cases
-      int num_missing_branches = 0;
-      const double b = tree.back().brts;
-      auto& ml = tlml;
-      while (cbt < b) {
-        double next_bt = get_next_bt(tree, cbt);
-        double lambda_max = ml(cbt, next_bt, pars, tree, model);
-        if (lambda_max > max_lambda) throw augmentation_lambda{};
-        double next_speciation_time = next_bt;
-        if (0.0 != lambda_max) {
-          const double u1 = std::uniform_real_distribution<>()(reng);
-          next_speciation_time = cbt - std::log(u1) / lambda_max;
-        }
-        if (next_speciation_time < next_bt) {
-          double u2 = std::uniform_real_distribution<>()(reng);
-          // calc pd(next_speciation_time)
-          double pt = std::max(0.0, model.nh_rate(next_speciation_time, pars, tree)) / lambda_max;
-          if (u2 < pt) {
-            double ext_time = model.extinction_time(next_speciation_time, pars, tree);
-            // find lineages alive at next_speciation_time and pick one as parent
-            std::vector<int> alive_ids;
-            for (const auto& node : tree) {
-              if (!detail::is_extinction(node) &&
-                  node.brts < next_speciation_time &&
-                  node.t_ext > next_speciation_time) {
-                alive_ids.push_back(node.id);
-              }
-            }
-            int chosen_parent_id = -1;
-            if (!alive_ids.empty()) {
-              std::uniform_int_distribution<size_t> uid(0, alive_ids.size() - 1);
-              chosen_parent_id = alive_ids[uid(reng)];
-            }
-            if (ext_time >= b) {
-              // Unsampled extant species (rho < 1): insert into tree
-              // so that N(t) is correct for diversity-dependent models.
-              int new_id = next_id++;
-              insert_unsampled_species(next_speciation_time, tree, new_id, chosen_parent_id);
-              num_missing_branches++;
-              if (num_missing_branches > max_missing) {
-                throw augmentation_overrun{};
-              }
-            } else {
-              int new_id = next_id++;
-              insert_species(next_speciation_time, ext_time, tree, new_id, chosen_parent_id);
-              num_missing_branches++;
-              if (num_missing_branches > max_missing) {
-                throw augmentation_overrun{};
-              }
-            }
-          }
-        }
-        cbt = std::min(next_speciation_time, next_bt);
-      }
-      compute_pendant_pd(tree);
-    }
-
-
     void do_augment_tree_cont(const param_t& pars, tree_t& tree, const Model& model, int max_missing, double max_lambda, int& next_id)
     {
       double cbt = 0;
@@ -301,12 +208,7 @@ namespace emphasis {
         node.parent_id = -1;
       }
     }
-    if (model.numerical_max_lambda()) {
-      do_augment_tree(pars, pooled, model, max_missing, max_lambda, next_id);
-    }
-    else {
-      do_augment_tree_cont(pars, pooled, model, max_missing, max_lambda, next_id);
-    }
+    do_augment_tree_cont(pars, pooled, model, max_missing, max_lambda, next_id);
   }
 
 
@@ -332,12 +234,7 @@ namespace emphasis {
               node.parent_id = -1;
             }
           }
-          if (model.numerical_max_lambda()) {
-            do_augment_tree(vpars[i], trees[i], model, max_missing, max_lambda, next_id);
-          }
-          else {
-            do_augment_tree_cont(vpars[i], trees[i], model, max_missing, max_lambda, next_id);
-          }
+          do_augment_tree_cont(vpars[i], trees[i], model, max_missing, max_lambda, next_id);
         } catch (...) {
           trees[i].clear();
         }

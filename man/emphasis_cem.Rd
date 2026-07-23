@@ -72,7 +72,7 @@ Default \code{0.01} (1\%).  SD will not decay below this floor.}
 
 \item{num_threads}{Parallel threads. Default \code{1}.}
 
-\item{model}{Length-3 binary integer vector \code{c(use_N, use_P, use_E)}.}
+\item{model}{Length-3 binary integer vector \code{c(use_N, use_M, use_D)}.}
 
 \item{link}{Integer link code: \code{0} = linear, \code{1} = exponential.}
 

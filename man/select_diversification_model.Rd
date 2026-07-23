@@ -2,7 +2,7 @@
 % Please edit documentation in R/inference.R
 \name{select_diversification_model}
 \alias{select_diversification_model}
-\title{Fit and compare the three single-covariate diversification models}
+\title{Fit and compare the single-covariate diversification models}
 \usage{
 select_diversification_model(
   tree,
@@ -42,22 +42,22 @@ A list of class \code{"model_selection"} with:
       \code{n_pars}, \code{loglik}, \code{AIC}, \code{delta_AIC},
       \code{AICw}, sorted by AIC.}
     \item{\code{best_model}}{Name of the best-supported model
-      (\code{"dd"}, \code{"pd"}, or \code{"ep"}).}
+      (\code{"dd"} or \code{"d"}).}
     \item{\code{best_pars}}{Named parameter estimates of the best model.}
-    \item{\code{fits}}{Named list of the three \code{emphasis_fit}
-      objects (\code{$dd}, \code{$pd}, \code{$ep}).}
+    \item{\code{fits}}{Named list of the \code{emphasis_fit}
+      objects (\code{$dd}, \code{$d}).}
   }
 }
 \description{
-Fits three 4-parameter models -- diversity dependence (DD, covariate N),
-phylogenetic diversity dependence (PD, covariate P), and evolutionary
-isolation time (EP, covariate E) -- to the same tree using a two-stage
-MCDE -> MCEM workflow, then ranks them by AIC and computes AIC weights.
+Fits the two 4-parameter single-covariate models -- diversity dependence
+(DD, covariate N) and age-imbalance dependence (D, covariate D = E - M) --
+to the same tree using a two-stage MCDE -> MCEM workflow, then ranks them by
+AIC and computes AIC weights.
 }
 \details{
-All three models share the same parameter layout:
+Both models share the same parameter layout:
 \code{c(beta_0, beta_X, gamma_0, gamma_X)}, so a single pair of bounds
-applies to all three.
+applies to both.
 }
 \examples{
 \dontrun{

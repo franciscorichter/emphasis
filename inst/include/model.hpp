@@ -111,7 +111,6 @@ namespace emphasis {
 
     const char* description() const { return "general diversification model"; }
     bool is_threadsafe() const { return true; }
-    bool numerical_max_lambda() const { return false; }
     int nparams() const { return 8; }
 
     // Apply link function to linear predictor

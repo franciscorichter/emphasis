@@ -27,8 +27,8 @@ accepted by \code{\link{estimate_rates}}.}
 \item{pars_mat}{Numeric matrix whose rows are compact parameter vectors
 (same layout as \code{pars} in \code{\link{estimate_rates}}).}
 
-\item{model}{Model specification: \code{"cr"}, \code{"dd"}, \code{"pd"},
-\code{"ep"}, or a length-3 binary integer vector.}
+\item{model}{Model specification: \code{"cr"}, \code{"dd"}, \code{"d"},
+\code{"nd"}, or a length-3 binary integer vector.}
 
 \item{sample_size}{Number of augmented trees per grid point (default 200).}
 

@@ -74,8 +74,8 @@
 #' \dontrun{
 #' lb  <- c(0.01, -0.5, 0, -0.5)
 #' ub  <- c(2,     0.5, 1,  0.5)
-#' sim <- simulate_tree(c(0.6, -0.05, 0.15, -0.03), max_t = 10, model = "pd")
-#' fit <- estimate_rates(sim, method = "cem", model = "pd",
+#' sim <- simulate_tree(c(0.6, -0.05, 0.15, -0.03), max_t = 10, model = "d")
+#' fit <- estimate_rates(sim, method = "cem", model = "d",
 #'   lower_bound = lb, upper_bound = ub,
 #'   control = list(max_iter = 50, num_points = 80, n_boot = 100))
 #'
