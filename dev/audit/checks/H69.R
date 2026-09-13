@@ -1,0 +1,33 @@
+.libPaths(c("/Users/pancho/.claude/jobs/867af780/tmp/rlib", .libPaths())); library(emphasis)
+set.seed(5); tr <- ape::drop.fossil(ape::rlineage(0.5, 0.2, Tmax = 8))
+while (ape::Ntip(tr) < 15 || ape::Ntip(tr) > 40) tr <- ape::drop.fossil(ape::rlineage(0.5,0.2,Tmax=8))
+brts <- sort(ape::branching.times(tr), decreasing = TRUE); cat("tips", ape::Ntip(tr), "\n")
+model <- c(0L,1L,0L)   # ~M model: loglik depends on node.pd
+ip <- emphasis:::.expand_pars(c(0.6, -0.05, 0.2, 0.0), model)
+lb <- emphasis:::.expand_pars(c(0, -0.5, 0, -0.5), model); ub <- emphasis:::.expand_pars(c(2, 0.5, 1, 0.5), model)
+cat("--- (a) emphasis:::em_cpp(copy_trees=TRUE) tree columns:\n")
+r <- emphasis:::em_cpp(brts, ip, 20L, 2000L, 1e4, 1e6, lb, ub, 1e-3, 1L, TRUE, model, 0L, 1.0, NULL)
+print(names(r$trees[[1]]))
+ev <- tryCatch(emphasis:::eval_logf(ip, r$trees, model = model, link = 0L, rho = 1.0), error = function(e) paste("ERROR:", conditionMessage(e)))
+cat("eval_logf on em_cpp trees ->", if (is.character(ev)) ev else "ok", "\n")
+if (!is.character(ev)) print(head(cbind(estep_logf = r$logf, eval_logf = ev$logf)))
+cat("--- (b) m_cpp ignores pd: augment_trees (8 cols), then zero pd\n")
+a <- emphasis:::augment_trees(brts, ip, 60L, 3000L, 1e4, 1e6, 1L, model, 0L, 1.0)
+print(names(a$trees[[1]]))
+lw <- a$logf - a$logg; w <- exp(lw - max(lw)); w <- w / mean(w)
+trees0 <- lapply(a$trees, function(d) { d$pd <- 0; d })
+ev1 <- emphasis:::eval_logf(ip, a$trees, model = model, link = 0L, rho = 1.0)$logf
+ev0 <- emphasis:::eval_logf(ip, trees0,  model = model, link = 0L, rho = 1.0)$logf
+cat(sprintf("eval_logf: max |logf(pd) - logf(pd=0)| = %.4g (E-step logf vs eval_logf with pd: %.3g)\n",
+            max(abs(ev1 - ev0)), max(abs(a$logf - ev1))))
+es <- function(trees) list(trees = trees, weights = w, rejected = 0L, rejected_overruns = 0L, rejected_lambda = 0L, rejected_zero_weights = 0L, time = 0, fhat = 0)
+m1 <- emphasis:::m_cpp(es(a$trees), ip, "rpd1", lb, ub, 1e-6, 1L, model, 0L, 1.0, NULL)
+m0 <- emphasis:::m_cpp(es(trees0),  ip, "rpd1", lb, ub, 1e-6, 1L, model, 0L, 1.0, NULL)
+cat("m_cpp estimates with pd :", round(m1$estimates, 5), "\n")
+cat("m_cpp estimates pd zeroed:", round(m0$estimates, 5), "\n")
+# reference: R-level maximisation of sum(w*logf) via eval_logf with the true pd (compact: beta0, betaM, gamma0, gammaM)
+obj <- function(p, trees) { p8 <- emphasis:::.expand_pars(p, model); -sum(w * emphasis:::eval_logf(p8, trees, model = model, link = 0L, rho = 1.0)$logf) }
+o1 <- optim(c(0.6,-0.05,0.2,0), obj, trees = a$trees, method = "L-BFGS-B", lower = c(0,-0.5,0,-0.5), upper = c(2,0.5,1,0.5))
+o0 <- optim(c(0.6,-0.05,0.2,0), obj, trees = trees0,  method = "L-BFGS-B", lower = c(0,-0.5,0,-0.5), upper = c(2,0.5,1,0.5))
+cat("R optim with pd     :", round(emphasis:::.expand_pars(o1$par, model), 5), "\n")
+cat("R optim pd zeroed   :", round(emphasis:::.expand_pars(o0$par, model), 5), "\n")

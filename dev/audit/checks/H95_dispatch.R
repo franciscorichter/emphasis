@@ -1,0 +1,15 @@
+.libPaths(c("/Users/pancho/.claude/jobs/867af780/tmp/rlib", .libPaths()))
+suppressMessages({ library(emphasis); library(ape) })
+ns <- asNamespace("emphasis"); set.seed(1)
+fns <- c(".mcem_bdi", ".augment_tree_bdi", ".mcem_dynamic_fresh", ".bdi_augment_one")
+cnt <- new.env(); for (f in fns) assign(f, 0L, envir = cnt)
+for (f in fns) suppressMessages(trace(f, where = ns, print = FALSE,
+  tracer = substitute({ assign(FN, get(FN, envir = cnt) + 1L, envir = cnt) }, list(FN = f))))
+phy0  <- ape::rphylo(15, 0.5, 0.1)
+brts0 <- sort(as.numeric(ape::branching.times(phy0)), decreasing = TRUE)
+# exactly the shape of the skipped smoke test in test-inference.R:70-83 (default control -> sampling)
+fit <- estimate_rates(brts0, method = "mcem", model = "cr",
+        control = list(lower_bound = c(0, 0), upper_bound = c(2, 1), max_iter = 3, sample_size = 20, num_threads = 1))
+for (f in fns) suppressMessages(untrace(f, where = ns))
+print(sapply(fns, function(f) get(f, envir = cnt)))
+cat("default ctrl$sampling =", emphasis:::.default_control("mcem")$sampling, "\n")

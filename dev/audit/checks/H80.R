@@ -1,0 +1,15 @@
+.libPaths(c("/Users/pancho/.claude/jobs/867af780/tmp/rlib", .libPaths())); library(emphasis)
+# Arithmetic of .run_gam:529 vs .build_cond_fun (inference.R:342)
+fhat <- c(-20, -21, -22); p <- c(0.5, 1e-320, 0)
+gam_path  <- fhat - log(p)
+cond_path <- fhat - log(pmax(p, 1e-300))
+print(rbind(p, gam_path, cond_path, kept_by_gam = is.finite(gam_path)))
+# Can predict_survival return exactly 0? binomial GAM response = plogis(eta)
+cat("plogis(-40) =", plogis(-40), " plogis(-800) =", plogis(-800), "\n")
+# build a tiny binomial gam whose response underflows
+library(mgcv)
+set.seed(2)
+x <- seq(0, 1, length.out = 200); y <- as.integer(x > 0.5)  # perfect separation -> huge |eta|
+g <- suppressWarnings(gam(y ~ s(x), family = binomial))
+pp <- predict_survival(g, data.frame(x = seq(-5, 0.2, length.out = 8)))
+print(pp); cat("any exact zero:", any(pp == 0), " min:", min(pp), "\n")

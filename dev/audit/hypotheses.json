@@ -1,0 +1,737 @@
+[
+ {
+  "id": "H1",
+  "severity": "critical",
+  "location": "`src/E_step.cpp:94`.",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "The acceptance test `isfinite(log_w) && 0 < exp(log_w)` is an absolute threshold: a tree with `lw < \u2248 -745` is counted as zero-weight even though `exp(lw - max)` is representable after max-shifting. `lw` contains the observed-speciation `\u03a3 log \u03bb_i` and the `-\u222bn(\u03bb+\u03bc)` terms that `q` does not cancel, so `|lw| = O(n_tips)` (e.g. 400 tips at `\u03bb \u2248 0.2` give `\u03a3 log \u03bb \u2248 -640` before integrals). On large clades every augmentation is rejected, `E_step` throws \"maxN exceeded \u2026 zero weights\", and `.mcem_warn_estep` (`emphasis.R:198-209`) attributes it to `\u03bb = 0`. `+Inf` weights (`logg = -Inf`, proposal support failure) are also swallowed into `rejected_zero_weights`. *Test:* `augment_trees` on a simulated CR tree of 300\u2013500 tips with `\u03bb = 0.2, \u03bc = 0.05`; record `rejected_zero_weights` vs `sample_size` and the `logf/logg` magnitudes of survivors; then compile with the test replaced by `isfinite(log_w)` (keeping `-Inf` as zero weight) and confirm `fhat` becomes finite and matches `DDD::bd_loglik` within IS error."
+ },
+ {
+  "id": "H2",
+  "severity": "critical",
+  "location": "`R/bdi.R:687` (+ `inference.R:359`, `simulate.R:345`).",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "BDI ignores `rho`: the conditioned process, `p(t)`, the rates and the absence of unsampled-extant lineages assume complete sampling; `rho` is forwarded only to `eval_logf`. The proposal has zero mass on augmentations with unsampled extant lineages, which have positive `f`-mass when `rho < 1`, so the IS estimator targets `f(obs, no unsampled)`. Measured BDI `fhat = -22.41 = C + 8\u00b7log 0.5` vs thinning `-15.41` at `rho = 0.5` on the same tree. Neither `.bdi_supported` nor the two dispatch sites gate on `rho`, and `bdi` is the default. *Test:* `estimate_rates(tree, \"cr\", control = list(rho = 0.7, sampling = \"bdi\"))` vs `sampling = \"dynamic_fresh\"`: logliks must agree within IS error; assert `.bdi_supported` returns FALSE (or a rho-aware BDI is implemented) when `rho < 1`."
+ },
+ {
+  "id": "H3",
+  "severity": "critical",
+  "location": "`R/de.R:340` (shared-tree CEM mode).",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "For a tree `z_i` drawn from `q(\u00b7|\u03b8_k)`, the weight at particle `\u03b8_j` is computed as `logf(z_i, \u03b8_j) - logg(z_i, \u03b8_j)`; the density actually used to draw `z_i` (`q(\u00b7|\u03b8_k)`, or the pooled mixture) never enters. `n_zero_weight` is dropped (`de.R:355`) and `bias_correct` forced FALSE. The docstring (`de.R:294-300`) asserts the reverse. Default is `shared_trees = FALSE`. *Test:* on a small CR tree run Mode 1 and Mode 2 with the same particle set and large `sample_size`; compare per-particle `fhat` to `DDD::bd_loglik` \u2014 Mode 2 should show \u03b8-dependent bias; replace the denominator with the mixture `log((1/n)\u03a3_k q(z|\u03b8_k))` and re-check."
+ },
+ {
+  "id": "H4",
+  "severity": "major",
+  "location": "`src/M_step.cpp:61` (both MCEM paths).",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "With a conditional, the objective is `-\u03a3_i w\u0303_i log f_i + log P_tree(\u03b8)` where `w\u0303` are unnormalised (`\u03a3w\u0303 \u2208 [1,N]` thinning, `= N` BDI). The self-normalised conditioned EM objective is `\u03a3_i (w\u0303_i/\u03a3w\u0303) log f_i - log P_tree`, i.e. the penalty needs coefficient `\u03a3w\u0303`. The comment at lines 58-60 states the normalised form. Consequence: MCEM with `cond` returns approximately the unconditioned maximiser while `estimate_rates` reports a conditioned loglik (`inference.R:820-822`), and the two samplers condition with different effective strength. *Test:* fit CR with `cond` supplied and `N = 200`; compare pars against the maximiser of `DDD::bd_loglik(cond = 1)` (survival-conditioned) and `cond = 0`; the current code should sit near the `cond = 0` optimum. Unit test: with constant `log f`, the M-step argmin must be invariant to rescaling `w`."
+ },
+ {
+  "id": "H5",
+  "severity": "major",
+  "location": "`inst/include/model.hpp:304, 308`.",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "`q` charges each augmented lineage `-log(2\u00b7tips + Ne)` where `tips` starts at 2 and increments per observed node; the sampler's parent choice is uniform over `|alive_ids| = tips - 2 + Ne` nodes (`augment_tree.cpp:154-166`) and the lineage count is `n_i = tips + Ne`. None of the three coincide, and `f` is per-lineage while `q` uses `n\u00b7\u03bb`. The cited \"tech report\" (`E_step.cpp:142`) is absent (`dev/audit`, `dev/validation` empty). Map 4's single-tree check nevertheless found thinning `fhat` within 0.02 nats of the Nee likelihood (\u00a71.11 item 1). *Test:* on a 2-tip and a 3-tip CR tree, enumerate augmentations with exactly one missing lineage and compute `\u03a3_z q(z)` by numerical integration over `(t*, t_ext)`; it must equal the total probability of the one-lineage event under the thinning process. Then check `E_q[f/q]` against `DDD::bd_loglik(btorph = 1, cond = 0, soc = 2)` for several `(\u03bb, \u03bc)`; a \u03b8-dependent gap falsifies the weight."
+ },
+ {
+  "id": "H6",
+  "severity": "major",
+  "location": "`model.hpp:221, 243, 282-296` (M/D models: three `mu`s, two `lambda`s, two compensators).",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "For any model with `\u03b3_M, \u03b3_D` or `\u03b2_M, \u03b2_D \u2260 0`: (a) `extinction_time` draws with `extinction_rate` (no D) on a node whose `pd = 0` during augmentation; (b) `nh_rate` uses `extinction_rate_ep` with `pd(t)`; (c) `sampling_prob` credits `mu_i = extinction_rate_ep` on the finished node with its final `pd/focal_tip_start`. Likewise `nh_rate`'s `lambda` is evaluated on a copy of the proxy node (`focal_tip_start = 0`, `D = 0` if observed) while `sampling_prob` uses the finished node. For D + exponential, `sampling_prob`'s compensator is the exact per-lineage sum `S_b\u00b7exp_integral` while the sampler's intensity is `n\u00b7\u03bb(proxy)`. The cancellation `f/q` derived for CR holds only when all coincide. *Test:* simulate a `d`/`nd` tree under the exponential link; estimate `p(y|\u03b8)` by (i) thinning IS with large `N` and (ii) an independent brute-force estimate (forward simulation with ABC-style matching of branching times on a 4\u20135-tip tree, or exact enumeration for 2\u20133 tips); a \u03b8-dependent discrepancy confirms `q \u2260` sampler density. Also assert `nh_rate(t*)` equals the `\u03bb_i \u03bc_i n_i` credited in `logg` for every augmented node by instrumenting the C++."
+ },
+ {
+  "id": "H7",
+  "severity": "major",
+  "location": "`src/augment_tree.cpp:138-140, 148-151` (envelope).",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "`\u03bb1 = nh(cbt)` uses the pre-event lineage count (lower_bound returns the node at `cbt` whose `n` is the count before the event), so just after a branching the true intensity `(n+1)\u03bbs(cbt)` exceeds `\u039b* = max(n\u03bbs(cbt), (n+1)\u03bbs(next_bt))` and `pt > 1` is accepted with probability 1. More generally `\u039b*` is the max of two endpoint evaluations, not a dominating rate (M(t), the survival factor, the gaussian link and `max(0,\u00b7)` are non-monotone), and after a rejection the envelope drops to `\u03bb2` alone (line 188). The realised intensity is `min(nh, \u039b*)` while `log q` integrates unclipped `nh`. *Test:* instrument the loop to count `pt > 1`; on CR trees with small `N` it must be non-zero. Compare the empirical distribution of first-event times on `[0, next_bt)` against `1 - exp(-\u222bnh)` by KS test. Fix candidates: evaluate the start-of-interval rate with post-event `n`, or reject/clip with a corrected density."
+ },
+ {
+  "id": "H8",
+  "severity": "major",
+  "location": "`model.hpp:424` (D + linear `f`).",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "For D-models under the linear (and non-exact gaussian) path, `f`'s integral uses `n_i\u00b7(\u03bb_focal + \u03bc_focal)` \u2014 `n` times the focal lineage's rate \u2014 instead of `\u03a3_s \u03bb_s(t)`; with `max(0,\u00b7)` and per-lineage `D` this is not the model's total intensity. `q` and `nh_rate` use the same approximation, so the sampler is self-consistent, but `fhat` estimates a different model from README:79-84, and AIC across links mixes an exact `f` (exponential) with an approximate one (linear). *Test:* on a small augmented tree with two lineages of different `D`, compute `\u03a3_s \u03bb_s` by hand and compare with `n\u00b7\u03bb_focal` used in `loglik`; state which model is being fitted."
+ },
+ {
+  "id": "H9",
+  "severity": "major",
+  "location": "`model_helpers.hpp:225`, `augment_tree.cpp:50`, `E_step.cpp:34`, `model.hpp:320, 412, 443-449`, `bdi.R:315` (pendant-age convention).",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "Observed nodes carry `tip_start = 0`, so `P(t) = k_obs(t)\u00b7t + \u03a3_missing(t - ts)`: every observed daughter counts as alive since the crown, the two crown lineages count nothing, and observed lineages' pendant starts are never reset by their own speciations; `E = M` (so `D = 0`) for observed speciation events. The forward simulator uses true pendant ages (`general_tree.hpp:178, 264-267`). Within `model.hpp` the D+exp running sums take an observed lineage's `ts` as its birth time (lines 320, 449) while `M` and the gaussian path (line 412) take `ts = 0`. Augmented lineages with `parent_id == -1` are reset to `tip_start = 0` (numerically verified: node at 0.0448 gets `pd = 0.0448`). `bdi.R:315` uses the same `P_obs = k\u00b7t` (inert under the gate). Hence the `M`/`D` covariates that generate data in `simulate_tree` are not the covariates the estimator evaluates. *Test:* simulate one `nd` tree, keep its L-table, compute the true `M(t)` and `D_s(t)` at each observed branching from the L-table, and compare with `pd/n` and `e_s - M` returned in the augmented data frame (`augment_trees(..., sample_size = 1)` with no missing lineages, `max_missing = 0`); they must match if the covariate is what README describes."
+ },
+ {
+  "id": "H10",
+  "severity": "major",
+  "location": "`R/bdi.R:514, 508` (DD rejection not in `log g`).",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "Under DD, draws with missing lineages alive at `tp` or overflowing `max_missing` are rejected, so the effective proposal is `q/P(accept|\u03b8)`, but `-log P(accept)` is not added to `logg`. `fhat` is biased upward by a \u03b8-dependent amount (measured +0.23 and +0.45 nats at two \u03b8). `max_tries = 5\u00b7sample_size` then returns fewer trees with no counter (`bdi.R:680-681, 804-807, 851`). *Test:* for a `dd` tree, compare BDI `fhat` with `DDD::dd_loglik` (mapping in \u00a75) across a grid of \u03b8; the gap should track `-log(acceptance rate)` recorded from the sampler."
+ },
+ {
+  "id": "H11",
+  "severity": "major",
+  "location": "`R/bdi.R:696` (+ `model_helpers.hpp:129-136`).",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "BDI performs no finite-weight filtering: with `dd` on the linear link, mean-field `N\u0302` proposals reach `N` where `\u03bb(N) = 0`, `loglik` returns `-Inf` (and, per Map 4, sometimes `+Inf` via `log_sum::result`); 56/300 trees had `\u00b1Inf`, `fhat = NaN`, and `w_norm` (`bdi.R:796-799`) became `NaN`, passed to `m_cpp`. Maps 2 and 4 disagree on the sign produced by `log_sum` at `\u03bb = 0` (\u00a71.11 item 2). *Test:* call `eval_logf` on a hand-built tree with one speciation node at `\u03bb = 0`; assert `-Inf`. Fit `dd` (linear) with pars `(1.5, -0.12, 0.4, 0)` via BDI and assert all `logf` finite or filtered, `fhat` finite, no `NaN` weights reach `m_cpp`."
+ },
+ {
+  "id": "H12",
+  "severity": "major",
+  "location": "`R/bdi.R:59, 86, 88` (\u03bc > \u03bb region).",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "For `\u03bc0 > \u03bb0`, `1 - E2 \u2264 0 < 1e-300` makes `.bdi_integral_cr` return `Inf` for every segment with `n > 0`; `uniroot` errors (\"f() values at end points not of opposite sign\", reproduced); `.mcem_bdi` counts an E-step failure and perturbs toward the box centre, so MCEM cannot visit `\u03bc \u2265 \u03bb`. On the final segment `t_hi = tp - 1e-14`, `U > H(t_hi)` (probability `~e^{-30n}`) also errors, and `1 - exp(-d\u00b71e-14)` carries ~2 significant digits. *Test:* `simulate_tree(tree, pars = c(0.3, 0.5), method = \"bdi\")` must not error; `estimate_rates` CR with bounds spanning `\u03bc > \u03bb` on a tree whose `DDD::bd_ML` MLE has `\u03bc \u2248 \u03bb` (small, old clade) should reach it."
+ },
+ {
+  "id": "H13",
+  "severity": "major",
+  "location": "`R/gam.R:967, 888-894`; `inference.R:824`.",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "The GAM stage loglik is the additive smooth's predicted value at the L-BFGS-B optimum, not an IS estimate; an additive `\u03a3 s(p_j)` cannot represent the `\u03bb\u2013\u03bc` or intercept\u2013slope ridges, so its optimum need not lie on the ridge. This value feeds AIC and README's model-comparison example. *Test:* on a CR tree, compare the GAM-stage pars/loglik to `DDD::bd_ML`; then evaluate `fhat` with 2000 trees at the GAM optimum and compare with the reported smooth value."
+ },
+ {
+  "id": "H14",
+  "severity": "major",
+  "location": "`R/emphasis.R:140`, `R/de.R:883` (+ `de.R:476-489`; `inference.R:855-856, 917-942`).",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "`loglik_var` bootstraps the K=2 moment-corrected estimator `mean(lw) + log(1 + m\u2082/2)` without the zero-weight denominator, while the reported loglik is the log-mean-exp with `S = N + n_zero`. `print.emphasis_fit` and `compare_models`' pairwise test present `sqrt(loglik_var)` as the MC s.e. of loglik. *Test:* on one E-step's `lw`, bootstrap both estimators and compare variances under a heavy-tailed weight distribution (e.g. `dd` with low ESS); assert `compare_models` p-values change materially."
+ },
+ {
+  "id": "H15",
+  "severity": "minor",
+  "location": "`R/de.R:819, 866` and `de.R:355`.",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "`bias_correct` affects only Mode-1 search-time `fhat`; the final elite re-evaluation and final estimate omit it, Mode 2 hard-codes FALSE, and the branch silently falls back when `n_zero_weight > 0` (`de.R:82-86`); untested (`test-de.R`). *Test:* unit test that `bias_correct = TRUE` changes `best_IS$fhat`; property test that `\u2113\u0302 + log(1 + \u03a3_{k\u2264K} m_k/k!) \u2192 log mean exp(lw)` as `K \u2192 \u221e`."
+ },
+ {
+  "id": "H16",
+  "severity": "minor",
+  "location": "`inst/include/model.hpp:434, 275, 250`.",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "`\u03bc` floored at `1e-300` in `f`'s extinction term but `1e-10` in `q` and `nh_rate`; `\u03bb = 0` in `f` gives `-Inf` (tree rejected) whereas `\u03bc = 0` at a sampled extinction gives finite `f` with relative weight `~e^{-690}` (kept). *Test:* evaluate `eval_logf` on a tree with an extinction node at `\u03bc = 0` and a speciation node at `\u03bb = 0`; document both outcomes; decide one convention."
+ },
+ {
+  "id": "H17",
+  "severity": "minor",
+  "location": "`R/de.R:112` (`.ess_from_lw`).",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "Non-finite log-weights are dropped before ESS, so `-Inf`-weight trees neither reduce ESS nor count in `n`. *Test:* `ess_from_lw(c(0, -Inf, -Inf))` \u2014 decide whether 1 or 1/3 is intended."
+ },
+ {
+  "id": "H18",
+  "severity": "question",
+  "location": "`src/E_step.cpp:143`, `R/de.R:69`.",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "`S = N + rejected_zero_weights` treats `\u03bb = 0` trees as legitimate zero-weight samples but excludes `augmentation_lambda`/`augmentation_overrun`, which are \u03b8-dependent, so `fhat(\u03b8)` is conditional on completion with a \u03b8-dependent event. Sampling that stops at `N` successes is an inverse-binomial design; `(1/S)\u03a3w` has `O(1/N)` bias, largest at `sample_size = 1` (`lw_1 - log(1 + n_zero)`). The counter also includes attempts finishing after `stop` (`E_step.cpp:104-107`). *Test:* on a CR tree with `max_missing` set low enough to trigger overruns, compare `fhat` with and without the excluded counts against `DDD::bd_loglik`."
+ },
+ {
+  "id": "H19",
+  "severity": "question",
+  "location": "`model.hpp:466`.",
+  "theme": "a: Likelihood / importance-sampling correctness",
+  "text": "`n_obs log \u03c1 + n_unsamp log(1-\u03c1)` omits `choose(n_obs + n_unsamp, n_obs)`; `n_unsamp` varies across `z`, so the coefficient is not constant across the IS sample. The `(1-\u03c1)` per unsampled lineage cancels with `q` line 308. *Test:* on a 2-tip tree with `\u03c1 = 0.5` enumerate augmentations with 0/1/2 unsampled lineages and check whether the labelled-history convention makes the coefficient unnecessary."
+ },
+ {
+  "id": "H20",
+  "severity": "major",
+  "location": "`R/inference.R:411` (+ `emphasis.R:44-61, 92, 99`; `inference.R:821`).",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "The reported MCEM loglik is `fhat(\u03b8_{K-1})` (E-step before the final M-step) while `pars = \u03b8_K`; `loglik_var` comes from the same E-step; the survival correction is evaluated at `\u03b8_K`. Under `max_iter`/`time_budget`/`e_step_failure` stops (not surfaced) the lag is not small. *Test:* after a fit, run one extra `em_cpp` at `\u03b8_K` with `N = 2000` and compare `fhat(\u03b8_K)` with `fit$loglik`; assert the pipeline's stage log would change ranking."
+ },
+ {
+  "id": "H21",
+  "severity": "major",
+  "location": "`R/emphasis.R:114` (+ `bdi.R` convergence rule).",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "Constant `N = 200`, no growth or averaging, convergence when `max_j |\u0394\u03b8_j|/range_j < 1e-3` for 3 consecutive iterations. With `N = 200` the MC noise in `\u03b8_k` is generally larger than `1e-3\u00b7range`, so \"converged\" can fire on three quiet draws or never; the returned `pars` is one draw from the MCEM stationary distribution. *Test:* repeat the same fit 20 times with fixed data; report the sd of `pars` and the distribution of `stop_reason`; compare `pars` spread with the distance to `DDD::bd_ML`."
+ },
+ {
+  "id": "H22",
+  "severity": "major",
+  "location": "`R/emphasis.R:89, 64-85` (+ `inference.R:60-63, 365`).",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "Recovery doubles `maxN` and pulls `\u03b8` 20 % toward `(lb+ub)/2`, but resets `maxN` to the original after the next success. When the failure cause is structural (`sample_size \u2265 maxN`, high rejection, the 120 s cap), the loop alternates fail/success and every failure moves \u03b8 toward the box centre; after 8 failures the returned `pars` is the perturbed vector (`emphasis.R:69, 165`). `maxN \u2265 sample_size` is documented, not enforced; `ctrl$maxN = 2000` by default so the `max(2000, 10\u00b7N)` fallback only applies when the user passes `NULL`, and `num_trees > 2000` cannot succeed. *Test:* fit with `sample_size = 1900, maxN = 2000` on a tree with ~10 % rejection; trace `pars` vs iteration and show drift toward the centre; unit test that `maxN < sample_size` errors."
+ },
+ {
+  "id": "H23",
+  "severity": "major",
+  "location": "`src/E_step.cpp:73` (+ `emphasis.hpp:113`; `mcem.cpp:27,46`; `rcpp_mce.cpp:61`).",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "A 120 s wall-clock cap is the meaning of `max_time_seconds = 0`; no caller passes the argument; on timeout with `< N` trees the throw says \"maxN exceeded\" and R responds by doubling `maxN` and perturbing (which cannot help). The check is per attempt, so one augmentation inserting up to `max_missing` lineages is unbounded. Also affects CEM (`de.R:151` \u2192 `NA`, indistinguishable from augmentation failure) and GAM. *Test:* on a large tree with `num_threads = 1` and `sample_size = 200`, time one E-step; if > 120 s assert the failure is reported as a timeout, not \"zero weights\"; thread `ctrl$max_time` through."
+ },
+ {
+  "id": "H24",
+  "severity": "major",
+  "location": "`R/de.R:736, 705-708` (+ `pipeline.R:198`).",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "With `sd_decay = 0.85`, `sd_min_frac = 0.01` the SD floor is reached only after 29 non-improving iterations, and the plateau stop requires the floor; the pipeline sets `max_iter = 20`, so CEM always stops on `max_iter` with SD \u2265 ~4.6 % of `(ub-lb)/4`. *Test:* run the pipeline's CEM stage and assert `converged == \"max_iter\"` on every run; property test that the stopping rule can fire within `max_iter` for the default control."
+ },
+ {
+  "id": "H25",
+  "severity": "major",
+  "location": "`R/de.R:839, 830-848`.",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "`obtained_estim` is the softmax-weighted mean of elite parameter vectors; elite `fhat`s are re-drawn with 20 trees and differ by units, so weights are near one-hot on a noisy winner or, on a ridge (`\u03bb\u2013\u03bc`, intercept\u2013slope), the mean lies off the ridge; the reported loglik is evaluated at that averaged point. *Test:* on a CR tree compare `best_IS$fhat` at `obtained_estim` with the best elite's `fhat` re-evaluated with the same tree count; on a ridge (`dd`) compare with `DDD::dd_loglik` at both points."
+ },
+ {
+  "id": "H26",
+  "severity": "major",
+  "location": "`R/inference.R:126` (+ `pipeline.R:198`; `de.R:151, 410, 659`).",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "CEM default `maxN = 10` with pipeline `num_trees = 5`: a particle needs 5 valid trees in 10 attempts; failures become `NA` and are excluded from elite selection; only the all-NA case escalates. The rejection rate is \u03b8-dependent, so the search is filtered toward easy-to-augment parameters. *Test:* record the fraction of NA particles per iteration as a function of `\u03b8` (e.g. by `\u03bc/\u03bb`); it should be non-uniform; compare CEM estimates with `maxN = 10` vs `maxN = 200` on the same tree."
+ },
+ {
+  "id": "H27",
+  "severity": "major",
+  "location": "`R/pipeline.R:295, 289-302` (+ `pipeline.R:231`).",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "Stage logliks are not comparable (GAM smoothed surrogate; CEM 20-tree log-mean-exp at an averaged point; MCEM 200-tree `fhat` at `\u03b8_{K-1}`), yet they are printed side by side and the MCEM init is \"cem if finite else gam\" regardless of value \u2014 the justifying comment (\"GAM with low sample_size can produce misleading optima\") contradicts the defaults (GAM 200 trees/point, CEM 5/particle). *Test:* re-evaluate every stage's `pars` with one common 2000-tree `fhat` and compare with the logged values."
+ },
+ {
+  "id": "H28",
+  "severity": "major",
+  "location": "`R/pipeline.R:145` (+ `gam.R:207-214`).",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "When `auto_bounds` finds no feasible centre it warns and returns the wide box with `survival_gam = NULL`; the pipeline logs the stage as \"ok\" and runs later stages unconditioned on the widest box; `result$cond` is FALSE but the log does not flag it. *Test:* force infeasibility (e.g. a 3-tip tree) and assert the log marks the downgrade."
+ },
+ {
+  "id": "H29",
+  "severity": "major",
+  "location": "`R/pipeline.R:125` (+ `168-175, 198-205, 249-257`).",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "`control$rho` reaches `auto_bounds` only; `gam/cem/mcem` run with `rho = 1` unless nested per stage. *Test:* `emphasis_pipeline(tree, control = list(rho = 0.5))` and inspect `fits$mcem$details` for the `rho` actually used."
+ },
+ {
+  "id": "H30",
+  "severity": "minor",
+  "location": "`R/emphasis.R:93` (+ `64-85`).",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "On E-step failure `prev_pars` is not updated and the streak is not reset (`next` before lines 93-122), so the next `delta_max` compares against the pre-perturbation iterate and a convergence streak can survive interleaved failures. *Test:* inject an E-step failure in a converging run and assert the streak resets."
+ },
+ {
+  "id": "H31",
+  "severity": "minor",
+  "location": "`R/emphasis.R:166` (+ `inference.R:410-412`).",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "If every iteration fails, `mcem` is `NULL`, `iterations = nrow(NULL) = NULL`, `loglik = NA`; `stop_reason` and `iterations` live only in `details`, never in the fit or print method. *Test:* unit test on the all-fail path; add `stop_reason` to `print.emphasis_fit`."
+ },
+ {
+  "id": "H32",
+  "severity": "minor",
+  "location": "`R/emphasis.R:178` (`.mcem_warn_estep`).",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "The diagnostic re-runs `em_cpp` with `rho = 1`, no conditional, `maxN = 200` fixed, and parses \"<n> zero weights\" thresholding at `n > 50` while the message says \"/200\". *Test:* trigger the warning under `rho < 1` and compare the diagnosed cause with the failing configuration's rejection breakdown."
+ },
+ {
+  "id": "H33",
+  "severity": "minor",
+  "location": "`R/emphasis.R:50` (+ `emphasis.hpp:40`; `inference.R:140, 518`; `simulate.R:139, 468`; `augment_tree.cpp:141`).",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "`max_lambda` is 1e6 in MCEM, 500 in GAM/simulate/C++ default; not a control entry for MCEM; it bounds the total thinning intensity `n\u00b7\u03bb\u00b7(\u2026)`, not the per-lineage rate as documented. *Test:* run the same \u03b8 through GAM and MCEM E-steps on a 500-tip tree; `rejected_lambda` differs; document which quantity is bounded."
+ },
+ {
+  "id": "H34",
+  "severity": "minor",
+  "location": "`R/emphasis.R:101`.",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "The per-iteration `rejected` column and verbose `rej=` use only `results$rejected` (unhandled exceptions), not overruns/lambda/zero-weight; a run with 90 % zero-weight trees shows `rej = 0`. *Test:* assert the trace column equals the sum of all rejection counters."
+ },
+ {
+  "id": "H35",
+  "severity": "minor",
+  "location": "`R/inference.R:816` (+ `emphasis.R:29`; `inference.R:548`).",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "`n_pars` counts parameters fixed by `lb == ub`; AIC over-penalises by 2 per fixed parameter; `compare_models` rankings shift. *Test:* fit `dd` with `gammaN` fixed via `lb = ub = 0` and check `n_pars`."
+ },
+ {
+  "id": "H36",
+  "severity": "minor",
+  "location": "`R/inference.R:290, 256-324, 740-749`.",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "`.validate_linear_init_pars` guards only the positive covariate extreme; `D` is centred and can be negative (to about `-crown age`); uses `\u2264 0` for `\u03bb` but `< 0` for `\u03bc`; `\u03b20 = 0` yields slope 0 with `\u03bb \u2261 0`. *Test:* init `d` linear with `\u03b2_D > 0` at midpoint bounds and check whether the first E-step collapses."
+ },
+ {
+  "id": "H37",
+  "severity": "minor",
+  "location": "`R/de.R:660, 677, 813, 857`.",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "Rescue escalation multiplies `max_missing` by 10 up to three times and by 1.1 per overrun iteration without bound, persisting into the final evaluation. *Test:* log `max_missing` per iteration in a run that triggers rescue."
+ },
+ {
+  "id": "H38",
+  "severity": "minor",
+  "location": "`R/de.R:745`.",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "Verbose `sd%` divides by `sd_floor/sd_min_frac`, which is 0 on inactive slots, giving `NaN` for every model. *Test:* run any CEM fit with `verbose = TRUE`."
+ },
+ {
+  "id": "H39",
+  "severity": "minor",
+  "location": "`R/gam.R:836` (+ `inference.R:151-166`; `gam.R:808-823`).",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "The projected-time check applies only on the sequential path of `estimate_likelihood_surface`; the `mclapply` path has no budget; in the pipeline the error discards the partial surface. *Test:* set a tiny `max_time` with `num_threads = 1` vs `> 1`."
+ },
+ {
+  "id": "H40",
+  "severity": "question",
+  "location": "`src/M_step.cpp:81`.",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "`xtol` (1e-3) is `xtol_rel` relative to `|x|`; `tol` (1e-3) is relative to the bound range. For slopes near 0 the optimiser stops much later than `tol`; for `\u03b20 \u2248 1` they coincide. Is the M-step tolerance meant to sit below the EM threshold in the same metric? *Test:* rerun MCEM with `xtol = 1e-6` and compare the iterate noise."
+ },
+ {
+  "id": "H41",
+  "severity": "question",
+  "location": "`R/inference.R:714` (+ `model.hpp:127-130`).",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "For the gaussian link `init_pars` is the bound midpoint with no slope handling; the CR rate is `\u03b20\u00b7e^{-1/2}` and slopes act inside a square. Is the midpoint a sensible start? *Test:* count `max_iter` stops for gaussian fits starting at the midpoint vs at the CEM point."
+ },
+ {
+  "id": "H42",
+  "severity": "question",
+  "location": "`R/de.R:698, 418`.",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "Plateau detection compares maxima of freshly re-drawn noisy `fhat`s (1\u20135 trees per particle), so `improvement \u2265 1e-4` is dominated by MC noise. *Test:* re-run the same population twice and measure the sd of `best_loglik`."
+ },
+ {
+  "id": "H43",
+  "severity": "question",
+  "location": "`R/inference.R:427, 548` (+ `de.R:382-389`).",
+  "theme": "b: MCEM / CEM optimisation logic",
+  "text": "Inactive 8-element slots have `lb = ub = 0` and `sd = 0`; are they guaranteed to stay at 0 through SBPLX and CEM perturbation? *Test:* assert all inactive slots are exactly 0 in every particle and every M-step estimate."
+ },
+ {
+  "id": "H44",
+  "severity": "critical",
+  "location": "`R/simulate.R:404` (`.extract_Ltable`).",
+  "theme": "c: Augmentation samplers (structure, topology, parents)",
+  "text": "For a `simulate_tree()` result, `tree$L` is the FULL L-table including true extinct lineages, and `.sim_tree_conditional` appends augmentations to it. Measured: 30-tip CR tree with 21 extinct rows \u2192 augmented tables averaged 70 rows (49 with `phylo2L(tes)`), 43/50 draws had a parent dying before its child was born, 43/50 `tas` had negative edges; 0/50 with `phylo2L(tes)`. *Test:* assert `min(tas$edge.length) \u2265 0` and `nrow(L_aug) == nrow(phylo2L(tes)) + n_augmented` for simulated inputs."
+ },
+ {
+  "id": "H45",
+  "severity": "major",
+  "location": "`R/bdi.R:556, 551-552` and `R/simulate.R:420, 428, 440` (+ `augment_tree.cpp:153-166`).",
+  "theme": "c: Augmentation samplers (structure, topology, parents)",
+  "text": "Parent assignment: BDI uses the deterministic id of the most recent observed branching (id 0 \u2014 an event after the birth \u2014 for lineages born before `bt_sorted[1]`; line 557/552 dead code); thinning draws uniformly over event nodes (never the two crown lineages) and returns `-1` when none, and `.aug_to_Ltable` drops `parent_id == -1` rows (33/1265 = 2.6 % of augmented lineages, the oldest ones, absent from `tas` while contributing to `log_q`), attaches the rest to the DAUGHTER row of the parent event via nearest birth age, and falls back to `L_extant[1,3]`. `tas` topology is therefore a convention, not a draw; `tas` and `log_q` describe different `z`. *Test:* count `parent_id == -1` rows per draw; assert every augmented lineage in the C++ data frame appears in `tas`; for BDI assert no lineage is attached to a node younger than itself."
+ },
+ {
+  "id": "H46",
+  "severity": "major",
+  "location": "`R/simulate.R:221-222` (rho forward).",
+  "theme": "c: Augmentation samplers (structure, topology, parents)",
+  "text": "Dropped tips get `L[,4] <- max_t` (\"extinct at present\" in the comment) which in DDD age units is extinction at the crown; `tas` has negative edges (min \u22124.99 at `rho = 0.5`), `tes` is unaffected; `n_drop` capped at `n_extant - 2` without guaranteeing a survivor per crown clade; these rows are inherited by H44. *Test:* `simulate_tree(pars = c(0.6, 0.1), max_t = 6, model = \"cr\", rho = 0.5)$tas` must have non-negative edges (expected fix: `L[drop,4] <- 0`)."
+ },
+ {
+  "id": "H47",
+  "severity": "major",
+  "location": "`inst/include/general_tree.hpp:37`, `src/augment_tree.cpp:41`, `model.hpp:218` (+ `de.R:259-263`).",
+  "theme": "c: Augmentation samplers (structure, topology, parents)",
+  "text": "Three independent thread-local engines seeded from the wall clock \u2295 thread id; `std::default_random_engine` is `minstd_rand` (31-bit LCG) on libc++; `set.seed()` reaches only rho tip-dropping and `auto_bounds` Phase 3. Two `set.seed(42)` forward runs gave 29 vs 156 L-table rows. Under `mclapply` forks the process-global engines' post-fork state is unknown. *Test:* two `set.seed(1)` runs of `simulate_tree` and of `augment_trees` must differ (documenting the fact) until a seed argument is added; after adding one, assert equality and that forked children differ."
+ },
+ {
+  "id": "H48",
+  "severity": "major",
+  "location": "`src/augment_tree.cpp:50` (+ `model_helpers.hpp:216-229`; `simulate.R:420`).",
+  "theme": "c: Augmentation samplers (structure, topology, parents)",
+  "text": "Augmented lineages with `parent_id == -1` (born before the first non-crown branching) get `tip_start = 0` and `e_s = M` (`D = 0`), while their extinction node keeps `tip_start = t_spec`; `P(t)` over-counts them by `t_spec`; the D+exp running sums add `e^{-\u03b2_D\u00b7brts}` but subtract `e^{-\u03b2_D\u00b7t_spec}`. *Test:* augment a tree with `max_missing = 1` many times, select draws with `parent_id == -1`, and verify `pd` against a hand computation."
+ },
+ {
+  "id": "H49",
+  "severity": "minor",
+  "location": "`src/augment_tree.cpp:167` (+ `model.hpp:216, 231`).",
+  "theme": "c: Augmentation samplers (structure, topology, parents)",
+  "text": "`insert_unsampled_species` fires whenever `ext_time \u2265 b` regardless of `rho`; if `extinction_time` can return `\u2265 T` at `rho = 1` (the truncated exponential should prevent it), `tas` gains an extra extant tip. *Test:* 10\u2074 augmentations at `rho = 1`, assert no `t_ext == 5e10`."
+ },
+ {
+  "id": "H50",
+  "severity": "minor",
+  "location": "`inst/include/model_helpers.hpp:161`.",
+  "theme": "c: Augmentation samplers (structure, topology, parents)",
+  "text": "`trunc_exp` is rejection sampling with acceptance `1 - e^{-\u03bcr}`; with `\u03bc` clamped to 1e-10 one call can spin ~1e9 iterations; the 120 s cap is the only backstop. *Test:* time `augment_trees` with `\u03b30 = 0` under the linear link; replace with inverse-CDF sampling."
+ },
+ {
+  "id": "H51",
+  "severity": "minor",
+  "location": "`src/augment_tree.cpp:101`.",
+  "theme": "c: Augmentation samplers (structure, topology, parents)",
+  "text": "The `n`-recomputation loop has no `tree.end()` guard; safe only because the caller routes `ext_time \u2265 b` elsewhere. *Test:* add an assert or bound; call `insert_species` directly with `t_ext \u2265 T` in a C++ unit test."
+ },
+ {
+  "id": "H52",
+  "severity": "minor",
+  "location": "`inst/include/general_tree.hpp:70-74, 85, 212-216, 250-256`.",
+  "theme": "c: Augmentation samplers (structure, topology, parents)",
+  "text": "Simulator times are `float` (~1e-7 relative), R matches birth ages by nearest value (`simulate.R:428`) and `prune_to_extant` uses `tol = 1e-8` (`inference.R:16-24`); with the linear link a selected lineage can have `\u03bb + \u03bc = 0` through floating fallback, giving `bernoulli(NaN)`. *Test:* simulate with `max_t = 100` and check `branching.times` for duplicates/zero-length edges; store `double`."
+ },
+ {
+  "id": "H53",
+  "severity": "minor",
+  "location": "`src/augment_tree.cpp:57` (+ `model.hpp:242`).",
+  "theme": "c: Augmentation samplers (structure, topology, parents)",
+  "text": "`compute_pendant_pd` is `O(N\u00b2)` per tree and `nh_rate` rescans for `P(t)` at every candidate; dominates E-step time at large `max_missing`. *Test:* profile one E-step on a 200-tip tree with `max_missing = 1e4`."
+ },
+ {
+  "id": "H54",
+  "severity": "minor",
+  "location": "`R/bdi.R:39-41`.",
+  "theme": "c: Augmentation samplers (structure, topology, parents)",
+  "text": "Critical-case branch (`|\u03bb0-\u03bc0| < 1e-15`): `I_lam` should be `\u03bb\u0394t - log(a1/a2)` and `I_mu` `\u03bb\u0394t + log((tp-t1)/(tp-t2))` (numeric 4.666 vs code 2.622); practically unreachable, and the general formula loses precision as `d \u2192 0`. *Test:* compare `.bdi_integral_cr` with `integrate()` at `d = 1e-6, 1e-10, 0`."
+ },
+ {
+  "id": "H55",
+  "severity": "minor",
+  "location": "`R/bdi.R:108-116` (+ `bdi.R:171-284, 338-366, 634-635`).",
+  "theme": "c: Augmentation samplers (structure, topology, parents)",
+  "text": "`.bdi_lam/.bdi_mu` read slots 3\u20134 as coefficients on `P` and `E` (pre-2026-07 layout) while C++ reads them as `\u03b2_M, \u03b2_D`; an 8-element `pars` with non-zero slots 3/4 is accepted and evaluated inconsistently; ~150 lines of Gaussian-closure code are inert under every reachable configuration. *Test:* pass `pars8` with `\u03b2_D \u2260 0` to `.augment_tree_bdi` and compare `logg` conventions with `eval_logf`; or assert the sampler errors."
+ },
+ {
+  "id": "H56",
+  "severity": "minor",
+  "location": "`R/bdi.R:605`.",
+  "theme": "c: Augmentation samplers (structure, topology, parents)",
+  "text": "BDI trees carry `pd \u2261 0` and no `focal_tip_start`; thinning trees carry per-node `pd`; any M/D-aware scoring of BDI trees sees `M = 0`. *Test:* `eval_logf` on a BDI tree with `\u03b2_M \u2260 0` vs a thinning tree of the same topology."
+ },
+ {
+  "id": "H57",
+  "severity": "minor",
+  "location": "`R/bdi.R:496, 491, 501-502` (+ `simulate.R:380`; `model.hpp:304`).",
+  "theme": "c: Augmentation samplers (structure, topology, parents)",
+  "text": "BDI `logg` uses per-lineage `log(\u03bbu)` per birth and immigration; thinning `log q` uses `log(n\u03bc\u03bb) - log(2\u00b7tips+Ne)`; both are returned as `log_q` by `simulate_tree`. The zero-variance CR property holds because `f` drops the same multiplicity, but the two \"log q\" values are not the same density. *Test:* on one fixed augmented tree (convert a BDI draw to the thinning data frame), compute both `logg`s; the difference should be a constant independent of `\u03b8` if they are compatible; if it depends on `\u03b8`, only one can be paired with `f`."
+ },
+ {
+  "id": "H58",
+  "severity": "minor",
+  "location": "`R/bdi.R:377`.",
+  "theme": "c: Augmentation samplers (structure, topology, parents)",
+  "text": "`.bdi_iterate` stops at 20 iterations with no non-convergence report; Cov ODE drops death cross-jumps; `\u00ca` clipped to `[0, tp]`. *Test:* return the final `delta` and assert it is below tolerance on a strong-DD tree."
+ },
+ {
+  "id": "H59",
+  "severity": "minor",
+  "location": "`R/bdi.R:665, 680-681`.",
+  "theme": "c: Augmentation samplers (structure, topology, parents)",
+  "text": "Under CR `max_tries = sample_size`, so any overflow returns fewer trees with no retry and no counter; `num_trees` reflects it but `rejected` is 0. *Test:* set `max_missing = 2` and assert the shortfall is reported."
+ },
+ {
+  "id": "H60",
+  "severity": "question",
+  "location": "`R/bdi.R:465`.",
+  "theme": "c: Augmentation samplers (structure, topology, parents)",
+  "text": "The DD branch breaks when `1-p < 1e-12` or `total < 1e-15` without the survival term for the remainder; with `n_alive > 0` this is a rejection at 514. Intended? *Test:* count how many rejections originate from this break vs genuine survivors."
+ },
+ {
+  "id": "H61",
+  "severity": "question",
+  "location": "`R/bdi.R:546`.",
+  "theme": "c: Augmentation samplers (structure, topology, parents)",
+  "text": "For a 2-tip tree `seq(0L, -1L)` is assigned to a zero-length index. *Test:* run BDI on a 2-tip tree."
+ },
+ {
+  "id": "H62",
+  "severity": "major",
+  "location": "`src/E_step.cpp:95, 101`.",
+  "theme": "d: Numerical stability, concurrency, build",
+  "text": "`if (!stop)` is evaluated outside the mutex and `stop = (E.trees.size() == N)` uses `==` inside it; a second thread can push tree `N+1` and set `stop = false`, after which all threads continue to `maxN`/120 s; `S_completed` then uses `N` rather than `trees.size()`, so `fhat` is biased by `log(N/num_trees)` and the M-step runs on an unplanned sample. *Test:* run `em_cpp` with `num_threads = 8`, `sample_size = 50`, `maxN = 5000` repeatedly and assert `length(logf) == 50`."
+ },
+ {
+  "id": "H63",
+  "severity": "major",
+  "location": "`src/E_step.cpp:63` (+ `augment_tree.cpp:221-224`; `M_step.cpp:77`).",
+  "theme": "d: Numerical stability, concurrency, build",
+  "text": "`tbb::task_arena arena(num_threads)` is constructed but the `parallel_for` is not run inside `arena.execute`, so it uses hardware concurrency; `num_threads` only sets grainsize. R callers that set `cpp_threads = 1` for `mclapply` forks (`de.R:223-227, 262`) still get a full TBB pool per child. *Test:* `num_threads = 1` with `sample_size = 2000` and measure CPU utilisation / `top`; assert single-core."
+ },
+ {
+  "id": "H64",
+  "severity": "major",
+  "location": "`src/E_step.cpp:62` (+ `augment_tree.cpp:223`).",
+  "theme": "d: Numerical stability, concurrency, build",
+  "text": "`grainsize = maxN / num_threads` (integer division) is 0 when `maxN < num_threads` (CEM default `maxN = 10`, `num_threads` up to hardware concurrency, 32 on whitebox); TBB's contract requires `\u2265 1`. *Test:* CEM defaults on a \u2265 12-thread machine; fix with `std::max<size_t>(1, \u2026)`."
+ },
+ {
+  "id": "H65",
+  "severity": "minor",
+  "location": "`src/rsbplx.cpp:144`.",
+  "theme": "d: Numerical stability, concurrency, build",
+  "text": "Any negative `nlopt_result` throws, including `NLOPT_ROUNDOFF_LIMITED (-4)`, a benign termination for derivative-free methods; `em_cpp` then errors and the MCEM driver treats it as an E-step failure (doubling `maxN`, perturbing). *Test:* log `nlopt` codes across a fit; count `-4` occurrences; treat `-4` as success."
+ },
+ {
+  "id": "H66",
+  "severity": "minor",
+  "location": "`src/M_step.cpp:84-87` (+ `rsbplx.cpp:108-123`).",
+  "theme": "d: Numerical stability, concurrency, build",
+  "text": "No check that `lower/upper` have `pars.size()` elements before passing `.data()` to nlopt; compact bounds with 8-element pars read out of bounds. *Test:* call `m_cpp` with 2-element bounds under ASan."
+ },
+ {
+  "id": "H67",
+  "severity": "minor",
+  "location": "`src/M_step.cpp:77, 76, 61`.",
+  "theme": "d: Numerical stability, concurrency, build",
+  "text": "`tbb::task_scheduler_init` is the pre-oneTBB API (compiles only because RcppParallel 5.1.11.2 ships the header); the `is_threadsafe` guard is commented out; the R conditional (`Rcpp::Function`) is called inside the NLopt C call stack so an R error unwinds through C frames. *Test:* make `predict_survival` throw mid-optimisation and observe."
+ },
+ {
+  "id": "H68",
+  "severity": "minor",
+  "location": "`src/E_step.cpp:97, 104-107`.",
+  "theme": "d: Numerical stability, concurrency, build",
+  "text": "Each accepted tree is copied under the global mutex (serialising the parallel region); `rejected_zero_weights` increments after `stop` while accepted-after-stop trees are dropped uncounted. *Test:* compare `sum(counters) + N` with the number of attempts made."
+ },
+ {
+  "id": "H69",
+  "severity": "minor",
+  "location": "`src/rcpp_mcem.cpp:11` (+ `rcpp_mcm.cpp:21`).",
+  "theme": "d: Numerical stability, concurrency, build",
+  "text": "`rcpp_mcem` uses a private 3-column unpack (`brts, n, t_ext`) instead of `unpack.h`'s 8 columns; `m_cpp` rebuilds nodes with `pd = tip_start = 0`, `id = parent_id = -1`, so trees from `em_cpp(copy_trees = TRUE)` cannot be re-scored for M/D models and `m_cpp` is correct only for N-only models (currently the only caller, `bdi.R:820`). *Test:* `eval_logf` on `em_cpp` trees for an `nd` model vs the E-step's own `logf`."
+ },
+ {
+  "id": "H70",
+  "severity": "minor",
+  "location": "`inst/include/emphasis.hpp:54` (+ `M_step.cpp:29-32`; `mcem.cpp:14-29`; `rcpp_mcm.cpp:54`).",
+  "theme": "d: Numerical stability, concurrency, build",
+  "text": "Dead API: `E_step_info_t::logf/logg` scalars, `nlopt_f_data` destructor building an empty tree, `mce()` with ignored arguments and no caller, `sbplx_1`, the `plugin` argument of `m_cpp`, the vectorised `augment_trees` C++ function (not the R symbol). *Test:* remove and rebuild."
+ },
+ {
+  "id": "H71",
+  "severity": "minor",
+  "location": "`inst/include/general_tree.hpp:231, 110-113` (+ `simulate.R` no validation).",
+  "theme": "d: Numerical stability, concurrency, build",
+  "text": "Gaussian link with `\u03b20 < 0` gives negative `\u03bb`; if `\u03bb + \u03bc > 0`, `bernoulli(p \u2209 [0,1])` is undefined behaviour; if the total is `\u2264 0`, `expon()` returns 1e20 and the run ends `done` with 2 rows (confirmed for `pars = c(-0.5, 0.1)`). *Test:* assert `simulate_tree` rejects negative intercepts under the gaussian link."
+ },
+ {
+  "id": "H72",
+  "severity": "minor",
+  "location": "`emphasis.Rcheck/00check.log:108-118`.",
+  "theme": "d: Numerical stability, concurrency, build",
+  "text": "Compiled code contains `abort/assert` entry points in `E_step.o`, `loglik.o`, `rcpp_*.o`; an assert can terminate the R session. *Test:* `R CMD check --as-cran`."
+ },
+ {
+  "id": "H73",
+  "severity": "critical",
+  "location": "`R/gam.R:170-179, 434-440, 676-688`.",
+  "theme": "e: API and cross-component consistency",
+  "text": "`auto_bounds`, `.find_feasible_center` and `.wide_bounds` branch on `link_int == 0L` else log-scale, so the gaussian link (2) gets `\u03b20 = log(lam_hat)` and bounds `[log lam_lo, log lam_hi]` although `model.hpp:127-130` uses `\u03b20` on the natural scale; for `bird.orders` the centre is `\u03b20 \u2248 -2.3`. A zero/negative-rate centre passes `.test_feasibility` because a 2-tip tree satisfies `tip_lo = 2` (`gam.R:161`). The survival GAM is then trained mostly at non-positive rates. *Test:* `auto_bounds(bird.orders, model = \"dd\", link = \"gaussian\")` and assert `lower_bound[\"beta_0\"] > 0`."
+ },
+ {
+  "id": "H74",
+  "severity": "major",
+  "location": "`R/gam.R:415, 401-416, 374`.",
+  "theme": "e: API and cross-component consistency",
+  "text": "The feasibility criterion (\u2265 50 % of forward simulations `done` with tips in `[0.1N, 10N]`) declares high-turnover regions (`\u03bc \u2248 \u03bb`) infeasible before any likelihood is evaluated, although survival conditioning is what makes those regions admissible; the survival GAM is trained only inside the box. *Test:* simulate CR trees with `\u03bc/\u03bb = 0.9`, run `auto_bounds`, and check whether `DDD::bd_ML(cond = 1)` lies inside the returned box."
+ },
+ {
+  "id": "H75",
+  "severity": "major",
+  "location": "`R/simulate.R:343, 404`.",
+  "theme": "e: API and cross-component consistency",
+  "text": "A numeric branching-time vector as `tree` (documented) errors in the conditional path (`tree$L` on an atomic vector). *Test:* `simulate_tree(tree = c(5,3,1), pars = c(0.5,0.1))`."
+ },
+ {
+  "id": "H76",
+  "severity": "major",
+  "location": "`R/simulate.R:168, 211`.",
+  "theme": "e: API and cross-component consistency",
+  "text": "`survival_prob = 1/n_attempts` per tree (values `{1, 0.5, 0}` at `max_tries = 1`), batch = its mean, not the `done` fraction; consumed by `auto_bounds`/`train_GAM`. *Test:* batch of 1000 with `max_tries = 1` vs `0`; compare to the empirical `done` fraction."
+ },
+ {
+  "id": "H77",
+  "severity": "major",
+  "location": "`R/simulate.R:268-274` (+ `inference.R:240,244`; `simulate.R:313-324`; `bdi.R:104`; `test-em.R:23`).",
+  "theme": "e: API and cross-component consistency",
+  "text": "The M slot is reachable through the binary-vector interface though README/roxygen call it internal; the formula path rejects `M`; `.bdi_supported` routes M-active models to thinning; C++ semantics of an M-active model are undocumented and untested. *Test:* decide; either reject `model_bin[2] == 1` in `.resolve_model` or document and test `beta_M`."
+ },
+ {
+  "id": "H78",
+  "severity": "major",
+  "location": "`R/RcppExports.R:9,13,36-37,65-66,97-98,131-132` (+ `div_tree.cpp:10-14`; `general_tree.hpp:87-88`; `rcpp_mce.cpp:31`; `rcpp_mcem.cpp:39`).",
+  "theme": "e: API and cross-component consistency",
+  "text": "Stale `(use_N, use_P, use_E)` / link `0/1` documentation on every C++ wrapper. *Test:* regenerate with corrected roxygen; grep for `use_P`."
+ },
+ {
+  "id": "H79",
+  "severity": "minor",
+  "location": "`R/inference.R:101, 107, 384, 404` (+ `model.hpp:90`; `.mcem_warn_estep`; `select_diversification_model`).",
+  "theme": "e: API and cross-component consistency",
+  "text": "`rho` unvalidated in R; C++ resets out-of-range values to 1 with no message; some callers do not forward it. *Test:* `estimate_rates(..., control = list(rho = 80))` must error."
+ },
+ {
+  "id": "H80",
+  "severity": "minor",
+  "location": "`R/inference.R:529, 532` (+ `gam.R:871`; `inference.R:344`).",
+  "theme": "e: API and cross-component consistency",
+  "text": "`.run_gam` subtracts `log(p_tree)` with no floor; `p = 0` gives `fhat = +Inf`, dropped by `is.finite`, so the lowest-survival grid rows are removed rather than penalised; `cond_fun` floors at 1e-300 so CEM/MCEM differ at the same points. *Test:* grid rows with `predict_survival == 0` and count how many vanish from the smooth."
+ },
+ {
+  "id": "H81",
+  "severity": "minor",
+  "location": "`R/gam.R:561, 553-559`.",
+  "theme": "e: API and cross-component consistency",
+  "text": "`.observed_covariates` sets `mean_pendant = mean(brts)` (all branching times), not a pendant age, for the M/D compensatory diagonals. *Test:* compare with the true mean pendant age from `tes`."
+ },
+ {
+  "id": "H82",
+  "severity": "minor",
+  "location": "`R/simulate.R:248` (+ `general_tree.hpp:104-107`; `model.hpp:87`).",
+  "theme": "e: API and cross-component consistency",
+  "text": "`link = 3` is linear in forward simulation and an out-of-range enum in augmentation. *Test:* `.resolve_link(3)` must error."
+ },
+ {
+  "id": "H83",
+  "severity": "minor",
+  "location": "`R/simulate.R:348-364, 228-231, 377, 407`.",
+  "theme": "e: API and cross-component consistency",
+  "text": "Every sampler and `L2phylo/phylo2L` call is wrapped in `tryCatch(error = NULL)`, so C++ exceptions, the 120 s cap, missing DDD and genuine bugs are indistinguishable from \"augmentation failed\". *Test:* pass an invalid `model_bin` and observe `tas = NULL, log_q = NA` with no message."
+ },
+ {
+  "id": "H84",
+  "severity": "minor",
+  "location": "`R/simulate.R:374`.",
+  "theme": "e: API and cross-component consistency",
+  "text": "With `useDDD = FALSE` the conditional path returns `tas = NULL` and discards the L-table and data frame. *Test:* request `useDDD = FALSE` and look for the augmentation."
+ },
+ {
+  "id": "H85",
+  "severity": "minor",
+  "location": "`R/simulate.R:158, 168, 172`.",
+  "theme": "e: API and cross-component consistency",
+  "text": "Batch recursion passes 15 positional arguments, forces `num_threads = 1` per row, `vapply(..., \"survival_prob\")` fails on `try-error` rows from `mclapply`, and the conditional batch return is undocumented. *Test:* make one row error under `mclapply`."
+ },
+ {
+  "id": "H86",
+  "severity": "minor",
+  "location": "`R/diagnostics.R:142, 305-315, 374, 387, 457, 533-541, 579-580`.",
+  "theme": "e: API and cross-component consistency",
+  "text": "`diagnose_cem` errors when `best_IS$ESS` is NULL; ESS taken from the fit rather than recomputed; documented invisible returns are visible; `par_names` from `names(x$pars)` may not match `par[0-9]+` columns; \"B=200\" hard-coded. *Test:* `diagnose_cem` on a fit lacking `ESS`."
+ },
+ {
+  "id": "H87",
+  "severity": "minor",
+  "location": "`R/inference.R:933, 910`.",
+  "theme": "e: API and cross-component consistency",
+  "text": "`compare_models` indexes AIC by label (two \"CR\" fits give a length-2 `T_ij`) and reads `n_pars` with `vapply(..., 0L)` (errors if double). *Test:* `compare_models(list(a, b))` with two CR fits."
+ },
+ {
+  "id": "H88",
+  "severity": "minor",
+  "location": "`DESCRIPTION:11`, `.Rbuildignore:8`, `.github/workflows/main.yml:37`.",
+  "theme": "e: API and cross-component consistency",
+  "text": "License field non-standard; `emphasis.Rcheck/` and `emphasis_0.4.tar.gz` not ignored; `checkout@v3`, no coverage job, no `--as-cran`, `syst_biol` trigger. *Test:* `R CMD build` and inspect the tarball; open the Actions page."
+ },
+ {
+  "id": "H89",
+  "severity": "minor",
+  "location": "`R/gam.R:65-66, 907-908`.",
+  "theme": "e: API and cross-component consistency",
+  "text": "`train_GAM`/`train_likelihood_GAM` `cat()` unconditionally, ignoring `verbose`. *Test:* `expect_silent`."
+ },
+ {
+  "id": "H90",
+  "severity": "minor",
+  "location": "`R/simulate.R:475` (+ `inference.R:365`; `bdi.R:663`; `inference.R:126`).",
+  "theme": "e: API and cross-component consistency",
+  "text": "Three attempt budgets for the same operation; `max_tries` ignored in the conditional path; failure statistics not comparable between `simulate_tree()` and `estimate_rates()`. *Test:* document and unify."
+ },
+ {
+  "id": "H91",
+  "severity": "question",
+  "location": "`R/gam.R:37` (+ `general_tree.hpp:175, 290`).",
+  "theme": "e: API and cross-component consistency",
+  "text": "`P_surv` is `P(both crown clades alive at T and N < max_lin = max(20N, 500))`, trained inside the detected box only; whether this is the conditioning event of the reported \"conditional likelihood\" (and the same event the M-step conditions on) is undetermined. *Test:* compare `predict_survival` with `DDD::bd_loglik`'s `cond = 1` normaliser (`1 - P(extinction)` squared) for CR."
+ },
+ {
+  "id": "H92",
+  "severity": "question",
+  "location": "`src/div_tree.cpp:33`.",
+  "theme": "e: API and cross-component consistency",
+  "text": "The C++ `max_tries` retry loop is never exercised from R. *Test:* remove or document."
+ },
+ {
+  "id": "H93",
+  "severity": "question",
+  "location": "`R/simulate.R:380`.",
+  "theme": "e: API and cross-component consistency",
+  "text": "See H57: two `log_q` definitions under one name."
+ },
+ {
+  "id": "H94",
+  "severity": "critical",
+  "location": "`tests/testthat/test-de.R:43,72,93,116,130`, `test-em.R:5,31,43,55,68`, `test-inference.R:72,86,99`, `test-simulate.R:35,80,91,104`, `test-augment.R:5`.",
+  "theme": "f: Tests, CI, documentation",
+  "text": "Every test reaching C++ (`augment_trees`, `eval_logf`, `emphasis_cem` end-to-end, `em_cpp`, `simulate_div_tree_cpp`) is unconditionally `skip()`-ed; the likelihood, proposal, M-step, MCEM, forward simulation, conditional term, multi-threading and the zero-weight denominator have no automated verification; CI green means \"compiles and pure-R plumbing works\". *Test:* re-enable `test-simulate.R` and `test-de.R` blocks (current signatures) first; add the closed-form checks of \u00a75."
+ },
+ {
+  "id": "H95",
+  "severity": "critical",
+  "location": "`R/bdi.R` (entire file, ~800 lines).",
+  "theme": "f: Tests, CI, documentation",
+  "text": "No test touches any `.bdi_*` function though BDI is the default proposal and README:132 claims exactness. *Test:* pin (i) `sd(lw) < 1e-10` and `ESS == N` under CR with `\u03bb > \u03bc`; (ii) `fhat == ` Nee crown likelihood computed by `integrate()` / `DDD::bd_loglik(cond = 0)` up to a constant; (iii) agreement with thinning under `dd`; (iv) behaviour at `\u03bc > \u03bb` and `rho < 1`."
+ },
+ {
+  "id": "H96",
+  "severity": "major",
+  "location": "`tests/testthat/test-augment.R:10`, `test-em.R:12`.",
+  "theme": "f: Tests, CI, documentation",
+  "text": "`mc_loglik()` is undefined anywhere in `R/`. *Test:* rewrite against `augment_trees`/`em_cpp`."
+ },
+ {
+  "id": "H97",
+  "severity": "major",
+  "location": "`tests/testthat/test-em.R:34-36, 47-49, 60-62, 72-74`.",
+  "theme": "f: Tests, CI, documentation",
+  "text": "`estimate_rates(..., lower_bound=, upper_bound=)` \u2014 no such formals. *Test:* move bounds into `control`."
+ },
+ {
+  "id": "H98",
+  "severity": "major",
+  "location": "`tests/testthat/test-inference.R:74, 88, 101`.",
+  "theme": "f: Tests, CI, documentation",
+  "text": "`simulate_tree(c(0.5, 0.1), max_t = 5, model = \"cr\")` binds the pars to `tree`. *Test:* use `pars =`."
+ },
+ {
+  "id": "H99",
+  "severity": "major",
+  "location": "README:92,183,246 (gaussian link untested).",
+  "theme": "f: Tests, CI, documentation",
+  "text": "No test in R or C++ exercises `link_int = 2`, the link every README example recommends. *Test:* add gaussian-link fits and a check that `\u03b20` is the peak rate (`eval_logf` on a tree with `\u03b7_cov = 1`)."
+ },
+ {
+  "id": "H100",
+  "severity": "major",
+  "location": "README:168 (rho untested).",
+  "theme": "f: Tests, CI, documentation",
+  "text": "No test passes `rho`; C++ sampling terms (`model.hpp:225-228, 251, 282, 295, 307-308, 456`) are untested. *Test:* CR with `rho < 1` vs a brute-force estimate; assert the two samplers agree (H2)."
+ },
+ {
+  "id": "H101",
+  "severity": "major",
+  "location": "`R/pipeline.R:57`, `R/gam.R:133`.",
+  "theme": "f: Tests, CI, documentation",
+  "text": "`emphasis_pipeline`, `auto_bounds`, `print.emphasis_pipeline`, `diagnose_mcem`, `diagnose_cem`, `.run_*`, `.resolve_control_aliases`, `.validate_linear_init_pars`, `.build_cond_fun`, `estimate_likelihood_surface`, `.sim_tree_conditional`, `.aug_to_Ltable`, `prune_to_extant`, `select_diversification_model` have no tests. *Test:* smoke tests with `stages = c(\"bounds\")` on a 10-tip tree."
+ },
+ {
+  "id": "H102",
+  "severity": "minor",
+  "location": "`tests/testthat/test-covariates.R:52-58`.",
+  "theme": "f: Tests, CI, documentation",
+  "text": "The expand/contract round trip uses `mb = c(1,1,1)`, for which `.expand_pars` is the identity; only `c(1,0,0)` exercises the index arithmetic; `c(0,0,1)` and `c(1,0,1)` are uncovered. *Test:* add `d` and `nd` round trips with distinct values per slot."
+ },
+ {
+  "id": "H103",
+  "severity": "minor",
+  "location": "`tests/testthat/test-gam.R:14` (+ `gam.R:67, 909`).",
+  "theme": "f: Tests, CI, documentation",
+  "text": "Tests guard on `mgcv` but package code calls `mgcv::gam` unconditionally with mgcv in Suggests. *Test:* run without mgcv."
+ },
+ {
+  "id": "H104",
+  "severity": "minor",
+  "location": "`tests/testthat/test-inference.R:71-72, 85-86, 98-99`, `test-augment.R:4-5`.",
+  "theme": "f: Tests, CI, documentation",
+  "text": "`skip_on_cran()` precedes `skip()`, so the reported reason is \"On CRAN\" locally. *Test:* remove `skip_on_cran` or set `NOT_CRAN`."
+ },
+ {
+  "id": "H105",
+  "severity": "minor",
+  "location": "documentation set (\u00a73 items 1\u201352).",
+  "theme": "f: Tests, CI, documentation",
+  "text": "Every README/roxygen/Rd discrepancy in \u00a73; in particular the badge URL, \"55 remaining tests\", the stale `emphasis-package.Rd`, and the two user-facing documents describing different default proposals (\u00a73 item 20). *Test:* `devtools::document()` diff; a docs-vs-code checklist run against \u00a73."
+ }
+]
