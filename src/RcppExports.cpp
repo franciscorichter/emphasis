@@ -61,6 +61,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// rcpp_thinning_envelope_violations
+double rcpp_thinning_envelope_violations(bool reset);
+RcppExport SEXP _emphasis_rcpp_thinning_envelope_violations(SEXP resetSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< bool >::type reset(resetSEXP);
+    rcpp_result_gen = Rcpp::wrap(rcpp_thinning_envelope_violations(reset));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rcpp_mcem
 List rcpp_mcem(const std::vector<double>& brts, const std::vector<double>& init_pars, int sample_size, int maxN, int max_missing, double max_lambda, const std::vector<double>& lower_bound, const std::vector<double>& upper_bound, double xtol_rel, int num_threads, bool copy_trees, Rcpp::IntegerVector model, int link, double rho, Nullable<Function> rconditional);
 RcppExport SEXP _emphasis_rcpp_mcem(SEXP brtsSEXP, SEXP init_parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP lower_boundSEXP, SEXP upper_boundSEXP, SEXP xtol_relSEXP, SEXP num_threadsSEXP, SEXP copy_treesSEXP, SEXP modelSEXP, SEXP linkSEXP, SEXP rhoSEXP, SEXP rconditionalSEXP) {
@@ -112,6 +123,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_emphasis_simulate_div_tree_cpp", (DL_FUNC) &_emphasis_simulate_div_tree_cpp, 6},
     {"_emphasis_eval_logf_cpp", (DL_FUNC) &_emphasis_eval_logf_cpp, 5},
     {"_emphasis_rcpp_mce", (DL_FUNC) &_emphasis_rcpp_mce, 10},
+    {"_emphasis_rcpp_thinning_envelope_violations", (DL_FUNC) &_emphasis_rcpp_thinning_envelope_violations, 1},
     {"_emphasis_rcpp_mcem", (DL_FUNC) &_emphasis_rcpp_mcem, 15},
     {"_emphasis_rcpp_mcm", (DL_FUNC) &_emphasis_rcpp_mcm, 11},
     {NULL, NULL, 0}

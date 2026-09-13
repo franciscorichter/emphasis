@@ -4,6 +4,7 @@
 #include <vector>
 #include <tbb/tbb.h>
 #include "emphasis.hpp"
+#include "augment_tree.hpp"
 #include "model.hpp"
 #include "rinit.h"
 #include "unpack.h"
@@ -84,4 +85,22 @@ List rcpp_mce(const std::vector<double>& brts,
   ret["num_trees"]             = E.info.num_trees;
   ret["time"]                  = E.info.elapsed;
   return ret;
+}
+
+
+//' Count thinning candidates with acceptance probability above 1
+//'
+//' The thinning sampler accepts a candidate speciation time with probability
+//' \code{nh(t) / lambda_max}. A value above 1 means the envelope
+//' \code{lambda_max} did not dominate the rate on that segment. The counter
+//' accumulates over every augmentation call in the session.
+//'
+//' @param reset Logical; zero the counter after reading it.
+//' @return Number of candidates with acceptance probability above 1 since the
+//'   last reset.
+//' @keywords internal
+// [[Rcpp::export(name = "thinning_envelope_violations")]]
+double rcpp_thinning_envelope_violations(bool reset = false)
+{
+  return static_cast<double>(emphasis::thinning_envelope_violations(reset));
 }

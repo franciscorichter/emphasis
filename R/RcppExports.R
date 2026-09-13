@@ -82,6 +82,21 @@ augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda
     .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link, rho)
 }
 
+#' Count thinning candidates with acceptance probability above 1
+#'
+#' The thinning sampler accepts a candidate speciation time with probability
+#' \code{nh(t) / lambda_max}. A value above 1 means the envelope
+#' \code{lambda_max} did not dominate the rate on that segment. The counter
+#' accumulates over every augmentation call in the session.
+#'
+#' @param reset Logical; zero the counter after reading it.
+#' @return Number of candidates with acceptance probability above 1 since the
+#'   last reset.
+#' @keywords internal
+thinning_envelope_violations <- function(reset = FALSE) {
+    .Call('_emphasis_rcpp_thinning_envelope_violations', PACKAGE = 'emphasis', reset)
+}
+
 #' function to perform one step of the E-M algorithm
 #' @param brts vector of branching times
 #' @param init_pars vector of initial parameter files

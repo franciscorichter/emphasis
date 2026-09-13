@@ -125,29 +125,74 @@ namespace emphasis {
     }
 
 
+    // Number of thinning candidates whose acceptance probability exceeded 1,
+    // i.e. the envelope did not dominate nh(t) at the candidate time. Read
+    // and reset through thinning_envelope_violations().
+    std::atomic<long long> envelope_violations{ 0 };
+
+    // Factor applied to the larger endpoint rate when lambda or mu vary
+    // within a segment (an M or D coefficient is active): nh(t) is then not
+    // monotone in t and its maximum need not lie at an endpoint.
+    constexpr double envelope_safety = 2.0;
+
+    // Rounding allowance on pt <= 1 (the survival factor at the candidate
+    // and at the segment start are two separate exp() evaluations).
+    constexpr double pt_tolerance = 1e-12;
+
+
+    // nh(t) at the start of the segment (cbt, next_bt].
+    // Model::nh_rate selects the node by lower_bound(t); at t == cbt that is
+    // the node at cbt itself, whose n is the count before its event. The
+    // count on the segment is that of the node found by upper_bound(cbt).
+    // Evaluating at the first representable time after cbt selects that
+    // node and leaves the survival factor unchanged to machine precision.
+    double segment_start_rate(double cbt, double next_bt, const param_t& pars, const tree_t& tree, const Model& model)
+    {
+      const double t = std::nextafter(cbt, next_bt);
+      return std::max(0.0, model.nh_rate(t, pars, tree));
+    }
+
+
     void do_augment_tree_cont(const param_t& pars, tree_t& tree, const Model& model, int max_missing, double max_lambda, int& next_id)
     {
       double cbt = 0;
       tree.reserve(5 * tree.size());    // just a guess, should cover most 'normal' cases
       int num_missing_branches = 0;
       const double b = tree.back().brts;
-      double lambda2 = 0.0;
-      bool dirty = true;
+      // With no M or D coefficient active, lambda and mu depend on n only and
+      // are constant within a segment; nh(t) = n * lambda * (1 - rho * exp(-mu * (T - t)))
+      // is then decreasing in t and its value at the segment start dominates
+      // it on the whole segment.
+      const bool constant_rates = (pars[2] == 0.0) && (pars[3] == 0.0) &&
+                                  (pars[6] == 0.0) && (pars[7] == 0.0);
+      double lambda_max = 0.0;
+      bool new_interval = true;   // (re)compute the envelope: start, tree changed, or next_bt reached
       while (cbt < b) {
-        double next_bt = get_next_bt(tree, cbt);
-        double lambda1 = (!dirty) ? lambda2 : std::max(0.0, model.nh_rate(cbt, pars, tree));
-        lambda2 = std::max(0.0, model.nh_rate(next_bt, pars, tree));
-        double lambda_max = std::max<double>(lambda1, lambda2);
-        if (lambda_max > max_lambda) throw augmentation_lambda{};
+        const double next_bt = get_next_bt(tree, cbt);
+        if (new_interval) {
+          const double lambda_start = segment_start_rate(cbt, next_bt, pars, tree, model);
+          if (constant_rates) {
+            lambda_max = lambda_start;
+          }
+          else {
+            const double lambda_end = std::max(0.0, model.nh_rate(next_bt, pars, tree));
+            lambda_max = envelope_safety * std::max(lambda_start, lambda_end);
+          }
+          if (lambda_max > max_lambda) throw augmentation_lambda{};
+          new_interval = false;
+        }
         double next_speciation_time = next_bt;
         if (0.0 != lambda_max) {
           const double u1 = std::uniform_real_distribution<>()(reng);
           next_speciation_time = cbt - std::log(u1) / lambda_max;
         }
-        dirty = false;
         if (next_speciation_time < next_bt) {
-          double u2 = std::uniform_real_distribution<>()(reng);
+          const double u2 = std::uniform_real_distribution<>()(reng);
           double pt = std::max(0.0, model.nh_rate(next_speciation_time, pars, tree)) / lambda_max;
+          if (pt > 1.0 + pt_tolerance) {
+            ++envelope_violations;
+          }
+          pt = std::min(pt, 1.0);
           if (u2 < pt) {
             double ext_time = model.extinction_time(next_speciation_time, pars, tree);
             // find lineages alive at next_speciation_time and pick one as parent
@@ -173,7 +218,7 @@ namespace emphasis {
               if (num_missing_branches > max_missing) {
                 throw augmentation_overrun{};
               }
-              dirty = true;   // tree changed
+              new_interval = true;   // tree changed
             } else {
               int new_id = next_id++;
               insert_species(next_speciation_time, ext_time, tree, new_id, chosen_parent_id);
@@ -181,9 +226,13 @@ namespace emphasis {
               if (num_missing_branches > max_missing) {
                 throw augmentation_overrun{};
               }
-              dirty = true;   // tree changed
+              new_interval = true;   // tree changed
             }
           }
+          // a rejected candidate keeps lambda_max for the rest of the segment
+        }
+        else {
+          new_interval = true;   // next_bt reached
         }
         cbt = std::min(next_speciation_time, next_bt);
       }
@@ -191,6 +240,12 @@ namespace emphasis {
     }
 
   } // namespace augment
+
+
+  long long thinning_envelope_violations(bool reset)
+  {
+    return reset ? envelope_violations.exchange(0) : envelope_violations.load();
+  }
 
 
   void augment_tree(const param_t& pars, const tree_t& input_tree, const Model& model, int max_missing, double max_lambda, tree_t& pooled)
