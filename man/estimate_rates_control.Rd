@@ -28,7 +28,8 @@ default), \code{upper_bound} (required, no default),
 MCEM-specific: \code{sampling} (default \code{"dynamic_fresh"}),
 \code{num_trees} (augmented trees per EM iteration, default 200;
 alias: \code{sample_size}), \code{max_iter} (iteration cap, default 200),
-\code{maxN} (max augmentation attempts per E-step, default 2000),
+\code{maxN} (max augmentation attempts per E-step, thinning only; must be
+at least \code{num_trees}; default NULL = \code{max(2000, 10 * num_trees)}),
 \code{xtol} (M-step optimiser tolerance, default 1e-3),
 \code{tol} (parameter-stability threshold: max relative change scaled
 by search range, default 1e-3), \code{patience} (consecutive stable

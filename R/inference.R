@@ -58,9 +58,11 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     Default \code{1e-3}.}
 #'   \item{\code{max_iter}}{Maximum EM iterations. Default \code{200}.}
 #'   \item{\code{maxN}}{Total augmentation attempts per E-step (accepted
-#'     plus rejected). Must exceed \code{num_trees}; increase for models
-#'     with high rejection rates (e.g. D/DD with strongly negative
-#'     covariate slope). Default \code{2000}.}
+#'     plus rejected), used by the thinning sampler. Must be at least
+#'     \code{num_trees}; \code{estimate_rates} stops with an error otherwise.
+#'     Increase for models with high rejection rates (e.g. D/DD with
+#'     strongly negative covariate slope). Default \code{NULL}, which sets
+#'     \code{max(2000, 10 * num_trees)}.}
 #'   \item{\code{tol}}{Parameter-stability convergence threshold. MCEM
 #'     is considered converged when the largest relative parameter change
 #'     (scaled by the search range) is below \code{tol} for \code{patience}
@@ -111,7 +113,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       sampling    = "bdi",      # BDI exact sampler (default); "dynamic_fresh" for thinning
       sample_size = 200L,       # alias: num_trees
       max_iter    = 200L,
-      maxN        = 2000L,      # total augmentation attempts; must exceed sample_size (thinning only)
+      maxN        = NULL,       # total augmentation attempts (thinning only); NULL -> max(2000, 10 * sample_size)
       xtol        = 1e-3,
       tol         = 1e-3,
       patience    = 3L
@@ -363,6 +365,13 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
     ctrl$sampling <- "dynamic_fresh"
   }
   if (is.null(ctrl$maxN)) ctrl$maxN <- max(2000L, 10L * as.integer(ctrl$sample_size))
+  # sample_size > maxN makes every thinning E-step fail structurally
+  if (ctrl$maxN < ctrl$sample_size)
+    stop(sprintf(paste0(
+      "control$maxN (%d) is smaller than control$num_trees (%d): the E-step ",
+      "cannot accept num_trees augmented trees within maxN attempts.\n",
+      "  Set maxN >= num_trees, or leave maxN = NULL for max(2000, 10 * num_trees)."),
+      as.integer(ctrl$maxN), as.integer(ctrl$sample_size)), call. = FALSE)
   raw <- switch(ctrl$sampling,
     bdi             = .mcem_bdi(
       brts        = brts,
@@ -411,7 +420,10 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   loglik   <- if (any(is.finite(fhat_vec)))
     utils::tail(fhat_vec[is.finite(fhat_vec)], 1L) else NA_real_
   loglik_var <- if (!is.null(raw$loglik_var)) raw$loglik_var else NA_real_
-  list(pars = raw$pars, loglik = loglik, loglik_var = loglik_var, details = raw)
+  # nrow(NULL) is NULL when no E-step succeeded; report 0 iterations
+  iterations <- if (is.null(raw$mcem)) 0L else as.integer(nrow(raw$mcem))
+  list(pars = raw$pars, loglik = loglik, loglik_var = loglik_var,
+       stop_reason = raw$stop_reason, iterations = iterations, details = raw)
 }
 
 #' @keywords internal
@@ -615,7 +627,9 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'   \code{"nd"} (\code{~ N + D}): diversity and age-imbalance.
 #' @param init_pars Starting parameter vector. Required for \code{"mcem"};
 #'   ignored for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the
-#'   midpoint of the bounds is used.
+#'   midpoint of the bounds is used, with covariate slopes started at 0 and
+#'   \code{gamma_0} moved to half of \code{beta_0} when the midpoint has
+#'   \code{lambda == mu}.
 #' @param control Named list of tuning parameters. Must include
 #'   \code{lower_bound} and \code{upper_bound}. Use
 #'   \code{\link{estimate_rates_control}} to inspect other defaults.
@@ -645,10 +659,17 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'       Monte Carlo noise. Populated automatically when
 #'       \code{control$num_trees >= 2} (B = 200 replicates); \code{NA}
 #'       when \code{num_trees = 1}.}
-#'     \item{\code{n_pars}}{Number of free parameters (used for AIC).}
+#'     \item{\code{n_pars}}{Number of free parameters (used for AIC):
+#'       parameters with \code{lower_bound == upper_bound} are fixed and
+#'       not counted.}
 #'     \item{\code{AIC}}{Akaike Information Criterion: \code{-2 * loglik + 2 * n_pars}.}
 #'     \item{\code{method}}{Method used (\code{"mcem"} or \code{"cem"}).}
 #'     \item{\code{model}}{Resolved binary model vector.}
+#'     \item{\code{stop_reason}}{Why the MCEM run stopped (\code{"converged"},
+#'       \code{"max_iter"}, \code{"time_budget"}, \code{"e_step_failure"},
+#'       \code{"m_step_failure"}); \code{NA} for other methods.}
+#'     \item{\code{iterations}}{Number of completed MCEM iterations
+#'       (\code{0} when every E-step failed); \code{NA} for other methods.}
 #'     \item{\code{details}}{Full output from the back-end function
 #'       (\code{.mcem_dynamic_fresh} or \code{emphasis_cem}).}
 #'   }
@@ -727,6 +748,22 @@ estimate_rates <- function(tree,
       for (j in all_slopes) {
         init_pars[j] <- max(lower_bound[j], min(upper_bound[j], 0))
       }
+    }
+    # A symmetric box puts the midpoint at lambda == mu, where the BDI
+    # sampler's CR transition probability is 0/0. Start mu at half of lambda
+    # (exponential link: log-rate minus log 2), clamped to the mu bounds.
+    j_mu <- length(init_pars) %/% 2L + 1L
+    if (isTRUE(init_pars[1L] == init_pars[j_mu])) {
+      mu_start <- if (link_int == 1L) init_pars[1L] - log(2) else 0.5 * init_pars[1L]
+      init_pars[j_mu] <- max(lower_bound[j_mu], min(upper_bound[j_mu], mu_start))
+      if (init_pars[1L] == init_pars[j_mu] &&
+          identical(ctrl$sampling, "bdi") && .bdi_supported(model_bin, link_int))
+        stop(sprintf(paste0(
+          "The default starting point has lambda == mu (%s = %s = %.4g), where ",
+          "the BDI sampler cannot start, and the mu bounds [%.4g, %.4g] leave no ",
+          "room to move it.\n  Supply init_pars with lambda != mu."),
+          .par_names(model_bin)[1L], .par_names(model_bin)[j_mu], init_pars[1L],
+          lower_bound[j_mu], upper_bound[j_mu]), call. = FALSE)
     }
   }
 
@@ -813,7 +850,8 @@ estimate_rates <- function(tree,
   # Contract 8-element result back to compact
   compact_pars <- .contract_pars(as.numeric(raw$pars), model_bin)
   pars <- stats::setNames(compact_pars, .par_names(model_bin))
-  n_pars <- length(pars)
+  # Parameters fixed by lower_bound == upper_bound are not estimated
+  n_pars <- sum(lower_bound != upper_bound)
 
   # For MCEM, the E-step fhat is unconditioned; apply correction here
   loglik <- raw$loglik
@@ -823,6 +861,8 @@ estimate_rates <- function(tree,
 
   aic <- if (is.finite(loglik)) -2 * loglik + 2 * n_pars else NA_real_
   loglik_var <- if (!is.null(raw$loglik_var)) raw$loglik_var else NA_real_
+  stop_reason <- if (!is.null(raw$stop_reason)) as.character(raw$stop_reason) else NA_character_
+  iterations  <- if (!is.null(raw$iterations)) as.integer(raw$iterations) else NA_integer_
 
   if (ctrl$verbose) {
     cat(sprintf("[estimate_rates] loglik=%.4f  AIC=%.4f  pars: %s%s\n",
@@ -834,6 +874,7 @@ estimate_rates <- function(tree,
   result <- list(pars = pars, loglik = loglik, loglik_var = loglik_var,
                  n_pars = n_pars, AIC = aic,
                  method = method, model = model_bin,
+                 stop_reason = stop_reason, iterations = iterations,
                  cond = !is.null(cond), details = raw$details)
   class(result) <- "emphasis_fit"
   result
@@ -856,6 +897,17 @@ print.emphasis_fit <- function(x, ...) {
     cat(sprintf("  (MC se: %.4f)", sqrt(x$loglik_var)))
   cat("\nAIC:           ", round(x$AIC, 4), "\n")
   cat("n_pars:        ", x$n_pars, "\n")
+  if (!is.null(x$iterations) && !is.na(x$iterations))
+    cat("Iterations:    ", x$iterations, "\n")
+  if (!is.null(x$stop_reason) && !is.na(x$stop_reason))
+    cat("Stop reason:   ", x$stop_reason, "\n")
+  if (is.na(x$loglik)) {
+    reason <- if (!is.null(x$stop_reason) && !is.na(x$stop_reason))
+      paste0(" (", x$stop_reason, ")") else ""
+    cat("Did not converge", reason,
+        ": no log-likelihood was obtained; the parameters above are not estimates.\n",
+        sep = "")
+  }
   invisible(x)
 }
 
