@@ -236,6 +236,43 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 }
 
 #' @keywords internal
+#' Relative parameter change, the statistic both MCEM stopping rules use
+#'
+#' The step in each coordinate is measured against that coordinate's own
+#' magnitude, with a floor so that a coordinate at or near zero is not
+#' measured against itself.  The floor carries the units of the parameter
+#' (see \code{.rel_floor}), so the statistic is unchanged when the tree and
+#' the rates are expressed in another unit of time.
+#'
+#' @param new,old Parameter vectors of equal length.
+#' @param floor_val Floor of the denominator, from \code{.rel_floor}.
+#' @return The largest relative coordinate change.
+#' @keywords internal
+.rel_change <- function(new, old, floor_val) {
+  max(abs(new - old) / pmax(abs(old), floor_val))
+}
+
+#' Floor of the relative-change denominator
+#'
+#' Under the linear and gaussian links the parameters are rates, of dimension
+#' 1/time, and the only rate scale in the problem is the inverse crown age:
+#' the floor is \code{rel_floor / crown_age}, which rescales with the rates
+#' themselves.  Under the exponential link the parameters are log-rates, where
+#' an absolute step already is a relative change of the rate, so the floor is
+#' \code{rel_floor}.
+#'
+#' @param brts Branching times (crown age first, or any order).
+#' @param link Integer link code: 0 linear, 1 exponential, 2 gaussian.
+#' @param rel_floor Dimensionless floor. Default \code{1e-2}.
+#' @return A positive scalar.
+#' @keywords internal
+.rel_floor <- function(brts, link = 0L, rel_floor = 1e-2) {
+  if (as.integer(link) == 1L) return(rel_floor)
+  crown_age <- suppressWarnings(max(abs(as.numeric(brts))))
+  if (!is.finite(crown_age) || crown_age <= 0) return(rel_floor)
+  rel_floor / crown_age
+}
+
 .par_names <- function(model_bin) {
   # Orthogonal covariate basis {N, M = P/N, D = E - M}: slot 2 is the mean-age
   # coefficient (beta_M), slot 3 the deviation coefficient (beta_D).
