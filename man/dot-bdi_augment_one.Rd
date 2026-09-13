@@ -18,7 +18,10 @@
 )
 }
 \value{
-List with $species, $n_alive_at_tp, $logg; or NULL on overflow.
+List with \code{$reason}: \code{"accepted"} (then also
+  \code{$species}, \code{$n_alive_at_tp}, \code{$logg}),
+  \code{"max_missing"} (more than \code{max_missing} missing lineages
+  drawn) or \code{"survivor"} (a missing lineage still alive at tp).
 }
 \description{
 Under CR: uses exact time-change method with analytical cumulative hazard.

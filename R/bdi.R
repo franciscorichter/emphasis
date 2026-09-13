@@ -421,7 +421,10 @@
 #' Under DD: uses approximate Gillespie with piecewise-constant rates.
 #'   IS weights have nonzero variance (importance sampling, not exact).
 #'
-#' @return List with $species, $n_alive_at_tp, $logg; or NULL on overflow.
+#' @return List with \code{$reason}: \code{"accepted"} (then also
+#'   \code{$species}, \code{$n_alive_at_tp}, \code{$logg}),
+#'   \code{"max_missing"} (more than \code{max_missing} missing lineages
+#'   drawn) or \code{"survivor"} (a missing lineage still alive at tp).
 #' @keywords internal
 .bdi_augment_one <- function(bt, pars8, model_bin, link, tp,
                              p_fun = NULL, Nhat_fun = NULL,
@@ -522,15 +525,15 @@
         n_alive <- n_alive - 1L
       }
 
-      if (n_total > max_missing) return(NULL)
+      if (n_total > max_missing) return(list(reason = "max_missing"))
     }
   }
 
   # Under CR: exact process ensures all species die before tp.
   # Under DD: approximate Gillespie may leave survivors — reject.
-  if (n_alive > 0L) return(NULL)
+  if (n_alive > 0L) return(list(reason = "survivor"))
 
-  list(species = species, n_alive_at_tp = 0L, logg = logg)
+  list(reason = "accepted", species = species, n_alive_at_tp = 0L, logg = logg)
 }
 
 
@@ -634,9 +637,30 @@
 
 #' BDI augmentation: draw sample_size augmented trees.
 #'
-#' Returns same structure as augment_trees() C++ function:
-#' list(trees, logf, logg, weights, fhat)
+#' Returns the same structure as the augment_trees() C++ function,
+#' list(trees, logf, logg, weights, fhat), plus the draw counts.
 #'
+#' Draws are attempted until \code{sample_size} have completed or the budget
+#' of \code{5 * sample_size} attempts is spent.  A draw is rejected when its
+#' missing-lineage count exceeds \code{max_missing} (counted in
+#' \code{n_rejected_max_missing}) or, under DD, when a missing lineage is
+#' still alive at the present (counted in \code{n_rejected}; such a tree has
+#' f = 0 at rho = 1).  Completed draws with a non-finite log-weight are
+#' dropped from the returned tree set (the M-step set) but stay in the fhat
+#' denominator with weight zero.
+#'
+#' fhat = log(sum_w / n_valid) + max_lw + log(acc), where n_valid counts every
+#' completed draw and acc = n_valid / (n_valid + n_rejected) is the acceptance
+#' rate of the survivor channel.  max_missing overflows are excluded from the
+#' denominator, as in the thinning E-step (S_completed in src/E_step.cpp).
+#'
+#' @return List: \code{trees}, \code{logf}, \code{logg}, \code{weights}
+#'   (finite-weight draws only), \code{fhat}, \code{n_valid} (completed
+#'   draws), \code{n_nonfinite} (completed draws dropped for a non-finite
+#'   log-weight), \code{n_attempts}, \code{n_rejected} (survivors at tp),
+#'   \code{n_rejected_max_missing}, \code{acc}.  \code{trees} is empty when
+#'   no draw completed or every completed draw has a non-finite log-weight;
+#'   a warning is issued when fewer than \code{sample_size} draws completed.
 #' @keywords internal
 .augment_tree_bdi <- function(tree,
                               pars,
@@ -673,20 +697,26 @@
     Ehat_fun <- sol$Ehat_fun
   }
 
-  # Draw augmented trees.
-  # For DD (approximate Gillespie), some draws are rejected (survivors at tp),
-  # so we oversample and collect until we have sample_size valid trees.
+  # Draw augmented trees.  A draw is rejected on max_missing overflow or,
+  # under DD (approximate Gillespie), when a missing lineage survives to tp.
+  # Attempts continue until sample_size draws have completed or the budget
+  # is spent; the two rejection channels are counted separately.
   trees      <- vector("list", sample_size)
   logg       <- numeric(sample_size)
   n_valid    <- 0L
-  max_tries  <- if (is_cr) sample_size else 5L * sample_size
+  n_attempts <- 0L
+  n_rej_surv <- 0L
+  n_rej_mm   <- 0L
+  max_tries  <- 5L * sample_size
 
   for (attempt in seq_len(max_tries)) {
     if (n_valid >= sample_size) break
+    n_attempts <- n_attempts + 1L
     aug <- .bdi_augment_one(bt, pars8, model_bin, link, tp,
                             p_fun, Nhat_fun, Phat_fun, Ehat_fun,
                             max_missing)
-    if (is.null(aug)) next
+    if (aug$reason == "survivor")    { n_rej_surv <- n_rej_surv + 1L; next }
+    if (aug$reason == "max_missing") { n_rej_mm   <- n_rej_mm   + 1L; next }
 
     n_valid <- n_valid + 1L
     trees[[n_valid]] <- .bdi_to_tree_df(aug$species, bt, tp)
@@ -697,10 +727,18 @@
   trees <- trees[seq_len(n_valid)]
   logg  <- logg[seq_len(n_valid)]
 
+  if (n_valid < sample_size) {
+    warning(sprintf(paste0(
+      "BDI augmentation: %d of %d requested draws completed in %d attempts ",
+      "(%d survivors at tp, %d over max_missing = %d)."),
+      n_valid, sample_size, n_attempts, n_rej_surv, n_rej_mm,
+      as.integer(max_missing)), call. = FALSE)
+  }
+
   # Compute logf (model log-likelihood) via C++ eval_logf.
   # eval_logf also returns a thinning-based logg — we discard it
   # and use the Gillespie-accumulated logg from above instead.
-  if (length(trees) > 0L) {
+  if (n_valid > 0L) {
     ev   <- eval_logf(pars8, trees,
                       model = as.integer(model_bin),
                       link  = as.integer(link),
@@ -711,15 +749,40 @@
   }
 
   weights <- logf - logg
-  max_lw  <- if (length(weights) > 0) max(weights) else 0
-  sum_w   <- sum(exp(weights - max_lw))
-  fhat    <- if (length(weights) > 0) log(sum_w / length(weights)) + max_lw else -Inf
+
+  # A completed draw with a non-finite log-weight (logf = -Inf when a rate
+  # is zero on the augmented tree) has weight zero: it stays in the fhat
+  # denominator and leaves the M-step set.
+  finite      <- is.finite(weights)
+  n_nonfinite <- sum(!finite)
+  trees   <- trees[finite]
+  logf    <- logf[finite]
+  logg    <- logg[finite]
+  weights <- weights[finite]
+
+  # Survivor rejections have f = 0 at rho = 1, so the completed draws are a
+  # sample from g / P(accept | theta) and log(acc) restores that factor.
+  # max_missing overflows are left out of the denominator (E_step.cpp).
+  acc <- if (n_valid + n_rej_surv > 0L) n_valid / (n_valid + n_rej_surv) else NA_real_
+  if (length(weights) > 0L) {
+    max_lw <- max(weights)
+    sum_w  <- sum(exp(weights - max_lw))
+    fhat   <- log(sum_w / n_valid) + max_lw + log(acc)
+  } else {
+    fhat <- -Inf
+  }
 
   list(trees   = trees,
        logf    = logf,
        logg    = logg,
        weights = weights,
-       fhat    = fhat)
+       fhat    = fhat,
+       n_valid = n_valid,
+       n_nonfinite = n_nonfinite,
+       n_attempts  = n_attempts,
+       n_rejected  = n_rej_surv,
+       n_rejected_max_missing = n_rej_mm,
+       acc     = acc)
 }
 
 
