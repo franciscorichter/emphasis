@@ -13,9 +13,16 @@
 # --------------------------------------------------------------------------- #
 
 # CR analytical solution
+# p(t) = (lam0-mu0) / (lam0 - mu0*exp(-(lam0-mu0)*(tp-t))), valid for any
+# lam0, mu0 >= 0. At lam0 == mu0 the general form is 0/0; its limit is
+# 1/(1 + lam0*(tp-t)), used when |lam0-mu0| is below a relative tolerance.
 .bdi_p_cr <- function(t, lam0, mu0, tp) {
-  E0 <- exp(-(lam0 - mu0) * (tp - t))
-  (lam0 - mu0) / (lam0 - mu0 * E0)
+  d <- lam0 - mu0
+  if (abs(d) <= 1e-12 * max(abs(lam0), abs(mu0))) {
+    return(1 / (1 + lam0 * (tp - t)))
+  }
+  E0 <- exp(-d * (tp - t))
+  d / (lam0 - mu0 * E0)
 }
 
 
@@ -31,18 +38,28 @@
 #'   int lam0*(1-p) dt = mu0*(t2-t1) + ln[p(t1)/p(t2)]
 #'   int mu0/(1-p) dt  = lam0*(t2-t1) + ln[(1-p(t1))/(1-p(t2))]
 #'
+#' Valid on both sides of lam0 = mu0: for mu0 > lam0 the factors
+#' lam0 - mu0*E and 1 - E are negative, and their ratios stay positive.
+#'
 #' @return The integral value (may be Inf when n>0 and t2==tp).
 #' @keywords internal
 .bdi_integral_cr <- function(t1, t2, n, k, lam0, mu0, tp) {
   if (t2 - t1 < 1e-15) return(0)
   d <- lam0 - mu0
-  if (abs(d) < 1e-15) {
-    # Critical case: lam0 = mu0
-    # p(t) = lam0*(tp-t)/(1+lam0*(tp-t)), 1-p = 1/(1+lam0*(tp-t))
+  if (abs(d) <= 1e-12 * max(abs(lam0), abs(mu0))) {
+    # Critical case: lam0 = mu0 (same switch as .bdi_p_cr)
+    # p(t) = 1/(1+lam0*(tp-t)), 1-p = lam0*(tp-t)/(1+lam0*(tp-t))
+    #   int lam0*(1-p) dt = lam0*(t2-t1) - ln(a1/a2)
+    #   int mu0/(1-p)  dt = lam0*(t2-t1) + ln[(tp-t1)/(tp-t2)]
     a1 <- 1 + lam0 * (tp - t1)
     a2 <- 1 + lam0 * (tp - t2)
-    I_lam <- log(a1 / a2)
-    I_mu  <- lam0 * (t2 - t1) + log(a2 / a1)  # mu/(1-p) = mu*(1+lam*(tp-t))
+    I_lam <- lam0 * (t2 - t1) - log(a1 / a2)
+    if (n > 0L) {
+      if (tp - t2 < 1e-300) return(Inf)   # t2 at tp: divergent
+      I_mu <- lam0 * (t2 - t1) + log((tp - t1) / (tp - t2))
+    } else {
+      I_mu <- 0
+    }
     return((n + 2L * k) * I_lam + n * I_mu)
   }
 
@@ -56,7 +73,7 @@
   if (n > 0L) {
     oE1 <- 1 - E1
     oE2 <- 1 - E2
-    if (oE2 < 1e-300) return(Inf)   # t2 at tp: divergent
+    if (abs(oE2) < 1e-300) return(Inf)   # t2 at tp: divergent (either sign of d)
     I_mu <- lam0 * (t2 - t1) + log(oE1 / oE2)
   } else {
     I_mu <- 0

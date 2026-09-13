@@ -16,5 +16,8 @@ total_rate(t) = (n+2k)*lam0*(1-p(t)) + n*mu0/(1-p(t))
 Uses the identities:
   int lam0*(1-p) dt = mu0*(t2-t1) + ln[p(t1)/p(t2)]
   int mu0/(1-p) dt  = lam0*(t2-t1) + ln[(1-p(t1))/(1-p(t2))]
+
+Valid on both sides of lam0 = mu0: for mu0 > lam0 the factors
+lam0 - mu0*E and 1 - E are negative, and their ratios stay positive.
 }
 \keyword{internal}
