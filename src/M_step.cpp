@@ -119,7 +119,16 @@ namespace emphasis {
           std::to_string(weights[i]) + "; weights must be finite and non-negative");
       }
     }
-    tbb::task_scheduler_init _tbb((num_threads > 0) ? num_threads : tbb::task_scheduler_init::automatic);
+    // tbb::task_scheduler_init was removed in oneTBB; a task_arena bounds the
+    // parallelism in both the legacy and the current library.  objective()
+    // runs a parallel_reduce, so the optimiser call is what must execute
+    // inside the arena: a parallel algorithm started outside one runs on the
+    // default arena, which is sized by hardware concurrency and ignores
+    // num_threads.
+    const int nth = (num_threads > 0)
+      ? std::min(num_threads, static_cast<int>(std::thread::hardware_concurrency()))
+      : static_cast<int>(std::thread::hardware_concurrency());
+    tbb::task_arena arena(std::max(1, nth));
     auto T0 = std::chrono::high_resolution_clock::now();
     nlopt_f_data sd{ model, trees, weights, conditional };
     auto M = M_step_t{};
@@ -131,8 +140,10 @@ namespace emphasis {
     auto upper = upper_bound.empty() ? model.upper_bound() : upper_bound;
     if (!upper.empty()) nlopt.set_upper_bounds(upper);
     nlopt.set_min_objective(objective, &sd);
-    M.minf = nlopt.optimize(M.estimates);
-    M.opt = static_cast<int>(nlopt.result());
+    arena.execute([&] {
+      M.minf = nlopt.optimize(M.estimates);
+      M.opt = static_cast<int>(nlopt.result());
+    });
     auto T1 = std::chrono::high_resolution_clock::now();
     M.elapsed = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count());
     return M;

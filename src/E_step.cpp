@@ -66,8 +66,10 @@ namespace emphasis {
     auto E = E_step_t{};
     auto T0 = std::chrono::high_resolution_clock::now();
 
-    const int grainsize = maxN / num_threads;
-    tbb::task_arena arena(num_threads);
+    // Integer division gives 0 when maxN < num_threads, which is not a valid
+    // grainsize.
+    const int grainsize = std::max(1, maxN / std::max(1, num_threads));
+    tbb::task_arena arena(std::max(1, num_threads));
 
     // `stop` is written only under `mutex` and only ever set to true, so an
     // attempt that observes it under the lock is either the one that filled
@@ -78,6 +80,9 @@ namespace emphasis {
     // augmentations that fhat averages over.  Attempts still in flight when
     // the N-th tree is pushed are dropped from numerator and denominator
     // alike; the drop does not depend on their outcome.
+    // A parallel algorithm started outside the arena runs on the default one,
+    // which is sized by hardware concurrency: num_threads would have no effect.
+    arena.execute([&] {
     tbb::parallel_for(tbb::blocked_range<unsigned>(0, maxN, grainsize), [&](const tbb::blocked_range<unsigned>& r) {
       for (unsigned i = r.begin(); i < r.end(); ++i) {
         if (stop) break;
@@ -153,6 +158,7 @@ namespace emphasis {
           ++E.info.rejected;
 	      }
       }
+    });
     });
     E.info.num_trees = static_cast<int>(E.trees.size());
     auto T1 = std::chrono::high_resolution_clock::now();

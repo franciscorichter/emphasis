@@ -289,9 +289,14 @@ namespace emphasis {
   {
     if (!model.is_threadsafe()) num_threads = 1;
     num_threads = std::max(1, std::min(num_threads, static_cast<int>(std::thread::hardware_concurrency())));
-    tbb::task_arena arena(num_threads);
+    tbb::task_arena arena(std::max(1, num_threads));
     std::vector<tree_t> trees(vpars.size(), input_tree);
-    const size_t grainsize = vpars.size() / num_threads;
+    // Integer division gives 0 when there are fewer parameter sets than
+    // threads, which is not a valid grainsize.
+    const size_t grainsize = std::max<size_t>(1, vpars.size() / static_cast<size_t>(std::max(1, num_threads)));
+    // Started outside the arena, a parallel algorithm runs on the default one
+    // and ignores num_threads.
+    arena.execute([&] {
     tbb::parallel_for(tbb::blocked_range<size_t>(0ull, vpars.size(), grainsize), [&](const tbb::blocked_range<size_t>& r) {
       for (size_t i = r.begin(); i < r.end(); ++i) {
         try {
@@ -310,6 +315,7 @@ namespace emphasis {
           trees[i].clear();
         }
       }
+    });
     });
     return trees;
   }
