@@ -4,7 +4,8 @@
 # unnormalised weights; with a conditional it is -Q + sum(w) * conditional(pars),
 # so the argmin does not depend on a positive rescaling of the weights.
 # Terms with w_i == 0 are skipped and a non-finite loglik on a weighted tree
-# makes the objective +Inf rather than NaN.
+# makes the objective +Inf rather than NaN; so does a non-finite return from the
+# conditional.  Weights that are non-finite or negative are rejected outright.
 
 # ---- fixed inputs -----------------------------------------------------------
 
@@ -94,6 +95,45 @@ test_that("M-step argmin equals the optim maximiser of the self-normalised objec
   expect_equal(mstep_cr(w_cr, cond_cr), ref(1), tolerance = 1e-3)    # argmax Q_norm - log P
 })
 
+test_that("a non-finite conditional is infeasible, not a frozen M-step", {
+  # mcem() takes an arbitrary R function as the conditional, and predict.gam
+  # returns NA on a newdata row it cannot evaluate, so the conditional is a
+  # reachable source of NA/NaN.  Unguarded it makes the objective NaN at every
+  # point, sbplx returns the initial parameters with status 4 (XTOL_REACHED),
+  # and the driver reads the iteration as a zero-length step: the H11(c)
+  # symptom, on the one channel of this objective the weight guard does not
+  # cover.
+  full <- function(cond) run_mstep(e_cr$trees, w_cr, theta0, lb_cr, ub_cr, cr_bin, cond)
+  est_na  <- full(function(p) NA_real_)
+  est_nan <- full(function(p) NaN)
+  expect_gt(max(abs(est_na - theta0)), 1e-6)
+  expect_gt(max(abs(est_nan - theta0)), 1e-6)
+
+  # A conditional of +Inf already drove the objective to +Inf before the guard.
+  # NA and NaN now take the same branch, so the three agree exactly.
+  est_inf <- full(function(p) Inf)
+  expect_identical(est_na, est_inf)
+  expect_identical(est_nan, est_inf)
+
+  # The guard does not fire on a conditional that is finite everywhere: the
+  # exact crown-survival conditional still reaches its own argmin, pinned
+  # against optim above, not the infeasible point.
+  expect_false(identical(full(cond_cr), est_inf))
+})
+
+test_that("the M-step rejects non-finite and negative weights", {
+  # A NaN weight makes the objective the constant +Inf, so sbplx returns a moved
+  # point under status 4 that no driver check can tell from a real step; a
+  # negative weight silently minimizes the density of that tree.  Zero stays
+  # legal -- it is how the drivers drop a zero-density draw.
+  for (bad in c(NaN, NA_real_, Inf, -1)) {
+    w_bad <- w_cr
+    w_bad[3] <- bad
+    expect_error(mstep_cr(w_bad), "weights must be finite and non-negative")
+  }
+  expect_silent(mstep_cr(replace(w_cr, 3, 0)))
+})
+
 # ---- diversity-dependent E-step with zero-density trees (H11) ---------------
 
 test_that("an E-step containing a -Inf tree still moves the estimate", {
@@ -156,8 +196,11 @@ test_that("an E-step containing a -Inf tree still moves the estimate", {
     expect_equal(est_fix, est_fin, tolerance = 1e-6)
   }
 
-  # positive weight on the -Inf tree: the objective is +Inf at the init and the
-  # optimizer ends where every weighted tree has finite density (lambda(13) > 0)
+  # Positive weight on the -Inf tree: the objective is +Inf at the init and the
+  # optimizer ends where every weighted tree has finite density (lambda(13) > 0).
+  # This path predates the w == 0 skip -- a weight of 1 on a -Inf loglik already
+  # gave Q = -Inf and objective +Inf, with no 0 * (-Inf) NaN to remove -- so the
+  # three expectations below document it rather than pin anything new.
   est_pos <- run_mstep(c(trees_fin, list(tree_bad)), c(w_fin, 1), pars8,
                        lb8, ub8, dd_bin, xtol_rel = 1e-4)
   expect_true(all(is.finite(est_pos)))

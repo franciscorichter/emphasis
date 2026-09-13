@@ -93,11 +93,25 @@ test_that("a negative linear predictor clamps to rate 0 and also gives -Inf", {
   expect_identical(ev(p, tr), -Inf)
 })
 
+test_that("a strictly negative rate (gaussian link, beta_0 < 0) gives -Inf", {
+  # Every rate above is exactly 0: the linear link clamps with max(0, .), so it
+  # cannot produce a strictly negative one.  The gaussian link does not clamp:
+  # lambda = beta_0 * exp(-(eta_cov - 1)^2 / 2), so beta_0 = -0.4 gives
+  # lambda = -0.2426 at every node.  Four scored nodes, so the running product
+  # cannot end positive by sign cancellation.  Before the fix this returned
+  # +Inf, and the "val <= 0" guard is what this pins: a guard weakened to
+  # "val == 0" leaves every other expectation in this file green.
+  p  <- c(-0.4, 0, 0, 0, 0.2, 0, 0, 0)
+  lf <- emphasis:::eval_logf(p, list(mk_tree(4)), model = c(1L, 0L, 0L),
+                             link = 2L, rho = 1)$logf
+  expect_identical(lf, -Inf)
+})
+
 test_that("a zero rate gives -Inf for several trees evaluated in one call", {
   p <- p8(0.3, -0.1)
   trees <- list(mk_tree(1), mk_tree(2), mk_tree(3))
   lf <- emphasis:::eval_logf(p, trees, model = c(1L, 0L, 0L), link = 0L, rho = 1)$logf
-  expect_true(is.finite(lf[1]))                 # lambda(2) = 0.2 only
+  expect_true(is.finite(lf[1]))                 # lambda(2) = 0.1, the only node
   expect_identical(lf[2], -Inf)                 # lambda(3) = 0 last
   expect_identical(lf[3], -Inf)                 # lambda(3) = 0, then lambda(4) = 0
 })
