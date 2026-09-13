@@ -64,9 +64,11 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     strongly negative covariate slope). Default \code{NULL}, which sets
 #'     \code{max(2000, 10 * num_trees)}.}
 #'   \item{\code{tol}}{Parameter-stability convergence threshold. MCEM
-#'     is considered converged when the largest relative parameter change
-#'     (scaled by the search range) is below \code{tol} for \code{patience}
-#'     consecutive iterations. Default \code{1e-3}.}
+#'     is considered converged when the largest relative parameter change,
+#'     \eqn{\max_j |\theta_k[j] - \theta_{k-1}[j]| / \max(|\theta_{k-1}[j]|, 10^{-2})},
+#'     is below \code{tol} for \code{patience} consecutive iterations. The
+#'     bound box does not enter. Default \code{1e-2}, of the order of the
+#'     Monte Carlo noise of an M-step iterate at \code{num_trees = 200}.}
 #'   \item{\code{patience}}{Number of consecutive iterations with parameter
 #'     change below \code{tol} required to declare convergence. Default
 #'     \code{3}.}
@@ -115,7 +117,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       max_iter    = 200L,
       maxN        = NULL,       # total augmentation attempts (thinning only); NULL -> max(2000, 10 * sample_size)
       xtol        = 1e-3,
-      tol         = 1e-3,
+      tol         = 1e-2,
       patience    = 3L
     ))
   } else if (method == "cem") {
@@ -420,8 +422,11 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   loglik   <- if (any(is.finite(fhat_vec)))
     utils::tail(fhat_vec[is.finite(fhat_vec)], 1L) else NA_real_
   loglik_var <- if (!is.null(raw$loglik_var)) raw$loglik_var else NA_real_
-  # nrow(NULL) is NULL when no E-step succeeded; report 0 iterations
-  iterations <- if (is.null(raw$mcem)) 0L else as.integer(nrow(raw$mcem))
+  # The drivers count completed E+M iterations themselves (the final
+  # E-step row of the trace is not one); fall back to the trace for older
+  # return shapes, and report 0 when no E-step succeeded.
+  iterations <- if (!is.null(raw$iterations)) as.integer(raw$iterations)
+                else if (is.null(raw$mcem)) 0L else as.integer(nrow(raw$mcem))
   list(pars = raw$pars, loglik = loglik, loglik_var = loglik_var,
        stop_reason = raw$stop_reason, iterations = iterations, details = raw)
 }

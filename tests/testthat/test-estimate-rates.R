@@ -138,7 +138,7 @@ test_that("print shows iterations and stop reason for a completed run", {
                    sampling = "bdi", sample_size = 20L, max_iter = 3L,
                    num_threads = 1L))
   expect_true(fit$stop_reason %in% c("converged", "max_iter", "time_budget"))
-  expect_equal(fit$iterations, nrow(fit$details$mcem))
+  expect_equal(fit$iterations, sum(fit$details$mcem$m_step))   # the final E-step row has no M-step
   out <- paste(capture.output(print(fit)), collapse = "\n")
   expect_match(out, paste0("Stop reason:\\s+", fit$stop_reason))
   expect_match(out, paste0("Iterations:\\s+", fit$iterations))

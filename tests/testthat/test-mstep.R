@@ -102,6 +102,8 @@ test_that("an E-step containing a -Inf tree still moves the estimate", {
   lb_dd  <- c(0.01, -1, 0.001, 0)
   ub_dd  <- c(5, 0, 2, 0)
   pars8  <- c(pars[1], pars[2], 0, 0, pars[3], pars[4], 0, 0)
+  lb8    <- .expand_pars(lb_dd, dd_bin)
+  ub8    <- .expand_pars(ub_dd, dd_bin)
 
   set.seed(2)
   e_dd <- .augment_tree_bdi(brts_dd, pars, model_bin = dd_bin, sample_size = 200L,
@@ -130,31 +132,37 @@ test_that("an E-step containing a -Inf tree still moves the estimate", {
   logf_bad <- eval_logf(pars8, list(tree_bad), model = dd_bin, link = 0L, rho = 1)$logf
   expect_identical(logf_bad, -Inf)
 
-  est_fin <- run_mstep(trees_fin, w_fin, pars, lb_dd, ub_dd, dd_bin, xtol_rel = 1e-4)
+  est_fin <- run_mstep(trees_fin, w_fin, pars8, lb8, ub8, dd_bin, xtol_rel = 1e-4)
   expect_true(all(is.finite(est_fin)))
-  expect_gt(max(abs(est_fin - pars)), 1e-3)
+  expect_gt(max(abs(est_fin - pars8)), 1e-3)
 
-  # w == 0 on the -Inf tree: the term is skipped, the estimate is unchanged
-  est_zero <- run_mstep(c(trees_fin, list(tree_bad)), c(w_fin, 0), pars,
-                        lb_dd, ub_dd, dd_bin, xtol_rel = 1e-4)
-  expect_identical(est_zero, est_fin)
+  # w == 0 on the -Inf tree: the term is skipped. The extra element changes
+  # the order of the parallel reduction, so SBPLX can stop at a different
+  # point of a flat direction; the invariant is the objective, not the
+  # coordinates.
+  est_zero <- run_mstep(c(trees_fin, list(tree_bad)), c(w_fin, 0), pars8,
+                        lb8, ub8, dd_bin, xtol_rel = 1e-4)
+  expect_true(all(is.finite(est_zero)))
+  Q_fin <- function(th) sum(w_fin * eval_logf(th, trees_fin,
+                                              model = dd_bin, link = 0L, rho = 1)$logf)
+  expect_equal(Q_fin(est_zero), Q_fin(est_fin), tolerance = 1e-6)
 
   # H11.R part E: all sampler draws with weight 0 on the non-finite ones;
   # the weights differ from w_fin by the constant factor 200 / sum(keep)
   if (any(!keep)) {
     lw_fix <- ifelse(keep, e_dd$weights, -Inf)
-    est_fix <- run_mstep(e_dd$trees, mean_one(lw_fix), pars, lb_dd, ub_dd, dd_bin,
+    est_fix <- run_mstep(e_dd$trees, mean_one(lw_fix), pars8, lb8, ub8, dd_bin,
                          xtol_rel = 1e-4)
     expect_equal(est_fix, est_fin, tolerance = 1e-6)
   }
 
   # positive weight on the -Inf tree: the objective is +Inf at the init and the
   # optimizer ends where every weighted tree has finite density (lambda(13) > 0)
-  est_pos <- run_mstep(c(trees_fin, list(tree_bad)), c(w_fin, 1), pars,
-                       lb_dd, ub_dd, dd_bin, xtol_rel = 1e-4)
+  est_pos <- run_mstep(c(trees_fin, list(tree_bad)), c(w_fin, 1), pars8,
+                       lb8, ub8, dd_bin, xtol_rel = 1e-4)
   expect_true(all(is.finite(est_pos)))
   expect_gt(est_pos[1] + 13 * est_pos[2], 0)
-  logf_at_est <- eval_logf(c(est_pos[1], est_pos[2], 0, 0, est_pos[3], est_pos[4], 0, 0),
-                           c(trees_fin, list(tree_bad)), model = dd_bin, link = 0L, rho = 1)$logf
+  logf_at_est <- eval_logf(est_pos, c(trees_fin, list(tree_bad)),
+                           model = dd_bin, link = 0L, rho = 1)$logf
   expect_true(all(is.finite(logf_at_est)))
 })

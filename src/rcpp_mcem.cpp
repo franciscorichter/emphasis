@@ -1,4 +1,6 @@
 
+#include <stdexcept>
+#include <string>
 #include <Rcpp.h>
 #include "emphasis.hpp"
 #include "model.hpp"
@@ -73,6 +75,11 @@ List rcpp_mcem(const std::vector<double>& brts,
                double rho = 1.0,
                Nullable<Function> rconditional = R_NilValue)
 {
+  if (init_pars.size() != 8 || lower_bound.size() != 8 || upper_bound.size() != 8) {
+    throw std::invalid_argument("em_cpp: init_pars, lower_bound and upper_bound must have length 8 (got " +
+      std::to_string(init_pars.size()) + ", " + std::to_string(lower_bound.size()) + ", " +
+      std::to_string(upper_bound.size()) + ")");
+  }
   std::vector<int> model_bin = {model[0], model[1], model[2]};
   auto mdl = emphasis::Model(lower_bound, upper_bound, model_bin, link, rho);
 

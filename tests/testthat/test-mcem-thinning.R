@@ -36,13 +36,15 @@ rej_cols <- c("rejected", "rejected_overruns", "rejected_lambda")
 
 test_that("sample_size > maxN: maxN ratchets once and the fit stays away from the box centre (H22 B)", {
   lb <- c(0, 0); ub <- c(4, 4); centre <- (lb + ub) / 2
+  # estimate_rates() rejects maxN < num_trees up front (H22 part A), so the
+  # ratchet is exercised on the driver directly.
   set.seed(2222)
-  fit <- suppressWarnings(estimate_rates(
-    brts22, model = "cr", method = "mcem", init_pars = c(1, 0.3),
-    control = list(sampling = "dynamic_fresh", num_trees = 300L, maxN = 200L,
-                   max_iter = 40L, tol = 1e-2, patience = 3L,
-                   lower_bound = lb, upper_bound = ub, num_threads = 1L)))
-  d <- fit$details
+  d <- suppressWarnings(emphasis:::.mcem_dynamic_fresh(
+    brts22, ex(c(1, 0.3)), sample_size = 300L, maxN = 200L, max_missing = 1e4,
+    lower_bound = ex(lb), upper_bound = ex(ub), max_iter = 40L, xtol = 1e-3,
+    tol = 1e-2, patience = 3L, num_threads = 1L, verbose = FALSE,
+    model = cr_bin, link = 0L, max_time = 300))
+  fit <- list(pars = emphasis:::.contract_pars(d$pars, cr_bin))
 
   # The first E-step fails structurally (200 attempts < 300 trees); the
   # doubled cap then holds for the rest of the run.
