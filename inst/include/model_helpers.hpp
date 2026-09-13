@@ -123,21 +123,26 @@ namespace emphasis {
     }
 
 
+    // Running sum of log(val) over positive rates, accumulated as a product
+    // that is folded into sum_ whenever it leaves (LOWER, UPPER).
+    // A rate <= 0 has log-density -Inf regardless of the other terms, so it is
+    // recorded as a flag and never enters prod_ or sum_: result() then returns
+    // -Inf and the sign of the result is never read off sum_.
     class log_sum
     {
     public:
       double result() const 
       { 
-        double r = std::log(prod_) + sum_;
-        if (!std::isfinite(r)) {
-          const double s = std::signbit(sum_) ? -1.0 : 1.0;
-          r = s * std::numeric_limits<double>::infinity();
-        }
-        return r; 
+        if (zero_) return -std::numeric_limits<double>::infinity();
+        return std::log(prod_) + sum_;
       }
 
       void operator+=(double val)
       {
+        if (val <= 0.0) {
+          zero_ = true;
+          return;
+        }
         if ((prod_ > EMPHASIS_LOGSUM_LOWER_TRESHOLD) && (prod_ < EMPHASIS_LOGSUM_UPPER_TRESHOLD)) {
           prod_ *= val;
         }
@@ -150,6 +155,7 @@ namespace emphasis {
     private:
       double prod_ = 1;
       double sum_ = 0;
+      bool zero_ = false;
     };
 
 
