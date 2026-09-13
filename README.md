@@ -337,6 +337,10 @@ integration tests are dead (see *Build and test*). There are no vignettes.
 
 ### Validation
 
+The technical report that draws on both lives in its own repository,
+`forge:pancho/emphasis-audit` (`~/System/Research/Diversity/emphasis-audit`), as a member of the
+Diversity programme.
+
 `dev/validation/` holds a study of how well MCEM recovers the exact maximum-likelihood estimate,
 per tree, against `DDD::bd_ML` for constant rates and `DDD::dd_ML` for the linear
 diversity-dependent model. `00-design.md` states the estimands, the reference calls and their
