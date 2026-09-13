@@ -1,9 +1,12 @@
 
 #include <Rcpp.h>
 #include <array>
+#include <stdexcept>
+#include <string>
 #include <vector>
 #include <tbb/tbb.h>
 #include "emphasis.hpp"
+#include "augment_tree.hpp"
 #include "model.hpp"
 #include "rinit.h"
 #include "unpack.h"
@@ -37,7 +40,13 @@ using namespace Rcpp;
 //'   \item{rejected}{Unhandled rejections.}
 //'   \item{rejected_overruns}{Rejected: too many extinct lineages.}
 //'   \item{rejected_lambda}{Rejected: lambda bound exceeded.}
-//'   \item{rejected_zero_weights}{Rejected: zero IS weight.}
+//'   \item{rejected_zero_weights}{Rejected: zero IS weight (log weight -Inf).}
+//'   \item{rejected_nonfinite}{Rejected: log weight +Inf or NaN.}
+//'   \item{num_trees}{Number of trees returned (\code{length(trees)}).}
+//'   \item{envelope_violations}{Thinning candidates drawn during this call
+//'     whose acceptance probability exceeded 1, i.e. the envelope did not
+//'     dominate the rate. Non-zero means the draws are not from the density
+//'     \code{logg} charges them; a warning is issued.}
 //'   \item{time}{Elapsed time (ms).}
 //' }
 //' @keywords internal
@@ -53,10 +62,19 @@ List rcpp_mce(const std::vector<double>& brts,
               int link = 0,
               double rho = 1.0)
 {
+  if (pars.size() != 8) {
+    throw std::invalid_argument("augment_trees: pars must have length 8 (got " +
+      std::to_string(pars.size()) + ")");
+  }
   std::vector<int> model_bin = {model[0], model[1], model[2]};
   // Bounds are only needed for M-step (nlopt); E-step does not use them.
   std::vector<double> lb8(8, -1e6), ub8(8, 1e6);
   auto mdl = emphasis::Model(lb8, ub8, model_bin, link, rho);
+
+  // The envelope counter is process-wide and accumulates across calls and
+  // threads; the difference over the call is this call's count, and leaves
+  // the counter readable through thinning_envelope_violations().
+  const long long viol_before = emphasis::thinning_envelope_violations(false);
 
   auto E = emphasis::E_step(sample_size,
                             maxN,
@@ -78,6 +96,33 @@ List rcpp_mce(const std::vector<double>& brts,
   ret["rejected_overruns"]     = E.info.rejected_overruns;
   ret["rejected_lambda"]       = E.info.rejected_lambda;
   ret["rejected_zero_weights"] = E.info.rejected_zero_weights;
+  ret["rejected_nonfinite"]    = E.info.rejected_nonfinite;
+  ret["num_trees"]             = E.info.num_trees;
+  const long long viol = emphasis::thinning_envelope_violations(false) - viol_before;
+  ret["envelope_violations"]   = static_cast<double>(viol);
   ret["time"]                  = E.info.elapsed;
+  if (viol > 0) {
+    Rcpp::warning("augment_trees: thinning envelope did not dominate the rate at " +
+      std::to_string(viol) + " candidate(s); those trees are drawn from a "
+      "different density than logg charges (audit finding H7, D-dependent models)");
+  }
   return ret;
+}
+
+
+//' Count thinning candidates with acceptance probability above 1
+//'
+//' The thinning sampler accepts a candidate speciation time with probability
+//' \code{nh(t) / lambda_max}. A value above 1 means the envelope
+//' \code{lambda_max} did not dominate the rate on that segment. The counter
+//' accumulates over every augmentation call in the session.
+//'
+//' @param reset Logical; zero the counter after reading it.
+//' @return Number of candidates with acceptance probability above 1 since the
+//'   last reset.
+//' @keywords internal
+// [[Rcpp::export(name = "thinning_envelope_violations")]]
+double rcpp_thinning_envelope_violations(bool reset = false)
+{
+  return static_cast<double>(emphasis::thinning_envelope_violations(reset));
 }

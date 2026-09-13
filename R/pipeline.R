@@ -246,8 +246,11 @@ emphasis_pipeline <- function(tree,
   if ("mcem" %in% stages) {
     if (verbose) cat("\n[Stage 4] MCEM refinement...\n")
 
+    # tol and patience are taken from the shared MCEM defaults so that the
+    # stage uses the same stopping rule as a direct estimate_rates call.
     mcem_defaults <- list(sample_size = 200, maxN = 5000, max_iter = 200,
-                          tol = 1e-3, patience = 3)
+                          tol = estimate_rates_control("mcem")$tol,
+                          patience = estimate_rates_control("mcem")$patience)
     mcem_ctrl <- utils::modifyList(mcem_defaults, control$mcem %||% list())
     mcem_ctrl$lower_bound <- ab$lower_bound
     mcem_ctrl$upper_bound <- ab$upper_bound
@@ -277,10 +280,14 @@ emphasis_pipeline <- function(tree,
       mcem_trace <- mcem_fit$details$mcem
     }
 
-    # Log per-iteration progress if MCEM ran
+    # Log per-iteration progress if MCEM ran. The trace's final row is the
+    # E-step at the returned parameters, not an iteration, so the count comes
+    # from the fit (equivalently, from the trace's iteration rows).
     if (verbose && !is.null(mcem_trace) && nrow(mcem_trace) > 0) {
+      n_iter <- if (!is.null(mcem_fit$iterations) && !is.na(mcem_fit$iterations))
+        mcem_fit$iterations else sum(.mcem_iter_rows(mcem_trace))
       cat(sprintf("    MCEM: %d iterations, final fhat=%.2f\n",
-                  nrow(mcem_trace),
+                  n_iter,
                   utils::tail(mcem_trace$fhat[is.finite(mcem_trace$fhat)], 1)))
     }
   }

@@ -2,10 +2,13 @@
 #include <mutex>
 #include <chrono>
 #include <numeric>
-#include <cmath>  
+#include <cmath>
+#include <limits>
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <stdexcept>
+#include <string>
 #include <tbb/tbb.h>
 #include "model.hpp"
 #include "emphasis.hpp"
@@ -18,11 +21,12 @@ namespace emphasis {
 
     struct nlopt_f_data
     {
-      nlopt_f_data(const Model& M, 
-                   const std::vector<tree_t>& Trees, 
+      nlopt_f_data(const Model& M,
+                   const std::vector<tree_t>& Trees,
                    const std::vector<double>& W,
                    conditional_fun_t* Conditional)
-        : model(M), trees(Trees), w(W), conditional(Conditional)
+        : model(M), trees(Trees), w(W), conditional(Conditional),
+          sum_w(std::accumulate(W.cbegin(), W.cend(), 0.0))
       {
       }
 
@@ -35,30 +39,59 @@ namespace emphasis {
       const std::vector<tree_t>& trees;
       const std::vector<double>& w;
       conditional_fun_t* conditional;
+      const double sum_w;   // sum of the weights over the trees passed
     };
 
 
+    // Q(pars) = sum_i w_i * loglik(pars, tree_i), a weighted sum with
+    // unnormalised weights (BDI: mean 1; thinning: max-scaled).
+    // Terms with w_i == 0 are skipped, so a tree of zero density under the
+    // current parameters (loglik = -Inf, weight 0) does not turn Q into NaN.
+    // A non-finite loglik on a tree with w_i != 0 makes the objective +Inf:
+    // nlopt treats the point as infeasible instead of stalling on NaN.  The
+    // conditional's return value is guarded the same way: it is an arbitrary R
+    // function (mcem() takes one from the caller, and predict.gam returns NA on
+    // a newdata row it cannot evaluate), and a NaN there leaves the objective
+    // NaN at every point, on which sbplx returns the initial parameters with
+    // status XTOL_REACHED and the driver reads the iteration as converged.
     double objective(unsigned int n, const double* x, double*, void* func_data)
     {
       auto psd = reinterpret_cast<nlopt_f_data*>(func_data);
       param_t pars(x, x + n);
-      const double Q = tbb::parallel_reduce(tbb::blocked_range<size_t>(0, psd->trees.size()), 0.0, 
+      constexpr double inf = std::numeric_limits<double>::infinity();
+      const double Q = tbb::parallel_reduce(tbb::blocked_range<size_t>(0, psd->trees.size()), 0.0,
         [&](const tbb::blocked_range<size_t>& r, double q) -> double {
           for (size_t i = r.begin(); i < r.end(); ++i) {
+            if (psd->w[i] == 0.0) continue;
             const double loglik = psd->model.loglik(pars, psd->trees[i]);
+            // Marks the whole subrange infeasible, discarding the q it had
+            // accumulated.  This is not a claim that every partial sum is
+            // finite or -Inf: a subrange of finite terms can still overflow to
+            // +Inf, and -Inf + (+Inf) is NaN.  The outer !isfinite(Q) test
+            // below is what turns any of those into +Inf; do not remove it.
+            if (!std::isfinite(loglik)) return -inf;
             q += loglik * psd->w[i];
           }
           return q;
         },
         std::plus<double>{}
       );
+      if (!std::isfinite(Q)) {
+        return inf;
+      }
       if (nullptr == psd->conditional) {
         return -Q;
       }
       // conditional(pars) returns log(P_tree(pars)).
-      // Conditioned MLE maximizes Q - log(P_tree), so we minimize
-      // -(Q - log(P_tree)) = -Q + log(P_tree).
-      return -Q + psd->conditional->operator()(pars);
+      // Conditioned MLE maximizes Q/sum_w - log(P_tree); multiplied by sum_w
+      // that is Q - sum_w * log(P_tree), so we minimize
+      // -Q + sum_w * log(P_tree). The argmin is invariant to a positive
+      // rescaling of the weights.
+      const double logp = psd->conditional->operator()(pars);
+      if (!std::isfinite(logp)) {
+        return inf;
+      }
+      return -Q + psd->sum_w * logp;
     }
   }
 
@@ -74,6 +107,18 @@ namespace emphasis {
                   conditional_fun_t* conditional)
   {
  //   if (!model.is_threadsafe()) num_threads = 1;
+    // A weight multiplies a log-density inside Q and scales the conditional
+    // through sum_w.  A NaN weight makes the objective the constant +Inf, on
+    // which sbplx returns a moved point with status XTOL_REACHED; a negative
+    // weight silently minimizes the density of that tree.  Both are rejected
+    // here, next to the length checks m_cpp already performs.  Zero is allowed:
+    // it is how the drivers drop a zero-density draw.
+    for (size_t i = 0; i < weights.size(); ++i) {
+      if (!std::isfinite(weights[i]) || weights[i] < 0.0) {
+        throw std::invalid_argument("M_step: weight " + std::to_string(i + 1) + " is " +
+          std::to_string(weights[i]) + "; weights must be finite and non-negative");
+      }
+    }
     tbb::task_scheduler_init _tbb((num_threads > 0) ? num_threads : tbb::task_scheduler_init::automatic);
     auto T0 = std::chrono::high_resolution_clock::now();
     nlopt_f_data sd{ model, trees, weights, conditional };

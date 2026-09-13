@@ -16,5 +16,11 @@ total_rate(t) = (n+2k)*lam0*(1-p(t)) + n*mu0/(1-p(t))
 Uses the identities:
   int lam0*(1-p) dt = mu0*(t2-t1) + ln[p(t1)/p(t2)]
   int mu0/(1-p) dt  = lam0*(t2-t1) + ln[(1-p(t1))/(1-p(t2))]
+
+Valid on both sides of lam0 = mu0.  Both log-ratios are evaluated with
+s = |lam0 - mu0| in the exponent, so the argument of exp is never
+positive and the mu0 > lam0 side does not overflow; writing the factors
+as \code{s - r*expm1(-s*tau)} also removes the cancellation of
+\code{lam0 - mu0*E} near lam0 = mu0.
 }
 \keyword{internal}

@@ -13,9 +13,29 @@
 # --------------------------------------------------------------------------- #
 
 # CR analytical solution
+# p(t) = (lam0-mu0) / (lam0 - mu0*exp(-(lam0-mu0)*(tp-t))), valid for any
+# lam0, mu0 >= 0. At lam0 == mu0 the general form is 0/0; its limit is
+# 1/(1 + lam0*(tp-t)), used when |lam0-mu0| is below a relative tolerance.
+#
+# Written with s = |lam0-mu0| so that the exponential argument is never
+# positive: exp(+s*(tp-t)) overflows for mu0 > lam0 once s*(tp-t) passes
+# ~709, which is reachable through a user-supplied box on the exponential
+# link.  For mu0 > lam0 the numerator and denominator are both multiplied
+# by exp(-s*(tp-t)) before the division.
 .bdi_p_cr <- function(t, lam0, mu0, tp) {
-  E0 <- exp(-(lam0 - mu0) * (tp - t))
-  (lam0 - mu0) / (lam0 - mu0 * E0)
+  d <- lam0 - mu0
+  if (abs(d) <= 1e-12 * max(abs(lam0), abs(mu0))) {
+    return(1 / (1 + lam0 * (tp - t)))
+  }
+  s  <- abs(d)
+  em <- expm1(-s * (tp - t))            # in [-1, 0)
+  if (d > 0) {
+    # lam0 - mu0*exp(-d*tau) = d - mu0*expm1(-d*tau), both terms positive
+    d / (d - mu0 * em)
+  } else {
+    # (mu0 - lam0)*exp(-s*tau) / (mu0 - lam0*exp(-s*tau))
+    s * exp(-s * (tp - t)) / (s - lam0 * em)
+  }
 }
 
 
@@ -31,33 +51,54 @@
 #'   int lam0*(1-p) dt = mu0*(t2-t1) + ln[p(t1)/p(t2)]
 #'   int mu0/(1-p) dt  = lam0*(t2-t1) + ln[(1-p(t1))/(1-p(t2))]
 #'
+#' Valid on both sides of lam0 = mu0.  Both log-ratios are evaluated with
+#' s = |lam0 - mu0| in the exponent, so the argument of exp is never
+#' positive and the mu0 > lam0 side does not overflow; writing the factors
+#' as \code{s - r*expm1(-s*tau)} also removes the cancellation of
+#' \code{lam0 - mu0*E} near lam0 = mu0.
+#'
 #' @return The integral value (may be Inf when n>0 and t2==tp).
 #' @keywords internal
 .bdi_integral_cr <- function(t1, t2, n, k, lam0, mu0, tp) {
   if (t2 - t1 < 1e-15) return(0)
   d <- lam0 - mu0
-  if (abs(d) < 1e-15) {
-    # Critical case: lam0 = mu0
-    # p(t) = lam0*(tp-t)/(1+lam0*(tp-t)), 1-p = 1/(1+lam0*(tp-t))
+  if (abs(d) <= 1e-12 * max(abs(lam0), abs(mu0))) {
+    # Critical case: lam0 = mu0 (same switch as .bdi_p_cr)
+    # p(t) = 1/(1+lam0*(tp-t)), 1-p = lam0*(tp-t)/(1+lam0*(tp-t))
+    #   int lam0*(1-p) dt = lam0*(t2-t1) - ln(a1/a2)
+    #   int mu0/(1-p)  dt = lam0*(t2-t1) + ln[(tp-t1)/(tp-t2)]
     a1 <- 1 + lam0 * (tp - t1)
     a2 <- 1 + lam0 * (tp - t2)
-    I_lam <- log(a1 / a2)
-    I_mu  <- lam0 * (t2 - t1) + log(a2 / a1)  # mu/(1-p) = mu*(1+lam*(tp-t))
+    I_lam <- lam0 * (t2 - t1) - log(a1 / a2)
+    if (n > 0L) {
+      if (tp - t2 < 1e-300) return(Inf)   # t2 at tp: divergent
+      I_mu <- lam0 * (t2 - t1) + log((tp - t1) / (tp - t2))
+    } else {
+      I_mu <- 0
+    }
     return((n + 2L * k) * I_lam + n * I_mu)
   }
 
-  E1 <- exp(-d * (tp - t1))
-  E2 <- exp(-d * (tp - t2))
+  # Both branches in terms of s = |d|, so exp is only ever evaluated at a
+  # non-positive argument.  With r1 the smaller of the two rates and r2 the
+  # larger, exp(-s*tau) factors out of each log-ratio and contributes
+  # -s*(t2-t1) to I_lam and +s*(t2-t1) to I_mu, turning the mu0 prefactor of
+  # I_lam into r1 and the lam0 prefactor of I_mu into r2:
+  #   I_lam = r1*(t2-t1) + ln[(s - r1*expm1(-s*tau2)) / (s - r1*expm1(-s*tau1))]
+  #   I_mu  = r2*(t2-t1) + ln[expm1(-s*tau1) / expm1(-s*tau2)]
+  # For lam0 > mu0 this is the shipped form with lam0 - mu0*E written as
+  # s - mu0*expm1(-s*tau), a sum of two positive terms.
+  s   <- abs(d)
+  r1  <- min(lam0, mu0)
+  r2  <- max(lam0, mu0)
+  em1 <- expm1(-s * (tp - t1))
+  em2 <- expm1(-s * (tp - t2))
 
-  # I_lam = int lam0*(1-p) = mu0*dt + ln(p1/p2)
-  #       = mu0*(t2-t1) + ln[(lam0-mu0*E2)/(lam0-mu0*E1)]
-  I_lam <- mu0 * (t2 - t1) + log((lam0 - mu0 * E2) / (lam0 - mu0 * E1))
+  I_lam <- r1 * (t2 - t1) + log((s - r1 * em2) / (s - r1 * em1))
 
   if (n > 0L) {
-    oE1 <- 1 - E1
-    oE2 <- 1 - E2
-    if (oE2 < 1e-300) return(Inf)   # t2 at tp: divergent
-    I_mu <- lam0 * (t2 - t1) + log(oE1 / oE2)
+    if (abs(em2) < 1e-300) return(Inf)   # t2 at tp: divergent (either sign of d)
+    I_mu <- r2 * (t2 - t1) + log(em1 / em2)
   } else {
     I_mu <- 0
   }
@@ -404,7 +445,10 @@
 #' Under DD: uses approximate Gillespie with piecewise-constant rates.
 #'   IS weights have nonzero variance (importance sampling, not exact).
 #'
-#' @return List with $species, $n_alive_at_tp, $logg; or NULL on overflow.
+#' @return List with \code{$reason}: \code{"accepted"} (then also
+#'   \code{$species}, \code{$n_alive_at_tp}, \code{$logg}),
+#'   \code{"max_missing"} (more than \code{max_missing} missing lineages
+#'   drawn) or \code{"survivor"} (a missing lineage still alive at tp).
 #' @keywords internal
 .bdi_augment_one <- function(bt, pars8, model_bin, link, tp,
                              p_fun = NULL, Nhat_fun = NULL,
@@ -505,15 +549,15 @@
         n_alive <- n_alive - 1L
       }
 
-      if (n_total > max_missing) return(NULL)
+      if (n_total > max_missing) return(list(reason = "max_missing"))
     }
   }
 
   # Under CR: exact process ensures all species die before tp.
   # Under DD: approximate Gillespie may leave survivors — reject.
-  if (n_alive > 0L) return(NULL)
+  if (n_alive > 0L) return(list(reason = "survivor"))
 
-  list(species = species, n_alive_at_tp = 0L, logg = logg)
+  list(reason = "accepted", species = species, n_alive_at_tp = 0L, logg = logg)
 }
 
 
@@ -617,9 +661,41 @@
 
 #' BDI augmentation: draw sample_size augmented trees.
 #'
-#' Returns same structure as augment_trees() C++ function:
-#' list(trees, logf, logg, weights, fhat)
+#' Returns the same structure as the augment_trees() C++ function,
+#' list(trees, logf, logg, weights, fhat), plus the draw counts.
 #'
+#' Draws are attempted until \code{sample_size} have completed or the budget
+#' of \code{5 * sample_size} attempts is spent.  A draw is rejected when its
+#' missing-lineage count exceeds \code{max_missing} (counted in
+#' \code{n_rejected_max_missing}) or, under DD, when a missing lineage is
+#' still alive at the present (counted in \code{n_rejected}; such a tree has
+#' f = 0 at rho = 1).  Completed draws with a non-finite log-weight are
+#' dropped from the returned tree set (the M-step set) but stay in the fhat
+#' denominator with weight zero.
+#'
+#' fhat = log(sum_w / n_valid) + max_lw + log(acc), where n_valid counts every
+#' completed draw and acc = n_valid / (n_valid + n_rejected) is the acceptance
+#' rate of the survivor channel.  max_missing overflows are excluded from the
+#' denominator, as in the thinning E-step (S_completed in src/E_step.cpp).
+#'
+#' The log(acc) correction is derived at \code{rho = 1}, where a surviving
+#' missing lineage has f = 0 and the rejection is a property of the target.
+#' At \code{rho < 1} an unsampled survivor is a legitimate configuration, so
+#' the factor does not apply (measured shift -0.1104 at rho = 0.5 on the
+#' 20-tip DD tree of tests/testthat/test-bdi-dd.R).  \code{acc} is the
+#' stop-at-\code{n_valid} plug-in estimate of the acceptance rate, which is
+#' biased at small \code{sample_size}: at the function's own default
+#' \code{sample_size = 1L} a draw with three survivor rejections moves fhat
+#' by log(1/4) = -1.39.  At the MCEM default of a few hundred draws the bias
+#' is of order 1e-3.
+#'
+#' @return List: \code{trees}, \code{logf}, \code{logg}, \code{weights}
+#'   (finite-weight draws only), \code{fhat}, \code{n_valid} (completed
+#'   draws), \code{n_nonfinite} (completed draws dropped for a non-finite
+#'   log-weight), \code{n_attempts}, \code{n_rejected} (survivors at tp),
+#'   \code{n_rejected_max_missing}, \code{acc}.  \code{trees} is empty when
+#'   no draw completed or every completed draw has a non-finite log-weight;
+#'   a warning is issued when fewer than \code{sample_size} draws completed.
 #' @keywords internal
 .augment_tree_bdi <- function(tree,
                               pars,
@@ -656,20 +732,26 @@
     Ehat_fun <- sol$Ehat_fun
   }
 
-  # Draw augmented trees.
-  # For DD (approximate Gillespie), some draws are rejected (survivors at tp),
-  # so we oversample and collect until we have sample_size valid trees.
+  # Draw augmented trees.  A draw is rejected on max_missing overflow or,
+  # under DD (approximate Gillespie), when a missing lineage survives to tp.
+  # Attempts continue until sample_size draws have completed or the budget
+  # is spent; the two rejection channels are counted separately.
   trees      <- vector("list", sample_size)
   logg       <- numeric(sample_size)
   n_valid    <- 0L
-  max_tries  <- if (is_cr) sample_size else 5L * sample_size
+  n_attempts <- 0L
+  n_rej_surv <- 0L
+  n_rej_mm   <- 0L
+  max_tries  <- 5L * sample_size
 
   for (attempt in seq_len(max_tries)) {
     if (n_valid >= sample_size) break
+    n_attempts <- n_attempts + 1L
     aug <- .bdi_augment_one(bt, pars8, model_bin, link, tp,
                             p_fun, Nhat_fun, Phat_fun, Ehat_fun,
                             max_missing)
-    if (is.null(aug)) next
+    if (aug$reason == "survivor")    { n_rej_surv <- n_rej_surv + 1L; next }
+    if (aug$reason == "max_missing") { n_rej_mm   <- n_rej_mm   + 1L; next }
 
     n_valid <- n_valid + 1L
     trees[[n_valid]] <- .bdi_to_tree_df(aug$species, bt, tp)
@@ -680,10 +762,18 @@
   trees <- trees[seq_len(n_valid)]
   logg  <- logg[seq_len(n_valid)]
 
+  if (n_valid < sample_size) {
+    warning(sprintf(paste0(
+      "BDI augmentation: %d of %d requested draws completed in %d attempts ",
+      "(%d survivors at tp, %d over max_missing = %d)."),
+      n_valid, sample_size, n_attempts, n_rej_surv, n_rej_mm,
+      as.integer(max_missing)), call. = FALSE)
+  }
+
   # Compute logf (model log-likelihood) via C++ eval_logf.
   # eval_logf also returns a thinning-based logg — we discard it
   # and use the Gillespie-accumulated logg from above instead.
-  if (length(trees) > 0L) {
+  if (n_valid > 0L) {
     ev   <- eval_logf(pars8, trees,
                       model = as.integer(model_bin),
                       link  = as.integer(link),
@@ -694,15 +784,40 @@
   }
 
   weights <- logf - logg
-  max_lw  <- if (length(weights) > 0) max(weights) else 0
-  sum_w   <- sum(exp(weights - max_lw))
-  fhat    <- if (length(weights) > 0) log(sum_w / length(weights)) + max_lw else -Inf
+
+  # A completed draw with a non-finite log-weight (logf = -Inf when a rate
+  # is zero on the augmented tree) has weight zero: it stays in the fhat
+  # denominator and leaves the M-step set.
+  finite      <- is.finite(weights)
+  n_nonfinite <- sum(!finite)
+  trees   <- trees[finite]
+  logf    <- logf[finite]
+  logg    <- logg[finite]
+  weights <- weights[finite]
+
+  # Survivor rejections have f = 0 at rho = 1, so the completed draws are a
+  # sample from g / P(accept | theta) and log(acc) restores that factor.
+  # max_missing overflows are left out of the denominator (E_step.cpp).
+  acc <- if (n_valid + n_rej_surv > 0L) n_valid / (n_valid + n_rej_surv) else NA_real_
+  if (length(weights) > 0L) {
+    max_lw <- max(weights)
+    sum_w  <- sum(exp(weights - max_lw))
+    fhat   <- log(sum_w / n_valid) + max_lw + log(acc)
+  } else {
+    fhat <- -Inf
+  }
 
   list(trees   = trees,
        logf    = logf,
        logg    = logg,
        weights = weights,
-       fhat    = fhat)
+       fhat    = fhat,
+       n_valid = n_valid,
+       n_nonfinite = n_nonfinite,
+       n_attempts  = n_attempts,
+       n_rejected  = n_rej_surv,
+       n_rejected_max_missing = n_rej_mm,
+       acc     = acc)
 }
 
 
@@ -718,6 +833,47 @@
 #' Under CR: zero-variance IS, so every E-step gives the same fhat regardless
 #' of the augmented trees.  Convergence depends only on the M-step.
 #'
+#' Stopping rule.  With theta_k the M-step output of iteration k,
+#' \deqn{\delta_k = \max_j |\theta_k[j] - \theta_{k-1}[j]| / \max(|\theta_{k-1}[j]|, \epsilon)}
+#' (\code{.rel_change}) with \eqn{\epsilon} from \code{.rel_floor}, and the
+#' run stops as "converged" once \eqn{\delta_k < tol} for \code{patience}
+#' consecutive iterations.  The scale is the parameter itself, not the
+#' search box, so the same fit stops at the same point whatever bounds the
+#' user passes; the floor carries the units of the parameters, so it also
+#' stops at the same point when the tree is measured in another unit of
+#' time.  An iteration whose
+#' M-step returned its starting point unchanged carries no information about
+#' stability and resets the streak.  The trace also records the absolute
+#' step \code{abs_step} and \code{drift}, the same relative displacement
+#' measured over the last \code{patience} iterations: under pure Monte Carlo
+#' noise \code{drift} is of the order of \code{sqrt(patience)} steps, under a
+#' deterministic EM drift it is \code{patience} steps.
+#'
+#' The reported likelihood is a separate E-step at the final iterate, so
+#' \code{fhat}, ESS, \code{final_IS} and \code{loglik_var} all describe
+#' \code{pars}; that E-step is the last row of \code{mcem} (\code{m_step =
+#' FALSE}, no step columns) and is not counted in \code{iterations}.  When
+#' that E-step fails and the final iterate is not the last one whose E-step
+#' succeeded, \code{pars} falls back to that iterate and the E-step is run
+#' there: a theta the sampler cannot evaluate is not returned as an
+#' estimate.
+#'
+#' Draw counts come from the E-step, which drops non-finite draws before
+#' returning: \code{n_valid} is the number of completed draws and the fhat
+#' denominator, \code{num_trees} the finite subset handed to the M-step, and
+#' \code{n_nonfinite} the difference.  \code{rejected} and
+#' \code{rejected_max_missing} are the two rejection channels.
+#'
+#' Eight E-step failures end the run with \code{stop_reason =
+#' "e_step_failure"} whether or not they are consecutive, so an M-step that
+#' keeps proposing an iterate the sampler cannot evaluate does not alternate
+#' to \code{max_iter}.
+#'
+#' @return A list: \code{mcem} (trace, one row per iteration plus the final
+#'   E-step), \code{pars}, \code{iterations} (number of completed E+M
+#'   iterations), \code{stop_reason}, \code{loglik} (fhat at \code{pars},
+#'   \code{NA} when the final E-step failed), \code{loglik_var},
+#'   \code{final_IS}, \code{n_failed} (E- or M-step failures).
 #' @keywords internal
 .mcem_bdi <- function(brts,
                       pars,
@@ -727,7 +883,7 @@
                       upper_bound,
                       max_iter,
                       xtol,
-                      tol,
+                      tol = 1e-2,
                       patience,
                       num_threads,
                       verbose    = FALSE,
@@ -744,27 +900,23 @@
 
   model_bin <- as.integer(model)
   link_int  <- as.integer(link)
+  patience  <- max(1L, as.integer(patience))
 
-  # Scale parameter changes by the search range for convergence check
-  range_vec <- upper_bound - lower_bound
-  range_vec[range_vec == 0] <- 1
+  # Floor of the relative-change denominator: a parameter below the floor in
+  # magnitude is measured against the floor, so a coordinate sitting at zero
+  # does not turn every step into an infinite relative change.  The floor
+  # carries the units of the parameters (.rel_floor), so the statistic is
+  # the same when the tree and the rates are expressed in another unit of
+  # time.  .mcem_dynamic_fresh uses the same two helpers.
+  floor_val  <- .rel_floor(brts, link_int)
+  rel_change <- function(new, old) .rel_change(new, old, floor_val)
 
-  streak      <- 0L
-  fail_streak <- 0L
-  prev_pars   <- pars
-  mcem        <- NULL
-  last_e_step <- NULL
-  stop_reason <- "max_iter"
-  t0_mcem     <- proc.time()[3]
-  center_pars <- (lower_bound + upper_bound) / 2
-
-  for (i in seq_len(max_iter)) {
-    # ── E-step: BDI augmentation ──
-    t0_e <- proc.time()[3]
-    e_raw <- tryCatch(
+  # One BDI E-step at `theta`; NULL on error or when no tree was drawn.
+  e_step_at <- function(theta) {
+    e <- tryCatch(
       .augment_tree_bdi(
         tree        = brts,
-        pars        = pars,
+        pars        = theta,
         model_bin   = model_bin,
         sample_size = as.integer(sample_size),
         max_missing = as.integer(max_missing),
@@ -773,46 +925,109 @@
       ),
       error = function(e) NULL
     )
-    elapsed_e <- proc.time()[3] - t0_e
+    if (is.null(e) || length(e$trees) == 0L) return(NULL)
+    e
+  }
 
-    if (is.null(e_raw) || length(e_raw$trees) == 0L) {
+  # Trace row.  Step columns are NA for the final E-step (no M-step).
+  trace_row <- function(theta, e, elapsed_e, m_time = 0, m_step = TRUE,
+                        delta_max = NA_real_, abs_step = NA_real_,
+                        drift = NA_real_, m_moved = NA) {
+    par_df <- as.data.frame(as.list(
+      stats::setNames(theta, paste0("par", seq_along(theta)))))
+    cbind(par_df, data.frame(
+      fhat        = e$fhat,
+      delta_max   = delta_max,
+      abs_step    = abs_step,
+      drift       = drift,
+      m_step      = m_step,
+      m_moved     = m_moved,
+      rejected    = .n0(e$n_rejected),
+      rejected_max_missing = .n0(e$n_rejected_max_missing),
+      # .augment_tree_bdi drops non-finite draws before returning and
+      # reports the count; the second term covers a caller that does not.
+      n_nonfinite = .n0(e$n_nonfinite) + sum(!is.finite(e$logf)),
+      n_valid     = .n0(e$n_valid),
+      num_trees   = length(e$trees),
+      ESS         = .ess_from_lw(e$weights),
+      time        = elapsed_e * 1000 + m_time
+    ))
+  }
+
+  streak      <- 0L
+  fail_streak <- 0L
+  n_efail     <- 0L            # E-step failures, consecutive or not
+  n_failed    <- 0L
+  prev_pars   <- pars          # last iterate whose E-step succeeded
+  history     <- list(pars)    # theta_0, theta_1, ... for the drift column
+  mcem        <- NULL
+  n_iter      <- 0L
+  stop_reason <- "max_iter"
+  t0_mcem     <- proc.time()[3]
+
+  for (i in seq_len(max_iter)) {
+    # ── E-step: BDI augmentation ──
+    t0_e  <- proc.time()[3]
+    e_raw <- e_step_at(pars)
+    elapsed_e <- as.numeric(proc.time()[3] - t0_e)
+
+    if (is.null(e_raw)) {
       fail_streak <- fail_streak + 1L
-      pars <- 0.8 * pars + 0.2 * center_pars
-      pars <- pmax(pars, lower_bound)
-      pars <- pmin(pars, upper_bound)
+      n_efail     <- n_efail + 1L
+      n_failed    <- n_failed + 1L
+      streak      <- 0L
+      # Restart from the last iterate whose E-step succeeded; the box centre
+      # is not a known-good point and may itself be where the sampler fails.
+      pars <- prev_pars
       if (verbose) message(sprintf(
-        "Iteration %d: E-step failed (%d consecutive) — perturbed toward center",
+        "Iteration %d: E-step failed (%d consecutive, %d in total) - restarting from the last successful iterate",
+        i, fail_streak, n_efail))
+      # Eight failures end the run whether or not they are consecutive: an
+      # M-step that keeps proposing the same unusable iterate alternates
+      # success and failure forever and the streak never builds.
+      if (fail_streak >= 8L || n_efail >= 8L) {
+        stop_reason <- "e_step_failure"; break
+      }
+      next
+    }
+
+    # M-step set: every draw .augment_tree_bdi returns.  It has already
+    # dropped the non-finite ones (they stay in its fhat denominator and
+    # are counted in the trace); an E-step with nothing left is mapped to
+    # NULL by e_step_at, so this guard is defensive.
+    lw <- e_raw$weights
+    if (length(lw) == 0L) {
+      fail_streak <- fail_streak + 1L
+      n_efail     <- n_efail + 1L
+      n_failed    <- n_failed + 1L
+      streak      <- 0L
+      pars <- prev_pars
+      if (verbose) message(sprintf(
+        "Iteration %d: E-step returned no finite log-weight (%d consecutive)",
         i, fail_streak))
-      if (fail_streak >= 8L) { stop_reason <- "e_step_failure"; break }
+      if (fail_streak >= 8L || n_efail >= 8L) {
+        stop_reason <- "e_step_failure"; break
+      }
       next
     }
     fail_streak <- 0L
+    prev_pars   <- pars
 
-    # Package E-step output for m_cpp()
-    # m_cpp objective: Σ loglik(θ,tree_i) * w[i]  — uses w as direct multipliers.
-    # The thinning E-step stores log-weights (logf-logg) which happen to be positive
-    # on average. BDI log-weights are constant and negative, which would flip the
-    # optimization direction. Convert to self-normalized IS weights (always positive).
-    lw <- e_raw$weights
-    max_lw <- max(lw)
-    w_norm <- exp(lw - max_lw)
-    w_norm <- w_norm / sum(w_norm) * length(w_norm)  # mean=1, all positive
+    # m_cpp objective: sum loglik(theta, tree_i) * w[i] with w as direct
+    # multipliers.  BDI log-weights are constant and negative under CR, so
+    # convert to self-normalised IS weights (mean 1, all positive).
+    w_norm <- exp(lw - max(lw))
+    w_norm <- w_norm / sum(w_norm) * length(w_norm)
 
     e_step <- list(
       trees                 = e_raw$trees,
       weights               = w_norm,
-      rejected              = 0L,
+      rejected              = .n0(e_raw$n_rejected),
       rejected_overruns     = 0L,
       rejected_lambda       = 0L,
-      rejected_zero_weights = 0L,
+      rejected_zero_weights = .n0(e_raw$n_nonfinite) + sum(!is.finite(e_raw$logf)),
       time                  = elapsed_e * 1000,
       fhat                  = e_raw$fhat
-    )
-    last_e_step <- list(
-      logf    = e_raw$logf,
-      logg    = e_raw$logg,
-      fhat    = e_raw$fhat,
-      weights = e_raw$weights
     )
 
     # ── M-step: C++ optimisation ──
@@ -833,36 +1048,42 @@
 
     if (is.null(m_result)) {
       fail_streak <- fail_streak + 1L
+      n_failed    <- n_failed + 1L
+      streak      <- 0L
       if (verbose) message(sprintf("Iteration %d: M-step failed", i))
       if (fail_streak >= 8L) { stop_reason <- "m_step_failure"; break }
       next
     }
 
-    pars <- as.numeric(m_result$estimates)
-    delta_max <- max(abs(pars - prev_pars) / range_vec)
-    prev_pars <- pars
+    new_pars  <- as.numeric(m_result$estimates)
+    m_moved   <- any(new_pars != pars)
+    abs_step  <- max(abs(new_pars - pars))
+    delta_max <- rel_change(new_pars, pars)
+    n_iter    <- n_iter + 1L
+    history[[n_iter + 1L]] <- new_pars
+    drift <- if (n_iter > patience)
+      rel_change(new_pars, history[[n_iter + 1L - patience]]) else NA_real_
+    pars      <- new_pars
 
-    # Record iteration
-    par_df <- as.data.frame(as.list(
-      stats::setNames(pars, paste0("par", seq_along(pars)))))
-    step <- cbind(par_df, data.frame(
-      fhat      = e_raw$fhat,
-      delta_max = delta_max,
-      rejected  = 0L,
-      num_trees = length(e_raw$trees),
-      time      = elapsed_e * 1000 + m_result$time
-    ))
-    mcem <- rbind(mcem, step)
+    mcem <- rbind(mcem, trace_row(
+      pars, e_raw, elapsed_e, m_time = m_result$time,
+      delta_max = delta_max, abs_step = abs_step, drift = drift,
+      m_moved = m_moved))
 
     if (verbose) {
       message(sprintf(
-        "Iteration %d: fhat=%.4f  delta=%.2e  streak=%d/%d  ESS=%.0f/%d",
-        i, e_raw$fhat, delta_max, streak, patience,
-        .ess_from_lw(e_raw$weights), length(e_raw$trees)))
+        "Iteration %d: fhat=%.4f  delta=%.2e  step=%.2e  streak=%d/%d  ESS=%.0f/%d%s",
+        i, e_raw$fhat, delta_max, abs_step, streak, patience,
+        .ess_from_lw(e_raw$weights), length(e_raw$trees),
+        if (m_moved) "" else "  (M-step returned its start)"))
     }
 
-    # Check convergence
-    if (delta_max < tol) {
+    # Check convergence.  An M-step that returned its start unchanged says
+    # nothing about stability (the objective may have been undefined there),
+    # so it does not count toward patience.
+    if (!m_moved) {
+      streak <- 0L
+    } else if (delta_max < tol) {
       streak <- streak + 1L
       if (streak >= patience) { stop_reason <- "converged"; break }
     } else {
@@ -880,36 +1101,64 @@
     }
   }
 
-  # Bootstrap variance from last iteration
-  loglik_var <- NA_real_
-  if (!is.null(last_e_step) &&
-      length(last_e_step$logf) >= 2L &&
-      all(is.finite(last_e_step$logf))) {
-    loglik_var <- .bootstrap_fhat_var(last_e_step$logf, last_e_step$logg,
-                                      K = 2L, B = 200L)
+  # ── Final E-step at the returned iterate ──
+  # The trace rows pair theta_k with fhat(theta_{k-1}); this E-step gives
+  # fhat, ESS and the IS diagnostics at pars itself.
+  t0_e    <- proc.time()[3]
+  e_final <- e_step_at(pars)
+  elapsed_e <- as.numeric(proc.time()[3] - t0_e)
+
+  # An iterate the sampler cannot evaluate is not an estimate: fall back to
+  # the last iterate whose E-step succeeded and report that one instead.
+  if (is.null(e_final) && !identical(pars, prev_pars)) {
+    n_efail  <- n_efail + 1L
+    n_failed <- n_failed + 1L
+    pars     <- prev_pars
+    if (verbose) message(
+      "Final E-step failed; returning the last iterate whose E-step succeeded.")
+    t0_e      <- proc.time()[3]
+    e_final   <- e_step_at(pars)
+    elapsed_e <- as.numeric(proc.time()[3] - t0_e)
   }
 
-  # Final IS diagnostics
-  final_IS <- NULL
-  if (!is.null(last_e_step) && length(last_e_step$logf) > 0L) {
-    lw <- last_e_step$logf - last_e_step$logg
+  if (!is.null(e_final)) {
+    mcem <- rbind(mcem, trace_row(pars, e_final, elapsed_e, m_step = FALSE))
+  } else if (verbose) {
+    message("Final E-step at the returned parameters failed; loglik is NA.")
+  }
+
+  loglik     <- NA_real_
+  loglik_var <- NA_real_
+  final_IS   <- NULL
+  if (!is.null(e_final)) {
+    loglik <- e_final$fhat
+    lw     <- e_final$logf - e_final$logg
+    # .augment_tree_bdi returns only draws with a finite log-weight.
+    if (length(e_final$logf) >= 2L) {
+      loglik_var <- .bootstrap_fhat_var(e_final$logf, e_final$logg,
+                                        K = 2L, B = 200L)
+    }
     final_IS <- list(
-      logf  = last_e_step$logf,
-      logg  = last_e_step$logg,
+      logf  = e_final$logf,
+      logg  = e_final$logg,
       lw    = lw,
-      fhat  = last_e_step$fhat,
+      fhat  = e_final$fhat,
       ESS   = .ess_from_lw(lw),
-      n_rejected = 0L,
-      rejected_zero_weights = 0L
+      n_rejected = .n0(e_final$n_rejected),
+      rejected_max_missing  = .n0(e_final$n_rejected_max_missing),
+      rejected_zero_weights = .n0(e_final$n_nonfinite) +
+                              sum(!is.finite(e_final$logf))
     )
   }
 
   list(
     mcem        = mcem,
     pars        = pars,
-    iterations  = nrow(mcem),
+    iterations  = n_iter,
     stop_reason = stop_reason,
+    loglik      = loglik,
     loglik_var  = loglik_var,
-    final_IS    = final_IS
+    final_IS    = final_IS,
+    n_failed    = n_failed
   )
 }

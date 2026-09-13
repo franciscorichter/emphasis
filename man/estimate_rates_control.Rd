@@ -25,14 +25,28 @@ default), \code{upper_bound} (required, no default),
 \code{verbose} (default FALSE), \code{max_missing} (default 1e4),
 \code{num_threads} (default 1).
 
-MCEM-specific: \code{sampling} (default \code{"dynamic_fresh"}),
+MCEM-specific: \code{sampling} (default \code{"bdi"}, the exact
+birth-death-with-immigration sampler for the cr and dd models on the
+linear and exponential links; \code{"dynamic_fresh"} is the thinning
+sampler, used for every other model/link and whenever it is asked for),
 \code{num_trees} (augmented trees per EM iteration, default 200;
 alias: \code{sample_size}), \code{max_iter} (iteration cap, default 200),
-\code{maxN} (max augmentation attempts per E-step, default 2000),
+\code{maxN} (max augmentation attempts per E-step, read by the thinning
+sampler only and ignored by BDI; under \code{"dynamic_fresh"} it must be
+at least \code{num_trees}; default NULL, and a non-finite value is treated
+as NULL, = \code{max(2000, 10 * num_trees)}),
 \code{xtol} (M-step optimiser tolerance, default 1e-3),
-\code{tol} (parameter-stability threshold: max relative change scaled
-by search range, default 1e-3), \code{patience} (consecutive stable
-iterations required, default 3).
+\code{tol} (parameter-stability threshold: the largest relative parameter
+change \eqn{\max_j |\theta_k[j] - \theta_{k-1}[j]| / \max(|\theta_{k-1}[j]|, c)},
+where the floor \eqn{c} is \code{tol / crown_age} for the rate-valued
+links and \code{tol} for the log-rates of the exponential link, so that
+the statistic does not change with the unit of time; the search box does
+not enter; default 1e-2, so every coordinate must move by less than 1\% of
+its own magnitude, \code{patience} times in a row; on a 12-tip CR tree at
+\code{num_trees = 200} that statistic has median 0.02 and falls below 1e-2
+in about a fifth of iterations, so runs at these defaults commonly end at
+\code{max_iter}), \code{patience} (consecutive stable iterations
+required, default 3).
 
 CEM-specific: \code{max_iter} (default 20), \code{num_particles}
 (particles per iteration, default 50; alias: \code{num_points}),

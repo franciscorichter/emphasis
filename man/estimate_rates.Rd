@@ -52,7 +52,8 @@ Default \code{"cr"} (constant rate). The recommended covariate model is
 
 \item{init_pars}{Starting parameter vector. Required for \code{"mcem"};
 ignored for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the
-midpoint of the bounds is used.}
+midpoint of the bounds is used, with covariate slopes started at 0
+(linear link) so that lambda stays positive during the early E-steps.}
 
 \item{control}{Named list of tuning parameters. Must include
 \code{lower_bound} and \code{upper_bound}. Use
@@ -82,15 +83,26 @@ log-likelihood is conditioned: \eqn{\ell_{\rm cond} = \ell -
 A list with class \code{"emphasis_fit"} containing:
   \describe{
     \item{\code{pars}}{Named numeric vector of parameter estimates.}
-    \item{\code{loglik}}{Final log-likelihood estimate.}
+    \item{\code{loglik}}{Final log-likelihood estimate. For MCEM this is
+      the importance-sampling estimate at the returned parameters, and is
+      \code{NA} when the E-step evaluating them failed.}
     \item{\code{loglik_var}}{Bootstrap variance of \code{loglik} due to
       Monte Carlo noise. Populated automatically when
       \code{control$num_trees >= 2} (B = 200 replicates); \code{NA}
       when \code{num_trees = 1}.}
-    \item{\code{n_pars}}{Number of free parameters (used for AIC).}
+    \item{\code{n_pars}}{Number of free parameters (used for AIC):
+      parameters with \code{lower_bound == upper_bound} are fixed and
+      not counted.}
     \item{\code{AIC}}{Akaike Information Criterion: \code{-2 * loglik + 2 * n_pars}.}
     \item{\code{method}}{Method used (\code{"mcem"} or \code{"cem"}).}
     \item{\code{model}}{Resolved binary model vector.}
+    \item{\code{stop_reason}}{Why the MCEM run stopped (\code{"converged"},
+      \code{"max_iter"}, \code{"time_budget"}, \code{"e_step_failure"},
+      \code{"m_step_failure"}); \code{NA} for other methods.}
+    \item{\code{iterations}}{Number of completed MCEM iterations
+      (\code{0} when every E-step failed); \code{NA} for other methods.}
+    \item{\code{n_failed}}{Number of E- or M-step failures over the MCEM
+      run; \code{NA} for other methods.}
     \item{\code{details}}{Full output from the back-end function
       (\code{.mcem_dynamic_fresh} or \code{emphasis_cem}).}
   }

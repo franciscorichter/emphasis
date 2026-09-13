@@ -1,4 +1,6 @@
 
+#include <stdexcept>
+#include <string>
 #include <Rcpp.h>
 #include "emphasis.hpp"
 #include "model.hpp"
@@ -61,9 +63,20 @@ List rcpp_mcm(List e_step,
               double rho = 1.0,
               Nullable<Function> rconditional = R_NilValue)
 {
+  // The internal parameter layout has 8 slots; Model::loglik indexes all of
+  // them, so shorter vectors read past the end.
+  if (init_pars.size() != 8 || lower_bound.size() != 8 || upper_bound.size() != 8) {
+    throw std::invalid_argument("m_cpp: init_pars, lower_bound and upper_bound must have length 8 (got " +
+      std::to_string(init_pars.size()) + ", " + std::to_string(lower_bound.size()) + ", " +
+      std::to_string(upper_bound.size()) + ")");
+  }
   auto E = emphasis::E_step_t{};
   E.trees = pack(as<List>(e_step["trees"]));
   E.weights = as<std::vector<double>>(e_step["weights"]);
+  if (E.weights.size() != E.trees.size()) {
+    throw std::invalid_argument("m_cpp: weights (" + std::to_string(E.weights.size()) +
+      ") and trees (" + std::to_string(E.trees.size()) + ") differ in length");
+  }
   E.info.num_trees = static_cast<int>(E.trees.size());
   E.info.rejected = as<int>(e_step["rejected"]);
   E.info.rejected_overruns = as<int>(e_step["rejected_overruns"]);

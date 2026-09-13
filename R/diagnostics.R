@@ -325,12 +325,21 @@ diagnose_cem <- function(x, plot = TRUE,
 #' the output of \code{\link{estimate_rates}} with \code{method = "mcem"}.
 #'
 #' @section Convergence (\code{$convergence}):
-#' A data frame with one row per EM iteration containing:
+#' A data frame with one row per EM iteration.  The trace's last row, the
+#' final E-step at the returned parameters, is not an iteration and is not
+#' included; the table therefore has \code{fit$iterations} rows and its
+#' \code{fhat} of the final E-step is reported as \code{$final_fhat}.
+#' Columns:
 #' \describe{
 #'   \item{\code{iteration}}{Iteration index.}
-#'   \item{\code{fhat}}{IS log-likelihood at the M-step estimate.}
-#'   \item{\code{delta_max}}{Maximum relative parameter change (fraction of
-#'     search range) from the previous iteration.}
+#'   \item{\code{fhat}}{IS log-likelihood at the previous iterate (the
+#'     E-step value the M-step of this iteration maximised).}
+#'   \item{\code{delta_max}}{Maximum relative parameter change from the
+#'     previous iteration, each coordinate measured against its own
+#'     magnitude.}
+#'   \item{\code{rejected}}{Draws rejected in the iteration's E-step:
+#'     \code{n_rejected} (the sum over rejection channels) where the trace
+#'     carries it, else the trace's own \code{rejected} column.}
 #'   \item{\code{num_trees}}{Number of augmented trees used.}
 #'   \item{\code{time}}{Wall-clock time for the iteration (ms).}
 #' }
@@ -352,8 +361,8 @@ diagnose_cem <- function(x, plot = TRUE,
 #'   (for simulation studies).  Red dashed lines are drawn at these values.
 #' @param lower_bound,upper_bound Optional numeric vectors for bound lines.
 #' @return A list of class \code{"mcem_diagnostics"} (invisibly) with
-#'   components \code{convergence}, \code{IS_quality},
-#'   and \code{final_IS}.
+#'   components \code{convergence}, \code{stop_reason}, \code{final_fhat},
+#'   \code{IS_quality}, and \code{final_IS}.
 #' @seealso \code{\link{diagnose_cem}}, \code{\link{estimate_rates}}
 #' @examples
 #' \dontrun{
@@ -380,21 +389,40 @@ diagnose_mcem <- function(x, plot = TRUE,
   if (is.null(details$mcem))
     stop("No MCEM trace found. Is this an MCEM fit?")
 
-  mcem_df  <- details$mcem
-  n_iter   <- nrow(mcem_df)
+  # The last trace row is the final E-step at the returned parameters, not an
+  # iteration; it is dropped here so that the table, the counts and the plots
+  # cover the K iterations of a K-iteration fit. Its fhat is the value
+  # reported in $IS_quality and in $final_fhat.
+  full_df   <- details$mcem
+  iter_rows <- .mcem_iter_rows(full_df)
+  mcem_df   <- full_df[iter_rows, , drop = FALSE]
+  n_iter    <- nrow(mcem_df)
 
   # -- 1. Convergence table --------------------------------------------------
   par_cols <- grep("^par[0-9]+$", names(mcem_df), value = TRUE)
+  # `n_rejected` is the sum over the rejection channels; `rejected` is one
+  # channel in the thinning trace and the total in the BDI trace.
+  rejected_col <- if ("n_rejected" %in% names(mcem_df)) mcem_df$n_rejected
+                  else if ("rejected" %in% names(mcem_df)) mcem_df$rejected
+                  else rep(NA_integer_, n_iter)
   convergence <- data.frame(
     iteration = seq_len(n_iter),
     fhat      = mcem_df$fhat,
     delta_max = if ("delta_max" %in% names(mcem_df)) mcem_df$delta_max
                 else rep(NA_real_, n_iter),
-    rejected  = if ("rejected" %in% names(mcem_df)) mcem_df$rejected
-                else rep(NA_integer_, n_iter),
+    rejected  = rejected_col,
     num_trees = mcem_df$num_trees,
     time      = mcem_df$time
   )
+
+  # fhat of the final E-step, i.e. of the parameters the fit returns. The
+  # iteration rows pair theta_k with fhat(theta_{k-1}), so their last value
+  # belongs to the previous iterate.
+  final_row  <- full_df[!iter_rows, , drop = FALSE]
+  final_fhat <- if (nrow(final_row) > 0L) utils::tail(final_row$fhat, 1L) else {
+    fhat_fin <- mcem_df$fhat[is.finite(mcem_df$fhat)]
+    if (length(fhat_fin) > 0L) utils::tail(fhat_fin, 1L) else NA_real_
+  }
 
   # -- 2. IS quality at final iteration --------------------------------------
   IS_quality <- NULL
@@ -424,7 +452,7 @@ diagnose_mcem <- function(x, plot = TRUE,
   n_par <- length(par_cols)
 
   # -- 4. Plots ------------------------------------------------------------
-  if (plot) {
+  if (plot && n_iter > 0L) {
     has_IS    <- !is.null(final_IS) &&
                  length(final_IS$lw[is.finite(final_IS$lw)]) > 1L
     has_delta <- any(!is.na(convergence$delta_max))
@@ -534,6 +562,7 @@ diagnose_mcem <- function(x, plot = TRUE,
     list(
       convergence = convergence,
       stop_reason = details$stop_reason,
+      final_fhat  = final_fhat,
       IS_quality  = IS_quality,
       final_IS    = final_IS
     ),
@@ -555,9 +584,10 @@ print.mcem_diagnostics <- function(x, ...) {
   if (!is.null(x$stop_reason))
     cat(sprintf("Stop reason:     %s\n", x$stop_reason))
 
-  fhat_fin <- x$convergence$fhat[is.finite(x$convergence$fhat)]
-  if (length(fhat_fin) > 0L)
-    cat(sprintf("Final fhat:      %.4f\n", utils::tail(fhat_fin, 1L)))
+  fhat_fin <- if (!is.null(x$final_fhat)) x$final_fhat else
+    utils::tail(x$convergence$fhat[is.finite(x$convergence$fhat)], 1L)
+  if (length(fhat_fin) == 1L && is.finite(fhat_fin))
+    cat(sprintf("Final fhat:      %.4f\n", fhat_fin))
 
   dm <- x$convergence$delta_max
   dm <- dm[!is.na(dm)]
