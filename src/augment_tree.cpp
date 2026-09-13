@@ -127,12 +127,27 @@ namespace emphasis {
 
     // Number of thinning candidates whose acceptance probability exceeded 1,
     // i.e. the envelope did not dominate nh(t) at the candidate time. Read
-    // and reset through thinning_envelope_violations().
+    // and reset through thinning_envelope_violations(); augment_trees()
+    // reports the count accumulated over one call.
     std::atomic<long long> envelope_violations{ 0 };
 
     // Factor applied to the larger endpoint rate when lambda or mu vary
     // within a segment (an M or D coefficient is active): nh(t) is then not
     // monotone in t and its maximum need not lie at an endpoint.
+    //
+    // The factor is not a bound. In
+    // nh(t) = n * lambda(t) * (1 - rho * exp(-mu(t) * (T - t)))
+    // the survival factor falls with t, so when lambda rises with t the
+    // product peaks between the endpoints, and the peak exceeds twice the
+    // larger endpoint value at ordinary parameters: model = "nd", linear
+    // link, beta_D = -0.5 gives 8 to 15 violations per 2000 draws on the
+    // 7-tip tree of tests/testthat/test-thinning-envelope.R, -2.0 gives
+    // 24 to 46. A dominating envelope there is max(lambda) over the segment
+    // (attained at an endpoint, since eta is affine in t within a segment)
+    // times max(survival) over the segment (at most
+    // 1 - rho * exp(-max(mu) * (T - cbt))), which needs lambda and mu
+    // separately; Model exposes neither, nor its link and model_bin.
+    // Deferred to wave 3 with H6, the larger error on the same path.
     constexpr double envelope_safety = 2.0;
 
     // Rounding allowance on pt <= 1 (the survival factor at the candidate
@@ -171,14 +186,13 @@ namespace emphasis {
         const double next_bt = get_next_bt(tree, cbt);
         if (new_interval) {
           const double lambda_start = segment_start_rate(cbt, next_bt, pars, tree, model);
-          if (constant_rates) {
-            lambda_max = lambda_start;
-          }
-          else {
-            const double lambda_end = std::max(0.0, model.nh_rate(next_bt, pars, tree));
-            lambda_max = envelope_safety * std::max(lambda_start, lambda_end);
-          }
-          if (lambda_max > max_lambda) throw augmentation_lambda{};
+          const double endpoint_max = constant_rates
+            ? lambda_start
+            : std::max(lambda_start, std::max(0.0, model.nh_rate(next_bt, pars, tree)));
+          // max_lambda bounds the rate, not the envelope, so it is tested
+          // against the endpoint maximum; the safety factor is applied after.
+          if (endpoint_max > max_lambda) throw augmentation_lambda{};
+          lambda_max = constant_rates ? endpoint_max : envelope_safety * endpoint_max;
           new_interval = false;
         }
         double next_speciation_time = next_bt;
@@ -192,6 +206,8 @@ namespace emphasis {
           if (pt > 1.0 + pt_tolerance) {
             ++envelope_violations;
           }
+          // no effect on the draw: u2 is in [0, 1), so u2 < pt already held
+          // for every pt >= 1. The candidate is accepted either way.
           pt = std::min(pt, 1.0);
           if (u2 < pt) {
             double ext_time = model.extinction_time(next_speciation_time, pars, tree);

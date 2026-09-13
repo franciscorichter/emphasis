@@ -1,6 +1,8 @@
 
 #include <Rcpp.h>
 #include <array>
+#include <stdexcept>
+#include <string>
 #include <vector>
 #include <tbb/tbb.h>
 #include "emphasis.hpp"
@@ -41,6 +43,10 @@ using namespace Rcpp;
 //'   \item{rejected_zero_weights}{Rejected: zero IS weight (log weight -Inf).}
 //'   \item{rejected_nonfinite}{Rejected: log weight +Inf or NaN.}
 //'   \item{num_trees}{Number of trees returned (\code{length(trees)}).}
+//'   \item{envelope_violations}{Thinning candidates drawn during this call
+//'     whose acceptance probability exceeded 1, i.e. the envelope did not
+//'     dominate the rate. Non-zero means the draws are not from the density
+//'     \code{logg} charges them; a warning is issued.}
 //'   \item{time}{Elapsed time (ms).}
 //' }
 //' @keywords internal
@@ -56,10 +62,19 @@ List rcpp_mce(const std::vector<double>& brts,
               int link = 0,
               double rho = 1.0)
 {
+  if (pars.size() != 8) {
+    throw std::invalid_argument("augment_trees: pars must have length 8 (got " +
+      std::to_string(pars.size()) + ")");
+  }
   std::vector<int> model_bin = {model[0], model[1], model[2]};
   // Bounds are only needed for M-step (nlopt); E-step does not use them.
   std::vector<double> lb8(8, -1e6), ub8(8, 1e6);
   auto mdl = emphasis::Model(lb8, ub8, model_bin, link, rho);
+
+  // The envelope counter is process-wide and accumulates across calls and
+  // threads; the difference over the call is this call's count, and leaves
+  // the counter readable through thinning_envelope_violations().
+  const long long viol_before = emphasis::thinning_envelope_violations(false);
 
   auto E = emphasis::E_step(sample_size,
                             maxN,
@@ -83,7 +98,14 @@ List rcpp_mce(const std::vector<double>& brts,
   ret["rejected_zero_weights"] = E.info.rejected_zero_weights;
   ret["rejected_nonfinite"]    = E.info.rejected_nonfinite;
   ret["num_trees"]             = E.info.num_trees;
+  const long long viol = emphasis::thinning_envelope_violations(false) - viol_before;
+  ret["envelope_violations"]   = static_cast<double>(viol);
   ret["time"]                  = E.info.elapsed;
+  if (viol > 0) {
+    Rcpp::warning("augment_trees: thinning envelope did not dominate the rate at " +
+      std::to_string(viol) + " candidate(s); those trees are drawn from a "
+      "different density than logg charges (audit finding H7, D-dependent models)");
+  }
   return ret;
 }
 
