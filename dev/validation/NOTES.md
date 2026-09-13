@@ -10,6 +10,15 @@ Tree: `TreeSim::sim.bd.taxa(n = 30, lambda = 0.6, mu = 0.2, complete = FALSE)`, 
 
 - `btorph` (0/1) shifts the log-likelihood by a θ-independent constant; MLEs unchanged.
 - `DDD:::lambdamu`, `ddmodel = 1`: `λ(N) = pmax(0, λ0 − (λ0 − μ0)·N/K)`, `μ = μ0` — the same truncation as emphasis's linear link, so the mapping `β0 = λ0, βN = −(λ0−μ0)/K, γ0 = μ0, γN = 0` is exact.
-- **Open:** `dd_loglik(K = 10⁶, ddmodel = 1, cond = 0)` − `bd_loglik(cond = 0)` is **not** constant in θ (5.42, 4.66, 4.02, 2.90 at four points; unchanged by `lx` 500→2000 and by `K` 10⁴→10⁶). Before `dd_ML` is used as the DD reference, find which `pars2` encoding of the two functions describes the same likelihood (check `?bd_loglik` / `?dd_loglik` positional meanings of `pars2`, and `cond` semantics), or establish the DD reference independently (e.g. `dd_ML` vs the generating parameters on `dd_sim` trees).
+- **Closed (2026-09-13).** The apparent theta-dependent offset between `dd_loglik(K -> inf)` and
+  `bd_loglik` was a `pars2` slot error in this file: DDD 5.2.4 takes
+  `bd_loglik: c(tdmodel, cond, btorph, verbose, soc)` and
+  `dd_loglik: c(lx, ddmodel, cond, btorph, verbose, soc)`, and the earlier calls ended
+  `(verbose, soc) = (2, 0)`, so the "reference" was a stem-age likelihood. With the documented
+  layouts, over 4 trees x 5 theta: `max|dd_loglik(K = 1e6) - bd_loglik| = 3.4e-04`,
+  `max|bd_loglik(btorph = 1) - Nee closed form| = 8.5e-14`, and
+  `max|fhat_BDI - bd_loglik| = 1.6e-11` — the constant between emphasis's `f` and DDD at
+  `btorph = 1` is zero. `dd_loglik(ddmodel = 1)` returns `-Inf` for `mu0 >= lam0`, so the DD
+  reference exists only on `lam0 > mu0`.
 - DDD's `bd_loglik`/`dd_loglik` print "Parameters: … Loglikelihood: …" unconditionally; wrap calls in `capture.output()`.
 - `timeout` is not on macOS; use Rscript's own `setTimeLimit()` or the emphasis `max_time` control.
