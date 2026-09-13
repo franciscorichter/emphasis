@@ -1,0 +1,10 @@
+.libPaths(c("/Users/pancho/.claude/jobs/867af780/tmp/rlib", .libPaths()))
+Sys.setenv(NOT_CRAN = "true")
+library(emphasis); library(testthat)
+cat("build:", system.file(package="emphasis"), "\n")
+cat("has counter fn:", exists("thinning_envelope_violations", envir = asNamespace("emphasis")), "\n")
+env <- new.env(parent = asNamespace("emphasis"))
+# stub so the substantive expectations get to run on the PRE-FIX build
+assign("thinning_envelope_violations", function(reset = FALSE) 0, envir = env)
+res <- testthat::test_file("/Users/pancho/Code/emphasis/tests/testthat/test-thinning-envelope.R", env = env, reporter = "summary")
+print(as.data.frame(res)[, c("test","nb","failed","skipped","error","warning","real")])

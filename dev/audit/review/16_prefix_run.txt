@@ -1,0 +1,80 @@
+> .libPaths(c("/Users/pancho/.claude/jobs/867af780/tmp/rlib", .libPaths())); library(emphasis); testthat::test_file("/Users/pancho/Code/emphasis/tests/testthat/test-mcem-thinning.R", env=new.env(parent=asNamespace("emphasis")), reporter="summary")
+mcem-thinning: 1.2.3456..789...a.b..cde...fgh.ij...klmn.opq
+
+══ Failed ══════════════════════════════════════════════════════════════════════
+── 1. Failure ('test-mcem-thinning.R:51:3'): sample_size > maxN: maxN ratchets o
+Expected `d$n_failed` to equal 1L.
+Differences:
+`actual` is NULL
+`expected` is an integer vector (1)
+
+
+── 2. Failure ('test-mcem-thinning.R:53:3'): sample_size > maxN: maxN ratchets o
+Expected `d$maxN` to equal 400L.
+Differences:
+`actual` is NULL
+`expected` is an integer vector (400)
+
+
+── 3. Failure ('test-mcem-thinning.R:55:3'): sample_size > maxN: maxN ratchets o
+Expected `nrow(d$mcem)` to equal `d$iterations + 1L`.
+Differences:
+  `actual`: 20
+`expected`: 21
+
+
+── 4. Failure ('test-mcem-thinning.R:59:3'): sample_size > maxN: maxN ratchets o
+Expected `max(abs(as.numeric(fit$pars) - centre))` > 1.
+Actual comparison: 0.59 <= 1.00
+Difference: -0.41 <= 0
+
+── 5. Failure ('test-mcem-thinning.R:60:3'): sample_size > maxN: maxN ratchets o
+Expected `as.numeric(fit$pars)[2]` < 1.
+Actual comparison: 1.41 >= 1.00
+Difference: 0.41 >= 0
+
+── 6. Error ('test-mcem-thinning.R:64:3'): sample_size > maxN: maxN ratchets onc
+Error in `!d$mcem$final_estep`: invalid argument type
+Backtrace:
+    ▆
+ 1. ├─d$mcem[!d$mcem$final_estep, ] at test-mcem-thinning.R:64:3
+ 2. └─base::`[.data.frame`(d$mcem, !d$mcem$final_estep, ) at test-mcem-thinning.R:64:3
+
+── 7. Failure ('test-mcem-thinning.R:86:3'): final E-step: fit$loglik is fhat at
+Expected `res$final_estep` to be TRUE.
+Differences:
+`actual` is NULL
+`expected` is a logical vector (TRUE)
+
+
+── 8. Failure ('test-mcem-thinning.R:87:3'): final E-step: fit$loglik is fhat at
+Expected `nrow(m)` to equal 4L.
+Differences:
+  `actual`: 3
+`expected`: 4
+
+
+── 9. Failure ('test-mcem-thinning.R:88:3'): final E-step: fit$loglik is fhat at
+Expected `m$final_estep` to equal `c(FALSE, FALSE, FALSE, TRUE)`.
+Differences:
+`actual` is NULL
+`expected` is a logical vector (FALSE, FALSE, FALSE, TRUE)
+
+
+── 10. Failure ('test-mcem-thinning.R:96:3'): final E-step: fit$loglik is fhat a
+Expected `is.na(last$delta_max)` to be TRUE.
+Differences:
+`actual`:   FALSE
+`expected`: TRUE 
+
+  ... and 16 more
+
+
+Maximum number of 10 failures reached, some test results may be missing.
+
+══ DONE ════════════════════════════════════════════════════════════════════════
+Frustration is a natural part of programming :)
+Warning message:
+package ‘testthat’ was built under R version 4.4.3 
+> 
+> 

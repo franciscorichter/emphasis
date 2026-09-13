@@ -1,0 +1,20 @@
+args <- commandArgs(trailingOnly = TRUE); lib <- args[1]
+.libPaths(c(lib, .libPaths())); suppressPackageStartupMessages(library(emphasis))
+ns <- asNamespace("emphasis"); cat("lib:", find.package("emphasis"), "\n")
+brts_dd <- c(6, 4.848493, 4.401821, 3.108164, 3.073914, 2.835023, 1.838828, 0.50463)
+mb <- c(1L,0L,0L)
+p8 <- ns$.expand_pars(c(1.5,-0.12,0.4,0), mb); lb8 <- ns$.expand_pars(c(0.01,-1,0.001,0), mb); ub8 <- ns$.expand_pars(c(5,0,2,0), mb)
+cat("p8:", p8, "\n")
+sm <- function(r) cat(sprintf("  stop=%s iters=%d n_failed=%d loglik=%.4f var=%.3g nrow(mcem)=%s pars=%s\n  n_nonfinite col=%s | rejected col=%s | num_trees=%s | m_moved=%s | delta=%s\n  final_IS: n_rejected=%s rejected_zero_weights=%s ESS=%s\n", r$stop_reason, r$iterations, r$n_failed, r$loglik, r$loglik_var, nrow(r$mcem), paste(signif(r$pars[c(1,2,5)],4), collapse=","), paste(r$mcem$n_nonfinite, collapse=","), paste(r$mcem$rejected, collapse=","), paste(r$mcem$num_trees, collapse=","), paste(r$mcem$m_moved, collapse=","), paste(signif(r$mcem$delta_max,2), collapse=","), r$final_IS$n_rejected, r$final_IS$rejected_zero_weights, signif(r$final_IS$ESS,4)))
+# Wrap .augment_tree_bdi to log what 1.4 reports, without changing it
+real_aug <- ns$.augment_tree_bdi; seen <- list()
+testthat::with_mocked_bindings(.augment_tree_bdi = function(tree, pars, ...) { e <- real_aug(tree, pars, ...); seen[[length(seen)+1L]] <<- c(n_valid = e$n_valid, n_nonfinite = e$n_nonfinite, n_rej = e$n_rejected, n_rej_mm = e$n_rejected_max_missing, n_trees = length(e$trees)); e }, .package = "emphasis", {
+  cat("\n[C1] dd linear, H11-D config, 4 iterations, N=200, max_missing=30\n"); set.seed(11)
+  r <- suppressWarnings(ns$.mcem_bdi(brts_dd, pars = p8, sample_size = 200L, max_missing = 30L, lower_bound = lb8, upper_bound = ub8, max_iter = 4L, xtol = 1e-3, tol = 1e-2, patience = 3L, num_threads = 1L, model = mb, link = 0L, rho = 1))
+  sm(r); cat("  what 1.4 reported per E-step call:\n"); print(do.call(rbind, seen))
+  seen <<- list()
+  cat("\n[C2] dd exponential link, 3 iterations, N=100\n"); set.seed(12)
+  pe <- ns$.expand_pars(c(log(1.5), -0.05, log(0.4), 0), mb)
+  r <- suppressWarnings(ns$.mcem_bdi(brts_dd, pars = pe, sample_size = 100L, max_missing = 30L, lower_bound = ns$.expand_pars(c(-5,-1,-5,0), mb), upper_bound = ns$.expand_pars(c(3,0,3,0), mb), max_iter = 3L, xtol = 1e-3, tol = 1e-2, patience = 3L, num_threads = 1L, model = mb, link = 1L, rho = 1))
+  sm(r); print(do.call(rbind, seen))
+})

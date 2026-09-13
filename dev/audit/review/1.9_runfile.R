@@ -1,0 +1,6 @@
+a <- commandArgs(trailingOnly=TRUE)
+.libPaths(c(a[1], .libPaths()))
+library(emphasis)
+cat("### lib:", a[1], " file:", a[2], "\n")
+rep <- testthat::SummaryReporter$new(max_reports = 100L)
+testthat::test_file(a[2], env = new.env(parent = asNamespace("emphasis")), reporter = rep)
