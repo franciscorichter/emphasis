@@ -2,7 +2,8 @@
 # Pins wave-1 item 1.7: audit ids H1, H16 (E-step half), H62, H68.
 #   - a completed augmentation is accepted iff its log-weight is finite
 #     (no absolute cut at log_w = -745.13 from exp() underflow);
-#   - log_w = -Inf counts as a zero-weight tree, +Inf/NaN separately;
+#   - logf = -Inf counts as a zero-weight tree, +Inf/NaN separately;
+#   - a sample size below 1 is an error, not an empty-range read;
 #   - with num_threads > 1 the sampler stops at exactly sample_size trees;
 #   - fhat divides by trees.size() + rejected_zero_weights.
 
@@ -29,6 +30,19 @@ aug <- function(brts, lambda, mu, N, maxN, num_threads = 1L) {
                 max_missing = 10000L, max_lambda = 1e6,
                 num_threads = as.integer(num_threads), model = cr, link = 0L,
                 rho = 1.0)
+}
+
+# 12-tip tree and a diversity-dependent call, for the weight-classification
+# tests: under the linear link lambda = lambda_0 + beta_N * N goes negative
+# at large N once beta_N is negative enough.
+b12 <- c(10, 8.3, 7.1, 6.2, 5.5, 4.4, 3.9, 3.1, 2.2, 1.5, 0.9, 0.3)
+dd  <- c(1L, 0L, 0L)
+pars_dd <- function(lambda, beta_N, mu) c(lambda, 0, beta_N, 0, mu, 0, 0, 0)
+
+aug_dd <- function(brts, lambda, beta_N, mu, N, maxN) {
+  augment_trees(brts, pars_dd(lambda, beta_N, mu), as.integer(N),
+                as.integer(maxN), max_missing = 10000L, max_lambda = 1e6,
+                num_threads = 1L, model = dd, link = 0L, rho = 1.0)
 }
 
 # log-mean-exp of the IS weights over completed augmentations, as E_step() does
@@ -85,6 +99,63 @@ test_that("zero-probability augmentations are counted as zero weights and the E-
   expect_match(conditionMessage(err), "40 zero weights")
   expect_match(conditionMessage(err), "0 non-finite weights")
   expect_match(conditionMessage(err), "Trees so far: 0")
+})
+
+test_that("a draw with logf = -Inf is a zero weight even when logg underflows too", {
+  # Trees augmented at beta_N = -0.06 complete; scored at beta_N = -0.5 the
+  # same trees give logf = -Inf (lambda <= 0 at a speciation node) AND
+  # logg = -Inf, so logf - logg is NaN.  Classification is on logf, so these
+  # are zero weights; classifying on log_w puts them in rejected_nonfinite
+  # and drops them from the fhat denominator.
+  r <- aug_dd(b12, 0.6, -0.06, 0.1, N = 8, maxN = 3000)
+  z <- eval_logf(pars_dd(0.6, -0.5, 0.1), r$trees, model = dd, link = 0L,
+                 rho = 1.0)
+  expect_true(all(z$logf == -Inf))
+  expect_true(all(z$logg == -Inf))
+  expect_true(all(is.nan(z$logf - z$logg)))
+
+  # An E-step run in that regime: every attempt is such a draw.
+  err <- tryCatch(aug_dd(b12, 0.6, -0.5, 0.1, N = 2, maxN = 400),
+                  error = function(e) e)
+  expect_s3_class(err, "error")
+  expect_match(conditionMessage(err), "400 zero weights")
+  expect_match(conditionMessage(err), "0 non-finite weights")
+})
+
+test_that(".total_rejected counts the non-finite bucket", {
+  # The counter is an E-step output, so it is pinned next to the E-step: a
+  # draw that lands in rejected_nonfinite must still reach the CEM/DE
+  # rejection total, as it did when the same draw was a zero weight.
+  raw <- list(rejected = 1L, rejected_zero_weights = 2L,
+              rejected_overruns = 3L, rejected_lambda = 4L,
+              rejected_nonfinite = 5L)
+  expect_equal(emphasis:::.total_rejected(raw), 15L)
+  raw$rejected_nonfinite <- NULL          # older returns carry no such slot
+  expect_equal(emphasis:::.total_rejected(raw), 10L)
+})
+
+test_that("a sample size below 1 is an error, not a read past the sample", {
+  # With N < 1 nothing is stored, the num_trees < N test is false, and the
+  # max_element / fhat tail then reads an empty weight vector: the pre-guard
+  # build segfaults here, so the call runs in its own process.
+  skip_on_cran()
+  skip_if_not_installed("pkgload")
+  pkg <- normalizePath(test_path("..", ".."), mustWork = TRUE)
+  script <- tempfile(fileext = ".R")
+  on.exit(unlink(script), add = TRUE)
+  writeLines(c(
+    sprintf('pkgload::load_all(%s, quiet = TRUE)', shQuote(pkg)),
+    'res <- tryCatch({',
+    '  augment_trees(c(4, 2.5, 1.2, 0.6), c(0.5, 0, 0, 0, 0.1, 0, 0, 0),',
+    '                0L, 20L, 10000L, 1e6, 1L, c(0L, 0L, 0L), 0L, 1)',
+    '  "returned"',
+    '}, error = function(e) "error")',
+    'cat("RESULT:", res, "\n")'), script)
+  out <- suppressWarnings(
+    system2(file.path(R.home("bin"), "Rscript"), shQuote(script),
+            stdout = TRUE, stderr = FALSE))
+  # A crash produces no RESULT line at all.
+  expect_true(any(grepl("RESULT: error", out, fixed = TRUE)))
 })
 
 test_that("em_cpp fhat is the log-mean-exp over trees.size() + rejected_zero_weights", {

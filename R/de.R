@@ -17,7 +17,8 @@
 # Total rejection count across all failure types
 .total_rejected <- function(raw) {
   .n0(raw$rejected) + .n0(raw$rejected_zero_weights) +
-    .n0(raw$rejected_overruns) + .n0(raw$rejected_lambda)
+    .n0(raw$rejected_overruns) + .n0(raw$rejected_lambda) +
+    .n0(raw$rejected_nonfinite)
 }
 
 # --------------------------------------------------------------------------- #
