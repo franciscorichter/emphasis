@@ -6,7 +6,10 @@ int_cr <- emphasis:::.bdi_integral_cr
 
 tp <- 5
 
-# Numerical integral of the total BDI rate through .bdi_p_cr itself.
+# Numerical integral of the total BDI rate through .bdi_p_cr itself, so an
+# error shared by p_cr and the closed form would cancel out of the
+# comparison; p_cr is pinned separately against Nee's formula and against
+# the hand-written critical limit below.
 num_int <- function(t1, t2, n, k, lam, mu, rel.tol = 1e-12) {
   rate <- function(t) {
     p <- vapply(t, function(s) p_cr(s, lam, mu, tp), numeric(1))
@@ -107,6 +110,30 @@ test_that("integral edge cases: zero-length segment and t2 == tp", {
   expect_true(is.finite(int_cr(1, tp, 0L, 2L, 0.5, 0.3, tp)))
   expect_true(is.finite(int_cr(1, tp, 0L, 2L, 0.3, 0.5, tp)))
   expect_true(is.finite(int_cr(1, tp, 0L, 2L, 0.4, 0.4, tp)))
+})
+
+test_that("the integral stays finite when |lam - mu| * (tp - t) passes the exp range", {
+  # exp(-(lam0-mu0)*(tp-t)) overflows for mu0 > lam0 once the product passes
+  # ~709.  The factored form keeps the exponent non-positive.
+  expect_true(is.finite(int_cr(0, 3, 0L, 2L, 0.1, 200, tp)))
+  expect_true(is.finite(int_cr(0, 3, 1L, 2L, 0.1, 200, tp)))
+  expect_true(is.finite(int_cr(0, 3, 1L, 2L, 0.1, 1e4, tp)))
+  # Agreement with the numerical integral, and with the value at mu - lam
+  # = 100 where the unfactored form is still in range.
+  expect_equal(int_cr(0, 3, 1L, 2L, 0.1, 200, tp),
+               num_int(0, 3, 1, 2, 0.1, 200), tolerance = 1e-10)
+  expect_equal(int_cr(0, 3, 1L, 2L, 0.1, 100.1, tp), 301.8, tolerance = 1e-9)
+  expect_true(is.finite(p_cr(1, 0.1, 200, tp)))
+
+  # And the sampler runs there: lam = 1, mu = exp(5.5) = 244.7 gives
+  # (mu - lam) * tp = 1218, well past the overflow threshold.
+  set.seed(11)
+  a <- emphasis:::.augment_tree_bdi(brts11, pars = c(0, 5.5),
+                                    model_bin = c(0L, 0L, 0L),
+                                    sample_size = 5L, link = 1L, rho = 1)
+  expect_length(a$trees, 5L)
+  expect_true(is.finite(a$fhat))
+  expect_lt(diff(range(a$weights)), 1e-8)
 })
 
 test_that(".bdi_find_event_time_cr runs with mu > lam and n > 0", {

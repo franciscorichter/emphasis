@@ -19,8 +19,11 @@ cr8  <- function(lam, mu) c(lam, 0, 0, 0, mu, 0, 0, 0)
 lb8  <- cr8(0, 0)
 ub8  <- cr8(3, 3)
 
-# Relative change of the stopping rule, recomputed from two parameter vectors.
-rel_change <- function(new, old, eps = 1e-2)
+# Relative change of the stopping rule, recomputed from two parameter
+# vectors.  The floor carries the units of the parameters: under the linear
+# link it is 1e-2 / crown_age (.rel_floor).
+floor12    <- 1e-2 / max(brts12)
+rel_change <- function(new, old, eps = floor12)
   max(abs(new - old) / pmax(abs(old), eps))
 
 run_bdi <- function(pars, max_iter, tol = 1e-2, patience = 3L,
@@ -36,7 +39,7 @@ run_bdi <- function(pars, max_iter, tol = 1e-2, patience = 3L,
 #  Stopping rule (H21)                                                         #
 # --------------------------------------------------------------------------- #
 
-test_that("delta_max is the relative change with floor eps = 1e-2 and is scaled by the parameter, not the box", {
+test_that("delta_max is the relative change with the .rel_floor floor and is scaled by the parameter, not the box", {
   steps <- c(0.004, 0.004, 0.05, 0.004, 0.004, 0.004)   # relative moves of lambda
   k <- 0L
   testthat::local_mocked_bindings(
@@ -61,8 +64,9 @@ test_that("delta_max is the relative change with floor eps = 1e-2 and is scaled 
   em <- r$mcem[r$mcem$m_step, ]
   expect_equal(nrow(em), 6L)
   # Iteration 1: lambda 0.5 -> 0.502 (0.4 %), mu 1e-3 -> 1.5e-3, measured
-  # against eps = 1e-2 (5 %), so delta_max = 0.05 whatever the box.
-  expect_equal(em$delta_max[1], 5e-4 / 1e-2)
+  # against the floor 1e-2 / crown_age, so delta_max is that ratio whatever
+  # the box.
+  expect_equal(em$delta_max[1], 5e-4 / floor12)
   expect_equal(em$abs_step[1], 0.5 * 0.004)
   # Iteration 3: lambda step of 5 % dominates.
   expect_equal(em$delta_max[3], 0.05, tolerance = 1e-8)
@@ -115,6 +119,39 @@ test_that("boxes [0,3], [0,30] and [0,300] give estimates within tolerance of ea
   }
 })
 
+test_that("the run is unchanged when the tree is measured in another unit of time", {
+  # brts * s with rates / s is the same tree in another unit, so every
+  # iterate scales by 1/s and delta_max, being relative, must not move.  An
+  # absolute floor of 1e-2 breaks this: at s = 1000 every rate sits far
+  # below it, each delta_max is divided by about 8 and the run stops as
+  # "converged" after `patience` iterations at essentially the init.
+  fit_scaled <- function(s) {
+    set.seed(21)
+    ns$.mcem_bdi(brts12 * s, pars = cr8(1.2, 0.9) / s, sample_size = 30L,
+                 max_missing = 1e4, lower_bound = cr8(0, 0),
+                 upper_bound = cr8(3, 3) / s, max_iter = 6L, xtol = 1e-3,
+                 tol = 1e-2, patience = 3L, num_threads = 1L,
+                 model = c(0L, 0L, 0L), link = 0L, rho = 1)
+  }
+  r1 <- fit_scaled(1)
+  r2 <- fit_scaled(1000)
+
+  expect_identical(r2$stop_reason, r1$stop_reason)
+  expect_equal(r2$iterations, r1$iterations)
+  expect_gt(r1$iterations, 3L)          # the scaled run must not stop early
+  expect_equal(r2$pars * 1000, r1$pars, tolerance = 1e-10)
+
+  e1 <- r1$mcem[r1$mcem$m_step, ]
+  e2 <- r2$mcem[r2$mcem$m_step, ]
+  expect_equal(e2$delta_max, e1$delta_max, tolerance = 1e-10)
+  # The recomputed statistic uses the floor of the scale it was fitted at.
+  pc <- grep("^par[0-9]+$", names(e1), value = TRUE)
+  P2 <- rbind(cr8(1.2, 0.9) / 1000, as.matrix(e2[, pc]))
+  for (k in seq_len(nrow(e2)))
+    expect_equal(e2$delta_max[k],
+                 rel_change(P2[k + 1, ], P2[k, ], floor12 / 1000))
+})
+
 # --------------------------------------------------------------------------- #
 #  Patience accounting and trace columns (H11 d)                              #
 # --------------------------------------------------------------------------- #
@@ -135,37 +172,61 @@ test_that("an M-step that returns its start unchanged does not count toward pati
   expect_false(any(em$m_moved))
 })
 
-test_that("non-finite draws and rejections are recorded from the E-step, and non-finite draws are excluded from the M-step set", {
+test_that("non-finite draws and both rejection channels are recorded from the E-step", {
+  # .augment_tree_bdi drops non-finite draws before returning, so the trace
+  # has to read its counts rather than recount the filtered vector.  The
+  # H11 part-D configuration drops 50-100 of 200 draws per E-step.
   real_aug <- ns$.augment_tree_bdi
+  seen <- list()
   n_trees_seen <- integer(0)
   testthat::local_mocked_bindings(
     .augment_tree_bdi = function(tree, pars, ...) {
       e <- real_aug(tree, pars, ...)
-      e$logf[1]    <- -Inf
-      e$weights[1] <- -Inf
-      e$n_rejected <- 7L
+      seen[[length(seen) + 1L]] <<- e
       e
     },
     m_cpp = function(e_step, init_pars, ...) {
       n_trees_seen <<- c(n_trees_seen, length(e_step$trees))
       est <- init_pars
-      est[1] <- est[1] * 1.001
+      est[2] <- est[2] * 1.001
       list(estimates = est, nlopt = 4L, time = 0)
     },
     .package = "emphasis")
 
-  set.seed(3)
-  r <- run_bdi(cr8(0.5, 0.2), max_iter = 2L, tol = 0, sample_size = 10L)
+  set.seed(11)
+  r <- ns$.mcem_bdi(brts_dd, pars = c(1.5, -0.12, 0.4, 0), sample_size = 200L,
+                    max_missing = 30L, lower_bound = c(0.01, -1, 0.001, 0),
+                    upper_bound = c(5, 0, 2, 0), max_iter = 2L, xtol = 1e-3,
+                    tol = 0, patience = 3L, num_threads = 1L,
+                    model = c(1L, 0L, 0L), link = 0L, rho = 1)
 
   m <- r$mcem
+  expect_equal(nrow(m), length(seen))
   expect_type(m$rejected, "integer")
   expect_type(m$n_nonfinite, "integer")
-  expect_true(all(m$rejected == 7L))
-  expect_true(all(m$n_nonfinite == 1L))
-  expect_true(all(m$num_trees == 10L))
-  expect_equal(n_trees_seen, c(9L, 9L))
-  expect_equal(r$final_IS$n_rejected, 7L)
-  expect_equal(r$final_IS$rejected_zero_weights, 1L)
+  expect_type(m$rejected_max_missing, "integer")
+
+  # The counts in the trace are the counts the E-step reported.
+  expect_equal(m$n_nonfinite, vapply(seen, function(e) e$n_nonfinite, integer(1)))
+  expect_equal(m$rejected, vapply(seen, function(e) e$n_rejected, integer(1)))
+  expect_equal(m$rejected_max_missing,
+               vapply(seen, function(e) e$n_rejected_max_missing, integer(1)))
+  expect_gt(sum(m$n_nonfinite), 0L)
+  expect_gt(sum(m$rejected), 0L)
+  expect_gt(sum(m$rejected_max_missing), 0L)
+
+  # num_trees is the finite subset, n_valid the fhat denominator.
+  expect_true(all(m$n_valid == 200L))
+  expect_equal(m$num_trees + m$n_nonfinite, m$n_valid)
+  expect_true(all(m$num_trees < 200L))
+
+  # The M-step sees exactly the finite subset of the iteration's E-step.
+  expect_equal(n_trees_seen, utils::head(m$num_trees, 2L))
+
+  expect_equal(r$final_IS$n_rejected, utils::tail(m$rejected, 1L))
+  expect_equal(r$final_IS$rejected_zero_weights, utils::tail(m$n_nonfinite, 1L))
+  expect_gt(r$final_IS$rejected_zero_weights, 0L)
+  expect_length(r$final_IS$logf, utils::tail(m$num_trees, 1L))
 })
 
 test_that("the H11 part D configuration does not report convergence through zero-delta iterations", {
@@ -259,6 +320,68 @@ test_that("an E-step failure restarts from the last successful iterate, not from
   expect_identical(r$stop_reason, "max_iter")
   expect_equal(nrow(r$mcem), 3L)
   expect_equal(calls[[4]], r$pars)
+})
+
+test_that("an M-step that keeps proposing an unusable iterate stops with e_step_failure instead of alternating", {
+  # The M-step always proposes lambda = 0.6, where the E-step fails; the
+  # failure branch restarts at 0.5, where it succeeds.  fail_streak never
+  # reaches 8, so only the cumulative count ends the run.
+  real_aug <- ns$.augment_tree_bdi
+  seen <- numeric(0)
+  testthat::local_mocked_bindings(
+    .augment_tree_bdi = function(tree, pars, ...) {
+      seen <<- c(seen, pars[1])
+      if (pars[1] > 0.55) stop("simulated E-step failure")
+      real_aug(tree, pars, ...)
+    },
+    m_cpp = function(e_step, init_pars, ...) {
+      est <- init_pars; est[1] <- 0.6
+      list(estimates = est, nlopt = 4L, time = 0)
+    },
+    .package = "emphasis")
+
+  set.seed(6)
+  r <- run_bdi(cr8(0.5, 0.2), max_iter = 30L, tol = 0)
+
+  expect_identical(r$stop_reason, "e_step_failure")
+  expect_equal(r$n_failed, 8L)
+  expect_lt(r$iterations, 30L)
+  # The returned iterate is the one whose E-step succeeds, not the proposal.
+  expect_equal(r$pars[1], 0.5)
+  expect_true(is.finite(r$loglik))
+  expect_true(all(seen %in% c(0.5, 0.6)))
+  expect_equal(sum(seen > 0.55), 8L)
+})
+
+test_that("a failing final E-step returns the last iterate whose E-step succeeded", {
+  real_aug <- ns$.augment_tree_bdi
+  calls <- list()
+  testthat::local_mocked_bindings(
+    .augment_tree_bdi = function(tree, pars, ...) {
+      calls[[length(calls) + 1L]] <<- pars
+      if (length(calls) == 3L) stop("simulated E-step failure")
+      real_aug(tree, pars, ...)
+    },
+    .package = "emphasis")
+
+  set.seed(7)
+  r <- run_bdi(cr8(0.5, 0.2), max_iter = 2L, tol = 0, sample_size = 10L)
+
+  # Calls 1 and 2 are the two iterations, call 3 the final E-step at
+  # theta_2 (fails), call 4 the fallback at theta_1.
+  expect_length(calls, 4L)
+  expect_identical(calls[[4]], calls[[2]])
+  expect_identical(r$pars, calls[[2]])
+  expect_false(identical(r$pars, calls[[3]]))
+  expect_true(is.finite(r$loglik))
+  expect_false(is.null(r$final_IS))
+  expect_equal(r$n_failed, 1L)
+
+  # The last trace row is that E-step, at the returned parameters.
+  m  <- r$mcem
+  pc <- grep("^par[0-9]+$", names(m), value = TRUE)
+  expect_false(utils::tail(m$m_step, 1L))
+  expect_equal(unname(unlist(m[nrow(m), pc])), r$pars)
 })
 
 test_that("eight consecutive E-step failures return the init unchanged with iterations 0 and loglik NA", {

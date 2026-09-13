@@ -42,5 +42,16 @@ fhat = log(sum_w / n_valid) + max_lw + log(acc), where n_valid counts every
 completed draw and acc = n_valid / (n_valid + n_rejected) is the acceptance
 rate of the survivor channel.  max_missing overflows are excluded from the
 denominator, as in the thinning E-step (S_completed in src/E_step.cpp).
+
+The log(acc) correction is derived at \code{rho = 1}, where a surviving
+missing lineage has f = 0 and the rejection is a property of the target.
+At \code{rho < 1} an unsampled survivor is a legitimate configuration, so
+the factor does not apply (measured shift -0.1104 at rho = 0.5 on the
+20-tip DD tree of tests/testthat/test-bdi-dd.R).  \code{acc} is the
+stop-at-\code{n_valid} plug-in estimate of the acceptance rate, which is
+biased at small \code{sample_size}: at the function's own default
+\code{sample_size = 1L} a draw with three survivor rejections moves fhat
+by log(1/4) = -1.39.  At the MCEM default of a few hundred draws the bias
+is of order 1e-3.
 }
 \keyword{internal}

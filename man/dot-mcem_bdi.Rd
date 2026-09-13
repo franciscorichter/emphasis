@@ -41,10 +41,13 @@ of the augmented trees.  Convergence depends only on the M-step.
 
 Stopping rule.  With theta_k the M-step output of iteration k,
 \deqn{\delta_k = \max_j |\theta_k[j] - \theta_{k-1}[j]| / \max(|\theta_{k-1}[j]|, \epsilon)}
-with \eqn{\epsilon = 10^{-2}}, and the run stops as "converged" once
-\eqn{\delta_k < tol} for \code{patience} consecutive iterations.  The
-scale is the parameter itself, not the search box, so the same fit stops
-at the same point whatever bounds the user passes.  An iteration whose
+(\code{.rel_change}) with \eqn{\epsilon} from \code{.rel_floor}, and the
+run stops as "converged" once \eqn{\delta_k < tol} for \code{patience}
+consecutive iterations.  The scale is the parameter itself, not the
+search box, so the same fit stops at the same point whatever bounds the
+user passes; the floor carries the units of the parameters, so it also
+stops at the same point when the tree is measured in another unit of
+time.  An iteration whose
 M-step returned its starting point unchanged carries no information about
 stability and resets the streak.  The trace also records the absolute
 step \code{abs_step} and \code{drift}, the same relative displacement
@@ -55,6 +58,21 @@ deterministic EM drift it is \code{patience} steps.
 The reported likelihood is a separate E-step at the final iterate, so
 \code{fhat}, ESS, \code{final_IS} and \code{loglik_var} all describe
 \code{pars}; that E-step is the last row of \code{mcem} (\code{m_step =
-FALSE}, no step columns) and is not counted in \code{iterations}.
+FALSE}, no step columns) and is not counted in \code{iterations}.  When
+that E-step fails and the final iterate is not the last one whose E-step
+succeeded, \code{pars} falls back to that iterate and the E-step is run
+there: a theta the sampler cannot evaluate is not returned as an
+estimate.
+
+Draw counts come from the E-step, which drops non-finite draws before
+returning: \code{n_valid} is the number of completed draws and the fhat
+denominator, \code{num_trees} the finite subset handed to the M-step, and
+\code{n_nonfinite} the difference.  \code{rejected} and
+\code{rejected_max_missing} are the two rejection channels.
+
+Eight E-step failures end the run with \code{stop_reason =
+"e_step_failure"} whether or not they are consecutive, so an M-step that
+keeps proposing an iterate the sampler cannot evaluate does not alternate
+to \code{max_iter}.
 }
 \keyword{internal}

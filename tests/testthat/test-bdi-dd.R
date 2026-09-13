@@ -67,8 +67,10 @@ test_that("BDI dd fhat matches DDD::dd_loglik up to a theta-independent constant
   expect_lt(min(res$acc), 0.75)
 
   # Corrected estimator: fhat - dd_loglik is a constant (~0) across theta.
+  # Measured spread of the gap over this grid: 0.06-0.14 with the log(acc)
+  # correction, 0.33-0.42 without it (seeds 101, 202, 303).
   gap <- res$fhat - res$ref
-  expect_lt(diff(range(gap)), 0.5)
+  expect_lt(diff(range(gap)), 0.25)
   expect_lt(max(abs(gap)), 0.3)
 
   # The estimator without log(acc) is off by -log(acc): > 0.3 nats at the
