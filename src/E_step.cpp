@@ -2,6 +2,7 @@
 #include <atomic>
 #include <algorithm>
 #include <numeric>
+#include <limits>
 #include <string>
 #include <tbb/tbb.h>
 #include "model.hpp"
@@ -50,6 +51,12 @@ namespace emphasis {
                   int num_threads,
                   double max_time_seconds)  // 0 = default 120s safety limit
   {
+    // N < 1 leaves the sample empty on every path: nothing is stored, the
+    // `num_trees < N` test below is false, and max_element/fhat would then
+    // read an empty weight vector and divide by zero.
+    if (N < 1) {
+      throw emphasis_error("E_step: sample size must be at least 1");
+    }
     if (!model.is_threadsafe()) num_threads = 1;
     num_threads = std::max(1, std::min(num_threads, static_cast<int>(std::thread::hardware_concurrency())));
     std::mutex mutex;
@@ -68,7 +75,9 @@ namespace emphasis {
     // is neither stored nor counted.  Every counter therefore refers to an
     // attempt completed before tree N was pushed, and
     // trees.size() + rejected_zero_weights is the number of completed
-    // augmentations that fhat averages over.
+    // augmentations that fhat averages over.  Attempts still in flight when
+    // the N-th tree is pushed are dropped from numerator and denominator
+    // alike; the drop does not depend on their outcome.
     tbb::parallel_for(tbb::blocked_range<unsigned>(0, maxN, grainsize), [&](const tbb::blocked_range<unsigned>& r) {
       for (unsigned i = r.begin(); i < r.end(); ++i) {
         if (stop) break;
@@ -114,13 +123,17 @@ namespace emphasis {
               }
             }
           }
-          else if (log_w == -std::numeric_limits<double>::infinity()) {
+          else if (logf == -std::numeric_limits<double>::infinity()) {
             // completed augmentation with f = 0 (e.g. lambda = 0 at a
             // speciation node): zero weight, enters the fhat denominator.
+            // Classification is on logf, not on log_w: when logg has also
+            // underflowed to -Inf the difference is NaN, and the draw is
+            // still a completed augmentation of probability zero.
             ++E.info.rejected_zero_weights;
           }
           else {
-            // +Inf or NaN: g = 0 or both f and g zero; not a valid draw.
+            // logf = +Inf, or a NaN log_w whose logf is finite (g = 0 or
+            // g = Inf): not a valid draw.
             ++E.info.rejected_nonfinite;
           }
         }
@@ -145,7 +158,9 @@ namespace emphasis {
     auto T1 = std::chrono::high_resolution_clock::now();
     E.info.elapsed = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count());
 
-    if (E.info.num_trees < N) {
+    // An empty sample is thrown on unconditionally: max_element below has no
+    // defined result on an empty range, and S_completed would be zero.
+    if (E.info.num_trees < N || E.weights.empty()) {
       throw emphasis_error_E(E);
     }
   
