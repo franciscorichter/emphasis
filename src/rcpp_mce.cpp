@@ -37,7 +37,9 @@ using namespace Rcpp;
 //'   \item{rejected}{Unhandled rejections.}
 //'   \item{rejected_overruns}{Rejected: too many extinct lineages.}
 //'   \item{rejected_lambda}{Rejected: lambda bound exceeded.}
-//'   \item{rejected_zero_weights}{Rejected: zero IS weight.}
+//'   \item{rejected_zero_weights}{Rejected: zero IS weight (log weight -Inf).}
+//'   \item{rejected_nonfinite}{Rejected: log weight +Inf or NaN.}
+//'   \item{num_trees}{Number of trees returned (\code{length(trees)}).}
 //'   \item{time}{Elapsed time (ms).}
 //' }
 //' @keywords internal
@@ -78,6 +80,8 @@ List rcpp_mce(const std::vector<double>& brts,
   ret["rejected_overruns"]     = E.info.rejected_overruns;
   ret["rejected_lambda"]       = E.info.rejected_lambda;
   ret["rejected_zero_weights"] = E.info.rejected_zero_weights;
+  ret["rejected_nonfinite"]    = E.info.rejected_nonfinite;
+  ret["num_trees"]             = E.info.num_trees;
   ret["time"]                  = E.info.elapsed;
   return ret;
 }

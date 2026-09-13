@@ -60,7 +60,9 @@ a list with the following components:
  \item{rejected}{number of rejected trees}
  \item{rejected_overruns}{number of trees rejected due to too large size}
  \item{rejected_lambda}{number of trees rejected due to lambda errors}
- \item{rejected_zero_weights}{number of trees rejected due to zero weight}
+ \item{rejected_zero_weights}{number of trees rejected due to zero weight (log weight -Inf)}
+ \item{rejected_nonfinite}{number of trees rejected due to a +Inf or NaN log weight}
+ \item{num_trees}{number of trees the E-step returned}
  \item{estimates}{vector of estimates}
  \item{nlopt}{nlopt status}
  \item{fhat}{vector of fhat values}

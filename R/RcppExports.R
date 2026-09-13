@@ -72,7 +72,9 @@ eval_logf <- function(pars, trees, model = as.integer( c(0, 0, 0)), link = 0L, r
 #'   \item{rejected}{Unhandled rejections.}
 #'   \item{rejected_overruns}{Rejected: too many extinct lineages.}
 #'   \item{rejected_lambda}{Rejected: lambda bound exceeded.}
-#'   \item{rejected_zero_weights}{Rejected: zero IS weight.}
+#'   \item{rejected_zero_weights}{Rejected: zero IS weight (log weight -Inf).}
+#'   \item{rejected_nonfinite}{Rejected: log weight +Inf or NaN.}
+#'   \item{num_trees}{Number of trees returned (\code{length(trees)}).}
 #'   \item{time}{Elapsed time (ms).}
 #' }
 #' @keywords internal
@@ -103,7 +105,9 @@ augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda
 #'  \item{rejected}{number of rejected trees}
 #'  \item{rejected_overruns}{number of trees rejected due to too large size}
 #'  \item{rejected_lambda}{number of trees rejected due to lambda errors}
-#'  \item{rejected_zero_weights}{number of trees rejected due to zero weight}
+#'  \item{rejected_zero_weights}{number of trees rejected due to zero weight (log weight -Inf)}
+#'  \item{rejected_nonfinite}{number of trees rejected due to a +Inf or NaN log weight}
+#'  \item{num_trees}{number of trees the E-step returned}
 #'  \item{estimates}{vector of estimates}
 #'  \item{nlopt}{nlopt status}
 #'  \item{fhat}{vector of fhat values}

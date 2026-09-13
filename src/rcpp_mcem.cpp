@@ -44,7 +44,9 @@ namespace {
 //'  \item{rejected}{number of rejected trees}
 //'  \item{rejected_overruns}{number of trees rejected due to too large size}
 //'  \item{rejected_lambda}{number of trees rejected due to lambda errors}
-//'  \item{rejected_zero_weights}{number of trees rejected due to zero weight}
+//'  \item{rejected_zero_weights}{number of trees rejected due to zero weight (log weight -Inf)}
+//'  \item{rejected_nonfinite}{number of trees rejected due to a +Inf or NaN log weight}
+//'  \item{num_trees}{number of trees the E-step returned}
 //'  \item{estimates}{vector of estimates}
 //'  \item{nlopt}{nlopt status}
 //'  \item{fhat}{vector of fhat values}
@@ -109,6 +111,8 @@ List rcpp_mcem(const std::vector<double>& brts,
   ret["rejected_overruns"] = mcem.e.info.rejected_overruns;
   ret["rejected_lambda"] = mcem.e.info.rejected_lambda;
   ret["rejected_zero_weights"] = mcem.e.info.rejected_zero_weights;
+  ret["rejected_nonfinite"] = mcem.e.info.rejected_nonfinite;
+  ret["num_trees"] = mcem.e.info.num_trees;
   ret["estimates"] = NumericVector(mcem.m.estimates.begin(), mcem.m.estimates.end());
   ret["nlopt"] = mcem.m.opt;
   ret["fhat"]  = mcem.e.info.fhat;
