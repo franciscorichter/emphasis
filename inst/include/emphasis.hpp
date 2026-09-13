@@ -48,7 +48,8 @@ namespace emphasis {
     int num_trees = 0;                  // number of trees augmented
     int rejected_overruns = 0;          // trees rejected because overrun of missing branches
     int rejected_lambda = 0;            // trees rejected because of lambda overrun
-    int rejected_zero_weights = 0;      // trees rejected because of zero-weight
+    int rejected_zero_weights = 0;      // trees rejected because of zero-weight (log_w = -Inf)
+    int rejected_nonfinite = 0;         // trees rejected because log_w is +Inf or NaN
     int rejected = 0;                   // trees rejected because of unhandled exception
     double elapsed = 0;                 // elapsed runtime [ms]
     double logf = 0;                    // likelihood of simulated tree
@@ -91,6 +92,7 @@ namespace emphasis {
       msg += std::to_string(E.info.rejected_lambda) + " lambda; ";
       msg += std::to_string(E.info.rejected_overruns) + " overruns; ";
       msg += std::to_string(E.info.rejected_zero_weights) + " zero weights; ";
+      msg += std::to_string(E.info.rejected_nonfinite) + " non-finite weights; ";
       msg += std::to_string(E.info.rejected) + " unhandled exception; ";
       msg += " Trees so far: " + std::to_string(E.info.num_trees);
       return msg;

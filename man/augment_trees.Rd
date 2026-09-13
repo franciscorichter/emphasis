@@ -47,7 +47,9 @@ A named list:
   \item{rejected}{Unhandled rejections.}
   \item{rejected_overruns}{Rejected: too many extinct lineages.}
   \item{rejected_lambda}{Rejected: lambda bound exceeded.}
-  \item{rejected_zero_weights}{Rejected: zero IS weight.}
+  \item{rejected_zero_weights}{Rejected: zero IS weight (log weight -Inf).}
+  \item{rejected_nonfinite}{Rejected: log weight +Inf or NaN.}
+  \item{num_trees}{Number of trees returned (\code{length(trees)}).}
   \item{time}{Elapsed time (ms).}
 }
 }
