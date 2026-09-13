@@ -93,8 +93,13 @@
 #'   sampling). With \code{rho < 1} a random fraction of extant tips is dropped
 #'   (forward simulation) or unsampled extant lineages are inserted
 #'   (augmentation), matching incomplete taxon sampling.
-#' @param method Augmentation method. Only \code{"thinning"} (the C++ thinning
-#'   proposal, the default) is supported.
+#' @param method Augmentation method: \code{"bdi"} (default, exact BDI
+#'   sampler) or \code{"thinning"} (C++ thinning proposal). The BDI sampler
+#'   draws from the exact conditional distribution under constant rates
+#'   (ESS = S, zero variance) and uses a self-consistent backward-forward
+#'   iteration under diversity dependence. It covers N-only models
+#'   (\code{"cr"}, \code{"dd"}) on the linear and exponential links;
+#'   any other model or link falls back to thinning.
 #' @examples
 #' \dontrun{
 #' # --- Forward simulation ---
@@ -135,7 +140,7 @@ simulate_tree <- function(tree        = NULL,
                           maxN        = NULL,
                           num_threads = 1L,
                           rho         = 1.0,
-                          method      = "thinning") {
+                          method      = "bdi") {
 
   model_bin <- .resolve_model(model)
   link_int  <- .resolve_link(link)
@@ -170,7 +175,7 @@ simulate_tree <- function(tree        = NULL,
   # ---------------------------------------------------------------------- #
   #  Conditional simulation (augmentation)                                  #
   # ---------------------------------------------------------------------- #
-  method <- match.arg(method, c("thinning"))
+  method <- match.arg(method, c("thinning", "bdi"))
 
   if (!is.null(tree)) {
     return(.sim_tree_conditional(tree, pars, model_bin,
@@ -337,14 +342,26 @@ simulate_tree <- function(tree        = NULL,
 
   L_extant <- .extract_Ltable(tree)
 
-  aug <- tryCatch(
-    .augment_tree_internal(tree, pars = pars, model_bin = model_bin,
-                           sample_size = n_trees,
-                           max_missing = max_missing, max_lambda = max_lambda,
-                           maxN = maxN, num_threads = num_threads, link = link,
-                           rho = rho),
-    error = function(e) NULL
-  )
+  if (method == "bdi" && !.bdi_supported(model_bin, link)) method <- "thinning"
+
+  if (method == "bdi") {
+    aug <- tryCatch(
+      .augment_tree_bdi(tree, pars = pars, model_bin = model_bin,
+                        sample_size = n_trees,
+                        max_missing = max_missing, link = link,
+                        rho = rho),
+      error = function(e) NULL
+    )
+  } else {
+    aug <- tryCatch(
+      .augment_tree_internal(tree, pars = pars, model_bin = model_bin,
+                             sample_size = n_trees,
+                             max_missing = max_missing, max_lambda = max_lambda,
+                             maxN = maxN, num_threads = num_threads, link = link,
+                             rho = rho),
+      error = function(e) NULL
+    )
+  }
 
   # Failure path
   if (is.null(aug) || length(aug$trees) == 0L) {

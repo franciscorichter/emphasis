@@ -108,7 +108,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   )
   if (method == "mcem") {
     c(common, list(
-      sampling    = "dynamic_fresh",  # thinning-based dynamic-fresh MCEM (only supported scheme)
+      sampling    = "bdi",      # BDI exact sampler (default); "dynamic_fresh" for thinning
       sample_size = 200L,       # alias: num_trees
       max_iter    = 200L,
       maxN        = 2000L,      # total augmentation attempts; must exceed sample_size (thinning only)
@@ -354,8 +354,35 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #' @keywords internal
 .run_mcem <- function(brts, init_pars, lower_bound, upper_bound, ctrl,
                       model = c(0L, 0L, 0L), link = 0L, cond_fun = NULL) {
+  # BDI is exact only for N-only models (cr, dd) on the linear/exponential
+  # links; D-dependent models and the gaussian link use the thinning proposal.
+  if (identical(ctrl$sampling, "bdi") && !.bdi_supported(model, link)) {
+    if (isTRUE(ctrl$verbose))
+      message("BDI sampler covers cr/dd on linear/exponential links only; ",
+              "falling back to thinning.")
+    ctrl$sampling <- "dynamic_fresh"
+  }
   if (is.null(ctrl$maxN)) ctrl$maxN <- max(2000L, 10L * as.integer(ctrl$sample_size))
   raw <- switch(ctrl$sampling,
+    bdi             = .mcem_bdi(
+      brts        = brts,
+      pars        = init_pars,
+      sample_size = ctrl$sample_size,
+      max_missing = ctrl$max_missing,
+      lower_bound = lower_bound,
+      upper_bound = upper_bound,
+      max_iter    = ctrl$max_iter,
+      xtol        = ctrl$xtol,
+      tol         = ctrl$tol,
+      patience    = ctrl$patience,
+      num_threads = ctrl$num_threads,
+      verbose     = ctrl$verbose,
+      conditional = cond_fun,
+      model       = model,
+      link        = link,
+      max_time    = ctrl$max_time,
+      rho         = ctrl$rho
+    ),
     dynamic_fresh   = .mcem_dynamic_fresh(
       brts        = brts,
       pars        = init_pars,
@@ -758,7 +785,9 @@ estimate_rates <- function(tree,
                   mode, ctrl$max_iter))
     }
     if (method == "mcem") {
-      sampling_str <- ctrl$sampling
+      sampling_str <- if (!identical(ctrl$sampling, "bdi")) ctrl$sampling else
+        if (.bdi_supported(model_bin, link_int)) "BDI (exact)" else
+          "dynamic_fresh (BDI not available for this model/link)"
       cat(sprintf("  sampling=%s  num_trees=%d  max_iter=%d  tol=%.1e  patience=%d  xtol=%.1e\n",
                   sampling_str, ctrl$num_trees, ctrl$max_iter, ctrl$tol, ctrl$patience, ctrl$xtol))
       if (ctrl$num_trees >= 2L)

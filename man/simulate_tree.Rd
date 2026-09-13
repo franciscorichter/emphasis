@@ -19,7 +19,7 @@ simulate_tree(
   maxN = NULL,
   num_threads = 1L,
   rho = 1,
-  method = "thinning"
+  method = "bdi"
 )
 }
 \arguments{
@@ -67,8 +67,13 @@ sampling). With \code{rho < 1} a random fraction of extant tips is dropped
 (forward simulation) or unsampled extant lineages are inserted
 (augmentation), matching incomplete taxon sampling.}
 
-\item{method}{Augmentation method. Only \code{"thinning"} (the C++ thinning
-proposal, the default) is supported.}
+\item{method}{Augmentation method: \code{"bdi"} (default, exact BDI
+sampler) or \code{"thinning"} (C++ thinning proposal). The BDI sampler
+draws from the exact conditional distribution under constant rates
+(ESS = S, zero variance) and uses a self-consistent backward-forward
+iteration under diversity dependence. It covers N-only models
+(\code{"cr"}, \code{"dd"}) on the linear and exponential links;
+any other model or link falls back to thinning.}
 }
 \description{
 Unified entry point for forward and conditional tree simulation.
