@@ -39,6 +39,12 @@ namespace {
 //' @param copy_trees if set to true, the trees generated are returned as well
 //' @param model integer vector of length 3: c(use_N, use_P, use_E)
 //' @param link link function: 0 = linear (max(0,...)), 1 = exponential
+//' @param rho sampling fraction in (0, 1]
+//' @param parent_tip_start tip start of the lineage that splits at each
+//' observed branching event, in the same forward-time order as \code{brts};
+//' empty (the default) when only branching times are available, in which case
+//' every observed lineage is recorded as dating from the crown and D = 0 at
+//' every observed event.
 //' @param rconditional R function that evaluates the GAM function.
 //' @return a list with the following components:
 //' \describe{
@@ -73,8 +79,10 @@ List rcpp_mcem(const std::vector<double>& brts,
                Rcpp::IntegerVector model = Rcpp::IntegerVector::create(0, 0, 0),
                int link = 0,
                double rho = 1.0,
-               Nullable<Function> rconditional = R_NilValue)
+               Nullable<Function> rconditional = R_NilValue,
+               Rcpp::NumericVector parent_tip_start = Rcpp::NumericVector::create())
 {
+  const std::vector<double> pts(parent_tip_start.begin(), parent_tip_start.end());
   if (init_pars.size() != 8 || lower_bound.size() != 8 || upper_bound.size() != 8) {
     throw std::invalid_argument("em_cpp: init_pars, lower_bound and upper_bound must have length 8 (got " +
       std::to_string(init_pars.size()) + ", " + std::to_string(lower_bound.size()) + ", " +
@@ -100,7 +108,8 @@ List rcpp_mcem(const std::vector<double>& brts,
                              upper_bound,
                              xtol_rel,
                              num_threads,
-                             conditional ? &conditional : nullptr);
+                             conditional ? &conditional : nullptr,
+                             pts);
   if (mcem.e.trees.empty()) {
     throw std::runtime_error("no trees, no optimization");
   }

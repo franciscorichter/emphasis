@@ -19,7 +19,8 @@ em_cpp(
   model = as.integer(c(0, 0, 0)),
   link = 0L,
   rho = 1,
-  rconditional = NULL
+  rconditional = NULL,
+  parent_tip_start = as.numeric(c())
 )
 }
 \arguments{
@@ -51,7 +52,15 @@ be equal in length to the vector of init_pars}
 
 \item{link}{link function: 0 = linear (max(0,...)), 1 = exponential}
 
+\item{rho}{sampling fraction in (0, 1]}
+
 \item{rconditional}{R function that evaluates the GAM function.}
+
+\item{parent_tip_start}{tip start of the lineage that splits at each
+observed branching event, in the same forward-time order as \code{brts};
+empty (the default) when only branching times are available, in which case
+every observed lineage is recorded as dating from the crown and D = 0 at
+every observed event.}
 }
 \value{
 a list with the following components:

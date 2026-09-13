@@ -71,12 +71,17 @@
                       rho = 1.0,
                       rel_floor = 1e-2) {
   if (inherits(brts, "phylo")) {
-    brts <- sort(ape::branching.times(brts), decreasing = TRUE)
+    # .extract_brts also carries the tip starts M and D are measured from.
+    brts <- .extract_brts(brts)
   }
   if (!is.numeric(brts)) stop("`brts` must be numeric or a `phylo` object.")
   if (!is.numeric(pars)) stop("`pars` must be numeric.")
   if (!is.null(conditional) && !is.function(conditional))
     stop("`conditional` must be a function or NULL.")
+
+  # Empty when only branching times were passed: M and D then fall back to the
+  # crown-age convention, as documented on estimate_rates().
+  parent_tip_start <- .pts(brts)
 
   # Convergence metric: max_j |theta_k,j - theta_{k-1,j}| / max(|theta_{k-1,j}|, floor).
   # The bound box does not enter; the floor keeps parameters at or near zero
@@ -115,7 +120,8 @@
              model = as.integer(model),
              link = as.integer(link),
              rho = as.numeric(rho),
-             rconditional = conditional),
+             rconditional = conditional,
+             parent_tip_start = parent_tip_start),
       error = function(e) NULL
     )
   }
@@ -328,7 +334,8 @@
            num_threads  = 1L,
            copy_trees   = FALSE,
            model        = as.integer(model),
-           link         = as.integer(link))
+           link         = as.integer(link),
+           parent_tip_start = .pts(brts))
     NULL
   }, error = function(e) conditionMessage(e))
 

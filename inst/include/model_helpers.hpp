@@ -51,16 +51,36 @@
 
 
 namespace emphasis {
+
+  // A tip_start is a forward time and is therefore never negative; this value
+  // in focal_tip_start marks an event whose splitting lineage is not known
+  // (a branching-time vector carrying no topology, or an augmented lineage
+  // drawn when no parent was on record).  Model::e_s falls back to the
+  // mean pendant age M there, which sets D = 0 for that event.
+  constexpr double ts_unknown = -1.0;
+
+  // node_t::clade on an observed node: 1 when the node carries the tip_start
+  // of the lineage that splits at it (the caller supplied the topology),
+  // 0 otherwise.
+  constexpr int clade_topology = 1;
+
   /* tree node */
   struct node_t
   {
     double brts;
     double n;             /* n[i] = number of species in [time_i-1, time_i) */
     double t_ext;         /* emp_t_ext_tip for present-day species;  emp_t_ext_extinct for extinction nodes */
-    double pd;
-    double tip_start;     // birth time of this lineage (for pendant PD); 0.0 = unset
-    double focal_tip_start; // tip_start of the lineage that caused this event (for exact EP likelihood)
-    int clade;            // required for sim_tree
+    double pd;            // pendant PD P(brts) = sum over the lineages alive on
+                          // the segment ending here of (brts - their tip_start)
+    double tip_start;     // forward time at which the lineage BORN at this node
+                          // last became a pendant tip (= brts for a speciation
+                          // node, the dying lineage's tip_start for an
+                          // extinction node)
+    double focal_tip_start; // tip_start of the lineage whose event this is (the
+                          // lineage that splits, or the one that dies);
+                          // ts_unknown when no parent is on record
+    int clade;            // clade_topology on an observed node whose
+                          // focal_tip_start came from the observed topology
     int id;               // unique stable lineage ID (assigned at creation); -1 = unset
     int parent_id;        // id of parent lineage; -1 = root / initial tree
   };
@@ -219,6 +239,13 @@ namespace emphasis {
 
     // Pendant PD: sum of pendant edge lengths of alive lineages at time tm.
     // Each alive lineage i contributes (tm - tip_start_i).
+    //
+    // One lineage per node, so the two crown lineages are not counted and a
+    // tip_start reset by a later split is not seen.  This is the value the
+    // thinning envelope reads at an arbitrary candidate time inside
+    // Model::nh_rate, where no event-list sweep is available; the pd stored on
+    // the nodes comes from compute_pendant_pd(), which keeps the running
+    // (N, sum tip_start) state and is exact.
     inline double calculate_pendant_pd(double tm, const std::vector<node_t>& tree)
     {
       double ppd = 0.0;

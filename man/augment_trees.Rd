@@ -14,7 +14,8 @@ augment_trees(
   num_threads,
   model = as.integer(c(0, 0, 0)),
   link = 0L,
-  rho = 1
+  rho = 1,
+  parent_tip_start = as.numeric(c())
 )
 }
 \arguments{
@@ -37,6 +38,16 @@ sorted decreasing).}
 \item{model}{Integer vector \code{c(use_N, use_P, use_E)}.}
 
 \item{link}{Link function: \code{0} = linear, \code{1} = exponential.}
+
+\item{rho}{Sampling fraction in \code{(0, 1]}.}
+
+\item{parent_tip_start}{Tip start of the lineage that splits at each
+observed branching event, in the same forward-time order as \code{brts}
+(that is, \code{rev} of the decreasing \code{brts}); one entry per event,
+or one per node with the last ignored. Empty (the default) means the
+topology is not available: every observed lineage is then recorded as
+dating from the crown and every observed event gets \code{D = 0}, which
+is what a bare branching-time vector has always produced.}
 }
 \value{
 A named list:

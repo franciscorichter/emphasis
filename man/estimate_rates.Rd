@@ -21,7 +21,15 @@ estimate_rates(
   \item the list returned by \code{\link{simulate_tree}} (\code{$tes} is
     used automatically, falling back to a pruned \code{$tas}), or
   \item a numeric vector of branching times (crown-age ordering).
-}}
+}
+The covariate \code{D} is a lineage's pendant age -- measured from the
+last time that lineage became a tip -- centred on the mean over the alive
+lineages, so it is a function of the topology and not of the branching
+times alone.  A \code{phylo} (or a \code{simulate_tree} result) carries
+it; a bare numeric vector does not, and every observed lineage is then
+recorded as dating from the crown, which leaves \code{D = 0} at every
+observed branching event.  Fit \code{"d"} or \code{"nd"} from a tree, not
+from branching times.}
 
 \item{method}{Optimisation method:
 \describe{

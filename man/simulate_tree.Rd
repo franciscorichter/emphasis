@@ -25,7 +25,11 @@ simulate_tree(
 \arguments{
 \item{tree}{Optional observed extant tree for augmentation. Accepts
 \code{NULL} (forward sim), a \code{simulate_tree} result, a
-\code{phylo} object, or a numeric branching-time vector.}
+\code{phylo} object, or a numeric branching-time vector.  A \code{phylo}
+also supplies the topology the pendant-age covariates \code{M} and
+\code{D} are computed from; with a bare branching-time vector every
+observed lineage is recorded as dating from the crown and \code{D = 0} at
+every observed branching event.}
 
 \item{pars}{Numeric parameter vector or matrix. When a matrix each row
 produces one forward simulation.}

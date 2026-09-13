@@ -56,6 +56,13 @@ namespace emphasis {
   //   D = E - M                                    (focal isolation relative to the
   //                                                 clade mean; Sum_s D = 0)
   //
+  // A lineage's pendant age at t is t - tip_start, where tip_start is the time
+  // it last became a pendant tip: its birth time, reset every time it
+  // speciates.  P = N*t - Sum_s tip_start_s is accumulated by the forward
+  // sweep in compute_pendant_pd() (src/augment_tree.cpp) and read off
+  // node.pd; E comes from node.focal_tip_start via e_s().  Both are the
+  // definitions the simulator uses (inst/include/general_tree.hpp).
+  //
   // Parameters layout (always 8 elements); slots 2/6 are coefficients on M and
   // slots 3/7 on D:
   //   {beta_0, beta_N, beta_M, beta_D, gamma_0, gamma_N, gamma_M, gamma_D}
@@ -132,7 +139,9 @@ namespace emphasis {
     // ---------------------------------------------------------------------
     // Orthogonal covariate basis {N, M, D}:
     //   N       = node.n                     (lineage count / diversity level)
-    //   M = P/N = node.pd / node.n           (mean pendant age / "maturity")
+    //   M = P/N = node.pd / node.n           (mean pendant age / "maturity",
+    //                                         over the N lineages alive on the
+    //                                         segment that ends at the node)
     //   D = E - M                            (focal lineage's isolation
     //                                         relative to the clade mean; Σ_s D = 0)
     // The parameter slots are reused: pars[2]/pars[6] are now coefficients on M
@@ -168,17 +177,21 @@ namespace emphasis {
 
     // Raw focal isolation E_s = pendant age of the focal lineage at event time.
     //
-    // For extinction nodes: E = brts - tip_start (exact, stored t_spec).
-    // For speciation nodes with known parent (parent_id >= 0):
-    //   E = brts - focal_tip_start (exact parent pendant age).
-    // For initial tree nodes (parent_id == -1, unknown parent):
-    //   E = P/N = M (mean-field marginalization over possible parents), which
-    //   makes the deviation D = E - M = 0 for such nodes: the "average" lineage.
+    // For extinction nodes: E = brts - tip_start (the dying lineage's own
+    //   tip_start, reset by any split it made since its birth).
+    // For an event whose splitting lineage is on record: E = brts -
+    //   focal_tip_start.  That covers every observed branching event of a tree
+    //   passed with its topology and every augmented lineage drawn from a
+    //   recorded parent.
+    // For an event whose splitting lineage is not on record (focal_tip_start
+    //   is ts_unknown: a branching-time vector with no topology, or a lineage
+    //   drawn when nothing was on record): E = P/N = M, a mean-field
+    //   marginalization over possible parents, which sets D = E - M = 0.
     double e_s(const node_t& node) const {
       if (detail::is_extinction(node)) {
         return node.brts - node.tip_start;
       }
-      if (node.parent_id >= 0) {
+      if (node.focal_tip_start >= 0.0) {
         return node.brts - node.focal_tip_start;
       }
       return (node.n > 0.0) ? (node.pd / node.n) : 0.0;

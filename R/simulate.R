@@ -65,7 +65,11 @@
 #'
 #' @param tree Optional observed extant tree for augmentation. Accepts
 #'   \code{NULL} (forward sim), a \code{simulate_tree} result, a
-#'   \code{phylo} object, or a numeric branching-time vector.
+#'   \code{phylo} object, or a numeric branching-time vector.  A \code{phylo}
+#'   also supplies the topology the pendant-age covariates \code{M} and
+#'   \code{D} are computed from; with a bare branching-time vector every
+#'   observed lineage is recorded as dating from the crown and \code{D = 0} at
+#'   every observed branching event.
 #' @param pars Numeric parameter vector or matrix. When a matrix each row
 #'   produces one forward simulation.
 #' @param max_t Crown age (forward simulation only). Default \code{1}.
@@ -483,6 +487,7 @@ simulate_tree <- function(tree        = NULL,
     num_threads = as.integer(num_threads),
     model       = as.integer(model_bin),
     link        = as.integer(link),
-    rho         = as.numeric(rho)
+    rho         = as.numeric(rho),
+    parent_tip_start = .pts(brts)
   )
 }

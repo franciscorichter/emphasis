@@ -232,23 +232,86 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   ctrl
 }
 
+#' Tip start of the lineage that splits at each observed branching event
+#'
+#' The covariates \eqn{M} and \eqn{D} are functions of the pendant ages of the
+#' alive lineages, and a lineage's pendant age is measured from the last time
+#' it became a tip -- its \emph{tip start}, which is reset every time it
+#' speciates.  For an observed branching event that is the forward time of the
+#' \strong{parent} of the splitting node, and \code{0} for the two children of
+#' the crown.
+#'
+#' Events are returned in forward-time order, the order the C++ layer builds
+#' the observed tree in, so the k-th entry belongs to the k-th observed node.
+#' A 2-tip tree has no non-crown internal node and returns
+#' \code{numeric(0)}.
+#'
+#' @param phy A \code{phylo} object.
+#' @return Numeric vector of length \code{Nnode(phy) - 1}.
+#' @keywords internal
+.observed_parent_tip_start <- function(phy) {
+  h    <- ape::node.depth.edgelength(phy)        # forward time of every node
+  root <- ape::Ntip(phy) + 1L
+  int  <- setdiff(seq.int(root, max(phy$edge)), root)   # internal, not the root
+  if (length(int) == 0L) return(numeric(0))
+  par  <- stats::setNames(phy$edge[, 1L], phy$edge[, 2L])  # child node -> parent
+  ord  <- order(h[int])
+  unname(h[par[as.character(int[ord])]])
+}
+
+#' Branching times, and the topology the covariates need
+#'
+#' Returns the branching times in the crown-first (decreasing) order the C++
+#' layer expects, carrying the per-node \code{"parent_tip_start"} attribute
+#' when the input was a tree rather than a bare numeric vector.  Read it with
+#' \code{.pts()} and hand it to \code{augment_trees()} / \code{em_cpp()}.
+#'
+#' The attribute has one entry per node: the tip start of the lineage that
+#' splits at that observed branching event, then \code{-1} for the terminal
+#' marker at the present, which is not an event.  It is \code{numeric(0)} for a
+#' numeric input, where no topology exists.
 #' @keywords internal
 .extract_brts <- function(tree) {
+  with_pts <- function(brts, phy) {
+    if (!is.null(phy))
+      attr(brts, "parent_tip_start") <- c(.observed_parent_tip_start(phy), -1)
+    brts
+  }
   if (is.numeric(tree)) {
-    return(sort(tree, decreasing = TRUE))
+    out <- sort(tree, decreasing = TRUE)
+    # A vector that already carries tip starts is one this function produced;
+    # keep them, unless sorting moved an entry, which would break the
+    # event-to-entry correspondence.
+    pts <- attr(tree, "parent_tip_start")
+    if (!is.null(pts) && identical(unname(out), unname(as.numeric(tree))))
+      attr(out, "parent_tip_start") <- pts
+    return(out)
   }
   if (inherits(tree, "phylo")) {
-    return(sort(ape::branching.times(tree), decreasing = TRUE))
+    return(with_pts(sort(ape::branching.times(tree), decreasing = TRUE), tree))
   }
   # simulate_tree() result: try $tes, then $tas (pruned to extant)
   if (is.list(tree) && !inherits(tree, "phylo")) {
     if (!is.null(tree$tes) && inherits(tree$tes, "phylo"))
-      return(sort(ape::branching.times(tree$tes), decreasing = TRUE))
-    if (!is.null(tree$tas) && inherits(tree$tas, "phylo"))
-      return(sort(ape::branching.times(prune_to_extant(tree$tas)), decreasing = TRUE))
+      return(with_pts(sort(ape::branching.times(tree$tes), decreasing = TRUE),
+                      tree$tes))
+    if (!is.null(tree$tas) && inherits(tree$tas, "phylo")) {
+      phy <- prune_to_extant(tree$tas)
+      return(with_pts(sort(ape::branching.times(phy), decreasing = TRUE), phy))
+    }
     stop("List passed to estimate_rates() must contain '$tes' or '$tas'.")
   }
   stop("'tree' must be a phylo object, a simulate_tree() result, or a numeric branching-time vector.")
+}
+
+#' The parent tip starts carried by a branching-time vector
+#'
+#' \code{numeric(0)} when there are none, which is how the C++ layer is told
+#' that no topology is available.
+#' @keywords internal
+.pts <- function(brts) {
+  p <- attr(brts, "parent_tip_start")
+  if (is.null(p)) numeric(0) else as.numeric(p)
 }
 
 #' Relative parameter change, the statistic both MCEM stopping rules use
@@ -706,6 +769,14 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'       used automatically, falling back to a pruned \code{$tas}), or
 #'     \item a numeric vector of branching times (crown-age ordering).
 #'   }
+#'   The covariate \code{D} is a lineage's pendant age -- measured from the
+#'   last time that lineage became a tip -- centred on the mean over the alive
+#'   lineages, so it is a function of the topology and not of the branching
+#'   times alone.  A \code{phylo} (or a \code{simulate_tree} result) carries
+#'   it; a bare numeric vector does not, and every observed lineage is then
+#'   recorded as dating from the crown, which leaves \code{D = 0} at every
+#'   observed branching event.  Fit \code{"d"} or \code{"nd"} from a tree, not
+#'   from branching times.
 #' @param method Optimisation method:
 #'   \describe{
 #'     \item{\code{"mcem"}}{Monte Carlo Expectation-Maximisation (default).

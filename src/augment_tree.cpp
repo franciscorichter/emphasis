@@ -7,6 +7,7 @@
 #include <memory>
 #include <thread>
 #include <unordered_map>
+#include <set>
 #include <tbb/tbb.h>
 #include "model.hpp"
 #include "augment_tree.hpp"
@@ -41,15 +42,126 @@ namespace emphasis {
     auto thread_local reng = detail::make_random_engine<std::default_random_engine>();
 
 
-    // After augmentation, assign tip_start, focal_tip_start, and pendant PD.
-    void compute_pendant_pd(tree_t& tree)
+    // Pendant PD and per-lineage tip_start by one forward sweep over the event
+    // list — the bookkeeping the simulator itself runs
+    // (inst/include/general_tree.hpp):
+    //
+    //   P(t) = N*t - S,   S = sum of tip_start over the lineages alive at t
+    //   start          : two crown lineages, tip_start 0, so S = 0 and N = 2
+    //   p speciates    : S += 2*t - ts[p];  ts[p] = ts[c] = t;  ++N
+    //   s goes extinct : S -= ts[s];  --N
+    //
+    // node.pd is P at the node's own time over the N lineages alive on the
+    // segment that ends there, which is the count node.n carries.  One pass
+    // with a log-time lookup per event; the value it replaces summed
+    // (t - tip_start) over the whole tree at every node, quadratically.
+    //
+    // The tip_start of the splitting lineage is known for an observed event
+    // when the caller supplied the topology (create_tree stored it in
+    // focal_tip_start), for an augmented lineage from the parent it was drawn
+    // from, and for an augmented lineage drawn before the first observed event
+    // — its parent is one of the two crown lineages, which both still carry
+    // tip_start 0 at that time.
+    void compute_pendant_pd_topology(tree_t& tree)
+    {
+      // The alive lineages, as the multiset of their tip_start values: the
+      // authority for both N (its size) and S (its sum).  A lineage is fully
+      // described by its tip_start here, so the two lineages an event leaves
+      // behind are interchangeable and the multiset needs no names.
+      //
+      // `by_id` names the lineages the augmentation can pick as a parent.  The
+      // value it holds is a key into the multiset, not a second copy of the
+      // state: `take` removes the alive lineage nearest to the requested
+      // tip_start and returns the value it actually removed, so S stays the
+      // sum of a real alive set whatever the key says.  Asking for a lineage
+      // that is no longer pendant at the age claimed then costs the nearest
+      // real one, instead of subtracting a tip_start no lineage has and
+      // driving P above N*t.
+      std::multiset<double> alive{ 0.0, 0.0 };   // the two crown lineages
+      std::unordered_map<int, double> by_id;     // lineage id -> its tip_start
+      double S = 0.0;
+
+      auto take = [&alive, &S](double want) {
+        if (alive.empty()) return want;
+        auto it = alive.lower_bound(want);
+        if (it == alive.end()) --it;
+        else if (it != alive.begin()) {
+          auto prev = std::prev(it);
+          if ((want - *prev) < (*it - want)) it = prev;
+        }
+        const double got = *it;
+        alive.erase(it);
+        S -= got;
+        return got;
+      };
+      auto put = [&alive, &S](double v) { alive.insert(v); S += v; };
+
+      const size_t last = tree.size() - 1;
+      for (size_t i = 0; i < tree.size(); ++i) {
+        auto& node = tree[i];
+        const double t = node.brts;
+        node.pd = static_cast<double>(alive.size()) * t - S;
+        if (detail::is_extinction(node)) {
+          double want = node.tip_start;    // birth time recorded at insertion
+          if (node.id >= 0) {
+            auto it = by_id.find(node.id);
+            if (it != by_id.end()) {
+              want = it->second;           // reset by a split since that birth
+              by_id.erase(it);
+            }
+          }
+          const double ts_s = take(want);
+          node.tip_start = ts_s;
+          node.focal_tip_start = ts_s;
+        }
+        else if (i == last) {
+          // The last node marks the present, not an event: no lineage is born
+          // and none splits there.
+          node.tip_start = t;
+          node.focal_tip_start = ts_unknown;
+        }
+        else {
+          double want = 0.0;
+          bool known = true;
+          if (detail::is_tip(node)) {
+            // Observed event: create_tree parked the splitting lineage's
+            // tip_start here.  Without a topology it is ts_unknown.
+            want = node.focal_tip_start;
+            if (want < 0.0) { want = 0.0; known = false; }
+          }
+          else if (node.parent_id >= 0) {
+            auto it = by_id.find(node.parent_id);
+            if (it != by_id.end()) want = it->second;
+          }
+          // else: drawn with no lineage on record, so its parent is a crown
+          // lineage, still at tip_start 0.
+          const double ts_p = take(want);      // the splitting lineage leaves
+          put(t); put(t);                      // parent and daughter, both tips
+          node.focal_tip_start = known ? ts_p : ts_unknown;
+          node.tip_start = t;
+          if (node.id >= 0) by_id[node.id] = t;
+          if (node.parent_id >= 0) {
+            auto it = by_id.find(node.parent_id);
+            if (it != by_id.end()) it->second = t;
+          }
+        }
+      }
+    }
+
+
+    // The pendant PD of a tree whose observed lineages carry no topology:
+    // every observed lineage is recorded as dating from the crown, one lineage
+    // per node, and P is summed over the tree at each node.  Kept so that a
+    // bare branching-time vector returns the values it always has.
+    void compute_pendant_pd_no_topology(tree_t& tree)
     {
       // Pass 1: set tip_start for speciation nodes, initialize focal_tip_start
       for (auto& node : tree) {
         if (!detail::is_extinction(node)) {
           node.tip_start = (node.parent_id == -1) ? 0.0 : node.brts;
         }
-        node.focal_tip_start = 0.0;
+        // An event whose parent is not on record leaves D mean-field (E = M).
+        node.focal_tip_start = (node.parent_id >= 0) ? 0.0 : ts_unknown;
       }
 
       // Pass 2: compute pendant PD per node
@@ -74,6 +186,17 @@ namespace emphasis {
           if (node.id >= 0) alive_ts[node.id] = node.brts;
         }
       }
+    }
+
+
+    // After augmentation, assign tip_start, focal_tip_start, and pendant PD.
+    // The last node is the observed terminal marker at the present and carries
+    // the flag create_tree set: whether the observed topology was supplied.
+    void compute_pendant_pd(tree_t& tree)
+    {
+      if (tree.empty()) return;
+      if (tree.back().clade == clade_topology) compute_pendant_pd_topology(tree);
+      else compute_pendant_pd_no_topology(tree);
     }
 
 

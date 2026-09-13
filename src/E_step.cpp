@@ -27,12 +27,50 @@ namespace emphasis {
     }
 
 
-    tree_t create_tree(brts_t brts)
+    // Observed tree from its branching times, and — when the caller has the
+    // topology — from the tip_start of the lineage that splits at each
+    // observed branching event.
+    //
+    // After inplace_cumsum_of_diff the entries of `brts` are forward times:
+    // entry i < size-1 is the observed branching event i, and the last entry
+    // is the present, a terminal marker rather than an event.  The two crown
+    // lineages have no node of their own.
+    //
+    // `parent_tip_start` is in that same order and may be
+    //   empty                : no topology; every observed event records an
+    //                          unknown splitting lineage (tip_start 0,
+    //                          focal_tip_start ts_unknown), which is what a
+    //                          bare branching-time vector can support.
+    //   brts.size() - 1      : one entry per observed branching event.
+    //   brts.size()          : one entry per node; the last is ignored.
+    tree_t create_tree(brts_t brts, const std::vector<double>& parent_tip_start)
     {
       inplace_cumsum_of_diff(brts);
+      const size_t m = brts.size();
+      const size_t np = parent_tip_start.size();
+      if (np != 0 && np != m && np + 1 != m) {
+        throw emphasis_error("create_tree: parent_tip_start must be empty, or hold one "
+                             "entry per observed branching event");
+      }
+      const bool topology = (np != 0);
       tree_t tree;
-      for (size_t i = 0; i < brts.size(); ++i) {
-        tree.push_back({ brts[i], 2.0 + i, t_ext_tip });
+      tree.reserve(m);
+      for (size_t i = 0; i < m; ++i) {
+        node_t node{};
+        node.brts = brts[i];
+        node.n = 2.0 + i;
+        node.t_ext = t_ext_tip;
+        node.pd = 0.0;
+        // The lineage born at this node became a pendant tip here; without a
+        // topology the old convention (every observed lineage dates from the
+        // crown) is kept, so that a bare branching-time vector reproduces the
+        // values it produced before.
+        node.tip_start = topology ? brts[i] : 0.0;
+        node.focal_tip_start = (topology && (i + 1 < m)) ? parent_tip_start[i] : ts_unknown;
+        node.clade = topology ? clade_topology : 0;
+        node.id = -1;
+        node.parent_id = -1;
+        tree.push_back(node);
       }
       std::sort(tree.begin(), tree.end(), detail::node_less{});
       return(tree);
@@ -49,7 +87,8 @@ namespace emphasis {
                   int max_missing,
                   double max_lambda,
                   int num_threads,
-                  double max_time_seconds)  // 0 = default 120s safety limit
+                  double max_time_seconds,  // 0 = default 120s safety limit
+                  const std::vector<double>& parent_tip_start)
   {
     // N < 1 leaves the sample empty on every path: nothing is stored, the
     // `num_trees < N` test below is false, and max_element/fhat would then
@@ -62,7 +101,7 @@ namespace emphasis {
     std::mutex mutex;
     std::atomic<bool> stop{ false };
 
-    tree_t init_tree = detail::create_tree(brts);
+    tree_t init_tree = detail::create_tree(brts, parent_tip_start);
     auto E = E_step_t{};
     auto T0 = std::chrono::high_resolution_clock::now();
 

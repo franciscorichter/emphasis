@@ -147,7 +147,8 @@
       num_threads = as.integer(num_threads),
       model       = as.integer(model_bin),
       link        = as.integer(link),
-      rho         = as.numeric(rho)
+      rho         = as.numeric(rho),
+      parent_tip_start = .pts(brts)
     ),
     error = function(e) NULL
   )

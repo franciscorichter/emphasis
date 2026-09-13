@@ -31,10 +31,14 @@ emphasis::tree_t pack(const Rcpp::DataFrame& r_tree) {
     entry.t_ext     = t_ext[i];
     entry.pd        = pd[i];
     entry.tip_start = has_tip_start ? tip_start_v[i] : 0.0;
-    entry.focal_tip_start = has_focal_ts ? focal_tip_start_v[i] : 0.0;
-    entry.clade     = 0;
     entry.id        = has_id ? id_v[i] : -1;
     entry.parent_id = has_parent_id ? parent_id_v[i] : -1;
+    // A tree built without the column carries no splitting lineage, so the
+    // event is mean-field (D = 0) exactly where it was before: at a node whose
+    // parent is not on record.
+    entry.focal_tip_start = has_focal_ts ? focal_tip_start_v[i]
+                          : ((entry.parent_id >= 0) ? 0.0 : emphasis::ts_unknown);
+    entry.clade     = 0;
     new_tree.push_back(entry);
   }
   return new_tree;

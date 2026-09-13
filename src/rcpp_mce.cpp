@@ -32,6 +32,14 @@ using namespace Rcpp;
 //' @param num_threads Threads for parallel augmentation.
 //' @param model Integer vector \code{c(use_N, use_P, use_E)}.
 //' @param link Link function: \code{0} = linear, \code{1} = exponential.
+//' @param rho Sampling fraction in \code{(0, 1]}.
+//' @param parent_tip_start Tip start of the lineage that splits at each
+//'   observed branching event, in the same forward-time order as \code{brts}
+//'   (that is, \code{rev} of the decreasing \code{brts}); one entry per event,
+//'   or one per node with the last ignored. Empty (the default) means the
+//'   topology is not available: every observed lineage is then recorded as
+//'   dating from the crown and every observed event gets \code{D = 0}, which
+//'   is what a bare branching-time vector has always produced.
 //' @return A named list:
 //' \describe{
 //'   \item{trees}{List of augmented-tree data frames.}
@@ -60,8 +68,10 @@ List rcpp_mce(const std::vector<double>& brts,
               int num_threads,
               Rcpp::IntegerVector model = Rcpp::IntegerVector::create(0, 0, 0),
               int link = 0,
-              double rho = 1.0)
+              double rho = 1.0,
+              Rcpp::NumericVector parent_tip_start = Rcpp::NumericVector::create())
 {
+  const std::vector<double> pts(parent_tip_start.begin(), parent_tip_start.end());
   if (pars.size() != 8) {
     throw std::invalid_argument("augment_trees: pars must have length 8 (got " +
       std::to_string(pars.size()) + ")");
@@ -83,7 +93,9 @@ List rcpp_mce(const std::vector<double>& brts,
                             mdl,
                             max_missing,
                             max_lambda,
-                            num_threads);
+                            num_threads,
+                            0.0,
+                            pts);
   List ret;
   List trees;
   for (const emphasis::tree_t& tree : E.trees) {

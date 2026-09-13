@@ -64,6 +64,14 @@ eval_logf <- function(pars, trees, model = as.integer( c(0, 0, 0)), link = 0L, r
 #' @param num_threads Threads for parallel augmentation.
 #' @param model Integer vector \code{c(use_N, use_P, use_E)}.
 #' @param link Link function: \code{0} = linear, \code{1} = exponential.
+#' @param rho Sampling fraction in \code{(0, 1]}.
+#' @param parent_tip_start Tip start of the lineage that splits at each
+#'   observed branching event, in the same forward-time order as \code{brts}
+#'   (that is, \code{rev} of the decreasing \code{brts}); one entry per event,
+#'   or one per node with the last ignored. Empty (the default) means the
+#'   topology is not available: every observed lineage is then recorded as
+#'   dating from the crown and every observed event gets \code{D = 0}, which
+#'   is what a bare branching-time vector has always produced.
 #' @return A named list:
 #' \describe{
 #'   \item{trees}{List of augmented-tree data frames.}
@@ -82,8 +90,8 @@ eval_logf <- function(pars, trees, model = as.integer( c(0, 0, 0)), link = 0L, r
 #'   \item{time}{Elapsed time (ms).}
 #' }
 #' @keywords internal
-augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0) {
-    .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link, rho)
+augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, parent_tip_start = as.numeric( c())) {
+    .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link, rho, parent_tip_start)
 }
 
 #' Count thinning candidates with acceptance probability above 1
@@ -117,6 +125,12 @@ thinning_envelope_violations <- function(reset = FALSE) {
 #' @param copy_trees if set to true, the trees generated are returned as well
 #' @param model integer vector of length 3: c(use_N, use_P, use_E)
 #' @param link link function: 0 = linear (max(0,...)), 1 = exponential
+#' @param rho sampling fraction in (0, 1]
+#' @param parent_tip_start tip start of the lineage that splits at each
+#' observed branching event, in the same forward-time order as \code{brts};
+#' empty (the default) when only branching times are available, in which case
+#' every observed lineage is recorded as dating from the crown and D = 0 at
+#' every observed event.
 #' @param rconditional R function that evaluates the GAM function.
 #' @return a list with the following components:
 #' \describe{
@@ -136,8 +150,8 @@ thinning_envelope_violations <- function(reset = FALSE) {
 #'  \item{logg}{vector of log q(z_i | obs, theta) for each valid tree}
 #' }
 #' @keywords internal
-em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, rconditional = NULL) {
-    .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model, link, rho, rconditional)
+em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, rconditional = NULL, parent_tip_start = as.numeric( c())) {
+    .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model, link, rho, rconditional, parent_tip_start)
 }
 
 #' function to perform one step of the E-M algorithm

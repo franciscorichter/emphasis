@@ -506,7 +506,8 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
           num_threads = 1L,
           model = as.integer(model_bin),
           link  = as.integer(link_int),
-          rho   = as.numeric(rho)
+          rho   = as.numeric(rho),
+          parent_tip_start = .pts(brts)
         )
         if (length(raw$trees) == 0L) FALSE
         else {
@@ -750,6 +751,7 @@ estimate_likelihood_surface <- function(tree, pars_mat, model = "cr",
   model_bin <- .resolve_model(model)
   link_int  <- .resolve_link(link)
   brts      <- .extract_brts(tree)
+  pts       <- .pts(brts)
 
   if (!is.matrix(pars_mat)) stop("'pars_mat' must be a matrix.")
   n_pts <- nrow(pars_mat)
@@ -775,7 +777,7 @@ estimate_likelihood_surface <- function(tree, pars_mat, model = "cr",
         max_lambda = as.numeric(max_lambda),
         num_threads = if (use_r_parallel) 1L else as.integer(num_threads),
         model = as.integer(model_bin), link = as.integer(link_int),
-        rho = as.numeric(rho)
+        rho = as.numeric(rho), parent_tip_start = pts
       ),
       error = function(e) NULL
     )
