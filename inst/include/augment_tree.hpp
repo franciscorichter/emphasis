@@ -22,6 +22,11 @@ namespace emphasis {
   };
 
 
+  // Number of thinning candidates whose acceptance probability exceeded 1
+  // (the envelope did not dominate nh at the candidate) since the last reset.
+  long long thinning_envelope_violations(bool reset);
+
+
   void augment_tree(const param_t& pars,
                     const tree_t& input_tree,
                     const Model& model,
