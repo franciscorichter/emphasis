@@ -5,3 +5,7 @@ scratch/
 data/
 figures/
 tables/
+
+# Build-specific baselines captured by the pendant-age comparison scripts.
+pendant_before.rds
+pendant_baseline_trees.rds
