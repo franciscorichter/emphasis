@@ -7,8 +7,8 @@
                       upper_bound,
                       max_iter,
                       xtol,
-                      tol,
-                      patience,
+                      tol = 1e-2,
+                      patience = 3L,
                       num_threads,
                       verbose = FALSE,
                       conditional = NULL,
@@ -24,28 +24,32 @@
   if (!is.null(conditional) && !is.function(conditional))
     stop("`conditional` must be a function or NULL.")
 
-  # Scale parameter changes by the search range for convergence check
-  range_vec <- upper_bound - lower_bound
-  range_vec[range_vec == 0] <- 1  # fixed params (lb == ub): delta always 0
+  # Convergence metric: max_j |theta_k,j - theta_{k-1,j}| / max(|theta_{k-1,j}|, rel_floor).
+  # The bound box does not enter; the floor keeps parameters at or near zero
+  # from giving an unbounded ratio.
+  rel_floor <- 1e-2
+  rel_delta <- function(new, old) max(abs(new - old) / pmax(abs(old), rel_floor))
 
-  streak      <- 0L
-  fail_streak <- 0L
-  prev_pars   <- pars
-  mcem        <- NULL
+  streak       <- 0L      # consecutive iterations with rel_delta < tol
+  fail_streak  <- 0L      # consecutive E-step failures
+  n_failed     <- 0L      # E-step failures over the whole run
+  n_success    <- 0L      # completed EM iterations
+  prev_pars    <- pars    # last successful M-step estimate (init until the first success)
+  cur_pars     <- pars    # point the next E-step samples at and the M-step starts from
+  par_hist     <- list()  # successful iterates, for the windowed drift
+  mcem         <- NULL
   last_results <- NULL
-  stop_reason <- "max_iter"
-  t0_mcem     <- proc.time()[3]
-
-  # E-step recovery state
-  orig_maxN    <- maxN
+  stop_reason  <- "max_iter"
+  t0_mcem      <- proc.time()[3]
   center_pars  <- (lower_bound + upper_bound) / 2
+  maxN_cap     <- 50000L
 
-  for (i in seq_len(max_iter)) {
-    results <- tryCatch(
+  run_em <- function(at, maxN_now) {
+    tryCatch(
       em_cpp(brts = brts,
-             init_pars = pars,
+             init_pars = at,
              sample_size = sample_size,
-             maxN = maxN,
+             maxN = maxN_now,
              max_missing = max_missing,
              max_lambda = 1e6,
              lower_bound = lower_bound,
@@ -59,69 +63,106 @@
              rconditional = conditional),
       error = function(e) NULL
     )
+  }
 
-    # Handle E-step failure with adaptive recovery
+  # One trace row: the iterate, the E-step value, the step metrics and the
+  # rejection counters of that E-step. `n_rejected` is the sum final_IS reports.
+  trace_row <- function(p, results, delta_max, abs_step, drift, maxN_used, final_estep) {
+    par_df <- as.data.frame(as.list(stats::setNames(p, paste0("par", seq_along(p)))))
+    n_rej <- .n0(results$rejected) +
+             .n0(results$rejected_overruns) +
+             .n0(results$rejected_lambda)
+    cbind(par_df, data.frame(
+      fhat                  = results$fhat,
+      delta_max             = delta_max,
+      abs_step              = abs_step,
+      drift                 = drift,
+      rejected              = .n0(results$rejected),
+      rejected_overruns     = .n0(results$rejected_overruns),
+      rejected_lambda       = .n0(results$rejected_lambda),
+      rejected_zero_weights = .n0(results$rejected_zero_weights),
+      n_rejected            = n_rej,
+      num_trees             = sample_size,
+      maxN                  = maxN_used,
+      time                  = results$time,
+      final_estep           = final_estep
+    ))
+  }
+
+  for (i in seq_len(max_iter)) {
+    maxN_used <- maxN
+    results   <- run_em(cur_pars, maxN)
+
     if (is.null(results)) {
       fail_streak <- fail_streak + 1L
+      n_failed    <- n_failed + 1L
+      streak      <- 0L
 
-      # Recovery: double maxN and perturb parameters toward center
-      maxN <- as.integer(min(maxN * 2L, 50000L))
-      pars <- 0.8 * pars + 0.2 * center_pars
-      # Clamp back within bounds
-      pars <- pmax(pars, lower_bound)
-      pars <- pmin(pars, upper_bound)
+      # Escalation: enlarge the attempt cap. The enlarged value is kept for
+      # the rest of the run (never reset after a success, never reduced).
+      maxN <- as.integer(max(maxN, min(2 * maxN, maxN_cap)))
+
+      # First failure: retry at the last successful iterate with the larger
+      # cap. From the second consecutive failure on, also move the sampling
+      # point toward the box centre; prev_pars keeps the last estimate.
+      if (fail_streak == 1L) {
+        cur_pars <- prev_pars
+        how <- "restarting from the last estimate"
+      } else {
+        cur_pars <- 0.8 * cur_pars + 0.2 * center_pars
+        cur_pars <- pmax(cur_pars, lower_bound)
+        cur_pars <- pmin(cur_pars, upper_bound)
+        how <- "perturbed toward center"
+      }
 
       if (verbose) message(sprintf(
-        "Iteration %d: E-step failed (%d consecutive) - recovery: maxN=%d, perturbed toward center",
-        i, fail_streak, maxN
+        "Iteration %d: E-step failed (%d consecutive) - recovery: maxN=%d, %s",
+        i, fail_streak, maxN, how
       ))
 
       if (fail_streak >= 8L) {
         stop_reason <- "e_step_failure"
-        .mcem_warn_estep(brts, pars, lower_bound, upper_bound, model, link)
-        break
-      }
-      next
-    }
-
-    # Success: reset recovery state
-    fail_streak <- 0L
-    maxN <- orig_maxN
-
-    last_results <- results
-    pars <- results$estimates
-    delta_max <- max(abs(pars - prev_pars) / range_vec)
-    prev_pars <- pars
-
-    # Record iteration
-    par_df <- as.data.frame(as.list(stats::setNames(pars, paste0("par", seq_along(pars)))))
-    step <- cbind(par_df, data.frame(
-      fhat      = results$fhat,
-      delta_max = delta_max,
-      rejected  = results$rejected,
-      num_trees = sample_size,
-      time      = results$time
-    ))
-    mcem <- rbind(mcem, step)
-
-    if (verbose) {
-      rej_str <- if (results$rejected > 0L) sprintf("  rej=%d", results$rejected) else ""
-      message(sprintf("Iteration %d: fhat=%.4f  delta=%.2e  streak=%d/%d%s",
-                      i, results$fhat, delta_max, streak, patience, rej_str))
-    }
-
-    # Check convergence: parameter stability
-    if (delta_max < tol) {
-      streak <- streak + 1L
-      if (streak >= patience) {
-        stop_reason <- "converged"
+        .mcem_warn_estep(brts, prev_pars, lower_bound, upper_bound, model, link)
         break
       }
     } else {
-      streak <- 0L
+      fail_streak  <- 0L
+      n_success    <- n_success + 1L
+      last_results <- results
+
+      new_pars  <- as.numeric(results$estimates)
+      abs_step  <- max(abs(new_pars - cur_pars))
+      delta_max <- rel_delta(new_pars, cur_pars)
+      par_hist[[n_success]] <- new_pars
+      # Relative displacement over the last `patience` completed iterations
+      drift <- if (n_success > patience)
+        rel_delta(new_pars, par_hist[[n_success - patience]]) else NA_real_
+      prev_pars <- new_pars
+      cur_pars  <- new_pars
+
+      step <- trace_row(new_pars, results, delta_max, abs_step, drift,
+                        maxN_used, final_estep = FALSE)
+      mcem <- rbind(mcem, step)
+
+      if (verbose) {
+        rej_str <- if (step$n_rejected > 0L) sprintf("  rej=%d", step$n_rejected) else ""
+        message(sprintf("Iteration %d: fhat=%.4f  delta=%.2e  step=%.2e  streak=%d/%d%s",
+                        i, results$fhat, delta_max, abs_step, streak, patience, rej_str))
+      }
+
+      # Convergence: `patience` consecutive iterations with rel_delta < tol
+      if (delta_max < tol) {
+        streak <- streak + 1L
+        if (streak >= patience) {
+          stop_reason <- "converged"
+          break
+        }
+      } else {
+        streak <- 0L
+      }
     }
 
-    # Time budget check
+    # Time budget check (counts failed iterations as well)
     if (!is.null(max_time)) {
       elapsed <- proc.time()[3] - t0_mcem
       if (elapsed > max_time) {
@@ -132,7 +173,26 @@
     }
   }
 
-  # Bootstrap variance from the last iteration's IS weights
+  # Final E-step at the returned iterate, so that fhat, loglik_var and final_IS
+  # describe the same point as `pars`. The M-step estimate of this call is
+  # discarded. Recorded as the last trace row with final_estep = TRUE.
+  final_estep <- FALSE
+  if (!is.null(last_results) && stop_reason != "e_step_failure") {
+    fin <- run_em(prev_pars, maxN)
+    if (!is.null(fin)) {
+      last_results <- fin
+      final_estep  <- TRUE
+      mcem <- rbind(mcem, trace_row(prev_pars, fin, NA_real_, NA_real_, NA_real_,
+                                    maxN, final_estep = TRUE))
+      if (verbose) message(sprintf("Final E-step at the returned parameters: fhat=%.4f",
+                                   fin$fhat))
+    } else if (verbose) {
+      message("Final E-step at the returned parameters failed; ",
+              "fhat is the last iteration's value.")
+    }
+  }
+
+  # Bootstrap variance from the last E-step's IS weights
   loglik_var <- NA_real_
   if (!is.null(last_results) &&
       length(last_results$logf) >= 2L &&
@@ -162,9 +222,12 @@
 
   list(
     mcem        = mcem,
-    pars        = pars,
-    iterations  = nrow(mcem),
+    pars        = prev_pars,
+    iterations  = n_success,
+    n_failed    = n_failed,
     stop_reason = stop_reason,
+    final_estep = final_estep,
+    maxN        = maxN,
     loglik_var  = loglik_var,
     final_IS    = final_IS
   )
