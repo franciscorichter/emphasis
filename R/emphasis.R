@@ -151,7 +151,8 @@
       rejected_nonfinite    = .n0(results$rejected_nonfinite),
       rejected_zero_weights = .n0(results$rejected_zero_weights),
       n_rejected            = n_rej,
-      num_trees             = sample_size,
+      num_trees             = if (is.null(results$num_trees)) sample_size
+                              else .n0(results$num_trees),
       maxN                  = maxN_used,
       ESS                   = .ess_from_lw(lw),
       time                  = results$time

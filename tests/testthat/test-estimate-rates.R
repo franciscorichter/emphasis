@@ -306,9 +306,10 @@ test_that("diagnose_mcem excludes the final E-step row on both samplers", {
 })
 
 test_that("diagnose_mcem's rejected column is the trace's n_rejected (H34)", {
-  # The thinning trace splits rejections into channels; n_rejected is their
-  # sum, and `rejected` alone counts unhandled exceptions.  max_missing = 2
-  # forces augmentation overruns, so the two differ.
+  # The thinning trace splits rejections into channels; `rejected` and
+  # `n_rejected` are both their sum (the same meaning the BDI trace gives
+  # `rejected`), and `rejected_errors` is the unhandled-exception channel.
+  # max_missing = 2 forces augmentation overruns, so the channels differ.
   # ape::rcoal(20) with set.seed(4), rescaled to crown age 5 (H34.R).
   brts4 <- c(5.000000, 0.824025, 0.722480, 0.699953, 0.461824, 0.410440,
              0.364074, 0.331263, 0.313102, 0.177920, 0.143375, 0.125860,
@@ -325,7 +326,9 @@ test_that("diagnose_mcem's rejected column is the trace's n_rejected (H34)", {
   dg <- diagnose_mcem(d, plot = FALSE)
   iter_rows <- emphasis:::.mcem_iter_rows(d$mcem)
   expect_gt(sum(d$mcem$n_rejected), 0L)
-  expect_equal(sum(d$mcem$rejected), 0L)          # a different channel
+  expect_gt(sum(d$mcem$rejected_overruns), 0L)    # the channel max_missing fills
+  expect_equal(sum(d$mcem$rejected_errors), 0L)   # no unhandled exception here
+  expect_equal(d$mcem$rejected, d$mcem$n_rejected)  # one meaning across drivers
   expect_equal(dg$convergence$rejected, d$mcem$n_rejected[iter_rows])
   expect_equal(nrow(dg$convergence), d$iterations)
 })

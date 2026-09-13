@@ -75,6 +75,10 @@ eval_logf <- function(pars, trees, model = as.integer( c(0, 0, 0)), link = 0L, r
 #'   \item{rejected_zero_weights}{Rejected: zero IS weight (log weight -Inf).}
 #'   \item{rejected_nonfinite}{Rejected: log weight +Inf or NaN.}
 #'   \item{num_trees}{Number of trees returned (\code{length(trees)}).}
+#'   \item{envelope_violations}{Thinning candidates drawn during this call
+#'     whose acceptance probability exceeded 1, i.e. the envelope did not
+#'     dominate the rate. Non-zero means the draws are not from the density
+#'     \code{logg} charges them; a warning is issued.}
 #'   \item{time}{Elapsed time (ms).}
 #' }
 #' @keywords internal

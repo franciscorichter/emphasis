@@ -447,6 +447,11 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
               "falling back to thinning.")
     ctrl$sampling <- "dynamic_fresh"
   }
+  # A sample size below 1 reaches the C++ E-step as a loop that accepts no
+  # tree and then indexes an empty weight vector.
+  if (!is.finite(ctrl$sample_size) || ctrl$sample_size < 1L)
+    stop(sprintf("control$num_trees must be at least 1 (got %s).",
+                 format(ctrl$sample_size)), call. = FALSE)
   if (is.null(ctrl$maxN) || !is.finite(ctrl$maxN))
     ctrl$maxN <- max(2000L, 10L * as.integer(ctrl$sample_size))
   # sample_size > maxN makes every thinning E-step fail structurally. The BDI
