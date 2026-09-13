@@ -1,0 +1,7 @@
+# A tier writes its own results; regenerate with run.sh rather than committing.
+results/
+results-*/
+scratch/
+data/
+figures/
+tables/
