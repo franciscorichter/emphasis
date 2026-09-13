@@ -52,9 +52,8 @@ Default \code{"cr"} (constant rate). The recommended covariate model is
 
 \item{init_pars}{Starting parameter vector. Required for \code{"mcem"};
 ignored for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the
-midpoint of the bounds is used, with covariate slopes started at 0 and
-\code{gamma_0} moved to half of \code{beta_0} when the midpoint has
-\code{lambda == mu}.}
+midpoint of the bounds is used, with covariate slopes started at 0
+(linear link) so that lambda stays positive during the early E-steps.}
 
 \item{control}{Named list of tuning parameters. Must include
 \code{lower_bound} and \code{upper_bound}. Use
@@ -84,7 +83,9 @@ log-likelihood is conditioned: \eqn{\ell_{\rm cond} = \ell -
 A list with class \code{"emphasis_fit"} containing:
   \describe{
     \item{\code{pars}}{Named numeric vector of parameter estimates.}
-    \item{\code{loglik}}{Final log-likelihood estimate.}
+    \item{\code{loglik}}{Final log-likelihood estimate. For MCEM this is
+      the importance-sampling estimate at the returned parameters, and is
+      \code{NA} when the E-step evaluating them failed.}
     \item{\code{loglik_var}}{Bootstrap variance of \code{loglik} due to
       Monte Carlo noise. Populated automatically when
       \code{control$num_trees >= 2} (B = 200 replicates); \code{NA}
@@ -100,6 +101,8 @@ A list with class \code{"emphasis_fit"} containing:
       \code{"m_step_failure"}); \code{NA} for other methods.}
     \item{\code{iterations}}{Number of completed MCEM iterations
       (\code{0} when every E-step failed); \code{NA} for other methods.}
+    \item{\code{n_failed}}{Number of E- or M-step failures over the MCEM
+      run; \code{NA} for other methods.}
     \item{\code{details}}{Full output from the back-end function
       (\code{.mcem_dynamic_fresh} or \code{emphasis_cem}).}
   }

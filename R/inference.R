@@ -50,25 +50,41 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'
 #' MCEM-specific parameters:
 #' \describe{
-#'   \item{\code{sampling}}{Sampling scheme. Currently only
-#'     \code{"dynamic_fresh"} is implemented.}
+#'   \item{\code{sampling}}{Sampling scheme: \code{"bdi"} (default), the
+#'     exact birth-death-with-immigration sampler, which covers the cr and dd
+#'     models on the linear and exponential links; or
+#'     \code{"dynamic_fresh"}, the thinning sampler, which covers every
+#'     model and link. \code{"bdi"} falls back to \code{"dynamic_fresh"}
+#'     for the model/link combinations it does not cover.}
 #'   \item{\code{num_trees}}{Augmented trees per EM iteration. Default
 #'     \code{200}. Alias: \code{sample_size}.}
 #'   \item{\code{xtol}}{Relative tolerance for the M-step optimiser.
 #'     Default \code{1e-3}.}
 #'   \item{\code{max_iter}}{Maximum EM iterations. Default \code{200}.}
 #'   \item{\code{maxN}}{Total augmentation attempts per E-step (accepted
-#'     plus rejected), used by the thinning sampler. Must be at least
-#'     \code{num_trees}; \code{estimate_rates} stops with an error otherwise.
-#'     Increase for models with high rejection rates (e.g. D/DD with
-#'     strongly negative covariate slope). Default \code{NULL}, which sets
+#'     plus rejected). Read by the thinning sampler only; the BDI sampler
+#'     has no such cap and ignores it. Under \code{"dynamic_fresh"} it must
+#'     be at least \code{num_trees}, and \code{estimate_rates} stops with an
+#'     error otherwise. Increase for models with high rejection rates (e.g.
+#'     D/DD with strongly negative covariate slope). Default \code{NULL},
+#'     and a non-finite value is treated as \code{NULL}, which sets
 #'     \code{max(2000, 10 * num_trees)}.}
 #'   \item{\code{tol}}{Parameter-stability convergence threshold. MCEM
 #'     is considered converged when the largest relative parameter change,
-#'     \eqn{\max_j |\theta_k[j] - \theta_{k-1}[j]| / \max(|\theta_{k-1}[j]|, 10^{-2})},
+#'     \eqn{\max_j |\theta_k[j] - \theta_{k-1}[j]| / \max(|\theta_{k-1}[j]|, c)},
 #'     is below \code{tol} for \code{patience} consecutive iterations. The
-#'     bound box does not enter. Default \code{1e-2}, of the order of the
-#'     Monte Carlo noise of an M-step iterate at \code{num_trees = 200}.}
+#'     bound box does not enter. The floor \eqn{c} carries the units of the
+#'     parameters (see \code{.rel_floor}): \code{tol / crown_age} where
+#'     they are rates (linear and gaussian links) and \code{tol} where they
+#'     are log-rates (exponential link), so the statistic does not change
+#'     when the tree is expressed in another unit of time. Default
+#'     \code{1e-2}: every coordinate must move by less than 1\% of its own
+#'     magnitude, \code{patience} times in a row. The step the sampler
+#'     itself produces sets whether that is reachable — on a 12-tip CR tree
+#'     at \code{num_trees = 200} the statistic has median 0.02 and falls
+#'     below \code{1e-2} in about a fifth of iterations — so runs at these
+#'     defaults commonly end at \code{max_iter}. Raising \code{num_trees}
+#'     shrinks the Monte Carlo part of the step.}
 #'   \item{\code{patience}}{Number of consecutive iterations with parameter
 #'     change below \code{tol} required to declare convergence. Default
 #'     \code{3}.}
@@ -235,7 +251,6 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   stop("'tree' must be a phylo object, a simulate_tree() result, or a numeric branching-time vector.")
 }
 
-#' @keywords internal
 #' Relative parameter change, the statistic both MCEM stopping rules use
 #'
 #' The step in each coordinate is measured against that coordinate's own
@@ -273,6 +288,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   rel_floor / crown_age
 }
 
+#' @keywords internal
 .par_names <- function(model_bin) {
   # Orthogonal covariate basis {N, M = P/N, D = E - M}: slot 2 is the mean-age
   # coefficient (beta_M), slot 3 the deviation coefficient (beta_D).
@@ -392,6 +408,34 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   c(lam, mu)
 }
 
+#' Trace rows that are MCEM iterations
+#'
+#' Both drivers append the final E-step at the parameters they return as a
+#' trace row.  That row is not an iteration: it carries no M-step and no step
+#' metrics.  \code{.mcem_bdi} flags it \code{m_step = FALSE} and
+#' \code{.mcem_dynamic_fresh} flags it \code{final_estep = TRUE}; both flags
+#' are read here, so that anything counting or plotting the trace reports K
+#' rows for a K-iteration fit.
+#'
+#' @param mcem_df An MCEM trace data frame, or \code{NULL}.
+#' @return A logical vector over the rows of \code{mcem_df}.
+#' @keywords internal
+.mcem_iter_rows <- function(mcem_df) {
+  if (is.null(mcem_df) || nrow(mcem_df) == 0L) return(logical(0))
+  is_final <- rep(FALSE, nrow(mcem_df))
+  if ("final_estep" %in% names(mcem_df)) {
+    flag <- as.logical(mcem_df$final_estep)
+    flag[is.na(flag)] <- FALSE
+    is_final <- is_final | flag
+  }
+  if ("m_step" %in% names(mcem_df)) {
+    flag <- as.logical(mcem_df$m_step)
+    flag[is.na(flag)] <- TRUE
+    is_final <- is_final | !flag
+  }
+  !is_final
+}
+
 #' @keywords internal
 .run_mcem <- function(brts, init_pars, lower_bound, upper_bound, ctrl,
                       model = c(0L, 0L, 0L), link = 0L, cond_fun = NULL) {
@@ -403,12 +447,15 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
               "falling back to thinning.")
     ctrl$sampling <- "dynamic_fresh"
   }
-  if (is.null(ctrl$maxN)) ctrl$maxN <- max(2000L, 10L * as.integer(ctrl$sample_size))
-  # sample_size > maxN makes every thinning E-step fail structurally
-  if (ctrl$maxN < ctrl$sample_size)
+  if (is.null(ctrl$maxN) || !is.finite(ctrl$maxN))
+    ctrl$maxN <- max(2000L, 10L * as.integer(ctrl$sample_size))
+  # sample_size > maxN makes every thinning E-step fail structurally. The BDI
+  # sampler draws each tree to completion and takes no maxN, so the check is
+  # scoped to the sampler that reads it, after the fallback above.
+  if (identical(ctrl$sampling, "dynamic_fresh") && ctrl$maxN < ctrl$sample_size)
     stop(sprintf(paste0(
-      "control$maxN (%d) is smaller than control$num_trees (%d): the E-step ",
-      "cannot accept num_trees augmented trees within maxN attempts.\n",
+      "control$maxN (%d) is smaller than control$num_trees (%d): the thinning ",
+      "E-step cannot accept num_trees augmented trees within maxN attempts.\n",
       "  Set maxN >= num_trees, or leave maxN = NULL for max(2000, 10 * num_trees)."),
       as.integer(ctrl$maxN), as.integer(ctrl$sample_size)), call. = FALSE)
   raw <- switch(ctrl$sampling,
@@ -455,17 +502,29 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
     dynamic_mixed   = stop("'dynamic_mixed' sampling not yet implemented."),
     stop("Unknown sampling scheme: ", ctrl$sampling)
   )
-  fhat_vec <- raw$mcem$fhat
-  loglik   <- if (any(is.finite(fhat_vec)))
-    utils::tail(fhat_vec[is.finite(fhat_vec)], 1L) else NA_real_
+  # The drivers evaluate a final E-step at the parameters they return and
+  # report its fhat as `loglik` (NA when that E-step failed), so take the
+  # value from the driver.  The trace tail is the fallback for return shapes
+  # without the field, and is one iteration behind the returned parameters
+  # whenever the final E-step did not run.  Exact extraction: `$` would
+  # partial-match `loglik_var` and hand back a variance.
+  loglik <- raw[["loglik"]]
+  if (is.null(loglik)) {
+    fhat_vec <- raw$mcem$fhat
+    loglik   <- if (any(is.finite(fhat_vec)))
+      utils::tail(fhat_vec[is.finite(fhat_vec)], 1L) else NA_real_
+  }
+  loglik <- if (length(loglik) == 1L) as.numeric(loglik) else NA_real_
   loglik_var <- if (!is.null(raw$loglik_var)) raw$loglik_var else NA_real_
   # The drivers count completed E+M iterations themselves (the final
-  # E-step row of the trace is not one); fall back to the trace for older
-  # return shapes, and report 0 when no E-step succeeded.
+  # E-step row of the trace is not one); fall back to the trace rows that
+  # are iterations, and report 0 when no E-step succeeded.
   iterations <- if (!is.null(raw$iterations)) as.integer(raw$iterations)
-                else if (is.null(raw$mcem)) 0L else as.integer(nrow(raw$mcem))
+                else as.integer(sum(.mcem_iter_rows(raw$mcem)))
+  n_failed <- if (!is.null(raw[["n_failed"]])) as.integer(raw[["n_failed"]]) else NA_integer_
   list(pars = raw$pars, loglik = loglik, loglik_var = loglik_var,
-       stop_reason = raw$stop_reason, iterations = iterations, details = raw)
+       stop_reason = raw$stop_reason, iterations = iterations,
+       n_failed = n_failed, details = raw)
 }
 
 #' @keywords internal
@@ -669,9 +728,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'   \code{"nd"} (\code{~ N + D}): diversity and age-imbalance.
 #' @param init_pars Starting parameter vector. Required for \code{"mcem"};
 #'   ignored for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the
-#'   midpoint of the bounds is used, with covariate slopes started at 0 and
-#'   \code{gamma_0} moved to half of \code{beta_0} when the midpoint has
-#'   \code{lambda == mu}.
+#'   midpoint of the bounds is used, with covariate slopes started at 0
+#'   (linear link) so that lambda stays positive during the early E-steps.
 #' @param control Named list of tuning parameters. Must include
 #'   \code{lower_bound} and \code{upper_bound}. Use
 #'   \code{\link{estimate_rates_control}} to inspect other defaults.
@@ -696,7 +754,9 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #' @return A list with class \code{"emphasis_fit"} containing:
 #'   \describe{
 #'     \item{\code{pars}}{Named numeric vector of parameter estimates.}
-#'     \item{\code{loglik}}{Final log-likelihood estimate.}
+#'     \item{\code{loglik}}{Final log-likelihood estimate. For MCEM this is
+#'       the importance-sampling estimate at the returned parameters, and is
+#'       \code{NA} when the E-step evaluating them failed.}
 #'     \item{\code{loglik_var}}{Bootstrap variance of \code{loglik} due to
 #'       Monte Carlo noise. Populated automatically when
 #'       \code{control$num_trees >= 2} (B = 200 replicates); \code{NA}
@@ -712,6 +772,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'       \code{"m_step_failure"}); \code{NA} for other methods.}
 #'     \item{\code{iterations}}{Number of completed MCEM iterations
 #'       (\code{0} when every E-step failed); \code{NA} for other methods.}
+#'     \item{\code{n_failed}}{Number of E- or M-step failures over the MCEM
+#'       run; \code{NA} for other methods.}
 #'     \item{\code{details}}{Full output from the back-end function
 #'       (\code{.mcem_dynamic_fresh} or \code{emphasis_cem}).}
 #'   }
@@ -775,6 +837,9 @@ estimate_rates <- function(tree,
   }
 
   if (is.null(init_pars) && method == "mcem") {
+    # The midpoint of a symmetric box has lambda == mu, and both samplers
+    # start there: the BDI transition probability is the lambda = mu limit
+    # of the CR kernel (.bdi_p_cr), not 0/0, so the midpoint needs no shift.
     init_pars <- (lower_bound + upper_bound) / 2
     # For linear link with DD/D models, the midpoint of the slope bounds
     # can push lambda to zero (lambda = max(0, beta_0 + beta_X * X)).
@@ -790,22 +855,6 @@ estimate_rates <- function(tree,
       for (j in all_slopes) {
         init_pars[j] <- max(lower_bound[j], min(upper_bound[j], 0))
       }
-    }
-    # A symmetric box puts the midpoint at lambda == mu, where the BDI
-    # sampler's CR transition probability is 0/0. Start mu at half of lambda
-    # (exponential link: log-rate minus log 2), clamped to the mu bounds.
-    j_mu <- length(init_pars) %/% 2L + 1L
-    if (isTRUE(init_pars[1L] == init_pars[j_mu])) {
-      mu_start <- if (link_int == 1L) init_pars[1L] - log(2) else 0.5 * init_pars[1L]
-      init_pars[j_mu] <- max(lower_bound[j_mu], min(upper_bound[j_mu], mu_start))
-      if (init_pars[1L] == init_pars[j_mu] &&
-          identical(ctrl$sampling, "bdi") && .bdi_supported(model_bin, link_int))
-        stop(sprintf(paste0(
-          "The default starting point has lambda == mu (%s = %s = %.4g), where ",
-          "the BDI sampler cannot start, and the mu bounds [%.4g, %.4g] leave no ",
-          "room to move it.\n  Supply init_pars with lambda != mu."),
-          .par_names(model_bin)[1L], .par_names(model_bin)[j_mu], init_pars[1L],
-          lower_bound[j_mu], upper_bound[j_mu]), call. = FALSE)
     }
   }
 
@@ -905,6 +954,7 @@ estimate_rates <- function(tree,
   loglik_var <- if (!is.null(raw$loglik_var)) raw$loglik_var else NA_real_
   stop_reason <- if (!is.null(raw$stop_reason)) as.character(raw$stop_reason) else NA_character_
   iterations  <- if (!is.null(raw$iterations)) as.integer(raw$iterations) else NA_integer_
+  n_failed    <- if (!is.null(raw$n_failed)) as.integer(raw$n_failed) else NA_integer_
 
   if (ctrl$verbose) {
     cat(sprintf("[estimate_rates] loglik=%.4f  AIC=%.4f  pars: %s%s\n",
@@ -917,6 +967,7 @@ estimate_rates <- function(tree,
                  n_pars = n_pars, AIC = aic,
                  method = method, model = model_bin,
                  stop_reason = stop_reason, iterations = iterations,
+                 n_failed = n_failed,
                  cond = !is.null(cond), details = raw$details)
   class(result) <- "emphasis_fit"
   result
