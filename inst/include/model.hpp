@@ -30,6 +30,7 @@
 
 #include <vector>
 #include <stdexcept>
+#include <string>
 #include <functional>
 #include <atomic>
 #include <cstdint>
@@ -202,7 +203,13 @@ namespace emphasis {
         link_(static_cast<LinkType>(link)), rho_(rho)
     {
       if (model_bin_.size() != 3) model_bin_ = {0, 0, 0};
-      if (rho_ <= 0.0 || rho_ > 1.0) rho_ = 1.0;
+      // Substituting 1 here made an out-of-range rho return the complete-
+      // sampling likelihood with no signal; eval_logf, augment_trees and
+      // em_cpp are exported, so an R-side check alone does not cover it.
+      if (!(rho_ > 0.0) || rho_ > 1.0) {
+        throw std::invalid_argument("rho must be in (0, 1] (got " +
+          std::to_string(rho_) + ")");
+      }
     }
 
     // Legacy constructor: maps old 4-param rpd5c layout to 8-param

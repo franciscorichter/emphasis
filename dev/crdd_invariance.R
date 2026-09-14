@@ -5,7 +5,9 @@
 # a fixed corpus of augmented trees scored with eval_logf, before and against
 # after, under identical().
 #
-# Augmentation is seeded from the clock inside C++ and is not reproducible, so
+# Augmentation takes a seed from R since wave 2, so a fixed seed reproduces a
+# draw at num_threads = 1.  A change to the sampler still changes which trees
+# are drawn under the same seed, so
 # the corpus itself is the thing that has to be carried across the two builds:
 # capture it once from the build being compared against, then score it again
 # from the build under test.

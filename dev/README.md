@@ -12,7 +12,10 @@ Working material, excluded from the package build by `.Rbuildignore`.
   are not tracked, so regenerate them against the two commits being compared.
 - `crdd_invariance.R` — the cr/dd bit-for-bit gate. `capture` fixes a corpus of augmented trees
   and their `eval_logf` scores from whichever build is loaded; `compare` rescores that corpus
-  from the build under test and requires `identical()`. Augmentation is seeded from the clock,
+  from the build under test and requires `identical()`. Augmentation takes a seed from R since
+  wave 2, so a fixed seed reproduces a draw at `num_threads = 1`; the capture/compare workflow
+  stays the right one across builds, because a change to the sampler changes which trees are
+  drawn even under the same seed,
   so the corpus itself has to cross the two builds; `dev/.crdd_corpus.rds` is not tracked.
 - `proposal_gates.R` — the measurements behind `tests/testthat/test-proposal-density.R`
   at sample sizes a test cannot afford: the KS test of the drawn lifetimes against the

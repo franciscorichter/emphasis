@@ -172,6 +172,7 @@ simulate_tree <- function(tree        = NULL,
 
   model_bin <- .resolve_model(model)
   link_int  <- .resolve_link(link)
+  .check_rho(rho, "rho")
 
   if (!is.numeric(pars) || length(pars) == 0L)
     stop("'pars' must be a non-empty numeric vector or matrix.")
@@ -383,7 +384,7 @@ simulate_tree <- function(tree        = NULL,
 
   L_extant <- .extract_Ltable(tree)
 
-  if (method == "bdi" && !.bdi_supported(model_bin, link)) method <- "thinning"
+  if (method == "bdi" && !.bdi_supported(model_bin, link, rho)) method <- "thinning"
 
   if (method == "bdi") {
     aug <- tryCatch(

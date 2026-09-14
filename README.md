@@ -40,7 +40,7 @@ R CMD build .           # source tarball
 
 CI runs `R CMD check` on every push through `.github/workflows/main.yml` (r-lib/actions, OS × R matrix).
 
-The C++ integration tests in `tests/testthat/test-em.R`, `test-inference.R` and `test-simulate.R` call `skip()` unconditionally, and their bodies target earlier APIs (`mc_loglik()`, `estimate_rates(lower_bound = )`, positional `simulate_tree()`), so they run nowhere and fail when un-skipped. The rest of the suite — 16 files, 898 expectations, including the pins written for the audit findings below — passes.
+The suite runs 23 files with no unconditional `skip()`, and exercises the compiled code rather than only the R layer. Several files are Monte Carlo gates — the importance sampler's unbiasedness against a brute-force marginal likelihood, the pendant-age covariates against values derived from the edge list — so a full run takes a few minutes.
 
 ## Layout
 
@@ -170,7 +170,7 @@ The survival probability $P_\theta$ is estimated by forward simulation and emula
 
 When the phylogeny samples only a fraction $\rho$ of the living species, set `rho` in the control list (or `simulate_tree(rho = ...)`). The augmentation then inserts both extinct lineages and unsampled extant lineages, and the likelihood gains the binomial sampling factor $n_{\text{obs}}\log\rho + n_{\text{unsamp}}\log(1-\rho)$. With `rho = 1` (default) the tree is completely sampled.
 
-The thinning proposal implements this. **The BDI sampler does not**: it proposes no unsampled extant lineages and uses the complete-sampling conditioned process, so `estimate_rates(rho = < 1)` at the default `sampling = "bdi"` returns the `rho = 1` estimate with no warning (audit finding H2). Until `.bdi_supported()` gates on `rho`, pass `sampling = "dynamic_fresh"` for any fit with `rho < 1`. `emphasis_pipeline()` forwards a top-level `control$rho` to `auto_bounds()` only (H29); give each stage its own `rho` until that is fixed.
+The thinning proposal implements this. The BDI sampler does not — it proposes no unsampled extant lineages — so `.bdi_supported()` reports it unavailable for `rho < 1` and the fit falls back to `sampling = "dynamic_fresh"`, announcing the change with a message. `emphasis_pipeline()` inherits a top-level `control$rho` into every stage, a nested per-stage value still wins, and the value actually used is recorded in the fit. A `rho` outside (0, 1] is an error, in R and in the compiled code alike.
 
 ## Usage
 
@@ -327,13 +327,24 @@ diversity dependence, a rate of zero gives a log-density of `-Inf` rather than `
 scales a survival penalty by the weight sum, the thinning envelope dominates for N-only models,
 and neither MCEM stopping rule depends on the unit of time.
 
-Waves 2 and 3 are not applied. The open items a user meets first: the BDI sampler ignores `rho`
-(see *Incomplete taxon sampling*), it does not cover `D`-dependent models or the gaussian link,
-the thinning proposal's density is not the sampler's own density for `D`-dependent models (H6),
-observed lineages carry `tip_start = 0` so `M` and `D` mean different quantities in simulation and
-in inference (H9), `auto_bounds()` places the gaussian link's intercepts on a log scale (H73), the
-C++ samplers are seeded from the clock so `set.seed()` does not reach them (H47), and the
-integration tests are dead (see *Build and test*). There are no vignettes.
+Wave 2 is applied: `rho` reaches every stage and is refused outside (0, 1] rather than silently
+replaced, `auto_bounds()` puts the gaussian link's intercepts on the natural scale the rate is
+defined on, the samplers take a seed from R so `set.seed()` reproduces a run and forked workers
+draw independently, and the integration tests execute the compiled code instead of skipping.
+
+The `D` covariate chain is complete: the estimator is given the observed topology that `M` and `D`
+are defined on (H9), the linear link integrates its own model per lineage rather than freezing the
+rates at the segment node (H8), `log q` is the density the thinning sampler draws from (H6), and
+the crown lineages can be drawn as parents so the proposal's support contains every attachment the
+likelihood gives positive density (H45). The last of those is what makes a `d` or `nd` fit a
+measurement: the importance sampler's unbiasedness can now be checked against a brute-force
+marginal likelihood on a tree with observed splits, and it passes.
+
+Wave 3 is not applied. The largest open items, in the order the validation study says they would
+pay off: the exact BDI proposal covers only N-only models on the linear and exponential links, so
+the thinning proposal is forced into the high-turnover regimes where its effective sample size
+collapses; and convergence is declared on a parameter step that is not referred to the Monte Carlo
+noise of the iterate it tests. There are no vignettes.
 
 ### Validation
 

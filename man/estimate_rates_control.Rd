@@ -23,12 +23,17 @@ Override individual elements and pass the modified list via the
 Shared parameters (all methods): \code{lower_bound} (required, no
 default), \code{upper_bound} (required, no default),
 \code{verbose} (default FALSE), \code{max_missing} (default 1e4),
-\code{num_threads} (default 1).
+\code{num_threads} (default 1), \code{rho} (sampling fraction, a single
+number in \eqn{(0, 1]}; default 1 = complete sampling, and an
+out-of-range value is an error rather than being replaced by 1).
 
 MCEM-specific: \code{sampling} (default \code{"bdi"}, the exact
 birth-death-with-immigration sampler for the cr and dd models on the
-linear and exponential links; \code{"dynamic_fresh"} is the thinning
-sampler, used for every other model/link and whenever it is asked for),
+linear and exponential links \emph{at \code{rho} = 1};
+\code{"dynamic_fresh"} is the thinning sampler, used for every other
+model/link, for \code{rho < 1} because the BDI proposal draws no
+unsampled extant lineages, and whenever it is asked for.  A fallback is
+announced with a message naming the reason and the sampler that runs),
 \code{num_trees} (augmented trees per EM iteration, default 200;
 alias: \code{sample_size}), \code{max_iter} (iteration cap, default 200),
 \code{maxN} (max augmentation attempts per E-step, read by the thinning
