@@ -167,12 +167,12 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   mu_hat <- 0.2 * r_hat
   lam_hat <- r_hat + mu_hat
 
-  if (link_int == 0L) {
-    center_lam <- c(lam_hat)
-    center_mu  <- c(mu_hat)
-  } else {
+  if (link_int == 1L) {
     center_lam <- c(log(max(lam_hat, 1e-4)))
     center_mu  <- c(log(max(mu_hat, 1e-6)))
+  } else {
+    center_lam <- c(.rate_intercept(lam_hat, link_int))
+    center_mu  <- c(.rate_intercept(mu_hat, link_int))
   }
   active <- which(model_bin == 1L)
   center <- c(center_lam, rep(0, length(active)),
@@ -396,11 +396,66 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 }
 
 
+# Intercept that puts the per-lineage rate at `rate` when the covariate term
+# of the linear predictor is zero.
+#
+#   linear (0)      rate = max(0, beta_0)                 -> beta_0 = rate
+#   exponential (1) rate = exp(beta_0)                    -> handled by the
+#                                                            caller's log()
+#   gaussian (2)    rate = beta_0 * exp(-(eta_cov - 1)^2 / 2)
+#                        = beta_0 * exp(-1/2) at eta_cov = 0
+#                                                         -> beta_0 = rate*e^(1/2)
+#
+# Under the gaussian link beta_0 is the peak rate on the natural scale
+# (general_tree.hpp:110-113, model.hpp:134-137), not a log rate, so the
+# log-scale branch belongs to the exponential link alone.
+.rate_intercept <- function(rate, link_int) {
+  if (link_int == 1L) return(log(rate))
+  if (link_int == 2L) return(rate * exp(0.5))
+  rate
+}
+
+
+# Total event rate at the crown: t = 0, N = 2, both lineages born at 0, so
+# P = 0, M = P/N = 0 and D = E - M = 0 and only the N term contributes to the
+# covariate part of the linear predictor.
+#
+# The simulator starts here, and rnd_t::expon returns 1e20 for a non-positive
+# total rate (general_tree.hpp:45-47), so the run ends at once with the 2-row
+# crown L-table and status "done".  A parameter value that does that is not
+# feasible; without this check it was counted as feasible, which is how the
+# gaussian box could sit entirely at negative beta_0.
+.crown_rate_positive <- function(pars, model_bin, link_int) {
+  p8      <- .expand_pars(pars, model_bin)
+  eta_lam <- 2 * p8[2L]        # beta_N * N with M = D = 0
+  eta_mu  <- 2 * p8[6L]        # gamma_N * N
+  if (link_int == 2L) {
+    lam <- p8[1L] * exp(-0.5 * (eta_lam - 1)^2)
+    mu  <- p8[5L] * exp(-0.5 * (eta_mu  - 1)^2)
+  } else if (link_int == 1L) {
+    lam <- exp(p8[1L] + eta_lam)
+    mu  <- exp(p8[5L] + eta_mu)
+  } else {
+    lam <- max(0, p8[1L] + eta_lam)
+    mu  <- max(0, p8[5L] + eta_mu)
+  }
+  isTRUE(is.finite(lam) && is.finite(mu) && (lam + mu) > 0)
+}
+
+
 # Test whether a parameter vector produces feasible trees.
 # Returns TRUE if >= 50% of n_test sims survive with sensible tips.
+#
+# A tree of exactly 2 tips carries no branching event beyond the crown, and is
+# what the simulator returns both for a non-positive total rate and for a rate
+# too low to produce a surviving split, so it is not accepted whatever tip_lo
+# asks for.
 .test_feasibility <- function(pars, model, link, max_t, max_lin,
                               n_test = 5L, tip_lo = 2, tip_hi = 500,
                               num_threads = 1L) {
+  if (!.crown_rate_positive(pars, .resolve_model(model), .resolve_link(link)))
+    return(FALSE)
+
   pars_mat <- matrix(rep(pars, n_test), nrow = n_test, byrow = TRUE)
   sims <- simulate_tree(
     pars = pars_mat, max_t = max_t,
@@ -412,7 +467,8 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     if (s$status == "done" && !is.null(s$tes))
       length(s$tes$tip.label) else 0L
   })
-  sum(ntips >= tip_lo & ntips <= tip_hi) >= ceiling(n_test / 2)
+  tip_min <- max(tip_lo, 3)
+  sum(ntips >= tip_min & ntips <= tip_hi) >= ceiling(n_test / 2)
 }
 
 
@@ -431,12 +487,12 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     for (mf in mu_fracs) {
       lam <- r_hat * m / (1 - mf)
       mu  <- lam * mf
-      if (link_int == 0L) {
-        cand <- c(max(lam, 1e-4), rep(0, length(active)),
-                  max(mu, 0), rep(0, length(active)))
-      } else {
+      if (link_int == 1L) {
         cand <- c(log(max(lam, 1e-4)), rep(0, length(active)),
                   log(max(mu, 1e-6)), rep(0, length(active)))
+      } else {
+        cand <- c(.rate_intercept(max(lam, 1e-4), link_int), rep(0, length(active)),
+                  .rate_intercept(max(mu, 0), link_int), rep(0, length(active)))
       }
       ok <- .test_feasibility(
         cand, model, link, max_t, max_lin,
@@ -539,7 +595,6 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 #   intercept_idx, coeff_idx, mu_intercept_idx, mu_coeff_idx, X_obs, name
 .observed_covariates <- function(brts, model_bin) {
   n_tips <- length(brts) + 1L
-  max_t  <- max(brts)
   active <- which(model_bin == 1L)
   if (length(active) == 0L) return(list())
 
@@ -547,23 +602,10 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   # basis {N, M = P/N, D = E - M}):
   #   N: number of tips
   #   M: mean pendant age (= P/N)
-  #   D: focal deviation from the mean; its typical magnitude is the spread of
-  #      pendant ages, ~ mean_pendant as a rough scale.
-  # Pendant ages at the present: for each tip, the time from its most recent
-  # internal node to the present. Approximated from the youngest branching times.
-
-  # Isolation times at the present: for each of the n_tips tips,
-  # the isolation time is the time from the most recent internal node to the present.
-  # The n_tips smallest branching times give the parent nodes of tips.
-  sorted_brts <- sort(brts)
-  # The youngest n_tips-1 branching times each contribute 2 isolation time branches
-  # minus the ones that are internal. Approximate: mean isolation time.
-  if (length(sorted_brts) >= 1L) {
-    pendant_ages <- sorted_brts[seq_len(min(n_tips, length(sorted_brts)))]
-    mean_pendant <- mean(pendant_ages)
-  } else {
-    mean_pendant <- max_t / 2
-  }
+  #   D: focal deviation from the mean.  Sum_s D = 0, so D has no mean to probe
+  #      along; what the compensatory diagonal needs is the magnitude a single
+  #      lineage's deviation can reach, and the mean pendant age is that scale.
+  mean_pendant <- .mean_pendant_age(brts)
 
   result <- list()
   # Parameter layout: [beta_0, (beta_N), (beta_M), (beta_D), gamma_0, ...]
@@ -594,6 +636,42 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     )
   }
   result
+}
+
+
+# Mean pendant age of the extant lineages at the present.
+#
+# This is M = P/N read at the present, the quantity the C++ covariate basis
+# calls the mean pendant age (model.hpp:142, :153): P = N*t - Sum_s tip_start_s
+# over the lineages alive at t, so M at the present is the mean over the n tips
+# of (T - birth time).  A tip is born when its parent node splits, so its
+# pendant age is the length of its own terminal edge and M is the mean terminal
+# edge length.
+#
+# `brts` alone cannot say which nodes are parents of tips, but the
+# "parent_tip_start" attribute can: it carries the forward time of the parent
+# of every non-crown internal node (.observed_parent_tip_start in inference.R),
+# and the sum over the n tips follows by difference.  Each of the n-1 internal
+# nodes is the parent of exactly 2 children, of which n-2 are themselves
+# internal, so with h = T - brts the forward time of an internal node,
+#
+#   Sum over all children of h(parent)  = 2 * Sum(T - brts)
+#   Sum over internal children          = Sum(parent_tip_start)
+#   Sum over the n tips of birth time   = the difference
+#   M                                   = T - that difference / n
+#
+# Falls back to half the crown age for a bare branching-time vector, which
+# carries no topology; that fallback also catches an attribute of the wrong
+# length rather than returning a number computed from a broken correspondence.
+.mean_pendant_age <- function(brts) {
+  T_max <- max(brts)
+  n_int <- length(brts)          # internal nodes, crown included
+  n_tip <- n_int + 1L
+  pts   <- .pts(brts)
+  pts   <- pts[pts >= 0]         # drop the terminal marker (-1), keep a real 0
+  if (length(pts) != n_int - 1L) return(T_max / 2)
+  sum_birth <- 2 * sum(T_max - brts) - sum(pts)
+  T_max - sum_birth / n_tip
 }
 
 
@@ -674,18 +752,21 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   lam_lo <- max(0.1 * r_hat, 1e-4)
   cov_hi <- max(0.3, 3 * abs(r_hat))
 
-  if (link_int == 0L) {
-    # Linear link: rates are direct (non-negative)
-    lb_lam <- c(lam_lo, rep(-cov_hi, length(active)))
-    ub_lam <- c(lam_hi, rep(cov_hi, length(active)))
-    lb_mu  <- c(0.0, rep(-cov_hi, length(active)))
-    ub_mu  <- c(lam_hi * 0.9, rep(cov_hi, length(active)))
-  } else {
+  if (link_int == 1L) {
     # Exponential link: log-scale
     lb_lam <- c(log(lam_lo), rep(-cov_hi, length(active)))
     ub_lam <- c(log(lam_hi), rep(cov_hi, length(active)))
     lb_mu  <- c(log(lam_lo) - 3, rep(-cov_hi, length(active)))
     ub_mu  <- c(log(lam_hi), rep(cov_hi, length(active)))
+  } else {
+    # Linear and gaussian links: the intercept is a rate, so the box is on the
+    # natural scale and non-negative.  The gaussian intercept is the peak of
+    # beta_0 * exp(-(eta_cov - 1)^2 / 2), which at eta_cov = 0 is beta_0*e^(-1/2),
+    # so each rate bound is carried to the intercept by .rate_intercept().
+    lb_lam <- c(.rate_intercept(lam_lo, link_int), rep(-cov_hi, length(active)))
+    ub_lam <- c(.rate_intercept(lam_hi, link_int), rep(cov_hi, length(active)))
+    lb_mu  <- c(0.0, rep(-cov_hi, length(active)))
+    ub_mu  <- c(.rate_intercept(lam_hi * 0.9, link_int), rep(cov_hi, length(active)))
   }
 
   list(lb = c(lb_lam, lb_mu), ub = c(ub_lam, ub_mu))
