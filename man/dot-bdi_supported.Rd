@@ -2,9 +2,16 @@
 % Please edit documentation in R/bdi.R
 \name{.bdi_supported}
 \alias{.bdi_supported}
-\title{Can the BDI sampler be used for this model/link?}
+\title{Can the BDI sampler be used for this model/link/rho?}
 \usage{
-.bdi_supported(model_bin, link)
+.bdi_supported(model_bin, link, rho = 1)
+}
+\arguments{
+\item{model_bin}{Length-3 binary model vector \code{c(use_N, use_M, use_D)}.}
+
+\item{link}{Integer link code: 0 linear, 1 exponential, 2 gaussian.}
+
+\item{rho}{Sampling fraction in \code{(0, 1]}. Default \code{1}.}
 }
 \description{
 The sampler's rate functions and mean-field ODEs are written in the
@@ -13,5 +20,20 @@ link handling covers only \code{linear} (0) and \code{exponential} (1).
 Under the package's current \code{(N, M, D)} basis and with the
 \code{gaussian} link (2), only N-only models on links 0/1 are exact, so
 every other case is routed to the thinning proposal by the callers.
+}
+\details{
+The sampler is also complete-sampling only.  Its survival probability
+\code{p(t)} (\code{.bdi_p_cr}, \code{.bdi_solve_p_backward}) is the
+probability of leaving a descendant at the present, not of leaving a
+\emph{sampled} descendant, and \code{.bdi_to_tree_df} writes only the
+extinction sentinels \code{1e11} (extinct) and \code{0} (observed): no
+draw ever carries the \code{5e10} sentinel that marks an unsampled
+extant lineage.  At \code{rho < 1} the draws therefore come from the
+\code{rho = 1} conditioned process while \code{eval_logf} scores them
+under \code{rho}, which adds \code{n_tips * log(rho)} and leaves the
+\code{rho = 1} likelihood surface (audit finding H2: on a 16-tip tree
+the fits land on the \code{rho = 1} MLE 0.47 rather than the
+\code{rho = 0.5} MLE 0.69).  \code{rho < 1} is therefore routed to the
+thinning proposal, which proposes unsampled extant lineages.
 }
 \keyword{internal}

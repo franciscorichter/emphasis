@@ -129,7 +129,7 @@
   stats::uniroot(f, c(t_cur + 1e-15, t_hi), tol = 1e-13)$root
 }
 
-#' Can the BDI sampler be used for this model/link?
+#' Can the BDI sampler be used for this model/link/rho?
 #'
 #' The sampler's rate functions and mean-field ODEs are written in the
 #' \code{(N, P, E)} covariate layout (slots 2-4 of \code{pars8}), and its
@@ -137,11 +137,34 @@
 #' Under the package's current \code{(N, M, D)} basis and with the
 #' \code{gaussian} link (2), only N-only models on links 0/1 are exact, so
 #' every other case is routed to the thinning proposal by the callers.
+#'
+#' The sampler is also complete-sampling only.  Its survival probability
+#' \code{p(t)} (\code{.bdi_p_cr}, \code{.bdi_solve_p_backward}) is the
+#' probability of leaving a descendant at the present, not of leaving a
+#' \emph{sampled} descendant, and \code{.bdi_to_tree_df} writes only the
+#' extinction sentinels \code{1e11} (extinct) and \code{0} (observed): no
+#' draw ever carries the \code{5e10} sentinel that marks an unsampled
+#' extant lineage.  At \code{rho < 1} the draws therefore come from the
+#' \code{rho = 1} conditioned process while \code{eval_logf} scores them
+#' under \code{rho}, which adds \code{n_tips * log(rho)} and leaves the
+#' \code{rho = 1} likelihood surface (audit finding H2: on a 16-tip tree
+#' the fits land on the \code{rho = 1} MLE 0.47 rather than the
+#' \code{rho = 0.5} MLE 0.69).  \code{rho < 1} is therefore routed to the
+#' thinning proposal, which proposes unsampled extant lineages.
+#'
+#' @param model_bin Length-3 binary model vector \code{c(use_N, use_M, use_D)}.
+#' @param link Integer link code: 0 linear, 1 exponential, 2 gaussian.
+#' @param rho Sampling fraction in \code{(0, 1]}. Default \code{1}.
 #' @keywords internal
-.bdi_supported <- function(model_bin, link) {
+.bdi_supported <- function(model_bin, link, rho = 1.0) {
   model_bin <- as.integer(model_bin)
   link      <- as.integer(link)
-  length(model_bin) == 3L && model_bin[2L] == 0L && model_bin[3L] == 0L &&
+  # Complete sampling only.  A rho above 1 is out of range and the callers
+  # reject it (.check_rho); it reaches the C++ layer as 1, so it is read here
+  # as complete sampling too rather than silently routed elsewhere.
+  rho_ok    <- is.numeric(rho) && length(rho) == 1L && is.finite(rho) && rho >= 1
+  rho_ok &&
+    length(model_bin) == 3L && model_bin[2L] == 0L && model_bin[3L] == 0L &&
     link %in% c(0L, 1L)
 }
 

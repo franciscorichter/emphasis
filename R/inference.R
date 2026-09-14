@@ -46,16 +46,23 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     Default \code{1e4}.}
 #'   \item{\code{num_threads}}{Threads for parallel computation. Default
 #'     \code{1}.}
+#'   \item{\code{rho}}{Sampling fraction: the proportion of extant species
+#'     present in the tree, in \code{(0, 1]}. Default \code{1} (complete
+#'     sampling). Values outside \code{(0, 1]} are an error. Under
+#'     \code{rho < 1} the augmentation inserts unsampled extant lineages as
+#'     well as extinct ones, which only the thinning sampler does, so
+#'     \code{sampling = "bdi"} falls back to \code{"dynamic_fresh"}.}
 #' }
 #'
 #' MCEM-specific parameters:
 #' \describe{
 #'   \item{\code{sampling}}{Sampling scheme: \code{"bdi"} (default), the
 #'     exact birth-death-with-immigration sampler, which covers the cr and dd
-#'     models on the linear and exponential links; or
+#'     models on the linear and exponential links at \code{rho = 1}; or
 #'     \code{"dynamic_fresh"}, the thinning sampler, which covers every
-#'     model and link. \code{"bdi"} falls back to \code{"dynamic_fresh"}
-#'     for the model/link combinations it does not cover.}
+#'     model, link and \code{rho}. \code{"bdi"} falls back to
+#'     \code{"dynamic_fresh"}, with a message, for the model/link
+#'     combinations it does not cover and whenever \code{rho < 1}.}
 #'   \item{\code{num_trees}}{Augmented trees per EM iteration. Default
 #'     \code{200}. Alias: \code{sample_size}.}
 #'   \item{\code{xtol}}{Relative tolerance for the M-step optimiser.
@@ -183,6 +190,38 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       call. = FALSE)
   }
   invisible(NULL)
+}
+
+# --------------------------------------------------------------------------- #
+#  Sampling fraction                                                           #
+# --------------------------------------------------------------------------- #
+
+#' Validate a sampling fraction
+#'
+#' \code{rho} is the fraction of extant species present in the tree, so it
+#' lives in \code{(0, 1]}.  The C++ layer (\code{model.hpp}) replaces any
+#' value outside that range by 1 and reports nothing, so a call made with
+#' \code{rho = 80} or \code{rho = -1} returns a complete-sampling fit under
+#' the label the user asked for (audit finding H79).  Every R entry point
+#' that accepts \code{rho} checks it here first.
+#'
+#' @param rho The value supplied by the caller.
+#' @param arg Name to quote in the error message.
+#' @return \code{rho} as a length-1 double.
+#' @keywords internal
+.check_rho <- function(rho, arg = "control$rho") {
+  ok <- is.numeric(rho) && length(rho) == 1L && is.finite(rho) &&
+    rho > 0 && rho <= 1
+  if (!ok) {
+    got <- if (is.null(rho)) "NULL" else
+      paste(utils::head(format(rho), 3L), collapse = ", ")
+    stop(sprintf(paste0(
+      "%s must be a single number in (0, 1] (got %s). It is the fraction of ",
+      "extant species present in the tree: rho = 1 is complete sampling, ",
+      "rho = 0.5 means half the extant species are missing."), arg, got),
+      call. = FALSE)
+  }
+  as.numeric(rho)
 }
 
 # --------------------------------------------------------------------------- #
@@ -503,11 +542,18 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 .run_mcem <- function(brts, init_pars, lower_bound, upper_bound, ctrl,
                       model = c(0L, 0L, 0L), link = 0L, cond_fun = NULL) {
   # BDI is exact only for N-only models (cr, dd) on the linear/exponential
-  # links; D-dependent models and the gaussian link use the thinning proposal.
-  if (identical(ctrl$sampling, "bdi") && !.bdi_supported(model, link)) {
-    if (isTRUE(ctrl$verbose))
-      message("BDI sampler covers cr/dd on linear/exponential links only; ",
-              "falling back to thinning.")
+  # links at complete sampling; D-dependent models, the gaussian link and
+  # rho < 1 use the thinning proposal.  The message is unconditional: the
+  # sampler the user asked for is not the sampler that runs, and at rho < 1
+  # the two target different likelihoods (H2).
+  if (identical(ctrl$sampling, "bdi") && !.bdi_supported(model, link, ctrl$rho)) {
+    reason <- if (.bdi_supported(model, link))
+      sprintf("rho = %s (incomplete sampling: the BDI proposal draws no unsampled extant lineages)",
+              format(ctrl$rho))
+    else
+      "this model/link (BDI covers cr and dd on the linear and exponential links)"
+    message("sampling = \"bdi\" is not available for ", reason,
+            "; using the thinning sampler (\"dynamic_fresh\") instead.")
     ctrl$sampling <- "dynamic_fresh"
   }
   # A sample size below 1 reaches the C++ E-step as a loop that accepts no
@@ -843,6 +889,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'     \item{\code{AIC}}{Akaike Information Criterion: \code{-2 * loglik + 2 * n_pars}.}
 #'     \item{\code{method}}{Method used (\code{"mcem"} or \code{"cem"}).}
 #'     \item{\code{model}}{Resolved binary model vector.}
+#'     \item{\code{rho}}{The sampling fraction the fit was computed at,
+#'       after the control merge.}
 #'     \item{\code{stop_reason}}{Why the MCEM run stopped (\code{"converged"},
 #'       \code{"max_iter"}, \code{"time_budget"}, \code{"e_step_failure"},
 #'       \code{"m_step_failure"}); \code{NA} for other methods.}
@@ -886,6 +934,7 @@ estimate_rates <- function(tree,
   ctrl     <- utils::modifyList(defaults, control)
   # Resolve parameter aliases (old names still work)
   ctrl <- .resolve_control_aliases(ctrl, method, user_ctrl = control)
+  ctrl$rho <- .check_rho(ctrl$rho)
 
   lower_bound <- ctrl$lower_bound
   upper_bound <- ctrl$upper_bound
@@ -990,10 +1039,11 @@ estimate_rates <- function(tree,
     }
     if (method == "mcem") {
       sampling_str <- if (!identical(ctrl$sampling, "bdi")) ctrl$sampling else
-        if (.bdi_supported(model_bin, link_int)) "BDI (exact)" else
-          "dynamic_fresh (BDI not available for this model/link)"
-      cat(sprintf("  sampling=%s  num_trees=%d  max_iter=%d  tol=%.1e  patience=%d  xtol=%.1e\n",
-                  sampling_str, ctrl$num_trees, ctrl$max_iter, ctrl$tol, ctrl$patience, ctrl$xtol))
+        if (.bdi_supported(model_bin, link_int, ctrl$rho)) "BDI (exact)" else
+          "dynamic_fresh (BDI not available for this model/link/rho)"
+      cat(sprintf("  sampling=%s  num_trees=%d  max_iter=%d  tol=%.1e  patience=%d  xtol=%.1e  rho=%s\n",
+                  sampling_str, ctrl$num_trees, ctrl$max_iter, ctrl$tol,
+                  ctrl$patience, ctrl$xtol, format(ctrl$rho)))
       if (ctrl$num_trees >= 2L)
         cat("  loglik_var   : bootstrapped automatically (B=200)\n")
       else
@@ -1041,7 +1091,7 @@ estimate_rates <- function(tree,
 
   result <- list(pars = pars, loglik = loglik, loglik_var = loglik_var,
                  n_pars = n_pars, AIC = aic,
-                 method = method, model = model_bin,
+                 method = method, model = model_bin, rho = ctrl$rho,
                  stop_reason = stop_reason, iterations = iterations,
                  n_failed = n_failed,
                  cond = !is.null(cond), details = raw$details)
@@ -1066,6 +1116,8 @@ print.emphasis_fit <- function(x, ...) {
     cat(sprintf("  (MC se: %.4f)", sqrt(x$loglik_var)))
   cat("\nAIC:           ", round(x$AIC, 4), "\n")
   cat("n_pars:        ", x$n_pars, "\n")
+  if (!is.null(x$rho) && is.finite(x$rho) && x$rho < 1)
+    cat("rho:           ", x$rho, "(incomplete sampling)\n")
   if (!is.null(x$iterations) && !is.na(x$iterations))
     cat("Iterations:    ", x$iterations, "\n")
   if (!is.null(x$stop_reason) && !is.na(x$stop_reason))

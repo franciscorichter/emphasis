@@ -28,8 +28,12 @@ e.g. \code{c("bounds", "gam")} for a quick exploratory fit.}
 
 \item{control}{Named list with optional sub-lists \code{bounds}, \code{gam},
 \code{cem}, \code{mcem} to override defaults for each stage.  Common
-parameters (\code{num_threads}, \code{max_missing}, \code{max_time}) can
-be set at the top level and are inherited by all stages.}
+parameters (\code{num_threads}, \code{max_missing}, \code{max_time},
+\code{rho}) can be set at the top level and are inherited by all stages.
+\code{rho}, the sampling fraction in \code{(0, 1]}, is inherited by the
+bounds, gam, cem and mcem stages alike, and a value nested under
+\code{control$gam}, \code{control$cem} or \code{control$mcem} overrides
+the inherited one for that stage.}
 
 \item{verbose}{Logical.  If \code{TRUE} (default), print progress and a
 summary log to the console.}
@@ -41,8 +45,9 @@ A list of class \code{"emphasis_pipeline"} with:
     \item{\code{loglik}}{Log-likelihood from the best stage.}
     \item{\code{AIC}}{AIC from the best stage.}
     \item{\code{best_stage}}{Which stage produced the final result.}
+    \item{\code{rho}}{The sampling fraction the best stage ran at.}
     \item{\code{log}}{Data frame with one row per stage: stage name,
-      pars, loglik, AIC, elapsed seconds, status.}
+      pars, loglik, AIC, elapsed seconds, status, rho.}
     \item{\code{mcem_trace}}{If MCEM ran, a data frame of per-iteration
       fhat and parameter values.  \code{NULL} otherwise.}
     \item{\code{bounds}}{The \code{auto_bounds} result (bounds + survival GAM).}

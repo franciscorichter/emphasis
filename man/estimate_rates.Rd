@@ -104,6 +104,8 @@ A list with class \code{"emphasis_fit"} containing:
     \item{\code{AIC}}{Akaike Information Criterion: \code{-2 * loglik + 2 * n_pars}.}
     \item{\code{method}}{Method used (\code{"mcem"} or \code{"cem"}).}
     \item{\code{model}}{Resolved binary model vector.}
+    \item{\code{rho}}{The sampling fraction the fit was computed at,
+      after the control merge.}
     \item{\code{stop_reason}}{Why the MCEM run stopped (\code{"converged"},
       \code{"max_iter"}, \code{"time_budget"}, \code{"e_step_failure"},
       \code{"m_step_failure"}); \code{NA} for other methods.}
