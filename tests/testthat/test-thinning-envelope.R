@@ -123,11 +123,14 @@ test_that("acceptance probability never exceeds 1 on the other rate paths", {
   expect_equal(raw$rejected_lambda, 0)
   expect_equal(raw$envelope_violations, 0)
   # M active: lambda and mu read the mean pendant age, held at the segment's
-  # own value, so nh still falls within the segment
+  # own value, so nh still falls within the segment.  M needs the topology --
+  # without it the proposal's P is not reproducible by the scorer and the call
+  # is refused -- so supply a parent_tip_start for these branching times.
   raw <- augment_trees(brts = brts7, pars = c(0.4, 0, 0.05, 0, 0.2, 0, 0.02, 0),
                        sample_size = 2000L, maxN = 100000L, max_missing = 200L,
                        max_lambda = 1e6, num_threads = 1L, model = c(0L, 1L, 0L),
-                       link = 0L, rho = 1)
+                       link = 0L, rho = 1,
+                       parent_tip_start = c(rep(0, length(brts7) - 1L), -1))
   expect_equal(raw$rejected_lambda, 0)
   expect_equal(raw$envelope_violations, 0)
   expect_equal(thinning_envelope_violations(), 0)

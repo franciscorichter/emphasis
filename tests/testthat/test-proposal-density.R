@@ -319,3 +319,70 @@ test_that("nh falls within a segment, so the start-of-segment envelope dominates
   expect_gt(segs, 1000L)
   expect_lt(worst, 1e-12)
 })
+
+# ---------------------------------------------------------------------------
+# The proposal reads M at the segment start, so P must extrapolate to the same
+# value whether or not a later birth has split the segment.  Deterministic:
+# no draws, no tolerance on a Monte Carlo quantity.
+# ---------------------------------------------------------------------------
+
+test_that("the proposal's P stays inside the bounds a pendant PD must satisfy", {
+  skip_on_cran()
+  # P(t) = sum over alive lineages of (t - tip_start) is bounded below by 0 and
+  # above by N*t (attained only when every alive lineage dates from the crown).
+  # The proposal reads P by extrapolating node.pd along the segment, so if that
+  # extrapolation used the wrong anchor -- the defect this commit removes -- the
+  # bounds break before any distributional test would notice.
+  set.seed(9)
+  phy <- ape::rphylo(10, 0.7, 0.25)
+  b   <- emphasis:::.extract_brts(phy)
+  pts <- emphasis:::.pts(b)
+  a <- augment_trees(b, c(0.7, 0, 0, 0, 0.25, 0, 0, 0), sample_size = 40L,
+                     maxN = 4000L, max_missing = 1e4, max_lambda = 1e6,
+                     num_threads = 1L, model = c(0L, 0L, 0L), link = 0L,
+                     rho = 1, parent_tip_start = pts)
+  worst_lo <- 0; worst_hi <- 0; checked <- 0L
+  for (tr in a$trees) {
+    tr <- tr[order(tr$brts), ]
+    t0 <- 0
+    for (k in seq_len(nrow(tr))) {
+      # probe inside the segment this node governs
+      for (u in c(0.1, 0.5, 0.9)) {
+        t <- t0 + u * (tr$brts[k] - t0)
+        if (t <= t0) next
+        P <- tr$pd[k] + tr$n[k] * (t - tr$brts[k])
+        worst_lo <- min(worst_lo, P)
+        worst_hi <- max(worst_hi, P - tr$n[k] * t)
+        checked <- checked + 1L
+      }
+      t0 <- tr$brts[k]
+    }
+  }
+  expect_gt(checked, 500L)
+  expect_gte(worst_lo, -1e-9)   # P >= 0
+  expect_lte(worst_hi,  1e-9)   # P <= N*t
+})
+
+test_that("an M-dependent model without the topology is refused, not mis-scored", {
+  brts <- c(3, 1.4, 0.6)
+  p <- c(0.4, 0, 0.05, 0, 0.1, 0, 0.02, 0)
+  # M active (slot 2 of model), no parent_tip_start: log q would not be the
+  # density the sampler drew from, so the call must error rather than return.
+  expect_error(
+    augment_trees(brts, p, sample_size = 1L, maxN = 50L, max_missing = 1e4,
+                  max_lambda = 1e6, num_threads = 1L, model = c(0L, 1L, 0L),
+                  link = 0L, rho = 1),
+    "topology")
+  # the same model with the topology supplied runs
+  expect_silent({
+    a <- augment_trees(brts, p, sample_size = 1L, maxN = 50L, max_missing = 1e4,
+                       max_lambda = 1e6, num_threads = 1L, model = c(0L, 1L, 0L),
+                       link = 0L, rho = 1, parent_tip_start = c(0, 0, -1))
+  })
+  # models without M are unaffected by the guard
+  expect_silent({
+    a <- augment_trees(brts, p, sample_size = 1L, maxN = 50L, max_missing = 1e4,
+                       max_lambda = 1e6, num_threads = 1L, model = c(1L, 0L, 1L),
+                       link = 0L, rho = 1)
+  })
+})

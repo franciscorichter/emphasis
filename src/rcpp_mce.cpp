@@ -77,6 +77,17 @@ List rcpp_mce(const std::vector<double>& brts,
       std::to_string(pars.size()) + ")");
   }
   std::vector<int> model_bin = {model[0], model[1], model[2]};
+  // The proposal reads M = P/N at the segment start. Without the observed
+  // topology P is the legacy quantity (every observed lineage dated from the
+  // crown), which the scorer cannot reproduce from the finished tree, so
+  // log q would not be the density the sampler drew from. cr, dd, d and nd
+  // never reach this; an M-active model passed as a binary vector does.
+  if (model_bin[1] == 1 && pts.empty()) {
+    throw std::invalid_argument(
+      "augment_trees: an M-dependent model (model[2] == 1) needs the observed topology. "
+      "Pass parent_tip_start; without it log q is not the density the sampler "
+      "draws from.");
+  }
   // Bounds are only needed for M-step (nlopt); E-step does not use them.
   std::vector<double> lb8(8, -1e6), ub8(8, 1e6);
   auto mdl = emphasis::Model(lb8, ub8, model_bin, link, rho);
