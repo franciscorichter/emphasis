@@ -26,6 +26,17 @@
 #'   gamma_0, [gamma_N], [gamma_D])}
 #' Only active covariates are included; length = \code{2 + 2 * sum(model)}.
 #'
+#' @section Reproducibility:
+#' Every call draws its seed for the C++ sampler from R's generator, so
+#' \code{set.seed()} fixes both the forward simulator and the thinning
+#' augmenter: two runs under one seed return the same tree, two runs under
+#' different seeds do not. The retries a forward simulation makes draw a seed
+#' each, so they are distinct trees rather than one tree redrawn. Under
+#' \code{parallel::mclapply} each child has its own R stream and therefore its
+#' own seeds. Augmentation with \code{num_threads > 1} is not reproducible:
+#' each worker draws from its own substream of the seed, but the sample keeps
+#' the first \code{n_trees} augmentations to finish.
+#'
 #' @section Output -- forward simulation (single):
 #' \describe{
 #'   \item{\code{tes}}{Extant-only phylogeny (\code{phylo}), or \code{NULL}.}
@@ -221,7 +232,8 @@ simulate_tree <- function(tree        = NULL,
   n_attempts <- 0L
   raw        <- list(status = "extinct")
   while (raw$status != "done" && n_attempts <= max_tries_i) {
-    raw        <- simulate_div_tree_cpp(pars8, model_bin, max_t, max_lin_i, 0L, link_int)
+    raw        <- simulate_div_tree_cpp(pars8, model_bin, max_t, max_lin_i, 0L,
+                                        link_int, seed = .draw_seed())
     n_attempts <- n_attempts + 1L
   }
 
@@ -259,6 +271,18 @@ simulate_tree <- function(tree        = NULL,
 # --------------------------------------------------------------------------- #
 #  Internal helpers                                                            #
 # --------------------------------------------------------------------------- #
+
+# One seed for one C++ sampler call, drawn from R's generator.
+#
+# The C++ samplers used to seed themselves from the wall clock XOR the thread
+# id, so set.seed() did not reach them and a forked child inherited its
+# parent's engine state byte for byte (H47).  Drawing the seed here puts them
+# on R's stream: set.seed() fixes them, and two forked children, whose R
+# streams differ, draw different trees.  Each call gets its own draw, so the
+# retries of a forward simulation are distinct trees rather than one tree
+# repeated.
+#' @keywords internal
+.draw_seed <- function() sample.int(.Machine$integer.max, 1L)
 
 #' @keywords internal
 .resolve_link <- function(link) {
@@ -523,7 +547,8 @@ simulate_tree <- function(tree        = NULL,
                                    maxN        = NULL,
                                    num_threads = 1L,
                                    link        = 0L,
-                                   rho         = 1.0) {
+                                   rho         = 1.0,
+                                   seed        = .draw_seed()) {
   brts  <- .extract_brts(tree)
   pars8 <- .expand_pars(pars, model_bin)
   if (is.null(maxN)) maxN <- max(2000L, 200L * as.integer(sample_size))
@@ -538,6 +563,7 @@ simulate_tree <- function(tree        = NULL,
     model       = as.integer(model_bin),
     link        = as.integer(link),
     rho         = as.numeric(rho),
-    parent_tip_start = .pts(brts)
+    parent_tip_start = .pts(brts),
+    seed        = as.integer(seed)
   )
 }

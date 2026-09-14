@@ -15,7 +15,8 @@ augment_trees(
   model = as.integer(c(0, 0, 0)),
   link = 0L,
   rho = 1,
-  parent_tip_start = as.numeric(c())
+  parent_tip_start = as.numeric(c()),
+  seed = 0L
 )
 }
 \arguments{
@@ -48,6 +49,11 @@ or one per node with the last ignored. Empty (the default) means the
 topology is not available: every observed lineage is then recorded as
 dating from the crown and every observed event gets \code{D = 0}, which
 is what a bare branching-time vector has always produced.}
+
+\item{seed}{Positive integer seeding the C++ sampler. \code{0} (the
+default) draws one from R's generator, so \code{set.seed()} reaches the
+sampler whether or not a seed is passed. Two calls carrying the same
+seed, the same arguments and \code{num_threads = 1} draw the same trees.}
 }
 \value{
 A named list:

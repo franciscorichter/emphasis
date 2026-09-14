@@ -7,6 +7,9 @@
 #include "rinit.h"
 using namespace Rcpp;
 
+// src/rcpp_mce.cpp — the `seed` argument into the integer the samplers run on.
+namespace emphasis { uint64_t resolve_seed(int seed); }
+
 
 namespace {
 
@@ -45,6 +48,9 @@ namespace {
 //' empty (the default) when only branching times are available, in which case
 //' every observed lineage is recorded as dating from the crown and D = 0 at
 //' every observed event.
+//' @param seed positive integer seeding the C++ sampler; 0 (the default) draws
+//' one from R's generator, so set.seed() reaches the sampler whether or not a
+//' seed is passed.
 //' @param rconditional R function that evaluates the GAM function.
 //' @return a list with the following components:
 //' \describe{
@@ -80,8 +86,10 @@ List rcpp_mcem(const std::vector<double>& brts,
                int link = 0,
                double rho = 1.0,
                Nullable<Function> rconditional = R_NilValue,
-               Rcpp::NumericVector parent_tip_start = Rcpp::NumericVector::create())
+               Rcpp::NumericVector parent_tip_start = Rcpp::NumericVector::create(),
+               int seed = 0)
 {
+  emphasis::rng::set_seed(emphasis::resolve_seed(seed));
   const std::vector<double> pts(parent_tip_start.begin(), parent_tip_start.end());
   if (init_pars.size() != 8 || lower_bound.size() != 8 || upper_bound.size() != 8) {
     throw std::invalid_argument("em_cpp: init_pars, lower_bound and upper_bound must have length 8 (got " +

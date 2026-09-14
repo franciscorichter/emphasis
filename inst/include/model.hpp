@@ -31,6 +31,8 @@
 #include <vector>
 #include <stdexcept>
 #include <functional>
+#include <atomic>
+#include <cstdint>
 #include "model_helpers.hpp"
 
 using namespace emphasis::detail;
@@ -40,7 +42,113 @@ namespace emphasis {
   using param_t = std::vector<double>;                  // unspecific parameters
   using tree_t = std::vector<node_t>;                   // tree, sorted by note_t::brts
 
-  using reng_t = std::mt19937_64;   // we need doubles
+  using reng_t = std::mt19937_64;   // the one engine type; we need doubles
+
+
+  // -------------------------------------------------------------------------
+  // Seeding of the C++ samplers.
+  //
+  // The thinning augmenter (src/augment_tree.cpp), the extinction-time draw in
+  // Model::extinction_time below and the forward simulator
+  // (inst/include/general_tree.hpp) each held an engine seeded from the wall
+  // clock XOR the thread id.  set.seed() did not reach any of them -- 0 of 4
+  // repeats identical against 4 of 4 for the pure-R BDI path -- and a
+  // thread_local engine is copied byte for byte into every forked child, so
+  // the children of a primed parent drew the same numbers rather than
+  // independent ones (H47).
+  //
+  // An Rcpp entry point now opens a stream epoch with rng::set_seed(s), where
+  // s is the integer the R layer passed: sample.int(.Machine$integer.max, 1L)
+  // by default, so set.seed() propagates and a forked child, whose R stream
+  // differs from its parent's, draws its own s.  Within an epoch each thread
+  // draws from one substream, seeded from a std::seed_seq over (s, substream);
+  // the substream is the TBB worker index, or an item index where the caller
+  // has one, which is what keeps parallel workers independent of each other
+  // while every one of them stays a function of s alone.
+  //
+  // Re-seeding happens when the epoch or the substream changes, not once per
+  // call: re-seeding a thread to its own substream on every call would hand
+  // every call on that thread the same draws.
+  namespace rng {
+
+    namespace detail_rng {
+
+      inline std::atomic<uint64_t>& seed_slot()
+      {
+        static std::atomic<uint64_t> s{ 0 };
+        return s;
+      }
+
+      // Bumped by every set_seed, so that a thread whose engine was seeded in
+      // an earlier epoch re-seeds on its next draw.  Not part of the seed: two
+      // calls carrying the same s must produce the same stream.
+      inline std::atomic<uint64_t>& epoch_slot()
+      {
+        static std::atomic<uint64_t> e{ 0 };
+        return e;
+      }
+
+      struct stream_t
+      {
+        reng_t eng{};
+        uint64_t epoch = ~uint64_t(0);   // never seeded
+        uint64_t sub = 0;
+      };
+
+      inline stream_t& local()
+      {
+        static thread_local stream_t s;
+        return s;
+      }
+
+      // std::seed_seq consumes 32-bit words, so each 64-bit input enters as
+      // its low and its high half.
+      inline reng_t make(uint64_t seed, uint64_t sub)
+      {
+        const uint32_t w[5] = {
+          static_cast<uint32_t>(seed), static_cast<uint32_t>(seed >> 32),
+          static_cast<uint32_t>(sub),  static_cast<uint32_t>(sub >> 32),
+          0x9e3779b9u
+        };
+        std::seed_seq sseq(w, w + 5);
+        return reng_t(sseq);
+      }
+
+    }
+
+
+    // Open a stream epoch: every thread re-seeds from `seed` on its next draw.
+    inline void set_seed(uint64_t seed)
+    {
+      detail_rng::seed_slot().store(seed);
+      detail_rng::epoch_slot().fetch_add(1);
+    }
+
+
+    // Put the calling thread on substream `sub` of the current epoch and hand
+    // back its engine.  Callers that know which worker or which item they are
+    // select the substream here; everything below them draws from engine().
+    inline reng_t& stream(uint64_t sub)
+    {
+      auto& s = detail_rng::local();
+      const uint64_t ep = detail_rng::epoch_slot().load();
+      if (s.epoch != ep || s.sub != sub) {
+        s.eng = detail_rng::make(detail_rng::seed_slot().load(), sub);
+        s.epoch = ep;
+        s.sub = sub;
+      }
+      return s.eng;
+    }
+
+
+    // The calling thread's engine, on the substream it is already on.
+    inline reng_t& engine()
+    {
+      return stream(detail_rng::local().sub);
+    }
+
+  }
+
 
   // Link functions for rate computation
   // 0 = linear:      rate = max(0, eta)
@@ -232,7 +340,10 @@ namespace emphasis {
     // factor of nh_rate used to decide that the lineage is missing at all and
     // the same one sampling_prob charges the lifetime with.
     double extinction_time(double t_speciation, const param_t& pars, const tree_t& tree) const {
-      static thread_local reng_t reng_ = make_random_engine<reng_t>();
+      // The stream the augmentation that called this is already drawing from,
+      // so the lifetime and the birth times it goes with come off one seeded
+      // engine rather than off a second, clock-seeded one.
+      reng_t& reng_ = rng::engine();
       const node_t* first = reinterpret_cast<const node_t*>(tree.data());
       auto it = lower_bound_node(t_speciation, tree.size(), first);
       double lambda = 0.0, mu = 0.0;

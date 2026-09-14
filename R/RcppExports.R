@@ -11,10 +11,14 @@
 #' @param max_N Maximum number of lineages before simulation is declared too large.
 #' @param max_tries Maximum retries after extinction or overflow.
 #' @param link Link function: 0 = linear (max(0,...)), 1 = exponential.
+#' @param seed Positive integer seeding the simulator. \code{0} (the default)
+#'   draws one from R's generator, so \code{set.seed()} reaches the simulator
+#'   whether or not a seed is passed. Note that \code{max_tries} retries
+#'   continue the same stream: a retry is a fresh tree, not the same one again.
 #' @return A named list with \code{Ltable} (4-column numeric matrix in DDD format)
 #'   and \code{status} (one of \code{"done"}, \code{"extinct"}, \code{"too_large"}).
-simulate_div_tree_cpp <- function(pars, model, max_t, max_N, max_tries, link = 0L) {
-    .Call('_emphasis_simulate_div_tree_cpp', PACKAGE = 'emphasis', pars, model, max_t, max_N, max_tries, link)
+simulate_div_tree_cpp <- function(pars, model, max_t, max_N, max_tries, link = 0L, seed = 0L) {
+    .Call('_emphasis_simulate_div_tree_cpp', PACKAGE = 'emphasis', pars, model, max_t, max_N, max_tries, link, seed)
 }
 
 #' Evaluate log p(obs, z | theta) and log q(z | obs, theta) for augmented trees
@@ -94,6 +98,10 @@ eval_nh_rate <- function(pars, tree, times, model = as.integer( c(0, 0, 0)), lin
 #'   topology is not available: every observed lineage is then recorded as
 #'   dating from the crown and every observed event gets \code{D = 0}, which
 #'   is what a bare branching-time vector has always produced.
+#' @param seed Positive integer seeding the C++ sampler. \code{0} (the
+#'   default) draws one from R's generator, so \code{set.seed()} reaches the
+#'   sampler whether or not a seed is passed. Two calls carrying the same
+#'   seed, the same arguments and \code{num_threads = 1} draw the same trees.
 #' @return A named list:
 #' \describe{
 #'   \item{trees}{List of augmented-tree data frames.}
@@ -112,8 +120,8 @@ eval_nh_rate <- function(pars, tree, times, model = as.integer( c(0, 0, 0)), lin
 #'   \item{time}{Elapsed time (ms).}
 #' }
 #' @keywords internal
-augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, parent_tip_start = as.numeric( c())) {
-    .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link, rho, parent_tip_start)
+augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, parent_tip_start = as.numeric( c()), seed = 0L) {
+    .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link, rho, parent_tip_start, seed)
 }
 
 #' What the proposal could attach an augmented lineage to
@@ -206,6 +214,9 @@ thinning_envelope_violations <- function(reset = FALSE) {
 #' empty (the default) when only branching times are available, in which case
 #' every observed lineage is recorded as dating from the crown and D = 0 at
 #' every observed event.
+#' @param seed positive integer seeding the C++ sampler; 0 (the default) draws
+#' one from R's generator, so set.seed() reaches the sampler whether or not a
+#' seed is passed.
 #' @param rconditional R function that evaluates the GAM function.
 #' @return a list with the following components:
 #' \describe{
@@ -225,8 +236,8 @@ thinning_envelope_violations <- function(reset = FALSE) {
 #'  \item{logg}{vector of log q(z_i | obs, theta) for each valid tree}
 #' }
 #' @keywords internal
-em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, rconditional = NULL, parent_tip_start = as.numeric( c())) {
-    .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model, link, rho, rconditional, parent_tip_start)
+em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, rconditional = NULL, parent_tip_start = as.numeric( c()), seed = 0L) {
+    .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model, link, rho, rconditional, parent_tip_start, seed)
 }
 
 #' function to perform one step of the E-M algorithm

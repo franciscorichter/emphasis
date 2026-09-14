@@ -123,6 +123,19 @@ coefficient (\code{M} is internal only, never part of the user vector):
 Only active covariates are included; length = \code{2 + 2 * sum(model)}.
 }
 
+\section{Reproducibility}{
+
+Every call draws its seed for the C++ sampler from R's generator, so
+\code{set.seed()} fixes both the forward simulator and the thinning
+augmenter: two runs under one seed return the same tree, two runs under
+different seeds do not. The retries a forward simulation makes draw a seed
+each, so they are distinct trees rather than one tree redrawn. Under
+\code{parallel::mclapply} each child has its own R stream and therefore its
+own seeds. Augmentation with \code{num_threads > 1} is not reproducible:
+each worker draws from its own substream of the seed, but the sample keeps
+the first \code{n_trees} augmentations to finish.
+}
+
 \section{Output -- forward simulation (single)}{
 
 \describe{

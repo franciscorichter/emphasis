@@ -26,20 +26,24 @@
 #include <random>
 #include <algorithm>
 #include <cmath>
-#include <chrono>
-#include <thread>
+#include <cstdint>
 
 namespace sim_tree {
 
+// The simulator's engine, seeded from the caller's integer rather than from
+// the wall clock XOR the thread id, so that set.seed() in R reaches it
+// (src/div_tree.cpp draws the integer; see the rng notes in model.hpp).  Same
+// engine type and same seed_seq recipe as the augmenter's streams.
 struct rnd_t {
-  std::mt19937 rndgen_;
+  std::mt19937_64 rndgen_;
 
-  rnd_t() {
-    const auto tt = static_cast<int64_t>(
-      std::chrono::high_resolution_clock::now().time_since_epoch().count());
-    auto tid = std::this_thread::get_id();
-    const uint64_t e3{ std::hash<std::remove_const_t<decltype(tid)>>()(tid) };
-    rndgen_.seed(static_cast<unsigned int>(tt ^ static_cast<int64_t>(e3)));
+  explicit rnd_t(uint64_t seed) {
+    const uint32_t w[5] = {
+      static_cast<uint32_t>(seed), static_cast<uint32_t>(seed >> 32),
+      0u, 0u, 0x9e3779b9u
+    };
+    std::seed_seq sseq(w, w + 5);
+    rndgen_.seed(sseq);
   }
 
   double expon(double lambda) {
@@ -96,9 +100,10 @@ struct general_div {
               const std::array<double, 8>& p,
               const std::array<int, 3>&    m,
               size_t maxN,
-              int link_type = 0)
+              int link_type,
+              uint64_t seed)
     : max_t(total_time), t(0.f), max_N(maxN), N(0),
-      pars(p), model(m), link(link_type), break_type(none), rndgen() {}
+      pars(p), model(m), link(link_type), break_type(none), rndgen(seed) {}
 
   // Apply link function to linear predictor (linear and exponential only)
   double apply_link(double eta) const {

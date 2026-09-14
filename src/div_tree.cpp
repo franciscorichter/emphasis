@@ -1,6 +1,10 @@
 #include "general_tree.hpp"
 
 #include <Rcpp.h>
+#include <cstdint>
+
+// src/rcpp_mce.cpp — the `seed` argument into the integer the samplers run on.
+namespace emphasis { uint64_t resolve_seed(int seed); }
 
 //' Simulate a single phylogenetic tree under the general diversification model
 //'
@@ -12,6 +16,10 @@
 //' @param max_N Maximum number of lineages before simulation is declared too large.
 //' @param max_tries Maximum retries after extinction or overflow.
 //' @param link Link function: 0 = linear (max(0,...)), 1 = exponential.
+//' @param seed Positive integer seeding the simulator. \code{0} (the default)
+//'   draws one from R's generator, so \code{set.seed()} reaches the simulator
+//'   whether or not a seed is passed. Note that \code{max_tries} retries
+//'   continue the same stream: a retry is a fresh tree, not the same one again.
 //' @return A named list with \code{Ltable} (4-column numeric matrix in DDD format)
 //'   and \code{status} (one of \code{"done"}, \code{"extinct"}, \code{"too_large"}).
 // [[Rcpp::export]]
@@ -20,14 +28,16 @@ Rcpp::List simulate_div_tree_cpp(Rcpp::NumericVector  pars,
                                   double               max_t,
                                   int                  max_N,
                                   int                  max_tries,
-                                  int                  link = 0) {
+                                  int                  link = 0,
+                                  int                  seed = 0) {
+  const uint64_t rseed = emphasis::resolve_seed(seed);
   std::array<double, 8> p = {
     pars[0], pars[1], pars[2], pars[3],
     pars[4], pars[5], pars[6], pars[7]
   };
   std::array<int, 3> m = { model[0], model[1], model[2] };
 
-  sim_tree::general_div sim(max_t, p, m, static_cast<size_t>(max_N), link);
+  sim_tree::general_div sim(max_t, p, m, static_cast<size_t>(max_N), link, rseed);
   sim.simulate_tree_ltable();
 
   int tries = 0;
