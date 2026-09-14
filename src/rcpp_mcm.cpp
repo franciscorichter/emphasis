@@ -24,15 +24,17 @@ namespace {
       auto n = as<NumericVector>(df["n"]);
       auto t_ext = as<NumericVector>(df["t_ext"]);
       NumericVector pd, tip_start, focal_tip_start;
-      IntegerVector id, parent_id;
+      IntegerVector clade, id, parent_id;
       const bool has_pd        = df.containsElementNamed("pd");
       const bool has_ts        = df.containsElementNamed("tip_start");
       const bool has_focal_ts  = df.containsElementNamed("focal_tip_start");
+      const bool has_clade     = df.containsElementNamed("clade");
       const bool has_id        = df.containsElementNamed("id");
       const bool has_parent_id = df.containsElementNamed("parent_id");
       if (has_pd)        pd = as<NumericVector>(df["pd"]);
       if (has_ts)        tip_start = as<NumericVector>(df["tip_start"]);
       if (has_focal_ts)  focal_tip_start = as<NumericVector>(df["focal_tip_start"]);
+      if (has_clade)     clade = as<IntegerVector>(df["clade"]);
       if (has_id)        id = as<IntegerVector>(df["id"]);
       if (has_parent_id) parent_id = as<IntegerVector>(df["parent_id"]);
       for (auto i = 0; i < brts.size(); ++i) {
@@ -44,8 +46,9 @@ namespace {
         node.pd = has_pd ? pd[i] : 0.0;
         node.tip_start = has_ts ? tip_start[i] : 0.0;
         node.focal_tip_start = has_focal_ts ? focal_tip_start[i]
-                             : ((pid >= 0) ? 0.0 : emphasis::ts_unknown);
-        node.clade = 0;
+                             : (emphasis::has_parent(pid) ? 0.0
+                                                          : emphasis::ts_unknown);
+        node.clade = has_clade ? clade[i] : 0;
         node.id = has_id ? id[i] : -1;
         node.parent_id = pid;
         tree.push_back(node);

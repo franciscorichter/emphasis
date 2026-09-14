@@ -198,3 +198,48 @@ test_that("CR BDI sampler is exact under the exponential link with mu > lam", {
   expect_lt(diff(range(a$weights)), 1e-8)
   expect_equal(a$fhat - bl, -lgamma(length(brts11) + 1L), tolerance = 1e-8)
 })
+
+
+# --------------------------------------------------------------------------- #
+#  What the BDI parent assignment costs (audit finding H45, the R half)        #
+# --------------------------------------------------------------------------- #
+#
+# .bdi_to_tree_df records as the parent of a lineage born at t the last observed
+# branching at or before t, and falls back to observed node 0 when there is
+# none -- a node that is not yet born then.  .aug_to_Ltable refuses that
+# attachment rather than building a tas with an edge of negative length, so
+# method = "bdi" returns NULL for those draws.  Held here so the refusal cannot
+# quietly widen, and so the throughput it costs is on record.
+
+test_that("BDI draws refused are exactly those born before the first split", {
+  skip_on_cran()
+  set.seed(3)
+  phy   <- ape::rphylo(10L, 0.8, 0.3)
+  brts  <- emphasis:::.extract_brts(phy)
+  max_t <- brts[1L]
+  first <- max_t - brts[2L]          # forward time of the first observed split
+  L     <- DDD::phylo2L(phy)
+  aug <- emphasis:::.augment_tree_bdi(phy, pars = c(0.8, 0.3),
+                                      model_bin = c(0L, 0L, 0L),
+                                      sample_size = 200L, max_missing = 1e4,
+                                      link = 0L, rho = 1)
+  skip_if(length(aug$trees) == 0L, "BDI drew no tree")
+  pre <- refused <- built <- 0L
+  for (df in aug$trees) {
+    mis <- df$t_ext != 0 & df$t_ext < 1e11
+    early <- any(df$brts[mis] < first)
+    pre <- pre + early
+    Lt <- emphasis:::.aug_to_Ltable(df, max_t, brts, L)
+    if (is.null(Lt)) { refused <- refused + 1L; next }
+    tas <- DDD::L2phylo(Lt, dropextinct = FALSE)
+    # what the refusal is there to prevent
+    expect_gte(min(tas$edge.length), 0)
+    built <- built + 1L
+    expect_false(early)
+  }
+  # the refusal is exactly the pre-first-split draws, no wider and no narrower
+  expect_equal(refused, pre)
+  expect_equal(built + refused, length(aug$trees))
+  expect_gt(pre, 0L)                 # the drop is real on this tree
+  expect_gt(built, 0L)
+})

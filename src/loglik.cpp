@@ -14,13 +14,15 @@ emphasis::tree_t pack(const Rcpp::DataFrame& r_tree) {
   Rcpp::NumericVector t_ext     = r_tree["t_ext"];
   Rcpp::NumericVector pd        = r_tree["pd"];
   Rcpp::NumericVector tip_start_v, focal_tip_start_v;
-  Rcpp::IntegerVector id_v, parent_id_v;
+  Rcpp::IntegerVector clade_v, id_v, parent_id_v;
   bool has_tip_start = r_tree.containsElementNamed("tip_start");
   bool has_focal_ts  = r_tree.containsElementNamed("focal_tip_start");
+  bool has_clade     = r_tree.containsElementNamed("clade");
   bool has_id        = r_tree.containsElementNamed("id");
   bool has_parent_id = r_tree.containsElementNamed("parent_id");
   if (has_tip_start) tip_start_v = r_tree["tip_start"];
   if (has_focal_ts)  focal_tip_start_v = r_tree["focal_tip_start"];
+  if (has_clade)     clade_v = r_tree["clade"];
   if (has_id)        id_v = r_tree["id"];
   if (has_parent_id) parent_id_v = r_tree["parent_id"];
 
@@ -37,8 +39,11 @@ emphasis::tree_t pack(const Rcpp::DataFrame& r_tree) {
     // event is mean-field (D = 0) exactly where it was before: at a node whose
     // parent is not on record.
     entry.focal_tip_start = has_focal_ts ? focal_tip_start_v[i]
-                          : ((entry.parent_id >= 0) ? 0.0 : emphasis::ts_unknown);
-    entry.clade     = 0;
+                          : (emphasis::has_parent(entry.parent_id) ? 0.0
+                                                                  : emphasis::ts_unknown);
+    // Absent, the tree is read under the legacy convention, which is what a
+    // data frame built without the column has always meant.
+    entry.clade     = has_clade ? clade_v[i] : 0;
     new_tree.push_back(entry);
   }
   return new_tree;

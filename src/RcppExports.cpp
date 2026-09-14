@@ -89,6 +89,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// rcpp_pendant_sweep
+DataFrame rcpp_pendant_sweep(const Rcpp::DataFrame& tree, Rcpp::NumericVector parent_tip_start);
+RcppExport SEXP _emphasis_rcpp_pendant_sweep(SEXP treeSEXP, SEXP parent_tip_startSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::DataFrame& >::type tree(treeSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type parent_tip_start(parent_tip_startSEXP);
+    rcpp_result_gen = Rcpp::wrap(rcpp_pendant_sweep(tree, parent_tip_start));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rcpp_thinning_envelope_violations
 double rcpp_thinning_envelope_violations(bool reset);
 RcppExport SEXP _emphasis_rcpp_thinning_envelope_violations(SEXP resetSEXP) {
@@ -154,6 +166,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_emphasis_eval_nh_rate_cpp", (DL_FUNC) &_emphasis_eval_nh_rate_cpp, 6},
     {"_emphasis_rcpp_mce", (DL_FUNC) &_emphasis_rcpp_mce, 11},
     {"_emphasis_rcpp_attachments", (DL_FUNC) &_emphasis_rcpp_attachments, 1},
+    {"_emphasis_rcpp_pendant_sweep", (DL_FUNC) &_emphasis_rcpp_pendant_sweep, 2},
     {"_emphasis_rcpp_thinning_envelope_violations", (DL_FUNC) &_emphasis_rcpp_thinning_envelope_violations, 1},
     {"_emphasis_rcpp_mcem", (DL_FUNC) &_emphasis_rcpp_mcem, 16},
     {"_emphasis_rcpp_mcm", (DL_FUNC) &_emphasis_rcpp_mcm, 11},

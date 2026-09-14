@@ -568,6 +568,14 @@
 
 #' Convert BDI species list to the tree data frame format used by emphasis.
 #' Columns: brts, n, t_ext, pd, tip_start, id, parent_id
+#'
+#' The parent recorded for a lineage born at \code{t} is the last observed
+#' branching at or before \code{t}.  A lineage born before the first observed
+#' branching has none, and \code{max(0L, ...)} makes it observed node 0, which
+#' is not yet born then; \code{\link{.aug_to_Ltable}} refuses that attachment
+#' rather than building a \code{tas} with a negative edge.  See the
+#' \code{.augment_tree_bdi} documentation for what that costs and what fixing
+#' it would take.
 #' @keywords internal
 .bdi_to_tree_df <- function(species, bt, tp) {
   bt_sorted <- sort(bt)
@@ -689,6 +697,34 @@
 #' \code{sample_size = 1L} a draw with three survivor rejections moves fhat
 #' by log(1/4) = -1.39.  At the MCEM default of a few hundred draws the bias
 #' is of order 1e-3.
+#'
+#' @section Every pre-first-split lineage is attached to observed node 0:
+#' \code{.bdi_to_tree_df} records, as the parent of an augmented lineage born
+#' at \code{t}, the last observed branching at or before \code{t}
+#' (\code{max(which(bt_sorted <= birth) - 1L)}).  For a lineage born before the
+#' \strong{first} observed branching there is none, and the expression falls
+#' back to observed node 0 -- a lineage that is not yet born at \code{t}.  The
+#' sampler has no notion of the two crown lineages, which is where such a birth
+#' really attaches, and it never records the reserved crown ids the thinning
+#' sampler uses.
+#'
+#' The consequence used to be silent and wrong: \code{tas} carried an edge of
+#' negative length wherever it happened.  On seven trees measured here, the
+#' parent build turned all 200 draws into a \code{phylo} and 5 to 200 of them
+#' had a negative edge, the shortest \code{-7.15}.
+#'
+#' \code{\link{.aug_to_Ltable}} now refuses an attachment older than its
+#' recorded parent and returns \code{NULL}, so those draws produce no tree at
+#' all.  The failure is loud where it used to be silent, and the throughput is
+#' the price: on the same seven trees, \code{simulate_tree(method = "bdi")}
+#' built 0, 106, 124, 129, 153, 156 and 168 trees out of 200, with the refused
+#' draws in every case exactly those carrying a lineage born before the first
+#' observed branching.  A tree whose first observed branching is late loses
+#' most of its draws; one whose crown splits early loses few.
+#'
+#' The parent assignment itself is unchanged and still wrong.  Fixing it means
+#' giving the BDI sampler the two crown lineages and the same uniform draw over
+#' labelled attachments the thinning sampler makes (audit finding H45).
 #'
 #' @return List: \code{trees}, \code{logf}, \code{logg}, \code{weights}
 #'   (finite-weight draws only), \code{fhat}, \code{n_valid} (completed

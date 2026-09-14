@@ -37,10 +37,11 @@ namespace emphasis {
 
   // What the proposal had to choose from at one augmented birth: the lineages
   // alive there, the labelled attachments they carry, and the parent it
-  // recorded.  Reported by replaying the finished tree through the same sweep
-  // the sampler carried forward, so a test can hold the sampler's candidate set
-  // against the alive count node.n and against the 2*tips + Ne the density
-  // charges.
+  // recorded.  Reported by replaying the finished tree through the forward
+  // sweep, under the convention the last node's clade flag records, so a test
+  // can hold the sampler's candidate set against the alive count node.n and
+  // against the 2*tips + Ne the density charges.  The two conventions carry
+  // the same alive set, so none of these fields depends on which one runs.
   struct attachment_t
   {
     double brts;          // the birth
@@ -52,6 +53,15 @@ namespace emphasis {
   };
 
   std::vector<attachment_t> attachment_report(const tree_t& tree);
+
+
+  // One application of the forward pendant sweep over a whole tree: writes
+  // tip_start, focal_tip_start and pd on every node, exactly as the closing
+  // pass of the augmentation does.  The convention is the `clade` flag of the
+  // last node, and the match key for an observed branching event is the
+  // focal_tip_start the nodes carry on entry, so a caller that wants the sweep
+  // driven by the observed topology must put parent_tip_start there first.
+  void pendant_sweep_tree(tree_t& tree);
 
 
   // returns augmented tree per vpars

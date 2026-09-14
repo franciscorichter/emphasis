@@ -138,13 +138,21 @@ List rcpp_mce(const std::vector<double>& brts,
 
 //' What the proposal could attach an augmented lineage to
 //'
-//' Replays an augmented tree through the same forward sweep the thinning
-//' sampler carries, and reports at every augmented birth the lineages the
-//' proposal had to choose from, the labelled attachments they carry, and the
-//' parent that was recorded.  \code{candidates} must be the alive count
-//' \code{n} and \code{attachments} the \code{2 * tips + Ne} that
+//' Replays an augmented tree through the forward sweep the thinning sampler
+//' carries, and reports at every augmented birth the lineages the proposal had
+//' to choose from, the labelled attachments they carry, and the parent that
+//' was recorded.  \code{candidates} must be the alive count \code{n} and
+//' \code{attachments} the \code{2 * tips + Ne} that
 //' \code{Model::sampling_prob} charges \code{-log} of; the two crown lineages
 //' carry no node, so they appear only here and in their reserved ids.
+//'
+//' The convention the replay runs under is the \code{clade} column, which
+//' \code{\link{augment_trees}} carries out with the tree; a data frame built
+//' without it is read under the legacy convention, as a bare branching-time
+//' tree has always been.  Nothing reported here separates the two: the alive
+//' set, the attachments and whether the recorded parent is among them are
+//' carried by the lineage ids and the event order, which both conventions
+//' share.
 //'
 //' @param tree One augmented-tree data frame from \code{\link{augment_trees}}.
 //' @return A data frame with one row per augmented birth: \code{brts},
@@ -172,6 +180,61 @@ DataFrame rcpp_attachments(const Rcpp::DataFrame& tree)
                            Named("attachments") = att,
                            Named("parent_id") = pid,
                            Named("parent_alive") = alive);
+}
+
+
+//' Replay the forward pendant sweep over an augmented tree
+//'
+//' One application of the sweep the thinning sampler carries forward: it
+//' rewrites \code{tip_start}, \code{focal_tip_start} and \code{pd} on every
+//' node from the event list alone.  With \code{parent_tip_start} supplied the
+//' sweep is driven by the observed topology, exactly as the closing pass of
+//' \code{\link{augment_trees}} is: the k-th observed node is given the k-th
+//' entry as the tip start of the lineage that splits there, and the tree is
+//' read under the topology convention.  With it empty the tree is replayed as
+//' it stands, under the convention its \code{clade} column records and with
+//' the \code{focal_tip_start} it already carries as the match key.
+//'
+//' An augmented tree returned by \code{\link{augment_trees}} is a fixed point
+//' of the first form: the state the sampler carried is the tree that comes
+//' back.
+//'
+//' @param tree One augmented-tree data frame from \code{\link{augment_trees}}.
+//' @param parent_tip_start The tip starts the augmentation was driven by, or
+//'   \code{numeric(0)} to replay the tree as it stands.
+//' @return The same data frame with \code{tip_start}, \code{focal_tip_start}
+//'   and \code{pd} rewritten by the sweep.
+//' @keywords internal
+// [[Rcpp::export(name = "eval_pendant_sweep")]]
+DataFrame rcpp_pendant_sweep(const Rcpp::DataFrame& tree,
+                             Rcpp::NumericVector parent_tip_start =
+                               Rcpp::NumericVector::create())
+{
+  auto local_tree = loglik::pack(tree);
+  if (local_tree.empty()) return tree;
+  const std::vector<double> pts(parent_tip_start.begin(), parent_tip_start.end());
+  if (!pts.empty()) {
+    // The observed nodes are the tips the caller supplied, ids 0 .. m-1 in
+    // forward-time order; everything the augmentation added is missing or
+    // unsampled, and carries an id at or above m.
+    size_t m = 0;
+    for (const auto& node : local_tree) {
+      if (emphasis::detail::is_tip(node) && node.id >= 0) ++m;
+    }
+    if (pts.size() != m && pts.size() + 1 != m) {
+      throw std::invalid_argument(
+        "eval_pendant_sweep: parent_tip_start must be empty, or hold one entry "
+        "per observed branching event");
+    }
+    for (auto& node : local_tree) {
+      if (!emphasis::detail::is_tip(node) || node.id < 0) continue;
+      const size_t k = static_cast<size_t>(node.id);
+      node.focal_tip_start = (k + 1 < m) ? pts[k] : emphasis::ts_unknown;
+      node.clade = emphasis::clade_topology;   // as create_tree marks them
+    }
+  }
+  emphasis::pendant_sweep_tree(local_tree);
+  return unpack(local_tree);
 }
 
 

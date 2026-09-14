@@ -104,6 +104,19 @@
 #'   iteration under diversity dependence. It covers N-only models
 #'   (\code{"cr"}, \code{"dd"}) on the linear and exponential links;
 #'   any other model or link falls back to thinning.
+#'
+#'   \strong{\code{method = "bdi"} returns \code{NULL} for part of its draws.}
+#'   The BDI sampler has no notion of the two crown lineages, so a lineage born
+#'   before the first observed branching is recorded as a daughter of observed
+#'   node 0, which is not yet born then.  Such a draw cannot be turned into a
+#'   \code{tas}: it is refused, and that element of \code{trees} (or
+#'   \code{tas}, with \code{n_trees = 1}) is \code{NULL}.  On seven trees
+#'   measured for this release, 0 to 168 of 200 draws built; a tree whose first
+#'   observed branching is late loses most of them.  \code{log_q} is returned
+#'   for every draw either way.  It was previously silent and wrong -- every
+#'   such draw produced a \code{phylo} with an edge of negative length.  The
+#'   \code{"thinning"} method draws the parent from every lineage alive, the
+#'   two crown lineages included, and is not affected.
 #' @examples
 #' \dontrun{
 #' # --- Forward simulation ---

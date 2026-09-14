@@ -15,12 +15,21 @@ A data frame with one row per augmented birth: \code{brts},
   \code{parent_alive}.
 }
 \description{
-Replays an augmented tree through the same forward sweep the thinning
-sampler carries, and reports at every augmented birth the lineages the
-proposal had to choose from, the labelled attachments they carry, and the
-parent that was recorded.  \code{candidates} must be the alive count
-\code{n} and \code{attachments} the \code{2 * tips + Ne} that
+Replays an augmented tree through the forward sweep the thinning sampler
+carries, and reports at every augmented birth the lineages the proposal had
+to choose from, the labelled attachments they carry, and the parent that
+was recorded.  \code{candidates} must be the alive count \code{n} and
+\code{attachments} the \code{2 * tips + Ne} that
 \code{Model::sampling_prob} charges \code{-log} of; the two crown lineages
 carry no node, so they appear only here and in their reserved ids.
+}
+\details{
+The convention the replay runs under is the \code{clade} column, which
+\code{\link{augment_trees}} carries out with the tree; a data frame built
+without it is read under the legacy convention, as a bare branching-time
+tree has always been.  Nothing reported here separates the two: the alive
+set, the attachments and whether the recorded parent is among them are
+carried by the lineage ids and the event order, which both conventions
+share.
 }
 \keyword{internal}

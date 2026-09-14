@@ -118,13 +118,21 @@ augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda
 
 #' What the proposal could attach an augmented lineage to
 #'
-#' Replays an augmented tree through the same forward sweep the thinning
-#' sampler carries, and reports at every augmented birth the lineages the
-#' proposal had to choose from, the labelled attachments they carry, and the
-#' parent that was recorded.  \code{candidates} must be the alive count
-#' \code{n} and \code{attachments} the \code{2 * tips + Ne} that
+#' Replays an augmented tree through the forward sweep the thinning sampler
+#' carries, and reports at every augmented birth the lineages the proposal had
+#' to choose from, the labelled attachments they carry, and the parent that
+#' was recorded.  \code{candidates} must be the alive count \code{n} and
+#' \code{attachments} the \code{2 * tips + Ne} that
 #' \code{Model::sampling_prob} charges \code{-log} of; the two crown lineages
 #' carry no node, so they appear only here and in their reserved ids.
+#'
+#' The convention the replay runs under is the \code{clade} column, which
+#' \code{\link{augment_trees}} carries out with the tree; a data frame built
+#' without it is read under the legacy convention, as a bare branching-time
+#' tree has always been.  Nothing reported here separates the two: the alive
+#' set, the attachments and whether the recorded parent is among them are
+#' carried by the lineage ids and the event order, which both conventions
+#' share.
 #'
 #' @param tree One augmented-tree data frame from \code{\link{augment_trees}}.
 #' @return A data frame with one row per augmented birth: \code{brts},
@@ -133,6 +141,32 @@ augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda
 #' @keywords internal
 eval_attachments <- function(tree) {
     .Call('_emphasis_rcpp_attachments', PACKAGE = 'emphasis', tree)
+}
+
+#' Replay the forward pendant sweep over an augmented tree
+#'
+#' One application of the sweep the thinning sampler carries forward: it
+#' rewrites \code{tip_start}, \code{focal_tip_start} and \code{pd} on every
+#' node from the event list alone.  With \code{parent_tip_start} supplied the
+#' sweep is driven by the observed topology, exactly as the closing pass of
+#' \code{\link{augment_trees}} is: the k-th observed node is given the k-th
+#' entry as the tip start of the lineage that splits there, and the tree is
+#' read under the topology convention.  With it empty the tree is replayed as
+#' it stands, under the convention its \code{clade} column records and with
+#' the \code{focal_tip_start} it already carries as the match key.
+#'
+#' An augmented tree returned by \code{\link{augment_trees}} is a fixed point
+#' of the first form: the state the sampler carried is the tree that comes
+#' back.
+#'
+#' @param tree One augmented-tree data frame from \code{\link{augment_trees}}.
+#' @param parent_tip_start The tip starts the augmentation was driven by, or
+#'   \code{numeric(0)} to replay the tree as it stands.
+#' @return The same data frame with \code{tip_start}, \code{focal_tip_start}
+#'   and \code{pd} rewritten by the sweep.
+#' @keywords internal
+eval_pendant_sweep <- function(tree, parent_tip_start = as.numeric( c())) {
+    .Call('_emphasis_rcpp_pendant_sweep', PACKAGE = 'emphasis', tree, parent_tip_start)
 }
 
 #' Count thinning candidates with acceptance probability above 1
