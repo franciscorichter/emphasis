@@ -65,23 +65,61 @@ namespace emphasis {
     //
     //   topology  the lineages the observed tree really has: two crown lineages
     //             at tip_start 0 and a reset at every split, of the splitting
-    //             lineage as well as of its daughter.  The tip_start of the
-    //             splitting lineage is on record for an observed event when the
-    //             caller supplied the topology (create_tree parked it in
-    //             focal_tip_start), for an augmented lineage from the parent it
-    //             was drawn from, and for an augmented lineage drawn before the
-    //             first observed event — its parent is one of the two crown
-    //             lineages, which both still carry tip_start 0 then.
+    //             lineage as well as of its daughter.  The splitting lineage is
+    //             on record at every event: an observed event names it by the
+    //             tip_start the observed topology gives it (create_tree parked
+    //             that in focal_tip_start), an augmented one by the id of the
+    //             lineage it was drawn from — a node id, or one of the two
+    //             crown ids.
     //
     //   legacy    what a bare branching-time vector can support: one lineage per
     //             node, every observed lineage dating from the crown, the two
-    //             crown lineages absent, and the node counting itself.  Kept so
-    //             that an input with no topology returns the values it always
-    //             has; the sweep is the O(N) form of that same sum.
+    //             crown lineages absent from the sum, and the node counting
+    //             itself.  Kept so that an input with no topology returns the
+    //             values it always has; the sweep is the O(N) form of that same
+    //             sum.
+    //
+    // Both conventions carry the same alive set of named lineages, because that
+    // is what the augmentation draws a parent from; only what the sum P is taken
+    // over differs.
     class pendant_sweep
     {
     public:
-      explicit pendant_sweep(bool topology) : topology_(topology) {}
+      // A lineage alive at the sweep's current time.
+      //
+      //   ts      its tip_start now: the last time it became a pendant tip,
+      //           reset by every split it makes, observed or augmented.
+      //   obs_ts  its tip_start as the observed topology records it, which an
+      //           augmented birth does not touch.  parent_tip_start is measured
+      //           on the observed tree alone, so it is obs_ts, not ts, that
+      //           identifies the lineage splitting at an observed event.
+      //   observed  true for a lineage of the observed tree (the two crown
+      //           lineages and every lineage born at an observed branching),
+      //           false for an augmented one.  The proposal's parent draw and
+      //           the -log(2*tips + Ne) the density charges count an observed
+      //           lineage twice and an augmented one once.
+      struct lineage { double ts; double obs_ts; int id; bool observed; };
+
+      explicit pendant_sweep(bool topology) : topology_(topology)
+      {
+        alive_.push_back(lineage{ 0.0, 0.0, crown_id_a, true });
+        alive_.push_back(lineage{ 0.0, 0.0, crown_id_b, true });
+      }
+
+      // The lineages alive now, in the order they were born.  The augmentation
+      // draws its parent from this.
+      const std::vector<lineage>& alive() const { return alive_; }
+
+      // The number of labelled attachments a birth now has: 2 per observed
+      // lineage alive, 1 per augmented one.  This is the 2*tips + Ne of
+      // Model::sampling_prob, counted from the alive set rather than from the
+      // node list, and the sampler and the density must agree on it.
+      long long attachments() const
+      {
+        long long k = 0;
+        for (const auto& l : alive_) k += l.observed ? 2 : 1;
+        return k;
+      }
 
       // The pendant PD this sweep will store on `node`.
       double pd_of(const node_t& node) const
@@ -99,6 +137,8 @@ namespace emphasis {
       }
 
     private:
+      using alive_it = std::vector<lineage>::iterator;
+
       // P over the lineages the sweep currently holds alive.
       double P(double t) const { return count() * t - S_; }
       double count() const
@@ -106,49 +146,45 @@ namespace emphasis {
         return topology_ ? static_cast<double>(alive_.size()) : count_;
       }
 
-      // `alive_` is the authority for both N (its size) and S (its sum) under
-      // the topology convention.  A lineage is fully described by its tip_start
-      // there, so the two lineages an event leaves behind are interchangeable
-      // and the multiset needs no names.
-      //
-      // `by_id_` names the lineages the augmentation can pick as a parent.  The
-      // value it holds is a key into the multiset, not a second copy of the
-      // state: `take` removes the alive lineage nearest to the requested
-      // tip_start and returns the value it actually removed, so S stays the sum
-      // of a real alive set whatever the key says.  Asking for a lineage that is
-      // no longer pendant at the age claimed then costs the nearest real one,
-      // instead of subtracting a tip_start no lineage has and driving P above
-      // N*t.
-      double take(double want)
+      // The alive lineage with this id.  Every lineage the augmentation can
+      // name has one: a node id for a lineage born at a node, a crown id for
+      // one of the two the crown starts with.
+      alive_it by_id(int id)
       {
-        if (alive_.empty()) return want;
-        auto it = alive_.lower_bound(want);
-        if (it == alive_.end()) --it;
-        else if (it != alive_.begin()) {
-          auto prev = std::prev(it);
-          if ((want - *prev) < (*it - want)) it = prev;
-        }
-        const double got = *it;
-        alive_.erase(it);
-        S_ -= got;
-        return got;
+        return std::find_if(alive_.begin(), alive_.end(),
+                            [id](const lineage& l) { return l.id == id; });
       }
 
-      void put(double v) { alive_.insert(v); S_ += v; }
+      // The observed lineage the topology means when it reports that the
+      // lineage splitting here was last a tip at `want`.
+      //
+      // The match is on obs_ts — what the observed tree records — because that
+      // is what parent_tip_start is measured from, and it is nearest rather
+      // than exact because the caller's tip starts and the caller's branching
+      // times are two separate floating-point computations over the same tree.
+      // Two observed lineages share an obs_ts exactly when they are the two
+      // halves of one observed split, which the topology does not tell apart;
+      // the first-born of them is taken, in both sweeps alike, so the identity
+      // the sweep settles on is the same one every time it replays the tree.
+      alive_it nearest_observed(double want)
+      {
+        auto best = alive_.end();
+        double best_d = 0.0;
+        for (auto it = alive_.begin(); it != alive_.end(); ++it) {
+          if (!it->observed) continue;
+          const double d = std::abs(it->obs_ts - want);
+          if (best == alive_.end() || d < best_d) { best = it; best_d = d; }
+        }
+        return best;
+      }
 
       void advance_topology(node_t& node, bool last)
       {
         const double t = node.brts;
         if (detail::is_extinction(node)) {
-          double want = node.tip_start;    // birth time recorded at insertion
-          if (node.id >= 0) {
-            auto it = by_id_.find(node.id);
-            if (it != by_id_.end()) {
-              want = it->second;           // reset by a split since that birth
-              by_id_.erase(it);
-            }
-          }
-          const double ts_s = take(want);
+          auto it = by_id(node.id);
+          const double ts_s = (it != alive_.end()) ? it->ts : node.tip_start;
+          if (it != alive_.end()) { S_ -= it->ts; alive_.erase(it); }
           node.tip_start = ts_s;
           node.focal_tip_start = ts_s;
         }
@@ -159,35 +195,42 @@ namespace emphasis {
           node.focal_tip_start = ts_unknown;
         }
         else {
-          double want = 0.0;
+          const bool observed = detail::is_tip(node);
+          auto it = alive_.end();
           bool known = true;
-          if (detail::is_tip(node)) {
-            want = node.focal_tip_start;
+          if (observed) {
+            double want = node.focal_tip_start;
             if (want < 0.0) { want = 0.0; known = false; }
+            it = nearest_observed(want);
           }
-          else if (node.parent_id >= 0) {
-            auto it = by_id_.find(node.parent_id);
-            if (it != by_id_.end()) want = it->second;
+          else {
+            it = by_id(node.parent_id);
+            if (it == alive_.end()) known = false;   // no lineage on record
           }
-          // else: drawn with no lineage on record, so its parent is a crown
-          // lineage, still at tip_start 0.
-          const double ts_p = take(want);      // the splitting lineage leaves
-          put(t); put(t);                      // parent and daughter, both tips
+          double ts_p = 0.0;
+          if (it != alive_.end()) {
+            ts_p = it->ts;
+            S_ += t - ts_p;                // the splitting lineage is a tip again
+            it->ts = t;
+            // An observed split is the only kind the observed tree records.
+            if (observed) it->obs_ts = t;
+          }
+          alive_.push_back(lineage{ t, t, node.id, observed });   // the daughter
+          S_ += t;
           node.focal_tip_start = known ? ts_p : ts_unknown;
           node.tip_start = t;
-          if (node.id >= 0) by_id_[node.id] = t;
-          if (node.parent_id >= 0) {
-            auto it = by_id_.find(node.parent_id);
-            if (it != by_id_.end()) it->second = t;
-          }
         }
       }
 
       // The tip_start the legacy convention gives a node, and the change its
       // own arrival or departure makes to P at its own time.
+      //
+      // An observed node has no parent on record — every observed lineage
+      // dates from the crown under this convention — and an augmented one
+      // names the lineage it was drawn from, so it dates from its own birth.
       static double legacy_ts(const node_t& node)
       {
-        return (node.parent_id == -1) ? 0.0 : node.brts;
+        return has_parent(node.parent_id) ? node.brts : 0.0;
       }
 
       double legacy_delta(const node_t& node) const
@@ -212,12 +255,14 @@ namespace emphasis {
           S_ -= ts;
           node.focal_tip_start = node.tip_start;
           if (node.id >= 0) reset_.erase(node.id);
+          auto a = by_id(node.id);
+          if (a != alive_.end()) alive_.erase(a);
         }
         else {
           node.tip_start = legacy_ts(node);
           // An event whose parent is not on record leaves D mean-field (E = M).
-          node.focal_tip_start = (node.parent_id >= 0) ? 0.0 : ts_unknown;
-          if (node.parent_id >= 0) {
+          node.focal_tip_start = has_parent(node.parent_id) ? 0.0 : ts_unknown;
+          if (has_parent(node.parent_id)) {
             auto pit = reset_.find(node.parent_id);
             if (pit != reset_.end()) {
               node.focal_tip_start = pit->second;
@@ -227,14 +272,24 @@ namespace emphasis {
           count_ += 1.0;
           S_ += node.tip_start;
           if (node.id >= 0) { born_[node.id] = node.tip_start; reset_[node.id] = t; }
+          alive_.push_back(lineage{ t, t, node.id, detail::is_tip(node) });
         }
       }
 
       const bool topology_;
-      std::multiset<double> alive_{ 0.0, 0.0 };   // topology: the crown lineages
-      std::unordered_map<int, double> by_id_;     // topology: id -> its tip_start
+      // The alive lineages, in birth order, crown lineages first.  Under the
+      // topology convention it is also the authority for N (its size) and S
+      // (the sum of its tip starts); under the legacy convention P is the sum
+      // over nodes that count_ and S_ carry, and alive_ only names the
+      // lineages a birth can be drawn from.
+      std::vector<lineage> alive_;
       std::unordered_map<int, double> born_;      // legacy: id -> the ts it counts with
-      std::unordered_map<int, double> reset_;     // legacy: id -> ts for focal lookup
+      // legacy: id -> the tip_start a split of that lineage reports.  The two
+      // crown lineages are seeded at 0, the tip_start the legacy convention
+      // gives every observed lineage, so that a birth drawn from one of them
+      // reads the same E as a birth drawn from any other observed lineage.
+      std::unordered_map<int, double> reset_{ { crown_id_a, 0.0 },
+                                              { crown_id_b, 0.0 } };
       double count_ = 0.0;                        // legacy: lineages alive
       double S_ = 0.0;
     };
@@ -252,6 +307,31 @@ namespace emphasis {
         tree[i].pd = sweep.pd_of(tree[i]);
         sweep.advance(tree[i], i == last);
       }
+    }
+
+
+    // The candidate set and the parent at each augmented birth, by replaying
+    // the finished tree through the sweep the sampler carried forward.
+    std::vector<attachment_t> report(const tree_t& tree)
+    {
+      std::vector<attachment_t> out;
+      if (tree.empty()) return out;
+      tree_t work(tree.cbegin(), tree.cend());   // advance() writes the tip starts
+      pendant_sweep sweep(work.back().clade == clade_topology);
+      const size_t last = work.size() - 1;
+      for (size_t i = 0; i < work.size(); ++i) {
+        node_t& node = work[i];
+        if (i != last && !detail::is_extinction(node) && !detail::is_tip(node)) {
+          const auto& alive = sweep.alive();
+          bool found = false;
+          for (const auto& l : alive) if (l.id == node.parent_id) { found = true; break; }
+          out.push_back(attachment_t{ node.brts, node.n,
+                                      static_cast<long long>(alive.size()),
+                                      sweep.attachments(), node.parent_id, found });
+        }
+        sweep.advance(node, i == last);
+      }
+      return out;
     }
 
 
@@ -373,19 +453,33 @@ namespace emphasis {
           pt = std::min(pt, 1.0);
           if (u2 < pt) {
             double ext_time = model.extinction_time(next_speciation_time, pars, tree);
-            // find lineages alive at next_speciation_time and pick one as parent
-            std::vector<int> alive_ids;
-            for (const auto& node : tree) {
-              if (!detail::is_extinction(node) &&
-                  node.brts < next_speciation_time &&
-                  node.t_ext > next_speciation_time) {
-                alive_ids.push_back(node.id);
+            // The parent: uniform over the labelled attachments, which is the
+            // K = 2*tips + Ne that Model::sampling_prob charges -log K for.
+            //
+            // An attachment is a complete labelled history, and a birth off an
+            // observed lineage has two of them — the observed branch and the
+            // missing one are the two halves of one split, and either half may
+            // carry the observed lineage's own label — while a birth off an
+            // augmented lineage has one, because there the two halves differ by
+            // their death times and the swap is a different augmentation, not a
+            // second name for this one.  So an observed lineage alive weighs 2
+            // and an augmented one weighs 1, and the sampler and the density
+            // count the same K.
+            //
+            // The sweep is the authority for which lineages are alive: it holds
+            // every event up to cbt and none after it, and the two crown
+            // lineages, which carry no node, are in it from the start.
+            const auto& alive = sweep.alive();
+            const long long attachments = sweep.attachments();
+            int chosen_parent_id = no_parent;
+            {
+              std::uniform_int_distribution<long long> uid(0, attachments - 1);
+              long long k = uid(reng);
+              for (const auto& l : alive) {
+                const long long w = l.observed ? 2 : 1;
+                if (k < w) { chosen_parent_id = l.id; break; }
+                k -= w;
               }
-            }
-            int chosen_parent_id = -1;
-            if (!alive_ids.empty()) {
-              std::uniform_int_distribution<size_t> uid(0, alive_ids.size() - 1);
-              chosen_parent_id = alive_ids[uid(reng)];
             }
             int new_id = next_id++;
             if (ext_time >= b) {
@@ -425,6 +519,12 @@ namespace emphasis {
   long long thinning_envelope_violations(bool reset)
   {
     return reset ? envelope_violations.exchange(0) : envelope_violations.load();
+  }
+
+
+  std::vector<attachment_t> attachment_report(const tree_t& tree)
+  {
+    return report(tree);
   }
 
 

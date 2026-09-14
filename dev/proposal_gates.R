@@ -112,19 +112,16 @@ run_ess <- function(N = 2000L, reps = 8L) {
 #
 # On a 2-tip tree an augmentation with one missing lineage is a pair (t, d):
 # born at t from one of the two crown lineages, dead at d.  The observed tree
-# has no internal node, so the sampler's candidate-parent list is empty at
-# every t and the parent is a crown lineage — which is also every labelled
-# attachment the -log(2 tips + Ne) term counts (2 per observed lineage, and on
-# this tree both observed lineages are crown lineages carrying tip_start 0, so
-# f is the same for all four).  The stratum is therefore exactly
+# has no internal node, so the parent is a crown lineage — which is also every
+# labelled attachment the -log(2 tips + Ne) term counts (2 per observed lineage,
+# and on this tree both observed lineages are crown lineages carrying tip_start
+# 0, so f is the same for all four).  The stratum is therefore exactly
 #
-#   L1 = 4 * int_0^T int_t^T f(y, z(t, d)) dd dt
+#   L1 = 4 * int_0^T int_t^T f(y, z(t, d)) dd dt.
 #
-# and no parent convention is being approximated.  On a tree with an observed
-# split that is no longer true: the sampler draws uniformly over the nodes
-# alive, which never include the crown lineages, so some labelled attachments
-# have proposal probability zero (H45, open).  That is why the brute force is
-# done here and not on a larger tree.
+# The same integral on a tree WITH an observed split, where the attachments
+# carry different f and the two crown lineages are among them, is
+# tests/testthat/test-parent-support.R (H45).
 
 gauss_legendre <- function(n) {                    # Golub-Welsch, mapped to [0,1]
   k <- 1:(n - 1); b <- k / sqrt(4 * k^2 - 1)
@@ -136,7 +133,7 @@ gauss_legendre <- function(n) {                    # Golub-Welsch, mapped to [0,
 aug1 <- function(t, d, TT) data.frame(
   brts = c(t, d, TT), n = c(2, 3, 2), t_ext = c(d, 0, T_TIP),
   pd = c(2 * t, 3 * d - 2 * t, 2 * TT - t), tip_start = c(t, t, TT),
-  focal_tip_start = c(0, t, -1), id = c(1L, 1L, 0L), parent_id = c(-1L, -1L, -1L))
+  focal_tip_start = c(0, t, -1), id = c(1L, 1L, 0L), parent_id = c(-2L, -2L, -1L))
 
 aug0 <- function(TT) data.frame(
   brts = TT, n = 2, t_ext = T_TIP, pd = 2 * TT,

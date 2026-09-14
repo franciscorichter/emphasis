@@ -116,6 +116,25 @@ augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda
     .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link, rho, parent_tip_start)
 }
 
+#' What the proposal could attach an augmented lineage to
+#'
+#' Replays an augmented tree through the same forward sweep the thinning
+#' sampler carries, and reports at every augmented birth the lineages the
+#' proposal had to choose from, the labelled attachments they carry, and the
+#' parent that was recorded.  \code{candidates} must be the alive count
+#' \code{n} and \code{attachments} the \code{2 * tips + Ne} that
+#' \code{Model::sampling_prob} charges \code{-log} of; the two crown lineages
+#' carry no node, so they appear only here and in their reserved ids.
+#'
+#' @param tree One augmented-tree data frame from \code{\link{augment_trees}}.
+#' @return A data frame with one row per augmented birth: \code{brts},
+#'   \code{n}, \code{candidates}, \code{attachments}, \code{parent_id} and
+#'   \code{parent_alive}.
+#' @keywords internal
+eval_attachments <- function(tree) {
+    .Call('_emphasis_rcpp_attachments', PACKAGE = 'emphasis', tree)
+}
+
 #' Count thinning candidates with acceptance probability above 1
 #'
 #' The thinning sampler accepts a candidate speciation time with probability

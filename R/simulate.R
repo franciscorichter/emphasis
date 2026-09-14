@@ -413,44 +413,81 @@ simulate_tree <- function(tree        = NULL,
   NULL
 }
 
-# Merge augmented extinct branches into the extant L-table.
+# Reserved lineage ids of the two crown lineages
+#
+# The two crown lineages carry no node, so the augmentation cannot name them by
+# a node id; \code{inst/include/model_helpers.hpp} gives them ids of their own.
+# \code{crown_id_a} is the one the forward sweep splits at the first observed
+# branching event, which is what \code{.aug_to_Ltable} maps it onto.
+#' @keywords internal
+.crown_id_a <- -2L
+#' @keywords internal
+.crown_id_b <- -3L
+
+# Merge augmented branches into the extant L-table.
+#
+# Every augmented lineage names the lineage it was drawn from, so every one of
+# them becomes a row: an id of a lineage born at an observed branching event, or
+# one of the two crown ids.  Nothing is dropped, and an attachment to a lineage
+# born after the lineage attached to it is refused rather than turned into a
+# phylo with a negative edge.
 #' @keywords internal
 .aug_to_Ltable <- function(df, max_t, brts, L_extant) {
-  if (is.null(L_extant)) return(NULL)
+  if (is.null(L_extant) || nrow(L_extant) < 2L) return(NULL)
 
   t_ext_tip      <- 1e11
   t_ext_unsampled <- 5e10
-  aug <- df[df$t_ext != 0.0 &
-              df$parent_id != -1L &
-              df$t_ext < t_ext_tip, , drop = FALSE]
+  aug <- df[df$t_ext != 0.0 & df$t_ext < t_ext_tip, , drop = FALSE]
 
   if (nrow(aug) == 0L) return(L_extant)
+  if (any(aug$parent_id == -1L)) return(NULL)
 
-  id_to_label <- function(pid) {
-    if (pid < 0L || (pid + 2L) > length(brts)) return(NA_integer_)
-    as.integer(
-      L_extant[which.min(abs(L_extant[, 1L] - brts[pid + 2L])), 3L]
-    )
+  # Label and birth time of every observed lineage, by the id the C++ layer
+  # gives it.  The crown lineages are the two oldest rows of the L-table; the
+  # one that speciates first is the parent of the oldest row below them, and is
+  # the one the sweep splits at the first observed event.
+  crown <- which(L_extant[, 1L] == max(L_extant[, 1L]))
+  if (length(crown) != 2L) return(NULL)
+  crown_lbl <- as.integer(L_extant[crown, 3L])
+  rest <- setdiff(seq_len(nrow(L_extant)), crown)
+  if (length(rest)) {
+    first <- as.integer(L_extant[rest[which.max(L_extant[rest, 1L])], 2L])
+    if (first %in% crown_lbl) crown_lbl <- c(first, setdiff(crown_lbl, first))
+  }
+
+  lbl <- list(); birth <- list()
+  put <- function(id, label, b) {
+    lbl[[as.character(id)]]   <<- label
+    birth[[as.character(id)]] <<- b
+  }
+  put(.crown_id_a, crown_lbl[1L], max_t)
+  put(.crown_id_b, crown_lbl[2L], max_t)
+  # Observed node id k is the lineage born at the k-th observed branching event
+  # in forward time, which is entry k + 2 of the crown-first branching times.
+  for (k in seq_len(length(brts) - 1L) - 1L) {
+    r <- which.min(abs(L_extant[, 1L] - brts[k + 2L]))
+    put(k, as.integer(L_extant[r, 3L]), L_extant[r, 1L])
   }
 
   next_lbl   <- as.integer(max(abs(L_extant[, 3L]))) + 1L
   aug        <- aug[order(aug$brts), , drop = FALSE]
-  aug_labels <- list()
   new_rows   <- matrix(0.0, nrow = nrow(aug), ncol = 4L)
 
   for (k in seq_len(nrow(aug))) {
-    pid   <- aug$parent_id[k]
-    p_lbl <- aug_labels[[as.character(pid)]] %||% id_to_label(pid)
-    if (is.na(p_lbl) || length(p_lbl) == 0L) p_lbl <- L_extant[1L, 3L]
+    pk    <- as.character(aug$parent_id[k])
+    p_lbl <- lbl[[pk]]
+    if (is.null(p_lbl)) return(NULL)
+    b <- max_t - aug$brts[k]
+    if (b > birth[[pk]] + 1e-9) return(NULL)   # parent born after its daughter
 
-    lbl      <- if (p_lbl < 0L) -next_lbl else next_lbl
+    l        <- if (p_lbl < 0L) -next_lbl else next_lbl
     next_lbl <- next_lbl + 1L
 
     # Unsampled extant species (t_ext == t_ext_unsampled) are alive at present:
     # set L-table extinction time to -1 (DDD convention for extant tips)
     ext_k <- if (aug$t_ext[k] == t_ext_unsampled) -1 else max_t - aug$t_ext[k]
-    new_rows[k, ] <- c(max_t - aug$brts[k], p_lbl, lbl, ext_k)
-    aug_labels[as.character(aug$id[k])] <- lbl
+    new_rows[k, ] <- c(b, p_lbl, l, ext_k)
+    put(aug$id[k], l, b)
   }
 
   rbind(L_extant, new_rows)

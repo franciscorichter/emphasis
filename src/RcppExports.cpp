@@ -78,6 +78,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// rcpp_attachments
+DataFrame rcpp_attachments(const Rcpp::DataFrame& tree);
+RcppExport SEXP _emphasis_rcpp_attachments(SEXP treeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::DataFrame& >::type tree(treeSEXP);
+    rcpp_result_gen = Rcpp::wrap(rcpp_attachments(tree));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rcpp_thinning_envelope_violations
 double rcpp_thinning_envelope_violations(bool reset);
 RcppExport SEXP _emphasis_rcpp_thinning_envelope_violations(SEXP resetSEXP) {
@@ -142,6 +153,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_emphasis_eval_logf_cpp", (DL_FUNC) &_emphasis_eval_logf_cpp, 5},
     {"_emphasis_eval_nh_rate_cpp", (DL_FUNC) &_emphasis_eval_nh_rate_cpp, 6},
     {"_emphasis_rcpp_mce", (DL_FUNC) &_emphasis_rcpp_mce, 11},
+    {"_emphasis_rcpp_attachments", (DL_FUNC) &_emphasis_rcpp_attachments, 1},
     {"_emphasis_rcpp_thinning_envelope_violations", (DL_FUNC) &_emphasis_rcpp_thinning_envelope_violations, 1},
     {"_emphasis_rcpp_mcem", (DL_FUNC) &_emphasis_rcpp_mcem, 16},
     {"_emphasis_rcpp_mcm", (DL_FUNC) &_emphasis_rcpp_mcm, 11},

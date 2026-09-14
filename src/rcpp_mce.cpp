@@ -12,6 +12,9 @@
 #include "unpack.h"
 using namespace Rcpp;
 
+// src/loglik.cpp — an augmented-tree data frame back into a tree_t.
+namespace loglik { emphasis::tree_t pack(const Rcpp::DataFrame& r_tree); }
+
 
 //' Draw augmented trees via importance sampling
 //'
@@ -130,6 +133,45 @@ List rcpp_mce(const std::vector<double>& brts,
       "different density than logg charges");
   }
   return ret;
+}
+
+
+//' What the proposal could attach an augmented lineage to
+//'
+//' Replays an augmented tree through the same forward sweep the thinning
+//' sampler carries, and reports at every augmented birth the lineages the
+//' proposal had to choose from, the labelled attachments they carry, and the
+//' parent that was recorded.  \code{candidates} must be the alive count
+//' \code{n} and \code{attachments} the \code{2 * tips + Ne} that
+//' \code{Model::sampling_prob} charges \code{-log} of; the two crown lineages
+//' carry no node, so they appear only here and in their reserved ids.
+//'
+//' @param tree One augmented-tree data frame from \code{\link{augment_trees}}.
+//' @return A data frame with one row per augmented birth: \code{brts},
+//'   \code{n}, \code{candidates}, \code{attachments}, \code{parent_id} and
+//'   \code{parent_alive}.
+//' @keywords internal
+// [[Rcpp::export(name = "eval_attachments")]]
+DataFrame rcpp_attachments(const Rcpp::DataFrame& tree)
+{
+  auto local_tree = loglik::pack(tree);
+  const auto rep = emphasis::attachment_report(local_tree);
+  NumericVector brts(rep.size()), n(rep.size()), cand(rep.size()), att(rep.size());
+  IntegerVector pid(rep.size());
+  LogicalVector alive(rep.size());
+  for (size_t i = 0; i < rep.size(); ++i) {
+    brts[i] = rep[i].brts;
+    n[i] = rep[i].n;
+    cand[i] = static_cast<double>(rep[i].candidates);
+    att[i] = static_cast<double>(rep[i].attachments);
+    pid[i] = rep[i].parent_id;
+    alive[i] = rep[i].parent_alive;
+  }
+  return DataFrame::create(Named("brts") = brts, Named("n") = n,
+                           Named("candidates") = cand,
+                           Named("attachments") = att,
+                           Named("parent_id") = pid,
+                           Named("parent_alive") = alive);
 }
 
 

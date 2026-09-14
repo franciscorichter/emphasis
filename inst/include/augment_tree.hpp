@@ -35,6 +35,25 @@ namespace emphasis {
                     tree_t& out);
 
 
+  // What the proposal had to choose from at one augmented birth: the lineages
+  // alive there, the labelled attachments they carry, and the parent it
+  // recorded.  Reported by replaying the finished tree through the same sweep
+  // the sampler carried forward, so a test can hold the sampler's candidate set
+  // against the alive count node.n and against the 2*tips + Ne the density
+  // charges.
+  struct attachment_t
+  {
+    double brts;          // the birth
+    double n;             // node.n there: the lineages alive
+    long long candidates; // lineages the proposal could draw from
+    long long attachments;// labelled attachments: 2 per observed, 1 per augmented
+    int parent_id;        // the parent it recorded
+    bool parent_alive;    // was that parent one of the candidates
+  };
+
+  std::vector<attachment_t> attachment_report(const tree_t& tree);
+
+
   // returns augmented tree per vpars
   // failures results in empty tree
   std::vector<tree_t> augment_trees(const std::vector<param_t>& vpars, 

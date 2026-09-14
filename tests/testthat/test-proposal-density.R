@@ -14,7 +14,8 @@
 #              int nh dt is the closed form sampling_prob already used.
 #   lifetime   exponential with rate mu_seg, truncated to (0, T - t), or (with
 #              rho < 1) unsampled-extant with the complementary probability.
-#   parent     uniform over the labelled attachments, 2 * tips + Ne of them (H5).
+#   parent     uniform over the labelled attachments, 2 * tips + Ne of them (H5);
+#              that draw is held in test-parent-support.R (H45).
 #
 # Four things are held here.
 #
@@ -107,18 +108,16 @@ test_that("the drawn lifetimes pass a KS test against the density logg charges",
 # --------------------------------------------------------------------------- #
 #
 # On a 2-tip tree an augmentation with one missing lineage is a pair (t, d).
-# The observed tree has no internal node, so the sampler's candidate-parent list
-# is empty at every t and the parent is a crown lineage -- which is also every
-# labelled attachment the -log(2 tips + Ne) term counts: 2 per observed lineage,
-# and here both observed lineages are crown lineages at tip_start 0, so f is the
-# same for all four.  The stratum is therefore exactly
+# The observed tree has no internal node, so the parent is one of the two crown
+# lineages, which are also every labelled attachment the -log(2 tips + Ne) term
+# counts: 2 per observed lineage, and here both observed lineages are crown
+# lineages at tip_start 0, so f is the same for all four.  The stratum is
+# therefore exactly
 #
 #   L1 = 4 * int_0^T int_t^T f(y, z(t, d)) dd dt.
 #
-# On a tree with an observed split it would not be: the sampler draws the parent
-# uniformly over the nodes alive, which never include the crown lineages, so some
-# labelled attachments have proposal probability zero (H45, open).  That is why
-# the brute force is done on a 2-tip tree.
+# The same brute force on a tree WITH an observed split, where the attachments
+# do not all carry the same f, is tests/testthat/test-parent-support.R (H45).
 
 .gauss_legendre <- function(n) {                   # Golub-Welsch, mapped to [0,1]
   k <- 1:(n - 1); b <- k / sqrt(4 * k^2 - 1)
@@ -131,10 +130,11 @@ test_that("the drawn lifetimes pass a KS test against the density logg charges",
 # P is the pendant PD of the alive set: {0, 0} before t, {0, t, t} on (t, d],
 # {0, t} after -- the split resets the parent's tip start as well as the
 # daughter's.  Checked against a drawn tree below.
-.aug1 <- function(t, d, TT) data.frame(
+.aug1 <- function(t, d, TT, pid = -2L) data.frame(
   brts = c(t, d, TT), n = c(2, 3, 2), t_ext = c(d, 0, T_TIP),
   pd = c(2 * t, 3 * d - 2 * t, 2 * TT - t), tip_start = c(t, t, TT),
-  focal_tip_start = c(0, t, -1), id = c(1L, 1L, 0L), parent_id = c(-1L, -1L, -1L))
+  focal_tip_start = c(0, t, -1), id = c(1L, 1L, 0L),
+  parent_id = c(pid, pid, -1L))
 
 .aug0 <- function(TT) data.frame(
   brts = TT, n = 2, t_ext = T_TIP, pd = 2 * TT,
@@ -163,7 +163,10 @@ test_that("the 2-tip augmented tree is the one the sampler builds", {
   nm <- vapply(a$trees, function(d) sum(is_mis_row(d)), 0)
   skip_if(!any(nm == 1L), "no draw with exactly one missing lineage")
   df <- a$trees[[which(nm == 1L)[1L]]]
-  ref <- .aug1(df$brts[1], df$brts[2], TT)
+  # the parent is one of the two crown lineages, by their reserved ids: a 2-tip
+  # tree has no other lineage to draw from
+  expect_true(df$parent_id[1] %in% c(-2L, -3L))
+  ref <- .aug1(df$brts[1], df$brts[2], TT, df$parent_id[1])
   for (col in names(ref)) expect_equal(as.numeric(df[[col]]), as.numeric(ref[[col]]),
                                        tolerance = 1e-12, info = col)
   df0 <- a$trees[[which(nm == 0L)[1L]]]

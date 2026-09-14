@@ -64,6 +64,23 @@ namespace emphasis {
   // 0 otherwise.
   constexpr int clade_topology = 1;
 
+  // node_t::parent_id values that name no node.
+  //
+  // The two crown lineages are lineages of the observed tree like any other,
+  // but they are born at the crown rather than at an event, so they carry no
+  // node and cannot be named by a node id.  They get ids of their own, which
+  // the augmentation records on a lineage it draws from one of them, and which
+  // R/simulate.R maps back onto the two crown rows of the L-table.  They are
+  // negative so that no node id can collide with them, and distinct from
+  // no_parent so that "drawn from a crown lineage" is never read as "no parent
+  // on record".
+  constexpr int no_parent   = -1;
+  constexpr int crown_id_a  = -2;   // the crown lineage the topology splits first
+  constexpr int crown_id_b  = -3;
+
+  inline bool is_crown_id(int id) { return id == crown_id_a || id == crown_id_b; }
+  inline bool has_parent(int parent_id) { return parent_id != no_parent; }
+
   /* tree node */
   struct node_t
   {
