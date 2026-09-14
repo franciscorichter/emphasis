@@ -300,26 +300,13 @@ namespace emphasis {
     // i.e. the envelope did not dominate nh(t) at the candidate time. Read
     // and reset through thinning_envelope_violations(); augment_trees()
     // reports the count accumulated over one call.
-    std::atomic<long long> envelope_violations{ 0 };
-
-    // Factor applied to the larger endpoint rate when lambda or mu vary
-    // within a segment (an M or D coefficient is active): nh(t) is then not
-    // monotone in t and its maximum need not lie at an endpoint.
     //
-    // The factor is not a bound. In
-    // nh(t) = n * lambda(t) * (1 - rho * exp(-mu(t) * (T - t)))
-    // the survival factor falls with t, so when lambda rises with t the
-    // product peaks between the endpoints, and the peak exceeds twice the
-    // larger endpoint value at ordinary parameters: model = "nd", linear
-    // link, beta_D = -0.5 gives 8 to 15 violations per 2000 draws on the
-    // 7-tip tree of tests/testthat/test-thinning-envelope.R, -2.0 gives
-    // 24 to 46. A dominating envelope there is max(lambda) over the segment
-    // (attained at an endpoint, since eta is affine in t within a segment)
-    // times max(survival) over the segment (at most
-    // 1 - rho * exp(-max(mu) * (T - cbt))), which needs lambda and mu
-    // separately; Model exposes neither, nor its link and model_bin.
-    // Deferred to wave 3 with H6, the larger error on the same path.
-    constexpr double envelope_safety = 2.0;
+    // The envelope is nh at the start of the segment, which dominates nh on
+    // the whole segment: Model::nh_rate holds lambda and mu at the segment's
+    // own values, so the only thing that carries t is the survival factor
+    // 1 - rho * exp(-mu * (T - t)), and it falls with t. The counter is kept
+    // as a running assertion on that, not as a record of a known gap.
+    std::atomic<long long> envelope_violations{ 0 };
 
     // Rounding allowance on pt <= 1 (the survival factor at the candidate
     // and at the segment start are two separate exp() evaluations).
@@ -345,12 +332,6 @@ namespace emphasis {
       tree.reserve(5 * tree.size());    // just a guess, should cover most 'normal' cases
       int num_missing_branches = 0;
       const double b = tree.back().brts;
-      // With no M or D coefficient active, lambda and mu depend on n only and
-      // are constant within a segment; nh(t) = n * lambda * (1 - rho * exp(-mu * (T - t)))
-      // is then decreasing in t and its value at the segment start dominates
-      // it on the whole segment.
-      const bool constant_rates = (pars[2] == 0.0) && (pars[3] == 0.0) &&
-                                  (pars[6] == 0.0) && (pars[7] == 0.0);
       double lambda_max = 0.0;
       bool new_interval = true;   // (re)compute the envelope: start, tree changed, or next_bt reached
       // The pendant-age state of the segment the sampler is in.  Model reads P
@@ -368,14 +349,12 @@ namespace emphasis {
         if (new_interval) {
           // P on this segment, for Model::pendant_pd to extrapolate from.
           next_it->pd = sweep.pd_of(*next_it);
+          // nh falls within a segment, so the rate at its start is the
+          // dominating envelope — there is nothing to inflate, and the
+          // envelope and the bound max_lambda test the same number.
           const double lambda_start = segment_start_rate(cbt, next_bt, pars, tree, model);
-          const double endpoint_max = constant_rates
-            ? lambda_start
-            : std::max(lambda_start, std::max(0.0, model.nh_rate(next_bt, pars, tree)));
-          // max_lambda bounds the rate, not the envelope, so it is tested
-          // against the endpoint maximum; the safety factor is applied after.
-          if (endpoint_max > max_lambda) throw augmentation_lambda{};
-          lambda_max = constant_rates ? endpoint_max : envelope_safety * endpoint_max;
+          if (lambda_start > max_lambda) throw augmentation_lambda{};
+          lambda_max = lambda_start;
           new_interval = false;
         }
         double next_speciation_time = next_bt;

@@ -31,10 +31,11 @@ A named list with \code{pd} (the pendant PD used) and \code{nh}
   (the non-homogeneous thinning rate) at each time.
 }
 \description{
-\code{Model::nh_rate} evaluates its rate at candidate times between the
-nodes, and reads P off the node that governs the segment the candidate falls
-in (\code{Model::pendant_pd}).  This exposes both, so a test can hold that P
-against an independent recomputation from the augmented tree, and against
-\code{pd + n * (t - brts)} of the governing node.
+\code{Model::pendant_pd_at} reads P off the node that governs the segment a
+candidate time falls in; \code{Model::nh_rate} is the intensity of the
+sampler's birth process there.  This exposes both, so a test can hold P
+against an independent recomputation from the augmented tree and against
+\code{pd + n * (t - brts)} of the governing node, and can scan the intensity
+over a segment to check that its value at the segment start dominates it.
 }
 \keyword{internal}

@@ -227,12 +227,17 @@ namespace emphasis {
     // Draw extinction time from truncated exponential with rate = mu at speciation time.
     // With rho < 1, the lineage may be an unsampled extant species (returns t > T).
     // Caller should check: if result >= T, treat as unsampled tip (t_ext = t_ext_tip).
+    //
+    // The rate is the segment's mu (proposal_rates), the same one the survival
+    // factor of nh_rate used to decide that the lineage is missing at all and
+    // the same one sampling_prob charges the lifetime with.
     double extinction_time(double t_speciation, const param_t& pars, const tree_t& tree) const {
       static thread_local reng_t reng_ = make_random_engine<reng_t>();
-      auto it = lower_bound_node(t_speciation, tree.size(),
-                                 reinterpret_cast<const node_t*>(tree.data()));
-      double mu = extinction_rate(pars, *it);
-      if (mu <= 0.0) mu = 1e-10;
+      const node_t* first = reinterpret_cast<const node_t*>(tree.data());
+      auto it = lower_bound_node(t_speciation, tree.size(), first);
+      double lambda = 0.0, mu = 0.0;
+      proposal_rates(pars, *it, segment_start(it, first), lambda, mu);
+      (void)lambda;
       const double T = tree.back().brts;
       const double remaining = T - t_speciation;
       if (rho_ < 1.0) {
@@ -277,27 +282,80 @@ namespace emphasis {
       return pendant_pd(*it, t);
     }
 
-    // Non-homogeneous rate for thinning: N * lambda * (1 - exp(-mu*(T-t)))
+    // The time at which the segment ending at `it` begins: the previous node's
+    // time, or 0 for the first segment.
+    static double segment_start(const node_t* it, const node_t* first) {
+      return (it == first) ? 0.0 : (it - 1)->brts;
+    }
+
+    // The two rates the proposal holds on the segment (t0, node.brts].
+    //
+    // The proposal reads only the alive set: the diversity N = node.n and the
+    // mean pendant age M = P/N, with P extrapolated to the time the segment
+    // begins.  It never reads D.  That is what makes the sampler and the
+    // scorer read the same numbers: a birth splits the segment it falls in, so
+    // the sampler (which sees the segment whole) and the scorer (which sees
+    // the two halves) disagree about which node ends it, but they agree about
+    // the alive set on it and about where it begins.
+    //
+    // Under the linear link Sum_s D_s = 0 over the alive lineages, so
+    // N * lambda(N, M) is the model's own total speciation intensity whenever
+    // no lineage's rate is clipped at zero.
+    void proposal_rates(const param_t& pars, const node_t& node, double t0,
+                        double& lambda, double& mu) const {
+      node_t cur = node;
+      cur.pd = pendant_pd(node, t0);
+      lambda = speciation_rate(pars, cur);
+      mu = std::max(extinction_rate(pars, cur), 1e-10);
+    }
+
+    // The intensity of the thinning sampler's birth process:
+    //
+    //   nh(t) = N * lambda_seg * (1 - rho * exp(-mu_seg * (T - t)))
+    //
+    // lambda_seg and mu_seg are the segment's rates (proposal_rates) and the
+    // survival factor is the probability that a lineage born at t leaves no
+    // sampled descendant, under a lifetime that is exponential with rate
+    // mu_seg.  Only that factor carries t, and it falls with t, so nh is
+    // decreasing on every segment and its value where the segment begins
+    // dominates it there — for every model and every link.
     double nh_rate(double t, const param_t& pars, const tree_t& tree) const {
-      auto it = lower_bound_node(t,
-                                 tree.size(),
-                                 reinterpret_cast<const node_t*>(tree.data()));
-      node_t cur = *it;
-      cur.pd = pendant_pd(*it, t);
-      const double lambda = model_bin_[2] ? speciation_rate_ep(pars, cur)
-                                          : speciation_rate(pars, cur);
-      const double mu     = model_bin_[2] ? extinction_rate_ep(pars, cur)
-                                          : extinction_rate(pars, cur);
+      const node_t* first = reinterpret_cast<const node_t*>(tree.data());
+      auto it = lower_bound_node(t, tree.size(), first);
+      double lambda = 0.0, mu = 0.0;
+      proposal_rates(pars, *it, segment_start(it, first), lambda, mu);
       const double T = tree.back().brts;
-      const double mu_eff = std::max(mu, 1e-10);
-      return lambda * it->n * (1.0 - rho_ * std::exp(-mu_eff * (T - t)));
+      return lambda * it->n * (1.0 - rho_ * std::exp(-mu * (T - t)));
     }
 
 
+    // log q(z | obs, theta): the log density of the augmentation the thinning
+    // sampler drew (src/augment_tree.cpp, do_augment_tree_cont).
+    //
+    // The sampler draws, in forward time,
+    //
+    //   birth times  an inhomogeneous Poisson process of intensity nh(t),
+    //                realised by thinning a homogeneous process of rate
+    //                nh(segment start) — a dominating envelope, since nh falls
+    //                within a segment — so the times have density
+    //                prod_k nh(t_k) * exp(-int_0^T nh(t) dt);
+    //   a lifetime   for the lineage born at t_k: unsampled extant with
+    //                probability (1-rho)e^{-mu r}/(1-rho e^{-mu r}), otherwise
+    //                exponential with rate mu_seg truncated to (0, r),
+    //                r = T - t_k;
+    //   a parent     uniformly over the labelled attachments, 2 per observed
+    //                lineage alive (including the two crown lineages) and 1 per
+    //                missing one: 2*tips + Ne of them (H5).
+    //
+    // The survival factor cancels against the lifetime's normalisation, which
+    // is why each event contributes log(N * lambda * mu) - mu * lifespan (extinct)
+    // or log(N * lambda * (1-rho)) - mu * (T - t) (unsampled extant).
+    //
+    // N, lambda_seg and mu_seg are the same numbers the sampler used, so the
+    // compensator is int nh dt exactly: on a segment nh is N*lambda_seg times a
+    // single exponential in t, whose integral is the closed form below for
+    // every link.
     double sampling_prob(const param_t& pars, const tree_t& tree) const {
-      const bool ep_exp = model_bin_[2] && (link_ == LinkType::exponential);
-      const bool ep_gauss = model_bin_[2] && (link_ == LinkType::gaussian);
-
       double inte = 0;
       double logg = 0;
       double prev_brts = 0;
@@ -305,38 +363,14 @@ namespace emphasis {
       double Ne = 0.0;
       const double T = tree.back().brts;
 
-      // Running sums for EP+exp
-      double sum_exp_bE = ep_exp ? tree[0].n : 0.0;
-      double sum_exp_gE = ep_exp ? tree[0].n : 0.0;
-
       for (unsigned i = 0; i < tree.size(); ++i) {
         const auto& node = tree[i];
-        const double lambda = model_bin_[2] ? speciation_rate_ep(pars, node)
-                                            : speciation_rate(pars, node);
-        const double mu = std::max(model_bin_[2] ? extinction_rate_ep(pars, node)
-                                                 : extinction_rate(pars, node), 1e-10);
+        double lambda = 0.0, mu = 0.0;
+        proposal_rates(pars, node, prev_brts, lambda, mu);
         {
-          double dt = node.brts - prev_brts;
-          if (ep_exp && dt > 0.0) {
-            // For EP+exp, the thinning integral is:
-            // ∫ Σ_s λ_s(t) * (1 - ρ*exp(-μ_s(t)*(T-t))) dt
-            // Approximation: use node-level mu for the survival factor
-            double int_segment = dt - rho_ * (1.0/mu) * (std::exp(-mu*(T - node.brts)) - std::exp(-mu*(T - prev_brts)));
-            // Use exact EP+exp rate sum for lambda * n part.
-            // Orthogonal basis: eta = beta_0 + beta_N*N + beta_M*M + beta_D*D,
-            // D = E - M constant within the segment, so the M-dependent part folds
-            // into the constant term as (beta_M - beta_D)*M with M = P/N.
-            double N_seg = node.n;
-            double M_seg = (N_seg > 0.0) ? node.pd / N_seg : 0.0;
-            double A_lam = pars[0] + pars[1]*N_seg + (pars[2] - pars[3])*M_seg;
-            // Mean lambda over the segment using exact integral
-            double lam_integral = sum_exp_bE * exp_integral(A_lam, pars[3], prev_brts, node.brts);
-            double mean_lam_n = (dt > 0.0) ? lam_integral / dt : N_seg * lambda;
-            inte += mean_lam_n * int_segment;
-          } else {
-            double int_segment = dt - rho_ * (1.0/mu) * (std::exp(-mu*(T - node.brts)) - std::exp(-mu*(T - prev_brts)));
-            inte += node.n * lambda * int_segment;
-          }
+          const double dt = node.brts - prev_brts;
+          const double int_segment = dt - rho_ * (1.0/mu) * (std::exp(-mu*(T - node.brts)) - std::exp(-mu*(T - prev_brts)));
+          inte += node.n * lambda * int_segment;
         }
         tips += is_tip(node);
         Ne -= is_extinction(node);
@@ -348,20 +382,6 @@ namespace emphasis {
         else if (is_unsampled(node)) {
           // Unsampled extant species (rho < 1): logg = log(N*λ*(1-ρ)) - μ*(T-t) - log(K)
           logg += std::log(node.n * lambda * (1.0 - rho_)) - mu * (T - node.brts) - std::log(2.0 * tips + Ne++);
-        }
-
-        // Update running sums
-        if (ep_exp) {
-          if (is_missing(node) || is_unsampled(node)) {
-            sum_exp_bE += std::exp(-pars[3] * node.brts);
-            sum_exp_gE += std::exp(-pars[7] * node.brts);
-          } else if (is_extinction(node)) {
-            sum_exp_bE -= std::exp(-pars[3] * node.tip_start);
-            sum_exp_gE -= std::exp(-pars[7] * node.tip_start);
-          } else if (i != tree.size() - 1) {
-            sum_exp_bE += std::exp(-pars[3] * node.brts);
-            sum_exp_gE += std::exp(-pars[7] * node.brts);
-          }
         }
 
         prev_brts = node.brts;

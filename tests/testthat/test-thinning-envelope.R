@@ -15,8 +15,11 @@
 # against a critical value of 20.5. After the fix, over three replicates:
 # max |z| 1.86, pooled 4.6 / 5.4 / 1.6.
 #
-# The last block records a defect that is still open, not desired behaviour:
-# the envelope does not dominate on the D-dependent models.
+# The envelope is nh at the start of the segment. Since Model::nh_rate holds
+# lambda and mu at the segment's own covariates, the only thing carrying t is
+# the survival factor, which falls with t: nh is non-increasing on every
+# segment and the start value dominates it, for every model and every link.
+# The last block holds that directly.
 
 brts7 <- c(6, 4.5, 3.0, 2.0, 1.2, 0.5)
 T7 <- brts7[1]
@@ -119,7 +122,8 @@ test_that("acceptance probability never exceeds 1 on the other rate paths", {
                        link = 0L, rho = 1)
   expect_equal(raw$rejected_lambda, 0)
   expect_equal(raw$envelope_violations, 0)
-  # M active: lambda varies within a segment, safety-factor envelope
+  # M active: lambda and mu read the mean pendant age, held at the segment's
+  # own value, so nh still falls within the segment
   raw <- augment_trees(brts = brts7, pars = c(0.4, 0, 0.05, 0, 0.2, 0, 0.02, 0),
                        sample_size = 2000L, maxN = 100000L, max_missing = 200L,
                        max_lambda = 1e6, num_threads = 1L, model = c(0L, 1L, 0L),
@@ -131,8 +135,7 @@ test_that("acceptance probability never exceeds 1 on the other rate paths", {
 
 test_that("augment_trees rejects a pars vector shorter than 8", {
   skip_on_cran()
-  # the envelope reads pars[7] to decide whether the rates are constant
-  # within a segment; a length-7 vector returned trees before the guard.
+  # a length-7 vector returned trees before the guard in rcpp_mce.
   expect_error(
     augment_trees(brts = brts7, pars = c(0.4, 0, 0, 0, 0.2, 0, 0),
                   sample_size = 5L, maxN = 500L, max_missing = 200L,
@@ -141,14 +144,13 @@ test_that("augment_trees rejects a pars vector shorter than 8", {
     "must have length 8")
 })
 
-test_that("max_lambda bounds the rate, not the inflated envelope", {
+test_that("max_lambda bounds the rate the sampler thins against", {
   skip_on_cran()
-  # nd/linear, beta_0 = 1.5, beta_D = -0.5: lambda and mu vary within a
-  # segment, so the envelope is the larger endpoint rate times the safety
-  # factor 2. Tested against the endpoint rate, a bound of 8 returns every
-  # tree (1527 lambda rejections). Tested against the inflated envelope it is
-  # the bound 4 that each draw meets, and every draw throws: 19985 lambda
-  # rejections and 15 trees against maxN = 20000, i.e. an error, not trees.
+  # nd/linear, beta_0 = 1.5, beta_D = -0.5. The envelope is nh at the start of
+  # the segment and nothing is inflated on top of it, so max_lambda and the
+  # envelope test the same number. A bound of 8 returns every tree; the draw
+  # used to be tested against an envelope twice the endpoint rate, where the
+  # same bound left 15 trees out of maxN = 20000, i.e. an error, not trees.
   raw <- augment_trees(brts = brts7, pars = c(1.5, 0, 0, -0.5, 0.2, 0, 0, 0),
                        sample_size = 200L, maxN = 20000L, max_missing = 200L,
                        max_lambda = 8, num_threads = 1L, model = c(1L, 0L, 1L),
@@ -157,29 +159,22 @@ test_that("max_lambda bounds the rate, not the inflated envelope", {
   expect_length(raw$trees, 200L)
 })
 
-test_that("the envelope does not dominate on the D-dependent models (recorded, deferred)", {
+test_that("the envelope dominates on the D-dependent models too", {
   skip_on_cran()
-  # RECORDED DEFECT, not an accepted behaviour. With beta_D active the
-  # speciation rate rises within a segment while the survival factor falls, so
-  # nh(t) peaks between the endpoints and the safety factor of 2 on the larger
-  # endpoint is not a bound. A dominating envelope needs max(lambda) and
-  # max(mu) over the segment separately (see the comment on envelope_safety in
-  # src/augment_tree.cpp); deferred to wave 3 with H6, the larger error on the
-  # same path.
+  # This block used to record a defect. With beta_D active the speciation rate
+  # rose within a segment while the survival factor fell, so nh(t) peaked
+  # between the endpoints and the safety factor of 2 on the larger endpoint was
+  # not a bound: over 200 trees at beta_D = -0.5, 480 to 630 of about 2500
+  # segments carried an interior nh above twice the larger endpoint, the worst
+  # by a factor of 10^2 to 10^5, while the sampler's own violation count stayed
+  # at 0 because on a segment whose endpoint rates are clipped to zero the
+  # envelope is zero and no candidate is proposed at all.
   #
-  # Measured here by scanning nh over each segment of trees the sampler itself
-  # drew, rather than by counting its own rejections. The two do not see the
-  # same thing: on a segment whose endpoint rates are both clipped to zero the
-  # envelope is zero, no candidate is drawn at all, and nothing is counted even
-  # though nh is positive inside. Over 200 trees at beta_D = -0.5 and at -2.0,
-  # 480 to 630 of about 2500 segments carry an interior nh above twice the
-  # larger endpoint, the worst by a factor of 10^2 to 10^5, while the sampler's
-  # own violation count is 0. Before Model::nh_rate was given the pendant PD
-  # the scorer uses, that count was 8 to 15 per 2000 draws at beta_D = -0.5 and
-  # 24 to 46 at -2.0: the corrected P raises the level of lambda far more than
-  # its slope, so the candidates the sampler does draw now fall under the
-  # inflated envelope and the ones it should have drawn are never proposed.
-  # When the envelope is repaired both numbers become 0.
+  # Model::nh_rate now holds lambda and mu at the covariates of the segment and
+  # does not read D, so the only thing carrying t is the survival factor
+  # 1 - rho * exp(-mu * (T - t)), which falls with t. nh is therefore
+  # non-increasing on every segment, the rate at its start is a dominating
+  # envelope, and the safety factor is gone.
   p <- c(0.4, -0.01, 0, -0.5, 0.2, 0, 0, 0)
   thinning_envelope_violations(reset = TRUE)
   raw <- suppressWarnings(
@@ -190,22 +185,25 @@ test_that("the envelope does not dominate on the D-dependent models (recorded, d
   # the per-call count is the increment of the process-wide counter
   expect_equal(raw$envelope_violations, thinning_envelope_violations(reset = TRUE))
   expect_equal(raw$rejected_lambda, 0)
+  expect_equal(raw$envelope_violations, 0)
 
   over <- 0L; segs <- 0L; worst <- 0
   for (df in raw$trees) {
     for (i in seq_len(nrow(df))) {
       prev <- if (i == 1L) 0 else df$brts[i - 1L]
       if (df$brts[i] <= prev) next
-      g  <- seq(prev, df$brts[i], length.out = 201L)
+      # the half-open segment (prev, brts]: at t = prev the node lower_bound
+      # finds is the one at prev, which governs the segment before this one
+      g  <- seq(prev, df$brts[i], length.out = 201L)[-1L]
       nh <- pmax(0, eval_nh_rate(p, df, g, model = c(1L, 0L, 1L),
                                  link = 0L, rho = 1)$nh)
-      ends <- max(nh[2L], nh[length(nh)])          # the two the envelope reads
+      start <- nh[1L]                         # what the envelope reads
       segs <- segs + 1L
-      if (max(nh) > 2 * ends) over <- over + 1L
-      if (ends > 1e-12) worst <- max(worst, max(nh) / ends)
+      if (max(nh) > start * (1 + 1e-12)) over <- over + 1L
+      if (start > 1e-12) worst <- max(worst, max(nh) / start)
     }
   }
   expect_gt(segs, 1000L)
-  expect_gt(over, 100L)      # becomes expect_identical(over, 0L) when repaired
-  expect_gt(worst, 2)
+  expect_identical(over, 0L)
+  expect_lt(worst, 1 + 1e-12)
 })

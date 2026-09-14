@@ -14,6 +14,11 @@ Working material, excluded from the package build by `.Rbuildignore`.
   and their `eval_logf` scores from whichever build is loaded; `compare` rescores that corpus
   from the build under test and requires `identical()`. Augmentation is seeded from the clock,
   so the corpus itself has to cross the two builds; `dev/.crdd_corpus.rds` is not tracked.
+- `proposal_gates.R` — the measurements behind `tests/testthat/test-proposal-density.R`
+  at sample sizes a test cannot afford: the KS test of the drawn lifetimes against the
+  density `sampling_prob` charges them with (`lifetimes`), the effective sample size of a
+  D-model fit (`ess`), and `E_q[f/q]` against a brute-force marginal likelihood on a 2-tip
+  tree (`unbiased`).
 - `gates.R` — prints the measured agreements behind `tests/testthat/test-d-compensator.R`:
   the ep_linear compensator against numerical integration, the beta_D = 0 reduction, and the
   pendant PD `Model::nh_rate` reads.

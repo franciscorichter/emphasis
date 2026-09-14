@@ -116,7 +116,7 @@ List rcpp_mce(const std::vector<double>& brts,
   if (viol > 0) {
     Rcpp::warning("augment_trees: thinning envelope did not dominate the rate at " +
       std::to_string(viol) + " candidate(s); those trees are drawn from a "
-      "different density than logg charges (audit finding H7, D-dependent models)");
+      "different density than logg charges");
   }
   return ret;
 }
