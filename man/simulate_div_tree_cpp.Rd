@@ -4,7 +4,15 @@
 \alias{simulate_div_tree_cpp}
 \title{Simulate a single phylogenetic tree under the general diversification model}
 \usage{
-simulate_div_tree_cpp(pars, model, max_t, max_N, max_tries, link = 0L)
+simulate_div_tree_cpp(
+  pars,
+  model,
+  max_t,
+  max_N,
+  max_tries,
+  link = 0L,
+  seed = 0L
+)
 }
 \arguments{
 \item{pars}{Numeric vector of length 8:
@@ -20,6 +28,11 @@ Inactive parameters (those not selected by \code{model}) should be set to 0.}
 \item{max_tries}{Maximum retries after extinction or overflow.}
 
 \item{link}{Link function: 0 = linear (max(0,...)), 1 = exponential.}
+
+\item{seed}{Positive integer seeding the simulator. \code{0} (the default)
+draws one from R's generator, so \code{set.seed()} reaches the simulator
+whether or not a seed is passed. Note that \code{max_tries} retries
+continue the same stream: a retry is a fresh tree, not the same one again.}
 }
 \value{
 A named list with \code{Ltable} (4-column numeric matrix in DDD format)

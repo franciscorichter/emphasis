@@ -16,6 +16,28 @@ using namespace Rcpp;
 namespace loglik { emphasis::tree_t pack(const Rcpp::DataFrame& r_tree); }
 
 
+namespace emphasis {
+
+  // The seed the C++ samplers run on, from the `seed` argument of an Rcpp
+  // entry point.  A positive integer is used as given; anything else (the
+  // default, 0) draws one from R's own generator, which is what the R wrappers
+  // do with sample.int(.Machine$integer.max, 1L) and what makes set.seed()
+  // reach the samplers from callers that pass no seed of their own.  Rcpp
+  // brackets an exported function with an RNGScope, so unif_rand() is live
+  // here and R's stream advances by one draw, exactly as the R-level default
+  // would advance it.
+  //
+  // Declared where it is used: src/rcpp_mcem.cpp and src/div_tree.cpp.
+  uint64_t resolve_seed(int seed)
+  {
+    if (seed > 0) return static_cast<uint64_t>(seed);
+    const double u = R::unif_rand();
+    return static_cast<uint64_t>(u * 2147483646.0) + 1ull;
+  }
+
+}
+
+
 //' Draw augmented trees via importance sampling
 //'
 //' Augments an observed extant tree (given by its branching times) with
@@ -43,6 +65,10 @@ namespace loglik { emphasis::tree_t pack(const Rcpp::DataFrame& r_tree); }
 //'   topology is not available: every observed lineage is then recorded as
 //'   dating from the crown and every observed event gets \code{D = 0}, which
 //'   is what a bare branching-time vector has always produced.
+//' @param seed Positive integer seeding the C++ sampler. \code{0} (the
+//'   default) draws one from R's generator, so \code{set.seed()} reaches the
+//'   sampler whether or not a seed is passed. Two calls carrying the same
+//'   seed, the same arguments and \code{num_threads = 1} draw the same trees.
 //' @return A named list:
 //' \describe{
 //'   \item{trees}{List of augmented-tree data frames.}
@@ -72,8 +98,10 @@ List rcpp_mce(const std::vector<double>& brts,
               Rcpp::IntegerVector model = Rcpp::IntegerVector::create(0, 0, 0),
               int link = 0,
               double rho = 1.0,
-              Rcpp::NumericVector parent_tip_start = Rcpp::NumericVector::create())
+              Rcpp::NumericVector parent_tip_start = Rcpp::NumericVector::create(),
+              int seed = 0)
 {
+  emphasis::rng::set_seed(emphasis::resolve_seed(seed));
   const std::vector<double> pts(parent_tip_start.begin(), parent_tip_start.end());
   if (pars.size() != 8) {
     throw std::invalid_argument("augment_trees: pars must have length 8 (got " +

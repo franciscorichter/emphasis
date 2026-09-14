@@ -20,7 +20,8 @@ em_cpp(
   link = 0L,
   rho = 1,
   rconditional = NULL,
-  parent_tip_start = as.numeric(c())
+  parent_tip_start = as.numeric(c()),
+  seed = 0L
 )
 }
 \arguments{
@@ -61,6 +62,10 @@ observed branching event, in the same forward-time order as \code{brts};
 empty (the default) when only branching times are available, in which case
 every observed lineage is recorded as dating from the crown and D = 0 at
 every observed event.}
+
+\item{seed}{positive integer seeding the C++ sampler; 0 (the default) draws
+one from R's generator, so set.seed() reaches the sampler whether or not a
+seed is passed.}
 }
 \value{
 a list with the following components:

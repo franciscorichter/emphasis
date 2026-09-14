@@ -11,8 +11,8 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // simulate_div_tree_cpp
-Rcpp::List simulate_div_tree_cpp(Rcpp::NumericVector pars, Rcpp::IntegerVector model, double max_t, int max_N, int max_tries, int link);
-RcppExport SEXP _emphasis_simulate_div_tree_cpp(SEXP parsSEXP, SEXP modelSEXP, SEXP max_tSEXP, SEXP max_NSEXP, SEXP max_triesSEXP, SEXP linkSEXP) {
+Rcpp::List simulate_div_tree_cpp(Rcpp::NumericVector pars, Rcpp::IntegerVector model, double max_t, int max_N, int max_tries, int link, int seed);
+RcppExport SEXP _emphasis_simulate_div_tree_cpp(SEXP parsSEXP, SEXP modelSEXP, SEXP max_tSEXP, SEXP max_NSEXP, SEXP max_triesSEXP, SEXP linkSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -22,7 +22,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type max_N(max_NSEXP);
     Rcpp::traits::input_parameter< int >::type max_tries(max_triesSEXP);
     Rcpp::traits::input_parameter< int >::type link(linkSEXP);
-    rcpp_result_gen = Rcpp::wrap(simulate_div_tree_cpp(pars, model, max_t, max_N, max_tries, link));
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    rcpp_result_gen = Rcpp::wrap(simulate_div_tree_cpp(pars, model, max_t, max_N, max_tries, link, seed));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -58,8 +59,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // rcpp_mce
-List rcpp_mce(const std::vector<double>& brts, const std::vector<double>& pars, int sample_size, int maxN, int max_missing, double max_lambda, int num_threads, Rcpp::IntegerVector model, int link, double rho, Rcpp::NumericVector parent_tip_start);
-RcppExport SEXP _emphasis_rcpp_mce(SEXP brtsSEXP, SEXP parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP num_threadsSEXP, SEXP modelSEXP, SEXP linkSEXP, SEXP rhoSEXP, SEXP parent_tip_startSEXP) {
+List rcpp_mce(const std::vector<double>& brts, const std::vector<double>& pars, int sample_size, int maxN, int max_missing, double max_lambda, int num_threads, Rcpp::IntegerVector model, int link, double rho, Rcpp::NumericVector parent_tip_start, int seed);
+RcppExport SEXP _emphasis_rcpp_mce(SEXP brtsSEXP, SEXP parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP num_threadsSEXP, SEXP modelSEXP, SEXP linkSEXP, SEXP rhoSEXP, SEXP parent_tip_startSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -74,7 +75,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type link(linkSEXP);
     Rcpp::traits::input_parameter< double >::type rho(rhoSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type parent_tip_start(parent_tip_startSEXP);
-    rcpp_result_gen = Rcpp::wrap(rcpp_mce(brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link, rho, parent_tip_start));
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    rcpp_result_gen = Rcpp::wrap(rcpp_mce(brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link, rho, parent_tip_start, seed));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -113,8 +115,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // rcpp_mcem
-List rcpp_mcem(const std::vector<double>& brts, const std::vector<double>& init_pars, int sample_size, int maxN, int max_missing, double max_lambda, const std::vector<double>& lower_bound, const std::vector<double>& upper_bound, double xtol_rel, int num_threads, bool copy_trees, Rcpp::IntegerVector model, int link, double rho, Nullable<Function> rconditional, Rcpp::NumericVector parent_tip_start);
-RcppExport SEXP _emphasis_rcpp_mcem(SEXP brtsSEXP, SEXP init_parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP lower_boundSEXP, SEXP upper_boundSEXP, SEXP xtol_relSEXP, SEXP num_threadsSEXP, SEXP copy_treesSEXP, SEXP modelSEXP, SEXP linkSEXP, SEXP rhoSEXP, SEXP rconditionalSEXP, SEXP parent_tip_startSEXP) {
+List rcpp_mcem(const std::vector<double>& brts, const std::vector<double>& init_pars, int sample_size, int maxN, int max_missing, double max_lambda, const std::vector<double>& lower_bound, const std::vector<double>& upper_bound, double xtol_rel, int num_threads, bool copy_trees, Rcpp::IntegerVector model, int link, double rho, Nullable<Function> rconditional, Rcpp::NumericVector parent_tip_start, int seed);
+RcppExport SEXP _emphasis_rcpp_mcem(SEXP brtsSEXP, SEXP init_parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP lower_boundSEXP, SEXP upper_boundSEXP, SEXP xtol_relSEXP, SEXP num_threadsSEXP, SEXP copy_treesSEXP, SEXP modelSEXP, SEXP linkSEXP, SEXP rhoSEXP, SEXP rconditionalSEXP, SEXP parent_tip_startSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -134,7 +136,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type rho(rhoSEXP);
     Rcpp::traits::input_parameter< Nullable<Function> >::type rconditional(rconditionalSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type parent_tip_start(parent_tip_startSEXP);
-    rcpp_result_gen = Rcpp::wrap(rcpp_mcem(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model, link, rho, rconditional, parent_tip_start));
+    Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
+    rcpp_result_gen = Rcpp::wrap(rcpp_mcem(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model, link, rho, rconditional, parent_tip_start, seed));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -161,14 +164,14 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_emphasis_simulate_div_tree_cpp", (DL_FUNC) &_emphasis_simulate_div_tree_cpp, 6},
+    {"_emphasis_simulate_div_tree_cpp", (DL_FUNC) &_emphasis_simulate_div_tree_cpp, 7},
     {"_emphasis_eval_logf_cpp", (DL_FUNC) &_emphasis_eval_logf_cpp, 5},
     {"_emphasis_eval_nh_rate_cpp", (DL_FUNC) &_emphasis_eval_nh_rate_cpp, 6},
-    {"_emphasis_rcpp_mce", (DL_FUNC) &_emphasis_rcpp_mce, 11},
+    {"_emphasis_rcpp_mce", (DL_FUNC) &_emphasis_rcpp_mce, 12},
     {"_emphasis_rcpp_attachments", (DL_FUNC) &_emphasis_rcpp_attachments, 1},
     {"_emphasis_rcpp_pendant_sweep", (DL_FUNC) &_emphasis_rcpp_pendant_sweep, 2},
     {"_emphasis_rcpp_thinning_envelope_violations", (DL_FUNC) &_emphasis_rcpp_thinning_envelope_violations, 1},
-    {"_emphasis_rcpp_mcem", (DL_FUNC) &_emphasis_rcpp_mcem, 16},
+    {"_emphasis_rcpp_mcem", (DL_FUNC) &_emphasis_rcpp_mcem, 17},
     {"_emphasis_rcpp_mcm", (DL_FUNC) &_emphasis_rcpp_mcm, 11},
     {NULL, NULL, 0}
 };

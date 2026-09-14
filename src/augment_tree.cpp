@@ -39,9 +39,6 @@ namespace emphasis {
     }
 
 
-    auto thread_local reng = detail::make_random_engine<std::default_random_engine>();
-
-
     // Pendant PD and per-lineage tip_start by one forward sweep over the event
     // list — the bookkeeping the simulator itself runs
     // (inst/include/general_tree.hpp):
@@ -406,8 +403,24 @@ namespace emphasis {
     }
 
 
+    // The substream the calling thread draws from: its index in the TBB arena
+    // the caller runs in, or 0 outside one.  Workers of one arena carry
+    // distinct indices, so their streams are distinct functions of the same
+    // seed; the index is stable for the life of the arena, so a thread keeps
+    // one stream for the whole call rather than restarting it per attempt.
+    uint64_t worker_substream()
+    {
+      const int idx = tbb::this_task_arena::current_thread_index();
+      return (idx > 0) ? static_cast<uint64_t>(idx) : 0ull;
+    }
+
+
     void do_augment_tree_cont(const param_t& pars, tree_t& tree, const Model& model, int max_missing, double max_lambda, int& next_id)
     {
+      // The birth times, the parent draws and Model::extinction_time all come
+      // off this one engine (see the rng notes in inst/include/model.hpp);
+      // the caller has already selected the substream.
+      reng_t& reng = rng::engine();
       double cbt = 0;
       tree.reserve(5 * tree.size());    // just a guess, should cover most 'normal' cases
       int num_missing_branches = 0;
@@ -560,6 +573,7 @@ namespace emphasis {
 
   void augment_tree(const param_t& pars, const tree_t& input_tree, const Model& model, int max_missing, double max_lambda, tree_t& pooled)
   {
+    rng::stream(worker_substream());
     pooled.resize(input_tree.size());
     std::copy(input_tree.cbegin(), input_tree.cend(), pooled.begin());
     // assign sequential IDs to initial tree nodes; augmented nodes get IDs starting after
@@ -594,6 +608,9 @@ namespace emphasis {
     tbb::parallel_for(tbb::blocked_range<size_t>(0ull, vpars.size(), grainsize), [&](const tbb::blocked_range<size_t>& r) {
       for (size_t i = r.begin(); i < r.end(); ++i) {
         try {
+          // One substream per parameter set, so which worker picks up which
+          // item does not change what is drawn for it.
+          rng::stream(static_cast<uint64_t>(i));
           int next_id = 0;
           for (auto& node : trees[i]) {
             if (!detail::is_extinction(node)) {
