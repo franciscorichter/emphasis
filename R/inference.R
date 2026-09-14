@@ -76,7 +76,66 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     D/DD with strongly negative covariate slope). Default \code{NULL},
 #'     and a non-finite value is treated as \code{NULL}, which sets
 #'     \code{max(2000, 10 * num_trees)}.}
-#'   \item{\code{tol}}{Parameter-stability convergence threshold. MCEM
+#'   \item{\code{stop}}{Which stopping rule runs: \code{"ascent"} (default)
+#'     or \code{"step"}. \code{"ascent"} compares the gain each iteration
+#'     bought, in nats of the EM surrogate, against the Monte Carlo error of
+#'     that gain. \code{"step"} is the wave-1 rule described under
+#'     \code{tol} below, reproduced unchanged, for a user who wants the rule
+#'     \code{tol} and \code{patience} describe and nothing else.}
+#'   \item{\code{ascent_tol}}{\eqn{\delta}, the per-iteration surrogate gain
+#'     below which there is nothing left to certify. Default \code{0.01}
+#'     nats. With \code{patience = 3} a stop claims: over the last three
+#'     iterations the guaranteed gain was below \code{0.03} nats at
+#'     confidence \eqn{1 - \alpha}. It is a \strong{resolution, not a
+#'     distance to the maximiser}: \eqn{\Delta Q} bounds the EM guarantee,
+#'     not the deficit that remains, and it lives on the complete-data
+#'     scale, whose curvature exceeds the observed-data one. The trace
+#'     records \code{r_hat} and \code{U} so the extrapolation
+#'     \eqn{U / (1 - r)} can be measured per cell rather than assumed.
+#'     Smaller \code{ascent_tol} stops later, as smaller \code{tol} does.}
+#'   \item{\code{ascent_alpha}}{One-sided level of the ascent bound. Default
+#'     \code{0.05}.}
+#'   \item{\code{ess_min}}{Effective draws a sample must carry before any
+#'     certificate is issued. Default \code{200}, so a stop is never reached
+#'     on a sample thinner than the nominal \code{num_trees}.}
+#'   \item{\code{ess_floor}}{Below this effective sample size the statistic
+#'     is not estimable and the iteration falls back to the \code{tol} rule,
+#'     recorded in the trace as \code{gate = "legacy"} and, if it fires,
+#'     \code{stop_reason = "converged_step"}. Default \code{20}. A fit at
+#'     \code{num_trees = 1} lands here at every iteration and terminates
+#'     exactly as it does under \code{stop = "step"}.}
+#'   \item{\code{grow_sample}}{Grow the sample when, and only when, an
+#'     iteration is undecided \emph{and} the point estimate of the gain is
+#'     already below \eqn{\delta}, so that precision rather than travel is
+#'     what blocks the verdict, and only once that verdict has held
+#'     \code{patience} times in a row. Default \code{TRUE}. Growth is
+#'     append-only: the iterate does not move, so the extra draws pool with
+#'     the ones in hand and 200 to 300 costs 100 draws. The gate matters:
+#'     among the fits the rule declines to certify the binding term is
+#'     overwhelmingly the travel of the iterate, which no sample size can
+#'     fix, and a single quiet draw mid-climb would otherwise multiply the
+#'     budget.}
+#'   \item{\code{grow_factor}}{Multiplier per growth step, monotone. Default
+#'     \code{1.5}.}
+#'   \item{\code{max_sample_mult}}{Sample-size cap as a multiple of
+#'     \code{num_trees}. Default \code{25}.}
+#'   \item{\code{max_draws}}{Total E-step draws a fit may spend.
+#'     \code{NULL} (default) sets \code{max_iter * num_trees}, the identical
+#'     worst case the \code{tol} rule already reaches when it ends at
+#'     \code{max_iter}, so the new rule cannot cost more in draws than the
+#'     old one does there. Exhaustion stops the fit with
+#'     \code{stop_reason = "draw_budget"}, which is \strong{not}
+#'     "converged".}
+#'   \item{\code{mc_boot}}{Bootstrap replicates of the Monte Carlo error of
+#'     the gain. Default \code{12}. The resample is
+#'     \eqn{w_i \to w_i c_i} with \eqn{c} multinomial, so it draws no new
+#'     trees and costs one M-step per replicate.}
+#'   \item{\code{mc_refresh}}{Iterations between bootstraps; the stored
+#'     spread is carried forward on the \eqn{1/\sqrt{N}} law in between.
+#'     Default \code{3}. A certificate is never issued on a carried-forward
+#'     value: the bootstrap is re-run at every candidate stop.}
+#'   \item{\code{tol}}{Parameter-stability convergence threshold, and the
+#'     whole rule under \code{stop = "step"}. MCEM
 #'     is considered converged when the largest relative parameter change,
 #'     \eqn{\max_j |\theta_k[j] - \theta_{k-1}[j]| / \max(|\theta_{k-1}[j]|, c)},
 #'     is below \code{tol} for \code{patience} consecutive iterations. The
@@ -92,10 +151,21 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     below \code{1e-2} in about a fifth of iterations — so runs at these
 #'     defaults commonly end at \code{max_iter}. Raising \code{num_trees}
 #'     shrinks the Monte Carlo part of the step.}
-#'   \item{\code{patience}}{Number of consecutive iterations with parameter
-#'     change below \code{tol} required to declare convergence. Default
-#'     \code{3}.}
+#'   \item{\code{patience}}{Number of consecutive certifying iterations
+#'     required to declare convergence; under \code{stop = "step"} those are
+#'     iterations with parameter change below \code{tol}, under
+#'     \code{"ascent"} they are iterations whose upper bound on the gain is
+#'     below \code{ascent_tol}. Default \code{3}.}
 #' }
+#'
+#' Stop reasons an MCEM fit can carry. Only \code{"converged"} and
+#' \code{"converged_step"} are convergence; the rest say the fit ran out of
+#' something, and are reported as such rather than relabelled:
+#' \code{"converged"} (the ascent rule certified), \code{"converged_step"}
+#' (the fallback \code{tol} rule fired on a sample whose noise could not be
+#' estimated), \code{"undecided_at_max_sample"}, \code{"draw_budget"},
+#' \code{"max_iter"}, \code{"time_budget"}, \code{"e_step_failure"},
+#' \code{"m_step_failure"}.
 #'
 #' CEM-specific parameters:
 #' \describe{
@@ -142,7 +212,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       xtol        = 1e-3,
       tol         = 1e-2,
       patience    = 3L
-    ))
+    ), .ascent_defaults())
   } else if (method == "cem") {
     c(common, list(
       max_iter     = 50L,       # safety cap (adaptive SD stops earlier)
@@ -390,6 +460,483 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   rel_floor / crown_age
 }
 
+# --------------------------------------------------------------------------- #
+#  The MCEM stopping rule: ascent in the EM surrogate against its own          #
+#  Monte Carlo error.  One implementation; both drivers call it.               #
+# --------------------------------------------------------------------------- #
+
+#' Defaults of the ascent stopping rule
+#'
+#' Resolved once, in \code{\link{estimate_rates_control}}, and read by both
+#' MCEM drivers through \code{.ascent_controller}, so the two cannot carry
+#' different values.  See \code{estimate_rates_control} for what each one
+#' means to a user.
+#' @keywords internal
+.ascent_defaults <- function() {
+  list(
+    stop            = "ascent",  # "ascent" (default) or "step" (wave-1 rule)
+    # delta, in nats of surrogate gain per iteration.  Calibrated, not
+    # chosen: on a sample of the study's failing cells, delta = 0.01 raised
+    # the converged fraction to 10/12 but left only 6/12 fits within 0.1 nats
+    # of the exact MLE, against 8/12 for the wave-1 rule; at 0.002 the fits
+    # land within 0.1 nats 9/12 of the time, i.e. no ground is lost against
+    # the maximiser, and the median iteration count still falls from 392
+    # to 93.  A rule that certifies more often but lands further out is a
+    # worse rule, so the deficit fixes the value and the iteration saving is
+    # what is left over.
+    ascent_tol      = 0.002,
+    ascent_alpha    = 0.05,      # one-sided level of the ascent bound
+    ess_min         = 200,       # effective draws required before certifying
+    ess_floor       = 20,        # below this the statistic is not estimable
+    # Growth stays on, and it earns its cost: with it switched off on the
+    # same 20 fits, 12 of them stopped "undecided_at_max_sample" at a median
+    # deficit of 0.33 nats against 0.12 with growth and 0.19 under the
+    # wave-1 rule.  What growth buys is not a faster stop but a decidable
+    # one; the gate below is what keeps it from firing on a quiet draw
+    # mid-climb.
+    grow_sample     = TRUE,
+    grow_factor     = 1.5,
+    max_sample_mult = 25,        # max_sample_size = mult * num_trees
+    max_draws       = NULL,      # NULL -> max_iter * num_trees
+    mc_boot         = 12L,       # bootstrap replicates
+    mc_refresh      = 3L         # iterations between bootstraps
+  )
+}
+
+#' Self-normalised weights, ESS and the finite subset of a weighted sample
+#'
+#' \code{w} may be linear (thinning, max-scaled) or log weights; the caller
+#' says which.  Trees whose weight is not finite, or is zero, carry no
+#' information about the step and are dropped from the statistic.
+#'
+#' @param w Weight vector.
+#' @param log Are the weights on the log scale?
+#' @return \code{list(wt, keep, ESS, n)}: \code{wt} sums to one over the kept
+#'   entries, \code{keep} is the logical subset, \code{n} its size.
+#' @keywords internal
+.ascent_weights <- function(w, log = FALSE) {
+  w <- as.numeric(w)
+  if (log) {
+    keep <- is.finite(w)
+    if (!any(keep)) return(list(wt = numeric(0), keep = keep, ESS = NA_real_, n = 0L))
+    lin <- rep(0, length(w))
+    lin[keep] <- exp(w[keep] - max(w[keep]))
+  } else {
+    keep <- is.finite(w) & w > 0
+    lin  <- ifelse(keep, w, 0)
+  }
+  keep <- keep & is.finite(lin) & lin > 0
+  s <- sum(lin[keep])
+  if (!is.finite(s) || s <= 0)
+    return(list(wt = numeric(0), keep = keep, ESS = NA_real_, n = 0L))
+  wt <- lin[keep] / s
+  list(wt = wt, keep = keep, ESS = 1 / sum(wt^2), n = sum(keep))
+}
+
+#' The Q-increment and its delta-method standard error
+#'
+#' \eqn{\hat{\Delta Q}_k = \sum_i \tilde w_i [\log f(\theta_{k+1}, z_i) -
+#' \log f(\theta_k, z_i)]} over the augmented trees the M-step already
+#' consumed.  It is a difference of two log-densities of the same augmented
+#' data, so a change of time unit multiplies both by the same Jacobian and
+#' cancels exactly, and the search box never enters.  The standard error is
+#' the delta-method one for a self-normalised weighted mean.
+#'
+#' @param d Per-tree difference \code{logf(new) - logf(old)}.
+#' @param wt Self-normalised weights, summing to one, same length as \code{d}.
+#' @return \code{list(dQ, se)}.
+#' @keywords internal
+.ascent_stat <- function(d, wt) {
+  ok <- is.finite(d) & is.finite(wt)
+  if (!any(ok)) return(list(dQ = NA_real_, se = NA_real_))
+  wt <- wt[ok] / sum(wt[ok])
+  d  <- d[ok]
+  dQ <- sum(wt * d)
+  se <- sqrt(sum(wt^2 * (d - dQ)^2))
+  list(dQ = dQ, se = se)
+}
+
+#' Bootstrap the Monte Carlo error of the Q-increment
+#'
+#' A multinomial resample of the weighted augmented trees is exactly
+#' \eqn{w_i \to w_i c_i} with \eqn{c \sim \mathrm{Multinomial}(n, 1/n)}: no
+#' new draws, no re-packing, one extra M-step per replicate.  Two quantities
+#' come back.  \code{se_boot} is the spread of the increment across
+#' replicates, which is what the confidence statement rests on and what the
+#' delta-method error is least able to see when the weights are heavy-tailed.
+#' \code{mc_noise} is \eqn{\mathrm{mean}_b [Q_k(\theta_{k+1}) -
+#' Q_k(\theta_{k+1}^{(b)})]}, the drop a resampled M-step suffers on the
+#' original sample; it is non-negative by construction, because
+#' \eqn{\theta_{k+1}} maximises \eqn{Q_k}, and it measures the optimism of
+#' maximising the very sum being tested.  It is recorded, not differenced
+#' into the decision, so that the analytic offset \eqn{p/(2\,\mathrm{ESS})}
+#' can be calibrated against it across cells.
+#'
+#' @param trees Augmented trees of this E-step.
+#' @param w_raw Unnormalised linear weights, same length.
+#' @param wt Self-normalised weights over the kept trees.
+#' @param keep Logical subset of \code{trees} the statistic uses.
+#' @param logf_old \code{logf} at \eqn{\theta_k} over the kept trees.
+#' @param logf_new \code{logf} at \eqn{\theta_{k+1}} over the kept trees.
+#' @param theta_new The M-step output, used as the warm start of each replicate.
+#' @param refit Function \code{(weights, init)} returning a parameter vector,
+#'   or \code{NULL} on failure; supplied by the driver.
+#' @param score Function \code{(theta, trees)} returning per-tree \code{logf}.
+#' @param B Replicates.
+#' @return \code{list(se_boot, mc_noise, B_ok)}.
+#' @keywords internal
+.ascent_bootstrap <- function(trees, w_raw, wt, keep, logf_old, logf_new,
+                              theta_new, refit, score, B = 12L) {
+  n <- length(trees)
+  if (n < 5L || B < 2L)
+    return(list(se_boot = NA_real_, mc_noise = NA_real_, B_ok = 0L))
+  Q_new <- sum(wt * logf_new)
+  dQb <- rep(NA_real_, B)
+  nzb <- rep(NA_real_, B)
+  probs <- rep(1 / n, n)
+  for (b in seq_len(B)) {
+    cnt <- as.numeric(stats::rmultinom(1L, n, probs))
+    wb  <- w_raw * cnt
+    if (sum(wb[keep]) <= 0) next
+    th_b <- refit(wb, theta_new)
+    if (is.null(th_b) || !all(is.finite(th_b))) next
+    lf_b <- tryCatch(score(th_b, trees), error = function(e) NULL)
+    if (is.null(lf_b) || length(lf_b) != n) next
+    lf_bk <- lf_b[keep]
+    wtb <- wb[keep]
+    if (sum(wtb) <= 0) next
+    wtb <- wtb / sum(wtb)
+    if (all(is.finite(lf_bk))) {
+      dQb[b] <- sum(wtb * (lf_bk - logf_old))
+      nzb[b] <- Q_new - sum(wt * lf_bk)
+    }
+  }
+  ok <- is.finite(dQb)
+  list(se_boot  = if (sum(ok) >= 3L) stats::sd(dQb[ok]) else NA_real_,
+       mc_noise = if (any(is.finite(nzb))) mean(nzb[is.finite(nzb)]) else NA_real_,
+       B_ok     = sum(ok))
+}
+
+#' Resolve the stopping rule's settings from a control list
+#'
+#' Called once, in \code{.run_mcem}, and handed to whichever driver runs, so
+#' the two cannot carry different defaults.  Both drivers also accept
+#' \code{stop_opts = NULL} and resolve it themselves from the package
+#' defaults, which is what a direct call to a driver gets.
+#'
+#' @param ctrl A resolved MCEM control list.
+#' @param lower_bound,upper_bound The 8-element bound vectors; the number of
+#'   coordinates they leave free is the \code{p} of the optimism offset.
+#' @return A list ready for \code{.ascent_controller}.
+#' @keywords internal
+.ascent_opts <- function(ctrl = list(), lower_bound = NULL, upper_bound = NULL) {
+  o <- utils::modifyList(.ascent_defaults(), ctrl[intersect(names(ctrl),
+                                                            names(.ascent_defaults()))])
+  o$stop <- match.arg(as.character(o$stop), c("ascent", "step"))
+  o$tol         <- if (is.null(ctrl$tol)) 1e-2 else ctrl$tol
+  o$patience    <- max(1L, as.integer(if (is.null(ctrl$patience)) 3L else ctrl$patience))
+  o$sample_size <- max(1L, as.integer(if (is.null(ctrl$sample_size)) 200L
+                                      else ctrl$sample_size))
+  o$max_iter    <- max(1L, as.integer(if (is.null(ctrl$max_iter)) 200L else ctrl$max_iter))
+  o$p_free <- if (!is.null(lower_bound) && !is.null(upper_bound))
+    max(1L, sum(lower_bound != upper_bound)) else 2L
+  o$mc_boot    <- as.integer(o$mc_boot)
+  o$mc_refresh <- max(1L, as.integer(o$mc_refresh))
+  o
+}
+
+#' The stopping rule, as a stateful controller both drivers instantiate
+#'
+#' The EM inequality is \eqn{\ell(\theta_{k+1}) - \ell(\theta_k) \ge
+#' Q(\theta_{k+1}|\theta_k) - Q(\theta_k|\theta_k) = \Delta Q_k}, and the
+#' M-step maximises exactly the Monte Carlo version of the right-hand side
+#' over the trees already in hand.  Each iteration is therefore scored on the
+#' gain it bought, in nats, against the sampling error of that gain, rather
+#' than on the size of the parameter step against the parameter.  Near the
+#' fixed point \eqn{\Delta Q \to 0} and the rule reads "there is nothing left
+#' to certify"; the parameter-step rule reads "the step was small", which at a
+#' constant sample size is a statement about luck.
+#'
+#' Three verdicts per iteration:
+#' \describe{
+#'   \item{case 1}{\eqn{L_k > 0}: an ascent is asserted.  Accept the step.}
+#'   \item{case 2}{\eqn{U_k < \delta}: no gain above \eqn{\delta} can be
+#'     asserted.  Accept, and count toward \code{patience}.  A stop then
+#'     claims, checkably: over the last \code{patience} iterations the
+#'     guaranteed surrogate gain was below \code{patience} \eqn{\delta} nats
+#'     at confidence \eqn{1 - \alpha}.}
+#'   \item{case 3}{undecided.  When the point estimate is still above
+#'     \eqn{\delta} the iterate is travelling and the cheap response is to
+#'     take the step and iterate (3a).  When it is below \eqn{\delta} but the
+#'     interval still reaches past it, only precision can settle the question:
+#'     the step is \emph{not} taken, the sample grows, and the statistic is
+#'     recomputed at the same \eqn{\theta_k} (3b).}
+#' }
+#' Growth fires in 3b alone.  Among the fits the rule declines to certify,
+#' the binding term is overwhelmingly the systematic travel of the iterate,
+#' not its Monte Carlo spread, and more draws per iteration cannot fix travel;
+#' ungated growth buys a few points of certified convergence for several times
+#' the study budget.
+#'
+#' Two refusals, both measured, that a reimplementation must keep.  Do not
+#' test a \emph{windowed drift} of Q against its noise: Q carries the
+#' complete-data curvature, which separates lambda from mu far better than the
+#' observed likelihood does, so along the lambda-mu ridge the surrogate keeps
+#' seeing motion the likelihood does not care about and a drift test never
+#' stops.  Do not rebuild the observed-data likelihood by importance-
+#' reweighting the same draws: around the optimum it is biased upward and its
+#' bootstrap spread can come out negative.  The per-iteration ascent is the
+#' statistic where the surrogate's bias is second order.
+#'
+#' What \eqn{\delta} is not: \eqn{\Delta Q} bounds the EM \emph{guarantee},
+#' not the remaining deficit, and it lives on the complete-data scale, whose
+#' curvature exceeds the observed-data one by the missing-information factor.
+#' \code{ascent_tol} is therefore a per-iteration resolution, not a distance
+#' to the maximiser; the trace records the EM rate \code{r_hat} and
+#' \code{U/(1 - r_hat)} so that the extrapolation can be measured per cell
+#' rather than assumed.
+#'
+#' @param opts Resolved control list (see \code{.ascent_defaults}), plus
+#'   \code{tol}, \code{patience}, \code{floor_val}, \code{sample_size},
+#'   \code{max_iter}, \code{p_free}.
+#' @param refit,score Driver-supplied closures; see \code{.ascent_bootstrap}.
+#' @return An environment with \code{$decide()}, \code{$S}, \code{$draws}.
+#' @keywords internal
+.ascent_controller <- function(opts, refit, score) {
+  st <- new.env(parent = emptyenv())
+  st$S           <- as.integer(opts$sample_size)
+  st$S0          <- as.integer(opts$sample_size)
+  st$S_max       <- max(st$S0, as.integer(ceiling(opts$max_sample_mult * st$S0)))
+  st$max_draws   <- if (is.null(opts$max_draws) || !is.finite(opts$max_draws))
+    as.numeric(opts$max_iter) * as.numeric(st$S0) else as.numeric(opts$max_draws)
+  st$streak      <- 0L      # consecutive case-2 iterations
+  st$undecided   <- 0L      # consecutive 3b iterations that could not grow
+  st$legacy_str  <- 0L      # streak on the fallback rule
+  st$U_hist      <- numeric(0)
+  st$draws       <- 0
+  st$boot_age    <- .Machine$integer.max
+  st$se_boot     <- NA_real_
+  st$se_boot_S   <- NA_real_
+  st$mc_noise    <- NA_real_
+  st$prev_step   <- NA_real_
+  st$z           <- stats::qnorm(1 - opts$ascent_alpha)
+  st$opts        <- opts
+
+  st$add_draws <- function(n) { st$draws <- st$draws + as.numeric(n); invisible(NULL) }
+
+  # An E- or M-step failure breaks the chain of comparable iterations: the
+  # driver restarts from another point, or with a larger attempt cap, and
+  # nothing before the break bears on stability.  Every streak the rule keeps
+  # is cleared, as the wave-1 rule cleared its own on the same event.  The
+  # sample size is not reduced: it is what the fit has decided it needs.
+  st$reset <- function() {
+    st$streak <- 0L; st$undecided <- 0L; st$legacy_str <- 0L
+    st$U_hist <- numeric(0); st$prev_step <- NA_real_
+    invisible(NULL)
+  }
+
+  # An empty verdict, filled in by whichever branch runs.
+  blank <- function() list(
+    accept = TRUE, stop = FALSE, stop_reason = NA_character_, grow = FALSE,
+    case = NA_integer_, gate = NA_character_, dQ = NA_real_, se_dQ = NA_real_,
+    se_boot = NA_real_, mc_noise = NA_real_, L = NA_real_, U = NA_real_,
+    S = st$S, ESS = NA_real_, ESS_over_S = NA_real_, r_hat = NA_real_,
+    n_boot = 0L)
+
+  st$decide <- function(theta_old, theta_new, m_moved, trees, w_raw,
+                        logf_old, delta_max, abs_step) {
+    v <- blank()
+    # EM rate of the iterate path, recorded for the delta extrapolation.
+    if (is.finite(st$prev_step) && st$prev_step > 0 && is.finite(abs_step))
+      v$r_hat <- abs_step / st$prev_step
+    if (isTRUE(m_moved) && is.finite(abs_step)) st$prev_step <- abs_step
+
+    ww <- .ascent_weights(w_raw, log = FALSE)
+    v$ESS <- ww$ESS
+    v$ESS_over_S <- if (is.finite(ww$ESS) && st$S > 0) ww$ESS / st$S else NA_real_
+
+    legacy <- function(reason) {
+      v$gate <- "legacy"
+      if (!isTRUE(m_moved)) st$legacy_str <- 0L
+      else if (is.finite(delta_max) && delta_max < opts$tol)
+        st$legacy_str <- st$legacy_str + 1L
+      else st$legacy_str <- 0L
+      if (st$legacy_str >= opts$patience) {
+        v$stop <- TRUE; v$stop_reason <- reason
+      }
+      v
+    }
+
+    # ---- the user's escape hatch: wave 1's rule, bit for bit ----
+    if (identical(opts$stop, "step")) return(legacy("converged"))
+
+    # ---- the statistic is not estimable: fall back, never hang ----
+    if (ww$n < 5L || !is.finite(ww$ESS) || ww$ESS < opts$ess_floor)
+      return(legacy("converged_step"))
+
+    # An M-step that returned its start says nothing about stability; it is
+    # routed to the undecided branch, never to a certificate.
+    if (!isTRUE(m_moved)) {
+      st$streak <- 0L; st$legacy_str <- 0L; st$U_hist <- numeric(0)
+      v$gate <- "ascent"; v$case <- 3L; v$dQ <- 0; v$se_dQ <- 0
+      return(v)
+    }
+
+    lf_new <- tryCatch(score(theta_new, trees), error = function(e) NULL)
+    if (is.null(lf_new) || length(lf_new) != length(trees))
+      return(legacy("converged_step"))
+    lf_new_k <- lf_new[ww$keep]
+    lf_old_k <- logf_old[ww$keep]
+    if (!all(is.finite(lf_new_k)) || !all(is.finite(lf_old_k)))
+      return(legacy("converged_step"))
+
+    s <- .ascent_stat(lf_new_k - lf_old_k, ww$wt)
+    if (!is.finite(s$dQ) || !is.finite(s$se)) return(legacy("converged_step"))
+    v$gate <- "ascent"; v$dQ <- s$dQ; v$se_dQ <- s$se
+
+    # Offset for the optimism of maximising the very sum being tested.
+    b_k <- opts$p_free / (2 * ww$ESS)
+    dQt <- s$dQ - b_k
+
+    # Bootstrap: on a throttle, and unconditionally at a candidate stop.
+    # It is the primary error estimate; the delta-method one is the cheap
+    # per-iteration statistic and the two are recorded side by side.
+    run_boot <- function() {
+      bb <- .ascent_bootstrap(trees, w_raw = w_raw,
+                              wt = ww$wt, keep = ww$keep,
+                              logf_old = lf_old_k, logf_new = lf_new_k,
+                              theta_new = theta_new, refit = refit,
+                              score = score, B = opts$mc_boot)
+      st$se_boot   <- bb$se_boot
+      st$se_boot_S <- st$S
+      st$mc_noise  <- bb$mc_noise
+      st$boot_age  <- 0L
+      v$n_boot     <<- bb$B_ok
+      bb
+    }
+    if (isTRUE(opts$mc_boot > 1L) && st$boot_age >= opts$mc_refresh) run_boot()
+
+    # Between refreshes the stored spread is carried forward on the 1/sqrt(N)
+    # law, which is what limits how stale it may be.
+    se_eff <- function() {
+      sb <- st$se_boot
+      if (is.finite(sb) && is.finite(st$se_boot_S) && st$se_boot_S > 0)
+        sb <- sb * sqrt(st$se_boot_S / st$S)
+      max(s$se, if (is.finite(sb)) sb else 0)
+    }
+    bound <- function() {
+      e <- se_eff()
+      list(L = dQt - st$z * e, U = dQt + st$z * e)
+    }
+    bd <- bound()
+    v$se_boot <- st$se_boot; v$mc_noise <- st$mc_noise
+    v$L <- bd$L; v$U <- bd$U
+    st$boot_age <- st$boot_age + 1L
+
+    delta <- opts$ascent_tol
+
+    # ---- case 1: an ascent is asserted ----
+    if (is.finite(bd$L) && bd$L > 0) {
+      v$case <- 1L
+      st$streak <- 0L; st$undecided <- 0L; st$U_hist <- numeric(0)
+      return(st$budget_check(v))
+    }
+
+    # ---- case 2: no gain above delta can be asserted ----
+    if (is.finite(bd$U) && bd$U < delta) {
+      # A certificate is never issued on a carried-forward error estimate.
+      if (st$boot_age > 1L && isTRUE(opts$mc_boot > 1L)) {
+        run_boot(); bd <- bound()
+        v$se_boot <- st$se_boot; v$mc_noise <- st$mc_noise
+        v$L <- bd$L; v$U <- bd$U
+        st$boot_age <- 1L
+        if (!(is.finite(bd$U) && bd$U < delta)) {
+          v$case <- 3L; st$streak <- 0L; st$U_hist <- numeric(0)
+          return(st$budget_check(v))
+        }
+      }
+      v$case <- 2L
+      st$undecided <- 0L
+      st$streak <- st$streak + 1L
+      st$U_hist <- c(st$U_hist, bd$U)
+      if (length(st$U_hist) > opts$patience)
+        st$U_hist <- utils::tail(st$U_hist, opts$patience)
+      if (st$streak >= opts$patience &&
+          is.finite(ww$ESS) && ww$ESS >= opts$ess_min &&
+          sum(st$U_hist) < opts$patience * delta) {
+        v$stop <- TRUE; v$stop_reason <- "converged"
+        return(v)
+      }
+      return(st$budget_check(v))
+    }
+
+    # ---- case 3: undecided ----
+    v$case <- 3L
+    st$streak <- 0L; st$U_hist <- numeric(0)
+    if (is.finite(dQt) && dQt >= delta) {
+      # 3a, travel-binding: the point estimate is still above delta.  Take the
+      # step and iterate; a larger sample cannot settle a moving iterate.
+      st$undecided <- 0L
+      return(st$budget_check(v))
+    }
+    # 3b, precision-binding: the point estimate is already below delta and
+    # only a smaller error can settle the question.  One such iteration is
+    # not evidence — a single quiet draw mid-climb would otherwise multiply
+    # the budget — so the verdict must hold `patience` times in a row before
+    # anything is spent on it.
+    st$undecided <- st$undecided + 1L
+    if (st$undecided >= opts$patience) {
+      if (isTRUE(opts$grow_sample) && st$S < st$S_max) {
+        v$grow   <- TRUE
+        v$accept <- FALSE         # do not take a step the data cannot support
+        st$S <- min(st$S_max, as.integer(ceiling(st$S * opts$grow_factor)))
+        v$S <- st$S
+        st$undecided <- 0L
+        return(st$budget_check(v))
+      }
+      v$stop <- TRUE; v$stop_reason <- "undecided_at_max_sample"
+      return(v)
+    }
+    st$budget_check(v)
+  }
+
+  # The draw budget is the identical worst case the wave-1 rule already has,
+  # max_iter * num_trees, so the new rule cannot cost more in draws than the
+  # old one costs when it ends at max_iter.  Exhaustion is not convergence.
+  st$budget_check <- function(v) {
+    if (is.finite(st$max_draws) && st$draws >= st$max_draws) {
+      v$stop <- TRUE; v$stop_reason <- "draw_budget"
+    }
+    v
+  }
+  st
+}
+
+#' The trace columns the stopping rule writes
+#'
+#' Identical names in both drivers, so a trace can be pooled across samplers.
+#' @keywords internal
+.ascent_trace_cols <- function(v = NULL) {
+  if (is.null(v)) v <- list()
+  g <- function(k, d = NA_real_) if (is.null(v[[k]])) d else v[[k]]
+  data.frame(
+    dQ         = as.numeric(g("dQ")),
+    se_dQ      = as.numeric(g("se_dQ")),
+    mc_noise   = as.numeric(g("mc_noise")),
+    se_boot    = as.numeric(g("se_boot")),
+    L          = as.numeric(g("L")),
+    U          = as.numeric(g("U")),
+    S          = as.numeric(g("S")),
+    draws      = as.numeric(g("draws")),
+    case       = as.integer(g("case", NA_integer_)),
+    accepted   = as.logical(g("accept", NA)),
+    ESS_over_S = as.numeric(g("ESS_over_S")),
+    r_hat      = as.numeric(g("r_hat")),
+    gate       = as.character(g("gate", NA_character_)),
+    n_boot     = as.integer(g("n_boot", NA_integer_)),
+    stringsAsFactors = FALSE)
+}
+
 #' @keywords internal
 .par_names <- function(model_bin) {
   # Orthogonal covariate basis {N, M = P/N, D = E - M}: slot 2 is the mean-age
@@ -572,6 +1119,9 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       "E-step cannot accept num_trees augmented trees within maxN attempts.\n",
       "  Set maxN >= num_trees, or leave maxN = NULL for max(2000, 10 * num_trees)."),
       as.integer(ctrl$maxN), as.integer(ctrl$sample_size)), call. = FALSE)
+  # The stopping rule's own settings travel as one list, resolved here once,
+  # so the two drivers cannot be handed different defaults.
+  stop_opts <- .ascent_opts(ctrl, lower_bound, upper_bound)
   raw <- switch(ctrl$sampling,
     bdi             = .mcem_bdi(
       brts        = brts,
@@ -590,7 +1140,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       model       = model,
       link        = link,
       max_time    = ctrl$max_time,
-      rho         = ctrl$rho
+      rho         = ctrl$rho,
+      stop_opts   = stop_opts
     ),
     dynamic_fresh   = .mcem_dynamic_fresh(
       brts        = brts,
@@ -610,7 +1161,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       model       = model,
       link        = link,
       max_time    = ctrl$max_time,
-      rho         = ctrl$rho
+      rho         = ctrl$rho,
+      stop_opts   = stop_opts
     ),
     dynamic_recycle = stop("'dynamic_recycle' sampling not yet implemented."),
     dynamic_mixed   = stop("'dynamic_mixed' sampling not yet implemented."),
@@ -638,7 +1190,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   n_failed <- if (!is.null(raw[["n_failed"]])) as.integer(raw[["n_failed"]]) else NA_integer_
   list(pars = raw$pars, loglik = loglik, loglik_var = loglik_var,
        stop_reason = raw$stop_reason, iterations = iterations,
-       n_failed = n_failed, details = raw)
+       n_failed = n_failed, total_draws = raw[["total_draws"]],
+       sample_size_final = raw[["sample_size_final"]], details = raw)
 }
 
 #' @keywords internal
@@ -1094,6 +1647,8 @@ estimate_rates <- function(tree,
                  method = method, model = model_bin, rho = ctrl$rho,
                  stop_reason = stop_reason, iterations = iterations,
                  n_failed = n_failed,
+                 total_draws = raw[["total_draws"]] %||% NA_real_,
+                 sample_size_final = raw[["sample_size_final"]] %||% NA_integer_,
                  cond = !is.null(cond), details = raw$details)
   class(result) <- "emphasis_fit"
   result

@@ -40,18 +40,54 @@ alias: \code{sample_size}), \code{max_iter} (iteration cap, default 200),
 sampler only and ignored by BDI; under \code{"dynamic_fresh"} it must be
 at least \code{num_trees}; default NULL, and a non-finite value is treated
 as NULL, = \code{max(2000, 10 * num_trees)}),
-\code{xtol} (M-step optimiser tolerance, default 1e-3),
+\code{xtol} (M-step optimiser tolerance, default 1e-3).
+
+Stopping rule (MCEM).  \code{stop} selects it: \code{"ascent"} (default)
+scores each iteration on the gain it bought, in nats of the EM surrogate
+\eqn{Q}, against the Monte Carlo error of that gain; \code{"step"} is the
+wave-1 parameter-stability rule, unchanged.  Under \code{"ascent"}:
+\code{ascent_tol} (\eqn{\delta}, the per-iteration surrogate gain below
+which there is nothing left to certify, default 0.002 nats),
+\code{ascent_alpha} (one-sided level of the bound, default 0.05),
+\code{ess_min} (effective draws required before any certificate, default
+200), \code{ess_floor} (below this the statistic is not estimable and the
+iteration falls back to the \code{tol} rule, default 20),
+\code{grow_sample} (default TRUE; the sample grows only when an iteration
+is undecided \emph{and} the point estimate is already below \eqn{\delta},
+so that precision rather than travel is what blocks the verdict, and only
+after \code{patience} such iterations in a row), \code{grow_factor}
+(default 1.5, monotone, append-only), \code{max_sample_mult} (sample cap
+as a multiple of \code{num_trees}, default 25), \code{max_draws}
+(NULL = \code{max_iter * num_trees}, the worst case the \code{tol} rule
+already reaches at \code{max_iter}), \code{mc_boot} (bootstrap replicates
+of the Monte Carlo error, default 12; the resample is
+\eqn{w_i \to w_i c_i} with \eqn{c} multinomial, so it draws no new trees),
+\code{mc_refresh} (iterations between bootstraps, default 3; a
+certificate is never issued on a carried-forward value).
+
+\eqn{\delta} is a \emph{resolution, not a distance to the maximiser}: the
+surrogate increment bounds the EM guarantee, not the deficit that remains,
+and with an EM rate \eqn{r} the remaining deficit is of order
+\eqn{\delta / (1 - r)}.  The trace records \code{r_hat} and \code{U} so
+that extrapolation can be read off per cell.
+
 \code{tol} (parameter-stability threshold: the largest relative parameter
 change \eqn{\max_j |\theta_k[j] - \theta_{k-1}[j]| / \max(|\theta_{k-1}[j]|, c)},
 where the floor \eqn{c} is \code{tol / crown_age} for the rate-valued
 links and \code{tol} for the log-rates of the exponential link, so that
 the statistic does not change with the unit of time; the search box does
 not enter; default 1e-2, so every coordinate must move by less than 1\% of
-its own magnitude, \code{patience} times in a row; on a 12-tip CR tree at
-\code{num_trees = 200} that statistic has median 0.02 and falls below 1e-2
-in about a fifth of iterations, so runs at these defaults commonly end at
-\code{max_iter}), \code{patience} (consecutive stable iterations
-required, default 3).
+its own magnitude, \code{patience} times in a row).  It is the whole rule
+under \code{stop = "step"}, and the fallback whenever the Monte Carlo
+error cannot be estimated.  \code{patience} (consecutive certifying
+iterations required, default 3).
+
+Stop reasons.  Only \code{"converged"} (the ascent rule certified) and
+\code{"converged_step"} (the fallback \code{tol} rule fired) are
+convergence.  \code{"undecided_at_max_sample"}, \code{"draw_budget"},
+\code{"max_iter"}, \code{"time_budget"}, \code{"e_step_failure"} and
+\code{"m_step_failure"} say the fit ran out of something and are reported
+as such.
 
 CEM-specific: \code{max_iter} (default 20), \code{num_particles}
 (particles per iteration, default 50; alias: \code{num_points}),

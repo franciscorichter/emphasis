@@ -252,7 +252,9 @@ test_that("print shows iterations and stop reason for a completed run", {
     control = list(lower_bound = c(0, 0), upper_bound = c(4, 4),
                    sampling = "bdi", sample_size = 20L, max_iter = 3L,
                    num_threads = 1L))
-  expect_true(fit$stop_reason %in% c("converged", "max_iter", "time_budget"))
+  expect_true(fit$stop_reason %in%
+                c("converged", "converged_step", "undecided_at_max_sample",
+                  "draw_budget", "max_iter", "time_budget"))
   # the final E-step is a trace row but not an iteration
   expect_equal(fit$iterations, sum(emphasis:::.mcem_iter_rows(fit$details$mcem)))
   expect_equal(nrow(fit$details$mcem), fit$iterations + 1L)

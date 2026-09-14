@@ -26,13 +26,19 @@ floor12    <- 1e-2 / max(brts12)
 rel_change <- function(new, old, eps = floor12)
   max(abs(new - old) / pmax(abs(old), eps))
 
+# These are wave-1 pins of the parameter-stability rule and its patience
+# accounting, so they run under `stop = "step"`; ten draws could not estimate
+# a Monte Carlo error anyway, and the ascent rule's own behaviour is pinned in
+# test-stopping-rule.R.
 run_bdi <- function(pars, max_iter, tol = 1e-2, patience = 3L,
-                    sample_size = 10L, lower_bound = lb8, upper_bound = ub8) {
+                    sample_size = 10L, lower_bound = lb8, upper_bound = ub8,
+                    stop = "step") {
   ns$.mcem_bdi(brts12, pars = pars, sample_size = sample_size,
                max_missing = 1e4, lower_bound = lower_bound,
                upper_bound = upper_bound, max_iter = max_iter, xtol = 1e-3,
                tol = tol, patience = patience, num_threads = 1L,
-               model = c(0L, 0L, 0L), link = 0L, rho = 1)
+               model = c(0L, 0L, 0L), link = 0L, rho = 1,
+               stop_opts = ns$.ascent_opts(list(stop = stop)))
 }
 
 # --------------------------------------------------------------------------- #
@@ -89,6 +95,8 @@ test_that("the default tol of .mcem_bdi is 1e-2", {
 })
 
 test_that("boxes [0,3], [0,30] and [0,300] give estimates within tolerance of each other (H21_widebox)", {
+  # Pins the wave-1 statistic, so it runs under stop = "step"; the ascent
+  # rule's own independence of the box is in test-stopping-rule.R.
   fit_box <- function(ub) {
     set.seed(21)
     estimate_rates(brts12, model = "cr", method = "mcem",
@@ -96,7 +104,7 @@ test_that("boxes [0,3], [0,30] and [0,300] give estimates within tolerance of ea
                    control = list(lower_bound = c(0, 0), upper_bound = c(ub, ub),
                                   sampling = "bdi", sample_size = 200L,
                                   num_threads = 1L, max_iter = 25L,
-                                  tol = 1e-2, patience = 3L))
+                                  tol = 1e-2, patience = 3L, stop = "step"))
   }
   fits  <- lapply(c(3, 30, 300), fit_box)
   pars  <- t(sapply(fits, function(f) unname(f$pars)))
@@ -131,7 +139,8 @@ test_that("the run is unchanged when the tree is measured in another unit of tim
                  max_missing = 1e4, lower_bound = cr8(0, 0),
                  upper_bound = cr8(3, 3) / s, max_iter = 6L, xtol = 1e-3,
                  tol = 1e-2, patience = 3L, num_threads = 1L,
-                 model = c(0L, 0L, 0L), link = 0L, rho = 1)
+                 model = c(0L, 0L, 0L), link = 0L, rho = 1,
+                 stop_opts = ns$.ascent_opts(list(stop = "step")))
   }
   r1 <- fit_scaled(1)
   r2 <- fit_scaled(1000)

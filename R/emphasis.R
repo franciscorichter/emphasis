@@ -1,24 +1,26 @@
 #' MCEM with thinning augmentation.
 #'
-#' E-step and M-step of one iteration are a single \code{em_cpp()} call: the
+#' One iteration is \code{augment_trees()} followed by \code{m_cpp()}: the
 #' augmented trees are drawn by the thinning sampler, up to \code{maxN}
-#' attempts per E-step.
+#' attempts per E-step, and the M-step then runs on the weights
+#' \eqn{\exp(\log f - \log g - \max)} that the C++ E-step would have handed
+#' it.  The two calls are what \code{em_cpp()} does internally
+#' (\code{src/mcem.cpp} is \code{E_step} followed by \code{M_step} with the
+#' same arguments), so the split is scoring-identical and no file under
+#' \code{src/} changed; it is what lets an undecided iteration enlarge its
+#' sample without redrawing, and lets this driver run the same bootstrap the
+#' BDI driver runs.
 #'
-#' Stopping rule, the same statistic \code{.mcem_bdi} uses.  With theta_k the
-#' M-step output of iteration k,
-#' \deqn{\delta_k = \max_j |\theta_k[j] - \theta_{k-1}[j]| / \max(|\theta_{k-1}[j]|, \epsilon)}
-#' and the run stops as "converged" once \eqn{\delta_k < tol} for
-#' \code{patience} consecutive iterations.  The search box does not enter, so
-#' the same fit stops at the same point whatever bounds the user passes.  The
-#' floor \eqn{\epsilon} comes from \code{.rel_floor(brts, link, rel_floor)}
-#' and carries the units of the parameters (\code{rel_floor / crown_age} for
-#' the rate-valued links, \code{rel_floor} for the log-rates of the
-#' exponential link), so the statistic is unchanged when the tree and the
-#' rates are expressed in another unit of time.  An iteration whose M-step
-#' returned its starting point unchanged carries no information about
-#' stability and resets the streak (trace column \code{m_moved}).  The trace
-#' also records the absolute step \code{abs_step} and \code{drift}, the same
-#' relative displacement measured over the last \code{patience} iterations.
+#' Stopping rule: \code{.ascent_controller}, the same object
+#' \code{.mcem_bdi} instantiates, from the same defaults resolved once in
+#' \code{.run_mcem}.  Each iteration is scored on the gain it bought in nats
+#' of the EM surrogate against the Monte Carlo error of that gain.  Growth is
+#' append-only: an undecided iteration does not move the iterate, so only the
+#' shortfall is drawn and it pools with the draws in hand.  \code{tol},
+#' \code{patience} and \code{.rel_floor} keep their meaning and are what the
+#' fallback path, and \code{stop = "step"}, use.  The trace also records the
+#' absolute step \code{abs_step} and \code{drift}, the same relative
+#' displacement measured over the last \code{patience} iterations.
 #'
 #' Trace.  Row k of \code{mcem} pairs theta_k with the E-step value
 #' fhat(theta_\{k-1\}) it was computed from, and with the rejection counters
@@ -69,7 +71,8 @@
                       link = 0L,
                       max_time = NULL,
                       rho = 1.0,
-                      rel_floor = 1e-2) {
+                      rel_floor = 1e-2,
+                      stop_opts = NULL) {
   if (inherits(brts, "phylo")) {
     # .extract_brts also carries the tip starts M and D are measured from.
     brts <- .extract_brts(brts)
@@ -90,7 +93,6 @@
   floor_val <- .rel_floor(brts, link, rel_floor)
   rel_delta <- function(new, old) .rel_change(new, old, floor_val)
 
-  streak       <- 0L      # consecutive iterations with rel_delta < tol
   fail_streak  <- 0L      # consecutive E-step failures
   n_failed     <- 0L      # E-step failures over the whole run
   n_success    <- 0L      # completed EM iterations
@@ -98,33 +100,104 @@
   cur_pars     <- pars    # point the next E-step samples at and the M-step starts from
   par_hist     <- list()  # successful iterates, for the windowed drift
   mcem         <- NULL
+  pool         <- NULL    # draws held across a growth step
   had_success  <- FALSE   # at least one iteration completed, so `pars` is an estimate
   stop_reason  <- "max_iter"
   t0_mcem      <- proc.time()[3]
   center_pars  <- (lower_bound + upper_bound) / 2
   maxN_cap     <- 50000L
 
-  run_em <- function(at, maxN_now) {
-    tryCatch(
-      em_cpp(brts = brts,
-             init_pars = at,
-             sample_size = sample_size,
-             maxN = maxN_now,
-             max_missing = max_missing,
-             max_lambda = 1e6,
-             lower_bound = lower_bound,
-             upper_bound = upper_bound,
-             xtol_rel = xtol,
-             num_threads = num_threads,
-             copy_trees = FALSE,
-             model = as.integer(model),
-             link = as.integer(link),
-             rho = as.numeric(rho),
-             rconditional = conditional,
-             parent_tip_start = parent_tip_start),
-      error = function(e) NULL
-    )
+  # ── E-step: the thinning sampler alone ──
+  run_e <- function(at, maxN_now, n_want) {
+    e <- tryCatch(
+      augment_trees(brts = brts,
+                    pars = at,
+                    sample_size = max(1L, as.integer(n_want)),
+                    maxN = as.integer(maxN_now),
+                    max_missing = max_missing,
+                    max_lambda = 1e6,
+                    num_threads = num_threads,
+                    model = as.integer(model),
+                    link = as.integer(link),
+                    rho = as.numeric(rho),
+                    parent_tip_start = parent_tip_start),
+      error = function(e) NULL)
+    if (is.null(e) || length(e$trees) == 0L) return(NULL)
+    e
   }
+
+  # Pooling two E-steps drawn at the same theta: the rejection counters add,
+  # and fhat is rebuilt over the pool rather than averaged.
+  e_pool <- function(a, b) {
+    if (is.null(a)) return(b)
+    if (is.null(b)) return(a)
+    add <- function(k) .n0(a[[k]]) + .n0(b[[k]])
+    out <- list(trees = c(a$trees, b$trees),
+                logf = c(a$logf, b$logf), logg = c(a$logg, b$logg),
+                rejected = add("rejected"),
+                rejected_overruns = add("rejected_overruns"),
+                rejected_lambda = add("rejected_lambda"),
+                rejected_zero_weights = add("rejected_zero_weights"),
+                rejected_nonfinite = add("rejected_nonfinite"),
+                envelope_violations = add("envelope_violations"),
+                time = add("time"))
+    out$num_trees <- length(out$trees)
+    out
+  }
+
+  # ── M-step: the same optimisation em_cpp() runs, on the weights the C++
+  # E-step would have handed it (exp(log w - max log w)).  Verified against
+  # em_cpp: identical() on the estimates, on logf, and on fhat.
+  run_m <- function(e, at) {
+    lw <- e$logf - e$logg
+    w  <- exp(lw - max(lw[is.finite(lw)]))
+    w[!is.finite(w)] <- 0
+    es <- list(trees = e$trees, weights = w,
+               rejected = .n0(e$rejected),
+               rejected_overruns = .n0(e$rejected_overruns),
+               rejected_lambda = .n0(e$rejected_lambda),
+               rejected_zero_weights = .n0(e$rejected_zero_weights),
+               time = .n0(e$time),
+               fhat = .is_fhat(e$logf, e$logg,
+                               n_zero_weight = .n0(e$rejected_zero_weights)))
+    m <- tryCatch(
+      m_cpp(e_step = es, init_pars = at, plugin = "rpd1",
+            lower_bound = lower_bound, upper_bound = upper_bound,
+            xtol_rel = xtol, num_threads = num_threads,
+            model = as.integer(model), link = as.integer(link),
+            rho = as.numeric(rho), rconditional = conditional),
+      error = function(e) NULL)
+    if (is.null(m)) return(NULL)
+    list(estimates = m$estimates, weights = w, fhat = es$fhat, m_time = m$time)
+  }
+
+  # ── the stopping rule, shared with .mcem_bdi ──
+  opts <- if (is.null(stop_opts))
+    .ascent_opts(list(tol = tol, patience = patience, sample_size = sample_size,
+                      max_iter = max_iter), lower_bound, upper_bound)
+    else stop_opts
+  opts$tol <- tol; opts$patience <- patience
+  opts$sample_size <- as.integer(sample_size); opts$max_iter <- as.integer(max_iter)
+
+  ctl_trees <- NULL
+  refit <- function(w, init) {
+    m <- tryCatch(
+      m_cpp(e_step = list(trees = ctl_trees, weights = w, rejected = 0L,
+                          rejected_overruns = 0L, rejected_lambda = 0L,
+                          rejected_zero_weights = 0L, time = 0, fhat = 0),
+            init_pars = init, plugin = "rpd1",
+            lower_bound = lower_bound, upper_bound = upper_bound,
+            xtol_rel = xtol, num_threads = num_threads,
+            model = as.integer(model), link = as.integer(link),
+            rho = as.numeric(rho), rconditional = conditional),
+      error = function(e) NULL)
+    if (is.null(m)) NULL else as.numeric(m$estimates)
+  }
+  score <- function(theta, trees) eval_logf(theta, trees,
+                                            model = as.integer(model),
+                                            link = as.integer(link),
+                                            rho = as.numeric(rho))$logf
+  ctl <- .ascent_controller(opts, refit, score)
 
   # The four disjoint ways the E-step discards a draw. Zero-weight draws are
   # not among them: they completed and stay in the fhat denominator.
@@ -139,11 +212,11 @@
   # rejection counters of that E-step. Step columns are NA for the final
   # E-step (no M-step), which is flagged `m_step = FALSE`.
   trace_row <- function(p, results, delta_max, abs_step, drift, maxN_used,
-                        m_step = TRUE, m_moved = NA) {
+                        m_step = TRUE, m_moved = NA, stop_cols = NULL) {
     par_df <- as.data.frame(as.list(stats::setNames(p, paste0("par", seq_along(p)))))
     n_rej <- n_rejected_of(results)
     lw <- results$logf - results$logg
-    cbind(par_df, data.frame(
+    cbind(par_df, .ascent_trace_cols(stop_cols), data.frame(
       fhat                  = results$fhat,
       delta_max             = delta_max,
       abs_step              = abs_step,
@@ -167,12 +240,27 @@
 
   for (i in seq_len(max_iter)) {
     maxN_used <- maxN
-    results   <- run_em(cur_pars, maxN)
+    # On a growth step the iterate did not move, so only the shortfall is
+    # drawn and it pools with the draws already held.
+    have <- if (is.null(pool)) 0L else length(pool$trees)
+    want <- max(0L, as.integer(ctl$S) - have)
+    e_new <- if (want > 0L) run_e(cur_pars, maxN, want) else NULL
+    if (!is.null(e_new)) ctl$add_draws(length(e_new$trees))
+    e_raw <- if (want > 0L) {
+      if (is.null(e_new)) NULL else e_pool(pool, e_new)
+    } else pool
+    ctl_trees <- if (is.null(e_raw)) NULL else e_raw$trees
+    m_out <- if (is.null(e_raw)) NULL else run_m(e_raw, cur_pars)
+    results <- if (is.null(e_raw) || is.null(m_out)) NULL else
+      utils::modifyList(e_raw, list(estimates = m_out$estimates,
+                                    fhat = m_out$fhat,
+                                    time = .n0(e_raw$time) + .n0(m_out$m_time)))
 
     if (is.null(results)) {
+      pool <- NULL
+      ctl$reset()
       fail_streak <- fail_streak + 1L
       n_failed    <- n_failed + 1L
-      streak      <- 0L
 
       # Escalation: enlarge the attempt cap. The enlarged value is kept for
       # the rest of the run (never reset after a success, never reduced).
@@ -210,39 +298,43 @@
       m_moved   <- any(new_pars != cur_pars)
       abs_step  <- max(abs(new_pars - cur_pars))
       delta_max <- rel_delta(new_pars, cur_pars)
-      par_hist[[n_success]] <- new_pars
+
+      # ── stopping rule ──
+      v <- ctl$decide(theta_old = cur_pars, theta_new = new_pars,
+                      m_moved = m_moved, trees = e_raw$trees,
+                      w_raw = m_out$weights, logf_old = e_raw$logf,
+                      delta_max = delta_max, abs_step = abs_step)
+      v$draws <- ctl$draws
+
+      if (isTRUE(v$accept)) {
+        prev_pars <- new_pars
+        cur_pars  <- new_pars
+        pool      <- NULL
+      } else {
+        # Undecided on precision: the step is not taken and the draws are
+        # kept, so the enlarged sample pools with them at the same theta.
+        pool <- e_raw
+      }
+      par_hist[[n_success]] <- cur_pars
       # Relative displacement over the last `patience` completed iterations
       drift <- if (n_success > patience)
-        rel_delta(new_pars, par_hist[[n_success - patience]]) else NA_real_
-      prev_pars <- new_pars
-      cur_pars  <- new_pars
+        rel_delta(cur_pars, par_hist[[n_success - patience]]) else NA_real_
 
-      step <- trace_row(new_pars, results, delta_max, abs_step, drift,
-                        maxN_used, m_step = TRUE, m_moved = m_moved)
+      step <- trace_row(cur_pars, results, delta_max, abs_step, drift,
+                        maxN_used, m_step = TRUE, m_moved = m_moved,
+                        stop_cols = v)
       mcem <- rbind(mcem, step)
 
       if (verbose) {
         rej_str <- if (step$n_rejected > 0L) sprintf("  rej=%d", step$n_rejected) else ""
-        message(sprintf("Iteration %d: fhat=%.4f  delta=%.2e  step=%.2e  streak=%d/%d%s%s",
-                        i, results$fhat, delta_max, abs_step, streak, patience, rej_str,
-                        if (m_moved) "" else "  (M-step returned its start)"))
+        message(sprintf(
+          "Iteration %d: fhat=%.4f  dQ=%.3e  U=%.3e  case=%s  S=%d  ESS=%.0f%s%s",
+          i, results$fhat, v$dQ, v$U, format(v$case), as.integer(ctl$S),
+          v$ESS, rej_str,
+          if (isTRUE(v$accept)) "" else "  (held: growing the sample)"))
       }
 
-      # Convergence: `patience` consecutive iterations with rel_delta < tol.
-      # An M-step that returned its starting point unchanged says nothing
-      # about stability (the objective may have been undefined there), so it
-      # does not count toward patience.
-      if (!m_moved) {
-        streak <- 0L
-      } else if (delta_max < tol) {
-        streak <- streak + 1L
-        if (streak >= patience) {
-          stop_reason <- "converged"
-          break
-        }
-      } else {
-        streak <- 0L
-      }
+      if (isTRUE(v$stop)) { stop_reason <- v$stop_reason; break }
     }
 
     # Time budget check (counts failed iterations as well)
@@ -265,11 +357,16 @@
   final_estep <- FALSE
   fin <- NULL
   if (had_success) {
-    fin <- run_em(prev_pars, maxN)
+    fin <- run_e(prev_pars, maxN, sample_size)
     if (!is.null(fin)) {
+      fin$fhat <- .is_fhat(fin$logf, fin$logg,
+                           n_zero_weight = .n0(fin$rejected_zero_weights))
       final_estep <- TRUE
+      ctl$add_draws(length(fin$trees))
       mcem <- rbind(mcem, trace_row(prev_pars, fin, NA_real_, NA_real_, NA_real_,
-                                    maxN, m_step = FALSE, m_moved = NA))
+                                    maxN, m_step = FALSE, m_moved = NA,
+                                    stop_cols = list(S = as.numeric(ctl$S),
+                                                     draws = ctl$draws)))
       if (verbose) message(sprintf("Final E-step at the returned parameters: fhat=%.4f",
                                    fin$fhat))
     } else if (verbose) {
@@ -314,7 +411,9 @@
     maxN        = maxN,
     loglik      = loglik,
     loglik_var  = loglik_var,
-    final_IS    = final_IS
+    final_IS    = final_IS,
+    total_draws = ctl$draws,
+    sample_size_final = as.integer(ctl$S)
   )
 }
 

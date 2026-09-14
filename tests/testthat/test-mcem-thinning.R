@@ -59,7 +59,8 @@ test_that("sample_size > maxN: maxN ratchets once and the fit stays away from th
     brts22, ex(c(1, 0.3)), sample_size = 300L, maxN = 200L, max_missing = 1e4,
     lower_bound = ex(lb), upper_bound = ex(ub), max_iter = 40L, xtol = 1e-3,
     tol = 1e-2, patience = 3L, num_threads = 1L, verbose = FALSE,
-    model = cr_bin, link = 0L, max_time = 300))
+    model = cr_bin, link = 0L, max_time = 300,
+    stop_opts = emphasis:::.ascent_opts(list(stop = "step"))))
   fit <- list(pars = emphasis:::.contract_pars(d$pars, cr_bin))
 
   # The first E-step fails structurally (200 attempts < 300 trees); the
@@ -237,14 +238,16 @@ test_that("eight consecutive failures return the init flagged with iterations 0 
 })
 
 test_that("failures after successes leave no lagged loglik (H20)", {
-  # Three iterations succeed, then the E-step fails permanently.  The driver
-  # still attempts the final E-step at the returned pars; here that attempt
-  # fails too, so the run reports no likelihood rather than the value of the
-  # iterate before last.
+  # Three iterations succeed, then the iteration fails permanently.  The
+  # failure is injected through the conditional, which the M-step calls, and
+  # the driver counts an iteration that cannot complete the same way whether
+  # the sampler or the optimiser is what failed.  The final E-step at the
+  # returned pars is a draw only, so it completes; what it may not do is
+  # report the E-step of the iterate before last as the likelihood of pars.
   lb8 <- ex(c(0, 0)); ub8 <- ex(c(2, 1)); ip8 <- ex(c(0.5, 0.1))
   flag <- new.env(); flag$fail <- FALSE
   cond <- function(p) {
-    if (flag$fail) stop("injected E-step failure")
+    if (flag$fail) stop("injected M-step failure")
     0
   }
   set.seed(11)
@@ -253,7 +256,8 @@ test_that("failures after successes leave no lagged loglik (H20)", {
       brts1, ip8, sample_size = 20L, maxN = 2000L, max_missing = 1e4,
       lower_bound = lb8, upper_bound = ub8, max_iter = 20L, xtol = 1e-3,
       tol = 1e-6, patience = 3L, num_threads = 1L, verbose = TRUE,
-      conditional = cond, model = cr_bin, link = 0L, max_time = 120),
+      conditional = cond, model = cr_bin, link = 0L, max_time = 120,
+      stop_opts = emphasis:::.ascent_opts(list(stop = "step"))),
     message = function(m) {
       if (grepl("^Iteration 3: fhat", conditionMessage(m))) flag$fail <- TRUE
       invokeRestart("muffleMessage")
@@ -261,14 +265,18 @@ test_that("failures after successes leave no lagged loglik (H20)", {
   expect_equal(res$stop_reason, "e_step_failure")
   expect_equal(res$iterations, 3L)
   expect_equal(res$n_failed, 8L)
-  expect_false(res$final_estep)
-  # pars is theta_3; nothing reports the E-step at theta_2 as its likelihood
-  expect_equal(nrow(res$mcem), 3L)
-  expect_true(all(res$mcem$m_step))
-  expect_true(is.na(res$loglik))
-  expect_true(is.na(res$loglik_var))
-  expect_null(res$final_IS)
-  expect_false(isTRUE(all.equal(res$loglik, res$mcem$fhat[3])))
+  # pars is theta_3, and the likelihood reported for it is a fresh E-step at
+  # theta_3 (the last trace row, m_step = FALSE), never the E-step of theta_2.
+  expect_equal(nrow(res$mcem), 4L)
+  expect_equal(sum(res$mcem$m_step), 3L)
+  expect_false(res$mcem$m_step[4L])
+  expect_true(res$final_estep)
+  expect_equal(res$loglik, res$mcem$fhat[4L])
+  expect_false(isTRUE(all.equal(res$loglik, res$mcem$fhat[3L])))
+  expect_false(is.null(res$final_IS))
+  # A conditional that throws is still refused at the user level: the
+  # conditioning correction estimate_rates() subtracts is NA there.
+  expect_error(cond(res$pars), "injected")
 })
 
 test_that("an interleaved E-step failure resets the streak and restarts from the last estimate (H30)", {
@@ -286,7 +294,8 @@ test_that("an interleaved E-step failure resets the streak and restarts from the
       lower_bound = lb8, upper_bound = ub8, max_iter = 20L, xtol = 1e-3,
       tol = 1e6,            # every successful iteration counts as stable
       patience = 3L, num_threads = 1L, verbose = TRUE, conditional = cond,
-      model = cr_bin, link = 0L, max_time = 120),
+      model = cr_bin, link = 0L, max_time = 120,
+      stop_opts = emphasis:::.ascent_opts(list(stop = "step"))),
     message = function(m) {
       txt <- conditionMessage(m); msgs <<- c(msgs, txt)
       if (grepl("^Iteration 2:", txt)) flag$fail <- TRUE
@@ -334,7 +343,8 @@ test_that("second consecutive failure perturbs toward the centre; pars stays the
       brts1, ip8, sample_size = 20L, maxN = 2000L, max_missing = 1e4,
       lower_bound = lb8, upper_bound = ub8, max_iter = 20L, xtol = 1e-3,
       tol = 1e6, patience = 2L, num_threads = 1L, verbose = TRUE,
-      conditional = cond, model = cr_bin, link = 0L, max_time = 120),
+      conditional = cond, model = cr_bin, link = 0L, max_time = 120,
+      stop_opts = emphasis:::.ascent_opts(list(stop = "step"))),
     message = function(m) {
       txt <- conditionMessage(m); msgs <<- c(msgs, txt)
       if (grepl("^Iteration 1:", txt)) flag$left <- 2L

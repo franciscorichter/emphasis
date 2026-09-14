@@ -207,7 +207,10 @@ test_that("cr and dd MCEM fits return the estimates they did before the fix", {
   # Pinned from the build that preceded the topology change; the BDI sampler
   # is pure R, so a seeded fit is reproducible.  cr and dd have model_bin
   # c(0,0,0) and c(1,0,0): neither M nor D enters a rate, and both fits have
-  # to come back unmoved.
+  # to come back unmoved.  The pin is on the sampler and the scorer, not on
+  # where a fit stops, so it runs under the wave-1 stopping rule: the ascent
+  # rule draws from R's generator for its bootstrap and stops elsewhere, and
+  # either would move these numbers without anything being wrong.
   set.seed(42)
   phy <- ape::rphylo(12, 0.5, 0)
 
@@ -216,7 +219,8 @@ test_that("cr and dd MCEM fits return the estimates they did before the fix", {
                          init_pars = c(0.5, 0.1),
                          control = list(lower_bound = c(0, 0),
                                         upper_bound = c(2, 1),
-                                        num_trees = 30L, max_iter = 5L))
+                                        num_trees = 30L, max_iter = 5L,
+                                        stop = "step"))
   expect_equal(unname(f_cr$pars), c(0.5847607702017, 0.0864009000326),
                tolerance = 1e-10)
   expect_equal(f_cr$loglik, -16.0992102587, tolerance = 1e-10)
@@ -226,7 +230,8 @@ test_that("cr and dd MCEM fits return the estimates they did before the fix", {
                          init_pars = c(0.8, -0.02, 0.2, 0),
                          control = list(lower_bound = c(0.1, -0.5, 0, -0.01),
                                         upper_bound = c(3, 0.01, 1, 0.01),
-                                        num_trees = 30L, max_iter = 5L))
+                                        num_trees = 30L, max_iter = 5L,
+                                        stop = "step"))
   expect_equal(unname(f_dd$pars),
                c(0.595602943635, 0.01, 0.136509120974, 0.01),
                tolerance = 1e-10)
