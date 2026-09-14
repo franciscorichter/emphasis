@@ -21,6 +21,31 @@ test_that(".contract_pars and .expand_pars are inverses", {
   expect_equal(back, pars8)
 })
 
+test_that(".contract_pars and .expand_pars round-trip on the partial layouts", {
+  # The round trip in test-covariates.R uses mb = c(1, 1, 1), where every slot
+  # is active and .expand_pars is the identity (audit id H102).  The layouts a
+  # user actually fits are partial: the expansion has to put each free
+  # parameter in its own slot and leave the rest at zero.
+  layouts <- list(
+    list(mb = c(1L, 0L, 0L), compact = c(0.5, -0.01, 0.1, 0.02),
+         full = c(0.5, -0.01, 0, 0, 0.1, 0.02, 0, 0)),
+    list(mb = c(0L, 0L, 1L), compact = c(0.5, 0.05, 0.1, 0.01),
+         full = c(0.5, 0, 0, 0.05, 0.1, 0, 0, 0.01)),
+    list(mb = c(1L, 0L, 1L), compact = c(0.5, -0.01, 0.05, 0.1, 0.02, 0.01),
+         full = c(0.5, -0.01, 0, 0.05, 0.1, 0.02, 0, 0.01)),
+    list(mb = c(0L, 1L, 0L), compact = c(0.5, 0.03, 0.1, -0.02),
+         full = c(0.5, 0, 0.03, 0, 0.1, 0, -0.02, 0))
+  )
+  for (lay in layouts) {
+    expect_equal(emphasis:::.expand_pars(lay$compact, lay$mb), lay$full)
+    expect_equal(emphasis:::.contract_pars(lay$full, lay$mb), lay$compact)
+    expect_length(emphasis:::.par_names(lay$mb), length(lay$compact))
+    # the slots the model does not select stay zero whatever the input
+    expect_true(all(emphasis:::.expand_pars(lay$compact, lay$mb)[
+      c(1 + which(lay$mb == 0L), 5 + which(lay$mb == 0L))] == 0))
+  }
+})
+
 test_that(".model_label returns correct labels", {
   expect_equal(emphasis:::.model_label(c(0L, 0L, 0L)), "CR")
   expect_equal(emphasis:::.model_label(c(1L, 0L, 0L)), "N")
