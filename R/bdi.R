@@ -329,8 +329,9 @@
 #' convention.
 #'
 #' The BDI tree data frame (.bdi_to_tree_df) sets tip_start = 0 for every
-#' observed lineage, so calculate_pendant_pd(t) = k(t) * t.  Missing species
-#' carry their actual birth time.  P(t) = P_obs(t) + P_miss(t).
+#' observed lineage, so their pendant PD at t is k(t) * t, with k counting the
+#' two crown lineages.  Missing species carry their actual birth time.
+#' P(t) = P_obs(t) + P_miss(t).
 #' @keywords internal
 .bdi_P_obs <- function(t, bt) {
   k <- 2L + sum(bt <= t)

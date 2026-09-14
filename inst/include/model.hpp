@@ -247,14 +247,43 @@ namespace emphasis {
       return t_speciation + emphasis::detail::trunc_exp(remaining, mu, reng_);
     }
 
+    // Pendant PD at an arbitrary time inside the segment `node` governs.
+    //
+    // node.pd is P at the node's own time over the N = node.n lineages alive on
+    // the segment that ends there.  No lineage is born and none dies strictly
+    // inside a segment, so on it both N and S = Sum_s tip_start_s are constant
+    // and P is the straight line through (node.brts, node.pd) with slope N:
+    //
+    //   P(t) = N*t - S = node.pd + node.n * (t - node.brts)
+    //
+    // This is the one definition of P the model has.  The scorer reads it at
+    // the nodes (node.pd itself); the sampler, which needs it at candidate
+    // times between them, reads it here, so the two cannot disagree.  Exact,
+    // and O(1) rather than a scan over the event list.
+    static double pendant_pd(const node_t& node, double t) {
+      return node.pd + node.n * (t - node.brts);
+    }
+
+    // The pendant PD at t, off the node that governs the segment t falls in.
+    //
+    // lower_bound_node returns the first node with brts >= t, which is the node
+    // whose segment (brts_{i-1}, brts_i] contains t: its (pd, n, brts) are the
+    // ones in force there.  Verified against the topology in
+    // tests/testthat/test-d-compensator.R.
+    double pendant_pd_at(double t, const tree_t& tree) const {
+      auto it = lower_bound_node(t,
+                                 tree.size(),
+                                 reinterpret_cast<const node_t*>(tree.data()));
+      return pendant_pd(*it, t);
+    }
+
     // Non-homogeneous rate for thinning: N * lambda * (1 - exp(-mu*(T-t)))
     double nh_rate(double t, const param_t& pars, const tree_t& tree) const {
       auto it = lower_bound_node(t,
                                  tree.size(),
                                  reinterpret_cast<const node_t*>(tree.data()));
-      const double pd = calculate_pendant_pd(t, tree);
       node_t cur = *it;
-      cur.pd = pd;
+      cur.pd = pendant_pd(*it, t);
       const double lambda = model_bin_[2] ? speciation_rate_ep(pars, cur)
                                           : speciation_rate(pars, cur);
       const double mu     = model_bin_[2] ? extinction_rate_ep(pars, cur)
@@ -358,6 +387,27 @@ namespace emphasis {
     // correct positive integral (the integrand is strictly positive).  Using
     // |b| would flip the sign of the hazard integral for negative beta_E.
     // Handles b→0 limit: intercept * exp(-(A-1)^2/2) * (t2 - t1)
+    // Helper: integral of max(0, c + b*t) from t1 to t2 — one lineage's
+    // contribution to the compensator under the linear link, where the rate is
+    // a line clipped at zero.
+    //
+    // b == 0 leaves a constant rate max(0, c).  Otherwise f(t) = c + b*t has a
+    // single root at t* = -c/b and is positive on one side of it: above t* when
+    // b > 0, below it when b < 0.  The integral is the area of f over the part
+    // of [t1, t2] on that side, which is empty when t* lies past the far
+    // endpoint and the whole interval when it lies past the near one.  Over the
+    // surviving [lo, hi] the integrand is a line, so the exact area is its
+    // width times its value at the midpoint.
+    static double relu_integral(double c, double b, double t1, double t2) {
+      if (t2 <= t1) return 0.0;
+      if (b == 0.0) return std::max(0.0, c) * (t2 - t1);
+      const double root = -c / b;
+      const double lo = (b > 0.0) ? std::max(t1, root) : t1;
+      const double hi = (b > 0.0) ? t2 : std::min(t2, root);
+      if (hi <= lo) return 0.0;
+      return (hi - lo) * (c + b * (0.5 * (lo + hi)));
+    }
+
     static double gauss_integral(double intercept, double A, double b, double t1, double t2) {
       if (std::abs(b) < 1e-12) {
         double d = A - 1.0;
@@ -372,6 +422,7 @@ namespace emphasis {
     double loglik(const param_t& pars, const tree_t& tree) const {
       const bool ep_exp = model_bin_[2] && (link_ == LinkType::exponential);
       const bool ep_gauss = model_bin_[2] && (link_ == LinkType::gaussian);
+      const bool ep_linear = model_bin_[2] && (link_ == LinkType::linear);
 
       log_sum log_lambda{};
       double log_mu_sum = 0.0;
@@ -428,6 +479,43 @@ namespace emphasis {
               inte += gauss_integral(pars[4], A_mu,  pars[7], prev_brts, node.brts);
             }
           }
+        } else if (ep_linear && dt > 0.0) {
+          // EP + linear: exact per-lineage integral over the segment.
+          //
+          // Same decomposition as the exponential and gaussian branches.  N and
+          // M are the segment's values; only D = (t - ts_s) - M carries time
+          // within the segment, so for a lineage born at ts_s
+          //   eta_s(t) = beta_0 + beta_N*N + beta_M*M + beta_D*((t - ts_s) - M)
+          //            = [beta_0 + beta_N*N + (beta_M - beta_D)*M - beta_D*ts_s]
+          //              + beta_D*t
+          // and the linear link makes the rate max(0, eta_s(t)): a line clipped
+          // at zero, whose kink falls inside the segment whenever the rate
+          // crosses zero there.  relu_integral does that case split exactly.
+          //
+          // The alive set is the exponential branch's: the two crown lineages
+          // (tip_start 0, alive throughout), plus every lineage whose birth
+          // node lies at or before the segment start and which has not died
+          // before the segment ends.  That is node.n lineages, which is what
+          // makes the branch collapse onto dt*n*(lambda+mu) when beta_D and
+          // gamma_D are zero.
+          const double N_seg = node.n;
+          const double M_seg = (N_seg > 0.0) ? node.pd / N_seg : 0.0;
+          const double base_lam = pars[0] + pars[1] * N_seg + (pars[2] - pars[3]) * M_seg;
+          const double base_mu  = pars[4] + pars[5] * N_seg + (pars[6] - pars[7]) * M_seg;
+          double seg = 0.0;
+          auto add_lineage = [&](double ts) {
+            seg += relu_integral(base_lam - pars[3] * ts, pars[3], prev_brts, node.brts);
+            seg += relu_integral(base_mu  - pars[7] * ts, pars[7], prev_brts, node.brts);
+          };
+          add_lineage(0.0);           // the two crown lineages
+          add_lineage(0.0);
+          const unsigned last = static_cast<unsigned>(tree.size()) - 1u;
+          for (unsigned j = 0; j < tree.size(); ++j) {
+            const auto& s = tree[j];
+            if (is_extinction(s) || j == last) continue;   // the last node marks the present
+            if (s.brts <= prev_brts && s.t_ext >= node.brts) add_lineage(s.tip_start);
+          }
+          inte += seg;
         } else {
           // Standard: piecewise constant rates
           const double lambda = model_bin_[2] ? speciation_rate_ep(pars, node)

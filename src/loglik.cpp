@@ -94,3 +94,41 @@ Rcpp::List eval_logf_cpp(const std::vector<double>& pars,
     Rcpp::Named("logg") = logg
   );
 }
+
+
+//' The pendant PD and thinning rate the sampler sees at arbitrary times
+//'
+//' \code{Model::nh_rate} evaluates its rate at candidate times between the
+//' nodes, and reads P off the node that governs the segment the candidate falls
+//' in (\code{Model::pendant_pd}).  This exposes both, so a test can hold that P
+//' against an independent recomputation from the augmented tree, and against
+//' \code{pd + n * (t - brts)} of the governing node.
+//'
+//' @param pars Numeric vector of 8 model parameters.
+//' @param tree One augmented-tree data frame.
+//' @param times Numeric vector of times at which to evaluate.
+//' @param model Integer vector \code{c(use_N, use_M, use_D)}.
+//' @param link Link function: 0 = linear, 1 = exponential, 2 = gaussian.
+//' @param rho Sampling fraction.
+//' @return A named list with \code{pd} (the pendant PD used) and \code{nh}
+//'   (the non-homogeneous thinning rate) at each time.
+//' @keywords internal
+// [[Rcpp::export(name = "eval_nh_rate")]]
+Rcpp::List eval_nh_rate_cpp(const std::vector<double>& pars,
+                            const Rcpp::DataFrame& tree,
+                            const std::vector<double>& times,
+                            Rcpp::IntegerVector model = Rcpp::IntegerVector::create(0, 0, 0),
+                            int link = 0,
+                            double rho = 1.0) {
+  std::vector<int> model_bin = {model[0], model[1], model[2]};
+  emphasis::param_t lb8(8, -1e6), ub8(8, 1e6);
+  auto mdl = emphasis::Model(lb8, ub8, model_bin, link, rho);
+  auto local_tree = loglik::pack(tree);
+
+  std::vector<double> pd(times.size()), nh(times.size());
+  for (size_t i = 0; i < times.size(); ++i) {
+    pd[i] = mdl.pendant_pd_at(times[i], local_tree);
+    nh[i] = mdl.nh_rate(times[i], pars, local_tree);
+  }
+  return Rcpp::List::create(Rcpp::Named("pd") = pd, Rcpp::Named("nh") = nh);
+}

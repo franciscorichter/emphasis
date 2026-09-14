@@ -268,13 +268,27 @@ test_that("without topology D is zero at every observed event, with it it is not
   flat <- mk(numeric(0))
   real <- mk(emphasis:::.pts(brts))
 
-  # A draw with no augmented lineage: under the linear link D = 0 at every
-  # node makes the log-likelihood exactly constant in beta_D, which is how the
-  # covariate used to be invisible.
+  # D of the lineage that splits, at every observed event.
+  D_at_events <- function(tr) {
+    ev <- seq_len(nrow(tr) - 1L)
+    M  <- tr$pd[ev] / tr$n[ev]
+    E  <- ifelse(tr$focal_tip_start[ev] >= 0,
+                 tr$brts[ev] - tr$focal_tip_start[ev], M)
+    E - M
+  }
+  expect_equal(D_at_events(flat), rep(0, nrow(flat) - 1L), tolerance = 1e-12)
+  expect_gt(max(abs(D_at_events(real))), 1e-6)
+
+  # beta_D is not invisible on the flat tree even so.  The compensator
+  # integrates each alive lineage's own D over the segment, and those are not
+  # zero where the event's D is: only the event terms are constant in beta_D
+  # here.  While the compensator was dt * n * (rate at the segment's end node),
+  # the linear-link log f of a draw with no augmented lineage was exactly
+  # constant in beta_D (H8) and the covariate was invisible on both trees.
   lf <- function(tr, beta_D)
     eval_logf(c(0.3, 0, 0, beta_D, 0, 0, 0, 0), list(tr),
               model = c(0L, 0L, 1L), link = 0L, rho = 1)$logf
-  expect_equal(lf(flat, 0.0), lf(flat, 0.4), tolerance = 0)
+  expect_false(isTRUE(all.equal(lf(flat, 0.0), lf(flat, 0.4))))
   expect_false(isTRUE(all.equal(lf(real, 0.0), lf(real, 0.4))))
 })
 

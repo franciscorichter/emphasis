@@ -237,29 +237,11 @@ namespace emphasis {
       return calculate_pd(tm, static_cast<unsigned>(tree.size()), tree.data());
     }
 
-    // Pendant PD: sum of pendant edge lengths of alive lineages at time tm.
-    // Each alive lineage i contributes (tm - tip_start_i).
-    //
-    // One lineage per node, so the two crown lineages are not counted and a
-    // tip_start reset by a later split is not seen.  This is the value the
-    // thinning envelope reads at an arbitrary candidate time inside
-    // Model::nh_rate, where no event-list sweep is available; the pd stored on
-    // the nodes comes from compute_pendant_pd(), which keeps the running
-    // (N, sum tip_start) state and is exact.
-    inline double calculate_pendant_pd(double tm, const std::vector<node_t>& tree)
-    {
-      double ppd = 0.0;
-      for (const auto& node : tree) {
-        if (node.brts > tm) break;  // tree is sorted by brts
-        // A lineage is "alive" at tm if it is not an extinction node and
-        // its t_ext > tm (either a tip surviving to present or an extinction
-        // that happens after tm).
-        if (!is_extinction(node) && node.t_ext > tm) {
-          ppd += (tm - node.tip_start);
-        }
-      }
-      return ppd;
-    }
+    // There is no second definition of the pendant PD here.  P is what the
+    // forward sweep in src/augment_tree.cpp stores on node.pd, and Model reads
+    // it off that node (Model::pendant_pd); the scan this file used to offer —
+    // one lineage per node, crown lineages uncounted, tip_start resets unseen,
+    // O(N) per call on the sampler's hot path — is gone.
 
   }
 

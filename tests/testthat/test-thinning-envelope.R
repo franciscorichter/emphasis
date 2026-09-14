@@ -160,27 +160,52 @@ test_that("max_lambda bounds the rate, not the inflated envelope", {
 test_that("the envelope does not dominate on the D-dependent models (recorded, deferred)", {
   skip_on_cran()
   # RECORDED DEFECT, not an accepted behaviour. With beta_D active the
-  # speciation rate rises within a segment while the survival factor falls,
-  # so nh(t) peaks between the endpoints and the safety factor of 2 on the
-  # larger endpoint is not a bound. Measured over six replicates on this tree:
-  # 8 to 15 candidates per 2000 draws at beta_D = -0.5, 24 to 46 at -2.0.
-  # A dominating envelope needs max(lambda) and max(mu) over the segment
-  # separately (see the comment on envelope_safety in src/augment_tree.cpp);
-  # deferred to wave 3 with H6, the larger error on the same path: logg for
-  # an empty augmentation is -2.840711 at every beta_D (D = 0 at every
-  # observed node) while the sampler's P(no missing) over 4000 draws runs
-  # 0.054 at beta_D = 0, 0.0738 at +0.2 and 0.247 at +1.0, all three with
-  # zero envelope violations. When the envelope is repaired this expectation
-  # becomes expect_equal(., 0).
+  # speciation rate rises within a segment while the survival factor falls, so
+  # nh(t) peaks between the endpoints and the safety factor of 2 on the larger
+  # endpoint is not a bound. A dominating envelope needs max(lambda) and
+  # max(mu) over the segment separately (see the comment on envelope_safety in
+  # src/augment_tree.cpp); deferred to wave 3 with H6, the larger error on the
+  # same path.
+  #
+  # Measured here by scanning nh over each segment of trees the sampler itself
+  # drew, rather than by counting its own rejections. The two do not see the
+  # same thing: on a segment whose endpoint rates are both clipped to zero the
+  # envelope is zero, no candidate is drawn at all, and nothing is counted even
+  # though nh is positive inside. Over 200 trees at beta_D = -0.5 and at -2.0,
+  # 480 to 630 of about 2500 segments carry an interior nh above twice the
+  # larger endpoint, the worst by a factor of 10^2 to 10^5, while the sampler's
+  # own violation count is 0. Before Model::nh_rate was given the pendant PD
+  # the scorer uses, that count was 8 to 15 per 2000 draws at beta_D = -0.5 and
+  # 24 to 46 at -2.0: the corrected P raises the level of lambda far more than
+  # its slope, so the candidates the sampler does draw now fall under the
+  # inflated envelope and the ones it should have drawn are never proposed.
+  # When the envelope is repaired both numbers become 0.
+  p <- c(0.4, -0.01, 0, -0.5, 0.2, 0, 0, 0)
   thinning_envelope_violations(reset = TRUE)
-  expect_warning(
-    raw <- augment_trees(brts = brts7, pars = c(0.4, -0.01, 0, -0.5, 0.2, 0, 0, 0),
-                         sample_size = 2000L, maxN = 100000L, max_missing = 200L,
-                         max_lambda = 1e6, num_threads = 1L, model = c(1L, 0L, 1L),
-                         link = 0L, rho = 1),
-    "envelope did not dominate")
-  expect_gt(raw$envelope_violations, 0)
+  raw <- suppressWarnings(
+    augment_trees(brts = brts7, pars = p, sample_size = 200L, maxN = 200000L,
+                  max_missing = 400L, max_lambda = 1e6, num_threads = 1L,
+                  model = c(1L, 0L, 1L), link = 0L, rho = 1))
+  expect_equal(raw$num_trees, 200L)
   # the per-call count is the increment of the process-wide counter
   expect_equal(raw$envelope_violations, thinning_envelope_violations(reset = TRUE))
   expect_equal(raw$rejected_lambda, 0)
+
+  over <- 0L; segs <- 0L; worst <- 0
+  for (df in raw$trees) {
+    for (i in seq_len(nrow(df))) {
+      prev <- if (i == 1L) 0 else df$brts[i - 1L]
+      if (df$brts[i] <= prev) next
+      g  <- seq(prev, df$brts[i], length.out = 201L)
+      nh <- pmax(0, eval_nh_rate(p, df, g, model = c(1L, 0L, 1L),
+                                 link = 0L, rho = 1)$nh)
+      ends <- max(nh[2L], nh[length(nh)])          # the two the envelope reads
+      segs <- segs + 1L
+      if (max(nh) > 2 * ends) over <- over + 1L
+      if (ends > 1e-12) worst <- max(worst, max(nh) / ends)
+    }
+  }
+  expect_gt(segs, 1000L)
+  expect_gt(over, 100L)      # becomes expect_identical(over, 0L) when repaired
+  expect_gt(worst, 2)
 })

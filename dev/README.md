@@ -10,3 +10,11 @@ Working material, excluded from the package build by `.Rbuildignore`.
   topology change. `pendant_baseline.R` captures a baseline from whichever build is loaded and
   `pendant_compare.R` diffs two captures; the `.rds` captures themselves are build-specific and
   are not tracked, so regenerate them against the two commits being compared.
+- `crdd_invariance.R` — the cr/dd bit-for-bit gate. `capture` fixes a corpus of augmented trees
+  and their `eval_logf` scores from whichever build is loaded; `compare` rescores that corpus
+  from the build under test and requires `identical()`. Augmentation is seeded from the clock,
+  so the corpus itself has to cross the two builds; `dev/.crdd_corpus.rds` is not tracked.
+- `gates.R` — prints the measured agreements behind `tests/testthat/test-d-compensator.R`:
+  the ep_linear compensator against numerical integration, the beta_D = 0 reduction, and the
+  pendant PD `Model::nh_rate` reads.
+- `bench_augment.R` — augmentation cost against tree size, for the pendant-PD scan H53 named.

@@ -53,3 +53,4 @@ doc/emphasis_technical.*
 # Claude Code (agent context lives in ~/.claude/)
 CLAUDE.md
 .claude/
+dev/.crdd_corpus.rds

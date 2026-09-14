@@ -45,6 +45,27 @@ eval_logf <- function(pars, trees, model = as.integer( c(0, 0, 0)), link = 0L, r
     .Call('_emphasis_eval_logf_cpp', PACKAGE = 'emphasis', pars, trees, model, link, rho)
 }
 
+#' The pendant PD and thinning rate the sampler sees at arbitrary times
+#'
+#' \code{Model::nh_rate} evaluates its rate at candidate times between the
+#' nodes, and reads P off the node that governs the segment the candidate falls
+#' in (\code{Model::pendant_pd}).  This exposes both, so a test can hold that P
+#' against an independent recomputation from the augmented tree, and against
+#' \code{pd + n * (t - brts)} of the governing node.
+#'
+#' @param pars Numeric vector of 8 model parameters.
+#' @param tree One augmented-tree data frame.
+#' @param times Numeric vector of times at which to evaluate.
+#' @param model Integer vector \code{c(use_N, use_M, use_D)}.
+#' @param link Link function: 0 = linear, 1 = exponential, 2 = gaussian.
+#' @param rho Sampling fraction.
+#' @return A named list with \code{pd} (the pendant PD used) and \code{nh}
+#'   (the non-homogeneous thinning rate) at each time.
+#' @keywords internal
+eval_nh_rate <- function(pars, tree, times, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0) {
+    .Call('_emphasis_eval_nh_rate_cpp', PACKAGE = 'emphasis', pars, tree, times, model, link, rho)
+}
+
 #' Draw augmented trees via importance sampling
 #'
 #' Augments an observed extant tree (given by its branching times) with

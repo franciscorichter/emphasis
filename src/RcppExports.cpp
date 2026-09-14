@@ -41,6 +41,22 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// eval_nh_rate_cpp
+Rcpp::List eval_nh_rate_cpp(const std::vector<double>& pars, const Rcpp::DataFrame& tree, const std::vector<double>& times, Rcpp::IntegerVector model, int link, double rho);
+RcppExport SEXP _emphasis_eval_nh_rate_cpp(SEXP parsSEXP, SEXP treeSEXP, SEXP timesSEXP, SEXP modelSEXP, SEXP linkSEXP, SEXP rhoSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type pars(parsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::DataFrame& >::type tree(treeSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type times(timesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type model(modelSEXP);
+    Rcpp::traits::input_parameter< int >::type link(linkSEXP);
+    Rcpp::traits::input_parameter< double >::type rho(rhoSEXP);
+    rcpp_result_gen = Rcpp::wrap(eval_nh_rate_cpp(pars, tree, times, model, link, rho));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rcpp_mce
 List rcpp_mce(const std::vector<double>& brts, const std::vector<double>& pars, int sample_size, int maxN, int max_missing, double max_lambda, int num_threads, Rcpp::IntegerVector model, int link, double rho, Rcpp::NumericVector parent_tip_start);
 RcppExport SEXP _emphasis_rcpp_mce(SEXP brtsSEXP, SEXP parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP num_threadsSEXP, SEXP modelSEXP, SEXP linkSEXP, SEXP rhoSEXP, SEXP parent_tip_startSEXP) {
@@ -124,6 +140,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_emphasis_simulate_div_tree_cpp", (DL_FUNC) &_emphasis_simulate_div_tree_cpp, 6},
     {"_emphasis_eval_logf_cpp", (DL_FUNC) &_emphasis_eval_logf_cpp, 5},
+    {"_emphasis_eval_nh_rate_cpp", (DL_FUNC) &_emphasis_eval_nh_rate_cpp, 6},
     {"_emphasis_rcpp_mce", (DL_FUNC) &_emphasis_rcpp_mce, 11},
     {"_emphasis_rcpp_thinning_envelope_violations", (DL_FUNC) &_emphasis_rcpp_thinning_envelope_violations, 1},
     {"_emphasis_rcpp_mcem", (DL_FUNC) &_emphasis_rcpp_mcem, 16},
