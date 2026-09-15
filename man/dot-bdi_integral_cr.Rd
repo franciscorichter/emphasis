@@ -4,10 +4,10 @@
 \alias{.bdi_integral_cr}
 \title{Exact integral of total BDI rate over [t1, t2] for CR with constant n, k.}
 \usage{
-.bdi_integral_cr(t1, t2, n, k, lam0, mu0, tp)
+.bdi_integral_cr(t1, t2, n, k, lam0, mu0, tp, rho = 1)
 }
 \value{
-The integral value (may be Inf when n>0 and t2==tp).
+The integral value (Inf when rho = 1, n > 0 and t2 == tp).
 }
 \description{
 total_rate(t) = (n+2k)*lam0*(1-p(t)) + n*mu0/(1-p(t))
@@ -22,5 +22,24 @@ s = |lam0 - mu0| in the exponent, so the argument of exp is never
 positive and the mu0 > lam0 side does not overflow; writing the factors
 as \code{s - r*expm1(-s*tau)} also removes the cancellation of
 \code{lam0 - mu0*E} near lam0 = mu0.
+
+Under incomplete sampling the same two identities hold with p replaced by
+its rho-sampled counterpart -- they follow from dp/dt = lam*p^2 - (lam-mu)*p
+alone, which carries no terminal condition -- so only the closed forms of
+the two log-ratios change.  With
+
+  A(t) = d*E + rho*lam0*(1 - E)          (so p = rho*d/A)
+  B(t) = A(t) - rho*d                    (so 1 - p = B/A)
+
+and E = exp(-d*(tp - t)), the integrals are
+
+  int lam0*(1-p) dt = min(lam0,mu0)*(t2-t1) + ln[A(t2)/A(t1)]
+  int mu0/(1-p)  dt = max(lam0,mu0)*(t2-t1) + ln[B(t1)/B(t2)]
+
+At rho = 1, B(tp) = 0 and the second integral diverges as t2 -> tp: a
+doomed lineage must die before the present.  At rho < 1, B(tp) = d*(1-rho)
+is non-zero and the integral is finite -- a doomed lineage may survive to
+the present as an unsampled extant tip, which is the configuration
+\code{.bdi_augment_one} then has to emit.
 }
 \keyword{internal}

@@ -3,7 +3,7 @@
 \name{.bdi_solve_p_backward}
 \alias{.bdi_solve_p_backward}
 \title{Solve survival probability p(t) backward from tp to 0.
-ODE: dp/dt = lam(t)*p^2 - (lam(t)-mu(t))*p, p(tp) = 1.
+ODE: dp/dt = lam(t)*p^2 - (lam(t)-mu(t))*p, p(tp) = rho.
 Rates use the mean-field covariates (N̂, P̂, Ê) — supports DD/PD/EP and
 mixed models. For CR (all model_bin = 0) the covariate arguments are
 ignored inside .bdi_lam/.bdi_mu.}
@@ -17,14 +17,15 @@ ignored inside .bdi_lam/.bdi_mu.}
   Nhat_fun,
   Phat_fun,
   Ehat_fun,
-  t_grid
+  t_grid,
+  rho = 1
 )
 }
 \description{
-Solve survival probability p(t) backward from tp to 0.
-ODE: dp/dt = lam(t)*p^2 - (lam(t)-mu(t))*p, p(tp) = 1.
-Rates use the mean-field covariates (N̂, P̂, Ê) — supports DD/PD/EP and
-mixed models. For CR (all model_bin = 0) the covariate arguments are
-ignored inside .bdi_lam/.bdi_mu.
+The ODE itself carries no sampling fraction; \code{rho} enters only as the
+terminal condition \code{p(tp) = rho}, which is the probability that a
+lineage alive at the present leaves a sampled descendant (itself).  That is
+the whole of the incomplete-sampling change on the backward side, and it
+reproduces the closed form of \code{.bdi_p_cr} under constant rates.
 }
 \keyword{internal}

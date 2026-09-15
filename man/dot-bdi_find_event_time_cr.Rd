@@ -4,7 +4,7 @@
 \alias{.bdi_find_event_time_cr}
 \title{Find next event time using exact time-change for CR.}
 \usage{
-.bdi_find_event_time_cr(t_cur, U, n, k, lam0, mu0, tp, t_max)
+.bdi_find_event_time_cr(t_cur, U, n, k, lam0, mu0, tp, t_max, rho = 1)
 }
 \value{
 Event time, or value > t_max if no event before boundary.

@@ -50,19 +50,23 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     present in the tree, in \code{(0, 1]}. Default \code{1} (complete
 #'     sampling). Values outside \code{(0, 1]} are an error. Under
 #'     \code{rho < 1} the augmentation inserts unsampled extant lineages as
-#'     well as extinct ones, which only the thinning sampler does, so
-#'     \code{sampling = "bdi"} falls back to \code{"dynamic_fresh"}.}
+#'     well as extinct ones; both samplers do so, and the choice of sampler
+#'     does not depend on \code{rho}.}
 #' }
 #'
 #' MCEM-specific parameters:
 #' \describe{
 #'   \item{\code{sampling}}{Sampling scheme: \code{"bdi"} (default), the
-#'     exact birth-death-with-immigration sampler, which covers the cr and dd
-#'     models on the linear and exponential links at \code{rho = 1}; or
-#'     \code{"dynamic_fresh"}, the thinning sampler, which covers every
-#'     model, link and \code{rho}. \code{"bdi"} falls back to
-#'     \code{"dynamic_fresh"}, with a message, for the model/link
-#'     combinations it does not cover and whenever \code{rho < 1}.}
+#'     birth-death-with-immigration sampler, which covers the cr and dd models
+#'     on the linear and exponential links and cr on the gaussian link, at any
+#'     \code{rho} in \code{(0, 1]}; or \code{"dynamic_fresh"}, the thinning
+#'     sampler, which covers every model, link and \code{rho}. Under constant
+#'     rates the BDI proposal is the exact conditional distribution, so its
+#'     weights are constant and its effective sample size is the number of
+#'     draws; under diversity dependence it is a mean-field approximation and
+#'     the weights vary. \code{"bdi"} falls back to \code{"dynamic_fresh"},
+#'     with a message naming the reason, for a D- or M-dependent model and for
+#'     dd on the gaussian link.}
 #'   \item{\code{num_trees}}{Augmented trees per EM iteration. Default
 #'     \code{200}. Alias: \code{sample_size}.}
 #'   \item{\code{xtol}}{Relative tolerance for the M-step optimiser.
@@ -541,17 +545,13 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #' @keywords internal
 .run_mcem <- function(brts, init_pars, lower_bound, upper_bound, ctrl,
                       model = c(0L, 0L, 0L), link = 0L, cond_fun = NULL) {
-  # BDI is exact only for N-only models (cr, dd) on the linear/exponential
-  # links at complete sampling; D-dependent models, the gaussian link and
-  # rho < 1 use the thinning proposal.  The message is unconditional: the
-  # sampler the user asked for is not the sampler that runs, and at rho < 1
-  # the two target different likelihoods (H2).
+  # BDI covers the N-only models (cr, dd) on the linear and exponential links,
+  # cr also on the gaussian link, at any rho in (0, 1].  What is left --
+  # D-dependent and M-dependent models, and dd on the gaussian link -- uses the
+  # thinning proposal.  The message is unconditional and names the reason: the
+  # sampler the user asked for is not the sampler that runs.
   if (identical(ctrl$sampling, "bdi") && !.bdi_supported(model, link, ctrl$rho)) {
-    reason <- if (.bdi_supported(model, link))
-      sprintf("rho = %s (incomplete sampling: the BDI proposal draws no unsampled extant lineages)",
-              format(ctrl$rho))
-    else
-      "this model/link (BDI covers cr and dd on the linear and exponential links)"
+    reason <- .bdi_unsupported_reason(model, link, ctrl$rho)
     message("sampling = \"bdi\" is not available for ", reason,
             "; using the thinning sampler (\"dynamic_fresh\") instead.")
     ctrl$sampling <- "dynamic_fresh"
@@ -1039,8 +1039,10 @@ estimate_rates <- function(tree,
     }
     if (method == "mcem") {
       sampling_str <- if (!identical(ctrl$sampling, "bdi")) ctrl$sampling else
-        if (.bdi_supported(model_bin, link_int, ctrl$rho)) "BDI (exact)" else
-          "dynamic_fresh (BDI not available for this model/link/rho)"
+        if (.bdi_supported(model_bin, link_int, ctrl$rho))
+          if (model_bin[1L] == 0L) "BDI (exact)" else "BDI (mean-field)"
+        else
+          "dynamic_fresh (BDI not available for this model/link)"
       cat(sprintf("  sampling=%s  num_trees=%d  max_iter=%d  tol=%.1e  patience=%d  xtol=%.1e  rho=%s\n",
                   sampling_str, ctrl$num_trees, ctrl$max_iter, ctrl$tol,
                   ctrl$patience, ctrl$xtol, format(ctrl$rho)))

@@ -45,9 +45,9 @@ denominator, as in the thinning E-step (S_completed in src/E_step.cpp).
 
 The log(acc) correction is derived at \code{rho = 1}, where a surviving
 missing lineage has f = 0 and the rejection is a property of the target.
-At \code{rho < 1} an unsampled survivor is a legitimate configuration, so
-the factor does not apply (measured shift -0.1104 at rho = 0.5 on the
-20-tip DD tree of tests/testthat/test-bdi-dd.R).  \code{acc} is the
+At \code{rho < 1} an unsampled survivor is a legitimate configuration and is
+emitted rather than rejected, so \code{n_rejected} is 0, \code{acc} is 1 and
+the factor is inert.  \code{acc} is the
 stop-at-\code{n_valid} plug-in estimate of the acceptance rate, which is
 biased at small \code{sample_size}: at the function's own default
 \code{sample_size = 1L} a draw with three survivor rejections moves fhat

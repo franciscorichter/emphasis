@@ -14,14 +14,16 @@
   Nhat_fun = NULL,
   Phat_fun = NULL,
   Ehat_fun = NULL,
-  max_missing = 10000L
+  max_missing = 10000L,
+  rho = 1
 )
 }
 \value{
 List with \code{$reason}: \code{"accepted"} (then also
-  \code{$species}, \code{$n_alive_at_tp}, \code{$logg}),
+  \code{$species}, \code{$unsampled}, \code{$n_alive_at_tp}, \code{$logg}),
   \code{"max_missing"} (more than \code{max_missing} missing lineages
-  drawn) or \code{"survivor"} (a missing lineage still alive at tp).
+  drawn) or \code{"survivor"} (a missing lineage still alive at tp; only
+  reachable at \code{rho = 1}, where such a tree has f = 0).
 }
 \description{
 Under CR: uses exact time-change method with analytical cumulative hazard.
@@ -29,5 +31,13 @@ Under CR: uses exact time-change method with analytical cumulative hazard.
   giving zero-variance IS weights (logf - logg = constant).
 Under DD: uses approximate Gillespie with piecewise-constant rates.
   IS weights have nonzero variance (importance sampling, not exact).
+}
+\details{
+At \code{rho < 1} a missing lineage still alive at tp is not a rejection but
+an \emph{unsampled extant} lineage: the conditioning event is "leaves no
+sampled descendant", and at the present that is satisfied by being alive and
+unsampled, an event of probability \code{1 - rho}.  Those lineages are
+returned in \code{$unsampled} (birth times) and written with the \code{5e10}
+sentinel by \code{\link{.bdi_to_tree_df}}, so \code{N(t)} counts them.
 }
 \keyword{internal}

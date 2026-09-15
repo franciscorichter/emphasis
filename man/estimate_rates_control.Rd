@@ -27,13 +27,17 @@ default), \code{upper_bound} (required, no default),
 number in \eqn{(0, 1]}; default 1 = complete sampling, and an
 out-of-range value is an error rather than being replaced by 1).
 
-MCEM-specific: \code{sampling} (default \code{"bdi"}, the exact
-birth-death-with-immigration sampler for the cr and dd models on the
-linear and exponential links \emph{at \code{rho} = 1};
-\code{"dynamic_fresh"} is the thinning sampler, used for every other
-model/link, for \code{rho < 1} because the BDI proposal draws no
-unsampled extant lineages, and whenever it is asked for.  A fallback is
-announced with a message naming the reason and the sampler that runs),
+MCEM-specific: \code{sampling} (default \code{"bdi"}, the
+birth-death-with-immigration sampler, which covers the cr and dd models
+on the linear and exponential links and cr on the gaussian link, at any
+\code{rho} in \eqn{(0, 1]}.  Under constant rates it draws from the exact
+conditional distribution, so its log-weights are constant and its
+effective sample size is the number of draws; under diversity dependence
+it is a mean-field approximation and the weights vary.
+\code{"dynamic_fresh"} is the thinning sampler, used for a D- or
+M-dependent model, for dd on the gaussian link, and whenever it is asked
+for.  A fallback is announced with a message naming the reason and the
+sampler that runs),
 \code{num_trees} (augmented trees per EM iteration, default 200;
 alias: \code{sample_size}), \code{max_iter} (iteration cap, default 200),
 \code{maxN} (max augmentation attempts per E-step, read by the thinning

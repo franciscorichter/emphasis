@@ -22,19 +22,59 @@
 # ~709, which is reachable through a user-supplied box on the exponential
 # link.  For mu0 > lam0 the numerator and denominator are both multiplied
 # by exp(-s*(tp-t)) before the division.
-.bdi_p_cr <- function(t, lam0, mu0, tp) {
+#
+# Under Bernoulli sampling with fraction rho the quantity the conditioning
+# needs is the probability of leaving at least one SAMPLED descendant.  Writing
+# Z for the number of descendants alive at tp, that is 1 - E[(1-rho)^Z], and
+# with the geometric law of Z it evaluates to
+#
+#   p_rho(t) = rho*d / (d*E + rho*lam0*(1 - E)),   E = exp(-d*(tp-t)),
+#
+# with d = lam0 - mu0; the critical limit is rho / (1 + rho*lam0*(tp-t)).
+# Both reduce to the complete-sampling forms at rho = 1, and p_rho(tp) = rho:
+# a lineage alive at the present leaves a sampled descendant (itself) exactly
+# when it is sampled.
+#
+# Under the Stadler reparameterisation lam' = rho*lam0, mu' = mu0 - lam0*(1-rho)
+# the growth rate d is unchanged and the denominator above is exactly the
+# complete-sampling denominator lam' - mu'*E, so
+#
+#   p_rho(t; lam0, mu0) = rho * p_1(t; rho*lam0, mu0 - lam0*(1 - rho)).
+#
+# The factor rho is not cosmetic: p_1 of anything is 1 at tp, and the terminal
+# value here is rho.  The identity is checked to 7e-16 in
+# tests/testthat/test-bdi-extended.R; it is a check, not the implementation.
+#
+# The rho >= 1 branch is the original code, untouched, so a complete-sampling
+# call returns the same bits it returned before rho entered this function.
+.bdi_p_cr <- function(t, lam0, mu0, tp, rho = 1) {
   d <- lam0 - mu0
+  if (rho >= 1) {
+    if (abs(d) <= 1e-12 * max(abs(lam0), abs(mu0))) {
+      return(1 / (1 + lam0 * (tp - t)))
+    }
+    s  <- abs(d)
+    em <- expm1(-s * (tp - t))            # in [-1, 0)
+    if (d > 0) {
+      # lam0 - mu0*exp(-d*tau) = d - mu0*expm1(-d*tau), both terms positive
+      return(d / (d - mu0 * em))
+    } else {
+      # (mu0 - lam0)*exp(-s*tau) / (mu0 - lam0*exp(-s*tau))
+      return(s * exp(-s * (tp - t)) / (s - lam0 * em))
+    }
+  }
+
   if (abs(d) <= 1e-12 * max(abs(lam0), abs(mu0))) {
-    return(1 / (1 + lam0 * (tp - t)))
+    return(rho / (1 + rho * lam0 * (tp - t)))
   }
   s  <- abs(d)
-  em <- expm1(-s * (tp - t))            # in [-1, 0)
+  em <- expm1(-s * (tp - t))              # in [-1, 0)
   if (d > 0) {
-    # lam0 - mu0*exp(-d*tau) = d - mu0*expm1(-d*tau), both terms positive
-    d / (d - mu0 * em)
+    # d*E + rho*lam0*(1 - E) = d*(1 + em) - rho*lam0*em, both terms >= 0
+    rho * d / (d * (1 + em) - rho * lam0 * em)
   } else {
-    # (mu0 - lam0)*exp(-s*tau) / (mu0 - lam0*exp(-s*tau))
-    s * exp(-s * (tp - t)) / (s - lam0 * em)
+    # numerator and denominator both multiplied by exp(-s*(tp - t))
+    rho * s * exp(-s * (tp - t)) / (s - rho * lam0 * em)
   }
 }
 
@@ -57,10 +97,30 @@
 #' as \code{s - r*expm1(-s*tau)} also removes the cancellation of
 #' \code{lam0 - mu0*E} near lam0 = mu0.
 #'
-#' @return The integral value (may be Inf when n>0 and t2==tp).
+#' Under incomplete sampling the same two identities hold with p replaced by
+#' its rho-sampled counterpart -- they follow from dp/dt = lam*p^2 - (lam-mu)*p
+#' alone, which carries no terminal condition -- so only the closed forms of
+#' the two log-ratios change.  With
+#'
+#'   A(t) = d*E + rho*lam0*(1 - E)          (so p = rho*d/A)
+#'   B(t) = A(t) - rho*d                    (so 1 - p = B/A)
+#'
+#' and E = exp(-d*(tp - t)), the integrals are
+#'
+#'   int lam0*(1-p) dt = min(lam0,mu0)*(t2-t1) + ln[A(t2)/A(t1)]
+#'   int mu0/(1-p)  dt = max(lam0,mu0)*(t2-t1) + ln[B(t1)/B(t2)]
+#'
+#' At rho = 1, B(tp) = 0 and the second integral diverges as t2 -> tp: a
+#' doomed lineage must die before the present.  At rho < 1, B(tp) = d*(1-rho)
+#' is non-zero and the integral is finite -- a doomed lineage may survive to
+#' the present as an unsampled extant tip, which is the configuration
+#' \code{.bdi_augment_one} then has to emit.
+#'
+#' @return The integral value (Inf when rho = 1, n > 0 and t2 == tp).
 #' @keywords internal
-.bdi_integral_cr <- function(t1, t2, n, k, lam0, mu0, tp) {
+.bdi_integral_cr <- function(t1, t2, n, k, lam0, mu0, tp, rho = 1) {
   if (t2 - t1 < 1e-15) return(0)
+  if (rho < 1) return(.bdi_integral_cr_rho(t1, t2, n, k, lam0, mu0, tp, rho))
   d <- lam0 - mu0
   if (abs(d) <= 1e-12 * max(abs(lam0), abs(mu0))) {
     # Critical case: lam0 = mu0 (same switch as .bdi_p_cr)
@@ -107,6 +167,63 @@
 }
 
 
+#' The rho < 1 branch of \code{\link{.bdi_integral_cr}}.
+#'
+#' Kept in its own function so that the complete-sampling path is the code
+#' the validation study measured, byte for byte.
+#'
+#' A and B are written so that every exponential argument is non-positive and
+#' every term of every sum is non-negative, on both sides of lam0 = mu0:
+#'
+#'   d > 0:  A = d*(1 + em) - rho*lam0*em,  em = expm1(-d*(tp - t))
+#'           B = d*(1 - rho) + em*(d - rho*lam0)
+#'   d < 0:  both multiplied by exp(-s*(tp - t)), s = |d|, and negated
+#'           A = s - rho*lam0*em,           em = expm1(-s*(tp - t))
+#'           B = s*(1 - rho)*exp(-s*(tp-t)) + em*(s + rho*lam0)
+#'   the scale factor exp(-s*(tp - t)) contributes -s*(t2 - t1) to ln[A2/A1]
+#'   and +s*(t2 - t1) to ln[B1/B2], which is exactly what turns the min/max
+#'   prefactors around.
+#'
+#' B is 1 - p times A and p is in (0, 1], so B > 0 throughout for either sign
+#' of d - rho*lam0.
+#' @keywords internal
+.bdi_integral_cr_rho <- function(t1, t2, n, k, lam0, mu0, tp, rho) {
+  d <- lam0 - mu0
+  if (abs(d) <= 1e-12 * max(abs(lam0), abs(mu0))) {
+    # p = rho/(1 + rho*lam0*tau), 1 - p = (1 - rho + rho*lam0*tau)/(1 + ...)
+    a1 <- 1 + rho * lam0 * (tp - t1); a2 <- 1 + rho * lam0 * (tp - t2)
+    b1 <- 1 - rho + rho * lam0 * (tp - t1)
+    b2 <- 1 - rho + rho * lam0 * (tp - t2)
+    I_lam <- lam0 * (t2 - t1) + log(a2 / a1)
+    I_mu  <- if (n > 0L) lam0 * (t2 - t1) + log(b1 / b2) else 0
+    return((n + 2L * k) * I_lam + n * I_mu)
+  }
+
+  s   <- abs(d)
+  r1  <- min(lam0, mu0)
+  r2  <- max(lam0, mu0)
+  em1 <- expm1(-s * (tp - t1))
+  em2 <- expm1(-s * (tp - t2))
+
+  if (d > 0) {
+    A1 <- d * (1 + em1) - rho * lam0 * em1
+    A2 <- d * (1 + em2) - rho * lam0 * em2
+    B1 <- d * (1 - rho) + em1 * (d - rho * lam0)
+    B2 <- d * (1 - rho) + em2 * (d - rho * lam0)
+  } else {
+    A1 <- s - rho * lam0 * em1
+    A2 <- s - rho * lam0 * em2
+    B1 <- s * (1 - rho) * exp(-s * (tp - t1)) - em1 * (s + rho * lam0)
+    B2 <- s * (1 - rho) * exp(-s * (tp - t2)) - em2 * (s + rho * lam0)
+  }
+
+  I_lam <- r1 * (t2 - t1) + log(A2 / A1)
+  I_mu  <- if (n > 0L) r2 * (t2 - t1) + log(B1 / B2) else 0
+
+  (n + 2L * k) * I_lam + n * I_mu
+}
+
+
 #' Find next event time using exact time-change for CR.
 #'
 #' Given cumulative hazard H(s) = .bdi_integral_cr(t_cur, s, ...),
@@ -114,43 +231,69 @@
 #'
 #' @return Event time, or value > t_max if no event before boundary.
 #' @keywords internal
-.bdi_find_event_time_cr <- function(t_cur, U, n, k, lam0, mu0, tp, t_max) {
+.bdi_find_event_time_cr <- function(t_cur, U, n, k, lam0, mu0, tp, t_max,
+                                    rho = 1) {
   # Quick check: will H reach U before t_max?
-  # When n>0 and t_max==tp, H→Inf so event always exists.
-  is_last_seg <- (tp - t_max < 1e-10) && (n > 0L)
+  # When n>0 and t_max==tp, H→Inf so event always exists -- but only at
+  # complete sampling.  At rho < 1 the extinction integral is finite at tp
+  # (a doomed lineage may survive as an unsampled extant tip), so the last
+  # segment takes the ordinary branch and can return "no event".
+  is_last_seg <- (rho >= 1) && (tp - t_max < 1e-10) && (n > 0L)
   if (!is_last_seg) {
-    H_max <- .bdi_integral_cr(t_cur, t_max, n, k, lam0, mu0, tp)
+    H_max <- .bdi_integral_cr(t_cur, t_max, n, k, lam0, mu0, tp, rho)
     if (U >= H_max) return(t_max + 1)  # no event
   }
 
   # Upper bound for root search
   t_hi <- if (is_last_seg) tp - 1e-14 else t_max
-  f <- function(s) .bdi_integral_cr(t_cur, s, n, k, lam0, mu0, tp) - U
+  f <- function(s) .bdi_integral_cr(t_cur, s, n, k, lam0, mu0, tp, rho) - U
   stats::uniroot(f, c(t_cur + 1e-15, t_hi), tol = 1e-13)$root
 }
 
 #' Can the BDI sampler be used for this model/link/rho?
 #'
-#' The sampler's rate functions and mean-field ODEs are written in the
-#' \code{(N, P, E)} covariate layout (slots 2-4 of \code{pars8}), and its
-#' link handling covers only \code{linear} (0) and \code{exponential} (1).
-#' Under the package's current \code{(N, M, D)} basis and with the
-#' \code{gaussian} link (2), only N-only models on links 0/1 are exact, so
-#' every other case is routed to the thinning proposal by the callers.
+#' The sampler conditions on a rate that is a function of the lineage count
+#' alone: \code{.bdi_p_cr} and \code{.bdi_solve_p_backward} solve one survival
+#' probability \code{p(t)} shared by every lineage alive at \code{t}, and the
+#' aggregate Gillespie of \code{.bdi_augment_one} moves \code{n_alive} lineages
+#' with one pair of rates.  That is what an N-only model gives it.
 #'
-#' The sampler is also complete-sampling only.  Its survival probability
-#' \code{p(t)} (\code{.bdi_p_cr}, \code{.bdi_solve_p_backward}) is the
-#' probability of leaving a descendant at the present, not of leaving a
-#' \emph{sampled} descendant, and \code{.bdi_to_tree_df} writes only the
-#' extinction sentinels \code{1e11} (extinct) and \code{0} (observed): no
-#' draw ever carries the \code{5e10} sentinel that marks an unsampled
-#' extant lineage.  At \code{rho < 1} the draws therefore come from the
-#' \code{rho = 1} conditioned process while \code{eval_logf} scores them
-#' under \code{rho}, which adds \code{n_tips * log(rho)} and leaves the
-#' \code{rho = 1} likelihood surface (audit finding H2: on a 16-tip tree
-#' the fits land on the \code{rho = 1} MLE 0.47 rather than the
-#' \code{rho = 0.5} MLE 0.69).  \code{rho < 1} is therefore routed to the
-#' thinning proposal, which proposes unsampled extant lineages.
+#' A D-dependent model (\code{model_bin[3] == 1}) does not: its rate depends on
+#' each lineage's own pendant age \code{E_s}, so the survival probability is a
+#' functional of the lineage's own history and no single \code{p(t)} exists.
+#' The construction this file is built on does not extend there, and
+#' D-dependent models stay on the thinning proposal.  The M covariate
+#' (\code{model_bin[2]}) is a clade-level mean and is not in scope here either:
+#' the sampler's own mean-field state would have to be closed on \code{P} as
+#' well as \code{N}, which is written but not gated.
+#'
+#' Under the \code{gaussian} link the rate is
+#' \code{beta_0 * exp(-(beta_N*N - 1)^2 / 2)}, still a function of \code{N}
+#' alone.  For \code{cr} the covariate part is zero and the rate is the
+#' constant \code{beta_0 * exp(-1/2)}, so constant rates on the gaussian link
+#' are the constant-rates case under a reparameterisation and are sampled
+#' exactly, as they are on the other two links.  For \code{dd} they are not:
+#' \code{lambda(N)} rises to a peak at \code{N = 1/beta_N} and falls after it,
+#' and the Picard iteration of \code{\link{.bdi_iterate}} does not contract on
+#' the far side.  Measured on a 20-tip tree over a 4 x 8 x 4 grid in
+#' \code{(beta_0, beta_N, rho)} with a 200-sweep budget -- more than three times
+#' what this function allows -- it failed to reach \code{tol} in 36 of 128
+#' cells, with \code{delta} running to 104.  That is divergence, not slow
+#' convergence.  The failing region is not an interval that could be excluded:
+#' at \code{rho = 0.5, beta_0 = 1} the iteration converges at
+#' \code{beta_N = 0.08}, fails at 0.1, and converges again at 0.2, 0.3 and 0.5;
+#' and the whole pattern moves with \code{rho}.  Where it does converge it can
+#' take 164 sweeps.  \code{dd} on the gaussian link therefore stays on the
+#' thinning proposal.  The linear and exponential \code{dd} rates are monotone
+#' in \code{N} and reached the fixed point in every cell of the same sweep, in
+#' at most 27 iterations, \code{rho} down to 0.2 included.
+#'
+#' Incomplete sampling is in scope for every model and link the gate otherwise
+#' accepts.  \code{p(t)} becomes the probability of leaving a \emph{sampled}
+#' descendant (\code{.bdi_p_cr}, \code{.bdi_solve_p_backward}, both of which
+#' take \code{rho}), and \code{.bdi_to_tree_df} emits the \code{5e10} sentinel
+#' for a missing lineage still alive at the present, so the draws carry
+#' unsampled extant lineages and \code{N(t)} counts them.
 #'
 #' @param model_bin Length-3 binary model vector \code{c(use_N, use_M, use_D)}.
 #' @param link Integer link code: 0 linear, 1 exponential, 2 gaussian.
@@ -159,22 +302,73 @@
 .bdi_supported <- function(model_bin, link, rho = 1.0) {
   model_bin <- as.integer(model_bin)
   link      <- as.integer(link)
-  # Complete sampling only.  A rho above 1 is out of range and the callers
-  # reject it (.check_rho); it reaches the C++ layer as 1, so it is read here
-  # as complete sampling too rather than silently routed elsewhere.
-  rho_ok    <- is.numeric(rho) && length(rho) == 1L && is.finite(rho) && rho >= 1
-  rho_ok &&
-    length(model_bin) == 3L && model_bin[2L] == 0L && model_bin[3L] == 0L &&
-    link %in% c(0L, 1L)
+  # A rho above 1 is out of range and the callers reject it (.check_rho); it
+  # reaches the C++ layer as 1, so it is read here as complete sampling too
+  # rather than silently routed elsewhere.
+  rho_ok    <- is.numeric(rho) && length(rho) == 1L && is.finite(rho) &&
+    rho > 0 && rho <= 1 + 1e-12
+  if (!rho_ok || length(model_bin) != 3L) return(FALSE)
+  # N-only: no M covariate, no D covariate.
+  if (model_bin[2L] != 0L || model_bin[3L] != 0L) return(FALSE)
+  if (link %in% c(0L, 1L)) return(TRUE)
+  # gaussian: constant rates only (see above).
+  link == 2L && model_bin[1L] == 0L
 }
 
-# Compute speciation rate from 8-param vector + model
+#' Why \code{\link{.bdi_supported}} refused, as a phrase for a message.
+#'
+#' Returns \code{NULL} when the sampler is available.  The reasons are ordered
+#' so that the first thing wrong with the call is the one reported.
+#' @inheritParams .bdi_supported
+#' @keywords internal
+.bdi_unsupported_reason <- function(model_bin, link, rho = 1.0) {
+  model_bin <- as.integer(model_bin)
+  link      <- as.integer(link)
+  if (!(is.numeric(rho) && length(rho) == 1L && is.finite(rho) &&
+        rho > 0 && rho <= 1 + 1e-12))
+    return(sprintf("rho = %s (outside (0, 1])", format(rho)))
+  if (length(model_bin) != 3L)
+    return("a model vector that is not length 3")
+  if (model_bin[3L] != 0L)
+    return(paste0("a D-dependent model: the BDI conditional distribution is ",
+                  "built on one survival probability p(t) shared by every ",
+                  "lineage alive at t, and a D-model's rate depends on each ",
+                  "lineage's own pendant age, so no single p(t) exists"))
+  if (model_bin[2L] != 0L)
+    return(paste0("an M-dependent model: the sampler's mean-field state would ",
+                  "have to be closed on the clade-mean pendant age as well as ",
+                  "on N"))
+  if (!(link %in% c(0L, 1L, 2L)))
+    return(sprintf("link code %d", link))
+  if (link == 2L && model_bin[1L] != 0L)
+    return(paste0("a diversity-dependent model on the gaussian link: ",
+                  "lambda(N) = beta_0*exp(-(beta_N*N - 1)^2/2) is not monotone ",
+                  "in N and the sampler's Picard iteration does not converge ",
+                  "on the far side of its peak"))
+  NULL
+}
+
+# Compute speciation rate from 8-param vector + model.
+#
+# The gaussian link is the package's quadratic-exponential rate
+# (inst/include/model.hpp): beta_0 is the peak rate and the intercept is
+# excluded from the quadratic, so the covariate part alone enters it.  For an
+# N-only model that leaves beta_N*N, and for cr it leaves 0 -- a constant rate
+# beta_0*exp(-1/2).
 .bdi_lam <- function(pars8, N, P, E, model_bin, link) {
+  if (link == 2L) {
+    eta_cov <- pars8[2] * N + pars8[3] * P + pars8[4] * E
+    return(pars8[1] * exp(-0.5 * (eta_cov - 1)^2))
+  }
   eta <- pars8[1] + pars8[2] * N + pars8[3] * P + pars8[4] * E
   if (link == 0L) max(0, eta) else exp(eta)
 }
 
 .bdi_mu <- function(pars8, N, P, E, model_bin, link) {
+  if (link == 2L) {
+    eta_cov <- pars8[6] * N + pars8[7] * P + pars8[8] * E
+    return(pars8[5] * exp(-0.5 * (eta_cov - 1)^2))
+  }
   eta <- pars8[5] + pars8[6] * N + pars8[7] * P + pars8[8] * E
   if (link == 0L) max(0, eta) else exp(eta)
 }
@@ -185,17 +379,24 @@
 # --------------------------------------------------------------------------- #
 
 #' Solve survival probability p(t) backward from tp to 0.
-#' ODE: dp/dt = lam(t)*p^2 - (lam(t)-mu(t))*p, p(tp) = 1.
+#' ODE: dp/dt = lam(t)*p^2 - (lam(t)-mu(t))*p, p(tp) = rho.
 #' Rates use the mean-field covariates (N̂, P̂, Ê) — supports DD/PD/EP and
 #' mixed models. For CR (all model_bin = 0) the covariate arguments are
 #' ignored inside .bdi_lam/.bdi_mu.
+#'
+#' The ODE itself carries no sampling fraction; \code{rho} enters only as the
+#' terminal condition \code{p(tp) = rho}, which is the probability that a
+#' lineage alive at the present leaves a sampled descendant (itself).  That is
+#' the whole of the incomplete-sampling change on the backward side, and it
+#' reproduces the closed form of \code{.bdi_p_cr} under constant rates.
 #' @keywords internal
 .bdi_solve_p_backward <- function(pars8, model_bin, link, bt, tp,
-                                  Nhat_fun, Phat_fun, Ehat_fun, t_grid) {
+                                  Nhat_fun, Phat_fun, Ehat_fun, t_grid,
+                                  rho = 1) {
   n_grid <- length(t_grid)
   t_rev  <- rev(t_grid)
   p_vals <- numeric(n_grid)
-  p      <- 1.0
+  p      <- min(rho, 1.0)
 
   for (i in seq_along(t_rev)) {
     ti <- t_rev[i]
@@ -367,11 +568,21 @@
 #' Ê(t) = P̂(t) / N̂(t).  All three enter the rate function; inactive
 #' covariates (pars8 slopes pinned to 0) make the extension transparent
 #' for CR/DD and activate PD/EP/mixed models.
-#' @return List with p_fun, Nhat_fun, Phat_fun, Ehat_fun.
+#' The sweep budget is 60 because the iteration slows as \code{rho} falls: the
+#' unsampled extant lineages raise \code{N̂}, which feeds back into the rates
+#' that produced them.  On the 20-tip DD tree at \code{K = 20} the fixed point
+#' is reached in 6 sweeps at \code{rho = 1}, 7 at 0.9, 14 at 0.5 and 27 at 0.2.
+#' The old budget of 20 therefore returned a non-converged mean field at small
+#' \code{rho} -- \code{delta = 2.9e-3} against \code{tol = 1e-4} in that last
+#' case -- and the loop still breaks on \code{tol}, so raising the cap cannot
+#' change a run that already converged.
+#'
+#' @return List with p_fun, Nhat_fun, Phat_fun, Ehat_fun, and the fixed-point
+#'   diagnostics converged / delta / iterations.
 #' @keywords internal
 .bdi_iterate <- function(pars8, model_bin, link, bt, tp,
-                         max_iter = 20, tol = 1e-4, n_grid = 500,
-                         use_gaussian_closure = TRUE) {
+                         max_iter = 60, tol = 1e-4, n_grid = 500,
+                         use_gaussian_closure = TRUE, rho = 1) {
   bt     <- sort(bt)
   t_grid <- seq(0, tp, length.out = n_grid)
 
@@ -390,14 +601,18 @@
   Pscale <- max(max(Phat_vals), 1)
 
   p_vals <- rep(0, length(t_grid))
+  delta  <- NA_real_
+  n_iter_used <- 0L
 
   for (iter in seq_len(max_iter)) {
+    n_iter_used <- iter
     Nhat_fun <- stats::approxfun(t_grid, Nhat_vals, rule = 2)
     Phat_fun <- stats::approxfun(t_grid, Phat_vals, rule = 2)
     Ehat_fun <- stats::approxfun(t_grid, Ehat_vals, rule = 2)
 
     p_vals <- .bdi_solve_p_backward(pars8, model_bin, link, bt, tp,
-                                    Nhat_fun, Phat_fun, Ehat_fun, t_grid)
+                                    Nhat_fun, Phat_fun, Ehat_fun, t_grid,
+                                    rho = rho)
     p_fun  <- stats::approxfun(t_grid, p_vals, rule = 2)
 
     if (use_gaussian_closure) {
@@ -453,7 +668,20 @@
        Ehat_fun = Ehat_fun,
        vN_vals  = vN_vals,
        cNP_vals = cNP_vals,
-       t_grid   = t_grid)
+       t_grid   = t_grid,
+       # The Picard iteration is not proved to contract, so a caller reads
+       # these three rather than assuming a fixed point was reached.  Measured
+       # on a 20-tip tree: the linear and exponential dd rates, which are
+       # monotone in N, converged in every cell of a sweep over slope and rho
+       # (rho down to 0.2), in 3 to 15 sweeps.  The gaussian dd rate
+       # lambda(N) = beta_0*exp(-(beta_N*N - 1)^2/2) peaks at N = 1/beta_N and
+       # falls after it; the map N -> rate -> N then oscillates and delta grew
+       # to 20 in 25 of 84 cells.  That is why .bdi_supported refuses dd on the
+       # gaussian link outright rather than trusting this flag per theta: the
+       # failing region moves with rho, and an MCEM run walks through it.
+       converged = isTRUE(delta < tol),
+       delta     = delta,
+       iterations = n_iter_used)
 }
 
 
@@ -469,17 +697,26 @@
 #' Under DD: uses approximate Gillespie with piecewise-constant rates.
 #'   IS weights have nonzero variance (importance sampling, not exact).
 #'
+#' At \code{rho < 1} a missing lineage still alive at tp is not a rejection but
+#' an \emph{unsampled extant} lineage: the conditioning event is "leaves no
+#' sampled descendant", and at the present that is satisfied by being alive and
+#' unsampled, an event of probability \code{1 - rho}.  Those lineages are
+#' returned in \code{$unsampled} (birth times) and written with the \code{5e10}
+#' sentinel by \code{\link{.bdi_to_tree_df}}, so \code{N(t)} counts them.
+#'
 #' @return List with \code{$reason}: \code{"accepted"} (then also
-#'   \code{$species}, \code{$n_alive_at_tp}, \code{$logg}),
+#'   \code{$species}, \code{$unsampled}, \code{$n_alive_at_tp}, \code{$logg}),
 #'   \code{"max_missing"} (more than \code{max_missing} missing lineages
-#'   drawn) or \code{"survivor"} (a missing lineage still alive at tp).
+#'   drawn) or \code{"survivor"} (a missing lineage still alive at tp; only
+#'   reachable at \code{rho = 1}, where such a tree has f = 0).
 #' @keywords internal
 .bdi_augment_one <- function(bt, pars8, model_bin, link, tp,
                              p_fun = NULL, Nhat_fun = NULL,
                              Phat_fun = NULL, Ehat_fun = NULL,
-                             max_missing = 1e4L) {
+                             max_missing = 1e4L, rho = 1) {
   bt <- sort(bt)
   is_cr <- all(model_bin == 0L)
+  complete <- (rho >= 1)
 
   lam0 <- .bdi_lam(pars8, 0, 0, 0, model_bin, link)
   mu0  <- .bdi_mu(pars8, 0, 0, 0, model_bin, link)
@@ -503,11 +740,12 @@
       if (is_cr) {
         # ── Exact time-change method for CR ──
         U <- stats::rexp(1)
-        t_star <- .bdi_find_event_time_cr(t, U, n_alive, k, lam0, mu0, tp, t1)
+        t_star <- .bdi_find_event_time_cr(t, U, n_alive, k, lam0, mu0, tp, t1,
+                                          rho)
 
         if (t_star >= t1) {
           # No event before boundary
-          logg <- logg - .bdi_integral_cr(t, t1, n_alive, k, lam0, mu0, tp)
+          logg <- logg - .bdi_integral_cr(t, t1, n_alive, k, lam0, mu0, tp, rho)
           break
         }
 
@@ -516,7 +754,7 @@
         t    <- t_star
 
         # Compute exact rates at event time for type selection
-        p    <- .bdi_p_cr(t, lam0, mu0, tp)
+        p    <- .bdi_p_cr(t, lam0, mu0, tp, rho)
         omp  <- 1 - p
         la   <- lam0 * omp
         mu_r <- mu0 / max(omp, 1e-15)
@@ -577,11 +815,14 @@
     }
   }
 
-  # Under CR: exact process ensures all species die before tp.
-  # Under DD: approximate Gillespie may leave survivors — reject.
-  if (n_alive > 0L) return(list(reason = "survivor"))
+  # At complete sampling the exact CR process leaves no survivor (the
+  # extinction hazard diverges at tp) and the approximate DD Gillespie
+  # occasionally does; such a tree has f = 0, so it is rejected.
+  # At rho < 1 a survivor is an unsampled extant lineage and is kept.
+  if (complete && n_alive > 0L) return(list(reason = "survivor"))
 
-  list(reason = "accepted", species = species, n_alive_at_tp = 0L, logg = logg)
+  list(reason = "accepted", species = species,
+       unsampled = alive, n_alive_at_tp = n_alive, logg = logg)
 }
 
 
@@ -600,12 +841,14 @@
 #' \code{.augment_tree_bdi} documentation for what that costs and what fixing
 #' it would take.
 #' @keywords internal
-.bdi_to_tree_df <- function(species, bt, tp) {
+.bdi_to_tree_df <- function(species, bt, tp, unsampled = numeric(0)) {
   bt_sorted <- sort(bt)
   n_obs     <- length(bt_sorted)
   n_aug     <- length(species)
-  # obs + (spec + ext) per missing + closing node at tp
-  n_total   <- n_obs + 2L * n_aug + 1L
+  n_uns     <- length(unsampled)
+  # obs + (spec + ext) per extinct missing + spec per unsampled extant
+  # + closing node at tp
+  n_total   <- n_obs + 2L * n_aug + n_uns + 1L
 
   # Pre-allocate vectors
   v_brts      <- numeric(n_total)
@@ -622,6 +865,13 @@
   v_id[idx]        <- seq(0L, n_obs - 1L)
   v_parent_id[idx] <- -1L
 
+  # The last observed branching at or before `birth`; see the note above and
+  # in .augment_tree_bdi on what this assignment costs (audit finding H45).
+  parent_of <- function(birth) {
+    parent <- which(bt_sorted <= birth) - 1L
+    if (length(parent) == 0L) 0L else max(0L, max(parent))
+  }
+
   # Augmented species: speciation + extinction nodes
   if (n_aug > 0L) {
     off <- n_obs
@@ -629,8 +879,7 @@
       sp    <- species[[i]]
       birth <- sp[1]; death <- sp[2]
       sid   <- as.integer(n_obs + i - 1L)
-      parent <- max(0L, which(bt_sorted <= birth) - 1L)
-      if (length(parent) == 0L) parent <- 0L else parent <- max(parent)
+      parent <- parent_of(birth)
       j <- off + 2L * (i - 1L)
       # Speciation node
       v_brts[j + 1L]      <- birth
@@ -644,6 +893,26 @@
       v_tip_start[j + 2L] <- birth
       v_id[j + 2L]        <- sid
       v_parent_id[j + 2L] <- parent
+    }
+  }
+
+  # Unsampled extant lineages (rho < 1): a speciation node carrying the
+  # 5e10 sentinel and no extinction node -- they are alive at the present, so
+  # they raise N(t) from their birth onward and never lower it again.  The
+  # C++ scorer reads 5e10 as is_unsampled (inst/include/model_helpers.hpp):
+  # the birth contributes log(lambda) like any other, the lineage contributes
+  # no log(mu), and Model::loglik charges it log(1 - rho).
+  if (n_uns > 0L) {
+    off <- n_obs + 2L * n_aug
+    for (i in seq_along(unsampled)) {
+      birth <- unsampled[i]
+      sid   <- as.integer(n_obs + n_aug + i - 1L)
+      j <- off + i
+      v_brts[j]      <- birth
+      v_t_ext[j]     <- 5e10       # t_ext_unsampled
+      v_tip_start[j] <- birth
+      v_id[j]        <- sid
+      v_parent_id[j] <- parent_of(birth)
     }
   }
 
@@ -712,9 +981,9 @@
 #'
 #' The log(acc) correction is derived at \code{rho = 1}, where a surviving
 #' missing lineage has f = 0 and the rejection is a property of the target.
-#' At \code{rho < 1} an unsampled survivor is a legitimate configuration, so
-#' the factor does not apply (measured shift -0.1104 at rho = 0.5 on the
-#' 20-tip DD tree of tests/testthat/test-bdi-dd.R).  \code{acc} is the
+#' At \code{rho < 1} an unsampled survivor is a legitimate configuration and is
+#' emitted rather than rejected, so \code{n_rejected} is 0, \code{acc} is 1 and
+#' the factor is inert.  \code{acc} is the
 #' stop-at-\code{n_valid} plug-in estimate of the acceptance rate, which is
 #' biased at small \code{sample_size}: at the function's own default
 #' \code{sample_size = 1L} a draw with three survivor rejections moves fhat
@@ -783,13 +1052,27 @@
 
   # Solve BDI rates
   p_fun <- Nhat_fun <- Phat_fun <- Ehat_fun <- NULL
+  mf_converged <- NA
+  mf_delta     <- NA_real_
   if (!is_cr) {
     sol <- .bdi_iterate(pars8, model_bin, link, bt, tp,
-                        use_gaussian_closure = use_gaussian_closure)
+                        use_gaussian_closure = use_gaussian_closure,
+                        rho = rho)
     p_fun    <- sol$p_fun
     Nhat_fun <- sol$Nhat_fun
     Phat_fun <- sol$Phat_fun
     Ehat_fun <- sol$Ehat_fun
+    mf_converged <- isTRUE(sol$converged)
+    mf_delta     <- sol$delta
+    # The mean-field covariates the whole DD proposal is built on are the
+    # fixed point of .bdi_iterate.  When the iteration stops on max_iter
+    # instead, the proposal is built on whatever the last sweep produced.  It
+    # is still a valid proposal -- the weights carry the error -- but the
+    # caller is told rather than left to assume a fixed point was reached.
+    if (!mf_converged) warning(sprintf(paste0(
+      "BDI augmentation: the mean-field iteration did not converge ",
+      "(delta = %.2e after %d sweeps); the proposal uses the last sweep."),
+      sol$delta, sol$iterations), call. = FALSE)
   }
 
   # Draw augmented trees.  A draw is rejected on max_missing overflow or,
@@ -809,12 +1092,13 @@
     n_attempts <- n_attempts + 1L
     aug <- .bdi_augment_one(bt, pars8, model_bin, link, tp,
                             p_fun, Nhat_fun, Phat_fun, Ehat_fun,
-                            max_missing)
+                            max_missing, rho = rho)
     if (aug$reason == "survivor")    { n_rej_surv <- n_rej_surv + 1L; next }
     if (aug$reason == "max_missing") { n_rej_mm   <- n_rej_mm   + 1L; next }
 
     n_valid <- n_valid + 1L
-    trees[[n_valid]] <- .bdi_to_tree_df(aug$species, bt, tp)
+    trees[[n_valid]] <- .bdi_to_tree_df(aug$species, bt, tp,
+                                        unsampled = aug$unsampled)
     logg[n_valid]     <- aug$logg
   }
 
@@ -877,7 +1161,10 @@
        n_attempts  = n_attempts,
        n_rejected  = n_rej_surv,
        n_rejected_max_missing = n_rej_mm,
-       acc     = acc)
+       acc     = acc,
+       # NA under cr (no mean-field system is solved); TRUE/FALSE under dd.
+       mf_converged = mf_converged,
+       mf_delta     = mf_delta)
 }
 
 

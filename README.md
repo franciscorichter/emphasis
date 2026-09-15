@@ -132,10 +132,16 @@ Two proposals $q$ are available, selected with `simulate_tree(method = )` for co
 
 | Sampler | Where | Scope | Property |
 | ------- | ----- | ----- | -------- |
-| `"bdi"` (default) | `R/bdi.R` | N-only models (`"cr"`, `"dd"`) on the linear and exponential links | Draws from the exact conditional distribution under constant rates (ESS = sample size, zero IS variance); under diversity dependence uses a self-consistent backward–forward mean-field iteration |
+| `"bdi"` (default) | `R/bdi.R` | N-only models (`"cr"`, `"dd"`) on the linear and exponential links, `"cr"` also on the gaussian link, at any $\rho \in (0,1]$ | Draws from the exact conditional distribution under constant rates (ESS = sample size, zero IS variance); under diversity dependence uses a self-consistent backward–forward mean-field iteration |
 | `"thinning"` (`sampling = "dynamic_fresh"`) | `src/augment_tree.cpp` | Every model and link | Poisson-thinning proposal, C++ with TBB parallelism |
 
-`.bdi_supported(model_bin, link)` gates both entry points: any model with a $D$ term, or the gaussian link, is routed to thinning (MCEM says so when `verbose = TRUE`). The BDI rate functions are written in the pre-2026-07 `(N, P, E)` covariate layout, which is why their exact scope stops at N-only models.
+`.bdi_supported(model_bin, link, rho)` gates both entry points, and `.bdi_unsupported_reason()` supplies the phrase the fallback message carries. Two things are routed to thinning.
+
+A model with a $D$ or $M$ term. The BDI construction conditions on a single survival probability $p(t)$ shared by every lineage alive at $t$; a $D$-model's rate depends on each lineage's own pendant age, so no single $p(t)$ exists. This is a property of the construction, not a gap in the code.
+
+`"dd"` on the gaussian link. There $\lambda(N) = \beta_0 e^{-(\beta_N N - 1)^2/2}$ is a function of $N$ alone, but it is not monotone: it peaks at $N = 1/\beta_N$ and falls after it, and the mean-field Picard iteration does not contract past the peak. Measured on a 20-tip tree over a $4\times 8\times 4$ grid in $(\beta_0, \beta_N, \rho)$ with a 200-sweep budget, it failed to reach tolerance in 36 of 128 cells with the residual running to 104 — divergence, not slow convergence — and the failing cells are interleaved with converging ones rather than forming a region that could be excluded. The linear and exponential `"dd"` rates are monotone in $N$ and converged in every cell of the same sweep, in at most 27 iterations.
+
+`"cr"` on the gaussian link is in scope because $\eta_{\text{cov}} = 0$ there, so $\lambda = \beta_0 e^{-1/2}$ is constant: constant rates under a reparameterisation, sampled exactly like the other two links.
 
 ### Estimation pipeline
 
@@ -170,7 +176,7 @@ The survival probability $P_\theta$ is estimated by forward simulation and emula
 
 When the phylogeny samples only a fraction $\rho$ of the living species, set `rho` in the control list (or `simulate_tree(rho = ...)`). The augmentation then inserts both extinct lineages and unsampled extant lineages, and the likelihood gains the binomial sampling factor $n_{\text{obs}}\log\rho + n_{\text{unsamp}}\log(1-\rho)$. With `rho = 1` (default) the tree is completely sampled.
 
-The thinning proposal implements this. The BDI sampler does not — it proposes no unsampled extant lineages — so `.bdi_supported()` reports it unavailable for `rho < 1` and the fit falls back to `sampling = "dynamic_fresh"`, announcing the change with a message. `emphasis_pipeline()` inherits a top-level `control$rho` into every stage, a nested per-stage value still wins, and the value actually used is recorded in the fit. A `rho` outside (0, 1] is an error, in R and in the compiled code alike.
+Both proposals implement this, and the choice of sampler does not depend on $\rho$. In the BDI proposal $p(t)$ becomes the probability of leaving a *sampled* descendant, which solves the same ODE with the terminal condition $p(t_p) = \rho$ and has the closed form $\rho d / (dE + \rho\lambda(1-E))$ under constant rates; a missing lineage still alive at the present is then not a rejection but an unsampled extant tip, emitted with the `5e10` sentinel so that $N(t)$ counts it. At $\rho = 1$ the extinction hazard diverges at $t_p$ and no such lineage can survive, which is the complete-sampling case unchanged. `emphasis_pipeline()` inherits a top-level `control$rho` into every stage, a nested per-stage value still wins, and the value actually used is recorded in the fit. A `rho` outside (0, 1] is an error, in R and in the compiled code alike.
 
 ## Usage
 
@@ -341,10 +347,11 @@ measurement: the importance sampler's unbiasedness can now be checked against a 
 marginal likelihood on a tree with observed splits, and it passes.
 
 Wave 3 is not applied. The largest open items, in the order the validation study says they would
-pay off: the exact BDI proposal covers only N-only models on the linear and exponential links, so
-the thinning proposal is forced into the high-turnover regimes where its effective sample size
-collapses; and convergence is declared on a parameter step that is not referred to the Monte Carlo
-noise of the iterate it tests. There are no vignettes.
+pay off: the BDI proposal now also covers the gaussian link for `"cr"` and every supported model
+at `rho < 1`, which removes two of the three reasons the thinning proposal was forced into the
+high-turnover regimes where its effective sample size collapses, but a `d` or `nd` model still has
+no exact proposal; and convergence is declared on a parameter step that is not referred to the
+Monte Carlo noise of the iterate it tests. There are no vignettes.
 
 ### Validation
 

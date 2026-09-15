@@ -1,11 +1,20 @@
-# Pins the sampling-fraction rho after the wave-2 fix for H2, H29 and H79:
-#   - .bdi_supported() takes rho and is FALSE below 1: the BDI proposal draws
-#     only extinct and observed lineages, never an unsampled extant one, so at
-#     rho < 1 it samples the rho = 1 conditioned process while eval_logf scores
-#     it under rho, which shifts logf by n_tips*log(rho) and leaves the
-#     estimator on the rho = 1 likelihood surface (H2)
+# Pins the sampling-fraction rho for H2, H29 and H79.
+#
+# H2 was that the BDI proposal drew only extinct and observed lineages, never an
+# unsampled extant one, so at rho < 1 it sampled the rho = 1 conditioned process
+# while eval_logf scored it under rho: logf shifted by n_tips*log(rho) and the
+# estimator stayed on the rho = 1 surface.  The wave-2 answer was to refuse
+# rho < 1 in .bdi_supported() and fall back to thinning.  The proposal now
+# samples the rho-conditioned process itself -- p(t) is the probability of
+# leaving a *sampled* descendant and a surviving missing lineage is emitted as
+# an unsampled extant tip -- so the gate no longer reads rho, and what this file
+# pins is the behaviour that replaced the fallback:
+#   - .bdi_supported() is the same at rho = 1 and below it
+#   - the BDI draws carry unsampled extant lineages, as the thinning draws do
+#   - a cr fit at rho = 0.5 lands on the rho = 0.5 MLE, which is the original
+#     H2 gate and is now met by the BDI sampler rather than by routing past it
 #   - the fallback to thinning is announced unconditionally, not only under
-#     control$verbose
+#     control$verbose, for what is still out of scope
 #   - emphasis_pipeline() inherits a top-level control$rho into every stage,
 #     a nested control$<stage>$rho overrides it, and the rho used is recorded
 #     in the stage log, in each stage's fit and in the pipeline result (H29)
@@ -50,31 +59,32 @@ nee_mle <- function(rho, brts) {
 n_unsampled <- function(tr) sum(tr$t_ext == 5e10)
 
 
-test_that(".bdi_supported is unchanged at rho = 1 and FALSE below it (H2)", {
-  # The model/link decisions the validation corpus was fitted under.
+test_that(".bdi_supported does not depend on rho (H2)", {
+  # The model/link decisions the validation corpus was fitted under, unchanged.
   expect_true(emphasis:::.bdi_supported(cr_bin, 0L))
   expect_true(emphasis:::.bdi_supported(cr_bin, 1L))
   expect_true(emphasis:::.bdi_supported(dd_bin, 0L))
   expect_true(emphasis:::.bdi_supported(dd_bin, 1L))
-  expect_false(emphasis:::.bdi_supported(cr_bin, 2L))   # gaussian link
   expect_false(emphasis:::.bdi_supported(nd_bin, 0L))   # D covariate
   expect_false(emphasis:::.bdi_supported(d_bin,  0L))
-  # The new argument defaults to complete sampling, so the two-argument calls
-  # above and the explicit rho = 1 calls agree.
-  for (mb in list(cr_bin, dd_bin, nd_bin, d_bin))
-    for (lk in 0:2)
-      expect_identical(emphasis:::.bdi_supported(mb, lk),
-                       emphasis:::.bdi_supported(mb, lk, rho = 1))
+  # cr on the gaussian link is in scope (the covariate part of eta is zero
+  # there, so the rate is the constant beta_0*exp(-1/2)); dd on it is not.
+  expect_true(emphasis:::.bdi_supported(cr_bin, 2L))
+  expect_false(emphasis:::.bdi_supported(dd_bin, 2L))
 
-  # Below 1 every model/link goes to thinning.
-  for (rho in c(0.999, 0.5, 0.1, 1e-6))
-    for (mb in list(cr_bin, dd_bin))
-      for (lk in 0:1)
-        expect_false(emphasis:::.bdi_supported(mb, lk, rho = rho))
+  # The verdict is the same at every rho in range: the sampler conditions on
+  # the rho-sampled survival probability rather than routing around it.
+  for (rho in c(1, 0.999, 0.5, 0.1, 1e-6))
+    for (mb in list(cr_bin, dd_bin, nd_bin, d_bin))
+      for (lk in 0:2)
+        expect_identical(emphasis:::.bdi_supported(mb, lk, rho = rho),
+                         emphasis:::.bdi_supported(mb, lk))
 
   # A rho that is not a usable number is not treated as complete sampling.
   expect_false(emphasis:::.bdi_supported(cr_bin, 0L, rho = NA_real_))
   expect_false(emphasis:::.bdi_supported(cr_bin, 0L, rho = NULL))
+  expect_false(emphasis:::.bdi_supported(cr_bin, 0L, rho = 0))
+  expect_false(emphasis:::.bdi_supported(cr_bin, 0L, rho = 1.5))
 })
 
 
@@ -117,12 +127,17 @@ test_that("estimate_rates validates rho for every method (H79)", {
 })
 
 
-test_that("the BDI proposal draws no unsampled extant lineage; thinning does (H2)", {
+test_that("both proposals draw unsampled extant lineages at rho < 1 (H2)", {
+  # The defect H2 recorded was that this count was 0 for the BDI draws and up
+  # to 17 for the thinning draws on the same tree.  Both are now non-zero, and
+  # the rho term of eval_logf carries the unsampled count on both.
+  set.seed(101)
   bdi <- emphasis:::.augment_tree_bdi(brts16, pars = c(0.5, 0.3),
                                       model_bin = cr_bin, sample_size = 30L,
                                       link = 0L, rho = 0.5)
   expect_gt(length(bdi$trees), 0L)
-  expect_equal(max(vapply(bdi$trees, n_unsampled, 1L)), 0L)
+  nb <- vapply(bdi$trees, n_unsampled, 1L)
+  expect_gt(max(nb), 0L)
 
   thin <- emphasis:::.augment_tree_internal(brts16, pars = c(0.5, 0.3),
                                             model_bin = cr_bin, sample_size = 30L,
@@ -131,46 +146,67 @@ test_that("the BDI proposal draws no unsampled extant lineage; thinning does (H2
   nu <- vapply(thin$trees, n_unsampled, 1L)
   expect_gt(max(nu), 0L)
 
-  # This is why scoring BDI draws at rho < 1 only shifts logf by a constant:
-  # with no unsampled lineage the rho term of eval_logf is n_obs * log(rho).
   p8 <- ex(c(0.5, 0.3))
   l1 <- emphasis:::eval_logf(p8, bdi$trees, model = cr_bin, link = 0L, rho = 1)$logf
   l5 <- emphasis:::eval_logf(p8, bdi$trees, model = cr_bin, link = 0L, rho = 0.5)$logf
-  expect_equal(l5 - l1, rep(n16 * log(0.5), length(l1)), tolerance = 1e-12)
+  expect_equal(l5 - l1, n16 * log(0.5) + nb * log(0.5), tolerance = 1e-12)
 
   # On the thinning draws the same term carries the unsampled count as well.
   lt1 <- emphasis:::eval_logf(p8, thin$trees, model = cr_bin, link = 0L, rho = 1)$logf
   lt5 <- emphasis:::eval_logf(p8, thin$trees, model = cr_bin, link = 0L, rho = 0.5)$logf
   expect_equal(lt5 - lt1, n16 * log(0.5) + nu * log(0.5), tolerance = 1e-12)
+
+  # At rho = 1 neither sampler writes the sentinel.
+  set.seed(101)
+  b1 <- emphasis:::.augment_tree_bdi(brts16, pars = c(0.5, 0.3),
+                                     model_bin = cr_bin, sample_size = 30L,
+                                     link = 0L, rho = 1)
+  expect_equal(max(vapply(b1$trees, n_unsampled, 1L)), 0L)
 })
 
 
-test_that("estimate_rates(rho < 1) says the sampler changed and runs thinning (H2)", {
+test_that("estimate_rates(rho < 1) keeps the BDI sampler and says nothing (H2)", {
   ctrl <- list(rho = 0.5, sampling = "bdi", sample_size = 20L, max_iter = 2L,
                num_threads = 1L, lower_bound = c(1e-3, 0), upper_bound = c(3, 3))
-  expect_message(
+  expect_no_message(
     fit <- estimate_rates(brts16, method = "mcem", model = "cr",
-                          init_pars = c(0.4, 0.2), control = ctrl),
-    "rho = 0.5")
-  # The trace is the thinning driver's (maxN and the four rejection channels);
-  # the BDI driver writes n_valid / rejected_max_missing instead.
-  expect_true(all(c("maxN", "rejected_errors") %in% names(fit$details$mcem)))
-  expect_false("n_valid" %in% names(fit$details$mcem))
+                          init_pars = c(0.4, 0.2), control = ctrl))
+  # The trace is the BDI driver's (n_valid and rejected_max_missing); the
+  # thinning driver writes maxN and four rejection channels instead.
+  expect_true(all(c("n_valid", "rejected_max_missing") %in% names(fit$details$mcem)))
+  expect_false("maxN" %in% names(fit$details$mcem))
   expect_equal(fit$rho, 0.5)
 
-  # The message is not gated on verbose, and it names the sampler that ran.
-  expect_message(
-    estimate_rates(brts16, method = "mcem", model = "cr", init_pars = c(0.4, 0.2),
-                   control = utils::modifyList(ctrl, list(verbose = FALSE))),
-    "dynamic_fresh")
-
-  # At rho = 1 the same call keeps BDI and says nothing.
+  # rho = 1 takes the same route.
   expect_no_message(
     fit1 <- estimate_rates(brts16, method = "mcem", model = "cr",
                            init_pars = c(0.4, 0.2),
                            control = utils::modifyList(ctrl, list(rho = 1))))
   expect_true(all(c("n_valid", "rejected_max_missing") %in% names(fit1$details$mcem)))
   expect_equal(fit1$rho, 1)
+})
+
+
+test_that("the fallback still fires, unconditionally, for what is out of scope", {
+  # A D-dependent model at rho < 1 still goes to thinning, and the message
+  # names the reason rather than only the fact.
+  # model "nd" is c(1, 0, 1): beta_0, beta_N, beta_D, gamma_0, gamma_N, gamma_D.
+  ctrl <- list(rho = 0.5, sampling = "bdi", sample_size = 20L, max_iter = 2L,
+               maxN = 2000L, num_threads = 1L,
+               lower_bound = c(1e-3, -1, -1, 0, 0, 0),
+               upper_bound = c(3, 1, 1, 3, 0, 0))
+  init <- c(0.4, -0.01, 0.01, 0.2, 0, 0)
+  expect_message(
+    fit <- estimate_rates(brts16, method = "mcem", model = "nd",
+                          init_pars = init, control = ctrl),
+    "D-dependent")
+  # Not gated on verbose, and it names the sampler that ran.
+  expect_message(
+    estimate_rates(brts16, method = "mcem", model = "nd", init_pars = init,
+                   control = utils::modifyList(ctrl, list(verbose = FALSE))),
+    "dynamic_fresh")
+  expect_true(all(c("maxN", "rejected_errors") %in% names(fit$details$mcem)))
+  expect_equal(fit$rho, 0.5)
 })
 
 
@@ -188,10 +224,14 @@ test_that("a cr fit at rho = 0.5 lands on the rho = 0.5 MLE (H2 gate)", {
                    lower_bound = c(1e-3, 0), upper_bound = c(3, 3))))
   lam <- unname(fit$pars[1L])
   # Measured before the fix (dev/audit/checks/H2.R): 0.4727, 0.4785, 0.4713 —
-  # the rho = 1 MLE.  After it, thinning gives 0.6782 to 0.7071.  The threshold
-  # is between the two clusters.
+  # the rho = 1 MLE.  The fallback to thinning gave 0.6782 to 0.7071.  The BDI
+  # sampler now meets the same gate itself, and exactly: its log-weights on this
+  # tree are constant to 1e-12 at rho = 0.5, so the E-step contributes no Monte
+  # Carlo error at all and what is left of the gap is the M-step's.
   expect_gt(lam, 0.60)
   expect_lt(abs(lam - m05[1L]), abs(lam - m1[1L]))
+  expect_true("n_valid" %in% names(fit$details$mcem))   # the BDI driver ran
+  expect_lt(stats::sd(fit$details$final_IS$lw), 1e-9)
 })
 
 
@@ -205,9 +245,17 @@ test_that("emphasis_pipeline inherits top-level rho into its stages (H29)", {
   expect_equal(res$fits$mcem$rho, 0.5)
   expect_equal(res$log$rho, 0.5)
   expect_equal(res$rho, 0.5)
-  # rho reached the back end, not just the record: the stage ran thinning,
-  # which is a decision .run_mcem takes from rho alone on a cr/linear tree.
-  expect_true("maxN" %in% names(res$fits$mcem$details$mcem))
+  # rho reached the back end, not just the record.  The stage no longer changes
+  # sampler on rho, so the evidence is the likelihood itself: the BDI E-step is
+  # exact under constant rates, so fhat at the returned theta is the closed-form
+  # rho-sampled likelihood there.  Had rho stopped at the record, fhat would be
+  # the rho = 1 value, which differs by n_tips*log(rho) = 16*log(0.5) = -11.09.
+  fit05 <- res$fits$mcem
+  expect_lt(stats::sd(fit05$details$final_IS$lw), 1e-9)
+  expect_lt(abs(fit05$loglik -
+                nee_rho(fit05$pars[1L], fit05$pars[2L], 0.5, brts16)), 1e-8)
+  expect_gt(abs(fit05$loglik -
+                nee_rho(fit05$pars[1L], fit05$pars[2L], 1.0, brts16)), 1)
 
   # A nested per-stage value wins over the inherited one.
   ctrl_nested <- utils::modifyList(base, list(rho = 0.5))

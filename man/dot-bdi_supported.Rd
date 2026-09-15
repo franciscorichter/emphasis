@@ -14,26 +14,48 @@
 \item{rho}{Sampling fraction in \code{(0, 1]}. Default \code{1}.}
 }
 \description{
-The sampler's rate functions and mean-field ODEs are written in the
-\code{(N, P, E)} covariate layout (slots 2-4 of \code{pars8}), and its
-link handling covers only \code{linear} (0) and \code{exponential} (1).
-Under the package's current \code{(N, M, D)} basis and with the
-\code{gaussian} link (2), only N-only models on links 0/1 are exact, so
-every other case is routed to the thinning proposal by the callers.
+The sampler conditions on a rate that is a function of the lineage count
+alone: \code{.bdi_p_cr} and \code{.bdi_solve_p_backward} solve one survival
+probability \code{p(t)} shared by every lineage alive at \code{t}, and the
+aggregate Gillespie of \code{.bdi_augment_one} moves \code{n_alive} lineages
+with one pair of rates.  That is what an N-only model gives it.
 }
 \details{
-The sampler is also complete-sampling only.  Its survival probability
-\code{p(t)} (\code{.bdi_p_cr}, \code{.bdi_solve_p_backward}) is the
-probability of leaving a descendant at the present, not of leaving a
-\emph{sampled} descendant, and \code{.bdi_to_tree_df} writes only the
-extinction sentinels \code{1e11} (extinct) and \code{0} (observed): no
-draw ever carries the \code{5e10} sentinel that marks an unsampled
-extant lineage.  At \code{rho < 1} the draws therefore come from the
-\code{rho = 1} conditioned process while \code{eval_logf} scores them
-under \code{rho}, which adds \code{n_tips * log(rho)} and leaves the
-\code{rho = 1} likelihood surface (audit finding H2: on a 16-tip tree
-the fits land on the \code{rho = 1} MLE 0.47 rather than the
-\code{rho = 0.5} MLE 0.69).  \code{rho < 1} is therefore routed to the
-thinning proposal, which proposes unsampled extant lineages.
+A D-dependent model (\code{model_bin[3] == 1}) does not: its rate depends on
+each lineage's own pendant age \code{E_s}, so the survival probability is a
+functional of the lineage's own history and no single \code{p(t)} exists.
+The construction this file is built on does not extend there, and
+D-dependent models stay on the thinning proposal.  The M covariate
+(\code{model_bin[2]}) is a clade-level mean and is not in scope here either:
+the sampler's own mean-field state would have to be closed on \code{P} as
+well as \code{N}, which is written but not gated.
+
+Under the \code{gaussian} link the rate is
+\code{beta_0 * exp(-(beta_N*N - 1)^2 / 2)}, still a function of \code{N}
+alone.  For \code{cr} the covariate part is zero and the rate is the
+constant \code{beta_0 * exp(-1/2)}, so constant rates on the gaussian link
+are the constant-rates case under a reparameterisation and are sampled
+exactly, as they are on the other two links.  For \code{dd} they are not:
+\code{lambda(N)} rises to a peak at \code{N = 1/beta_N} and falls after it,
+and the Picard iteration of \code{\link{.bdi_iterate}} does not contract on
+the far side.  Measured on a 20-tip tree over a 4 x 8 x 4 grid in
+\code{(beta_0, beta_N, rho)} with a 200-sweep budget -- more than three times
+what this function allows -- it failed to reach \code{tol} in 36 of 128
+cells, with \code{delta} running to 104.  That is divergence, not slow
+convergence.  The failing region is not an interval that could be excluded:
+at \code{rho = 0.5, beta_0 = 1} the iteration converges at
+\code{beta_N = 0.08}, fails at 0.1, and converges again at 0.2, 0.3 and 0.5;
+and the whole pattern moves with \code{rho}.  Where it does converge it can
+take 164 sweeps.  \code{dd} on the gaussian link therefore stays on the
+thinning proposal.  The linear and exponential \code{dd} rates are monotone
+in \code{N} and reached the fixed point in every cell of the same sweep, in
+at most 27 iterations, \code{rho} down to 0.2 included.
+
+Incomplete sampling is in scope for every model and link the gate otherwise
+accepts.  \code{p(t)} becomes the probability of leaving a \emph{sampled}
+descendant (\code{.bdi_p_cr}, \code{.bdi_solve_p_backward}, both of which
+take \code{rho}), and \code{.bdi_to_tree_df} emits the \code{5e10} sentinel
+for a missing lineage still alive at the present, so the draws carry
+unsampled extant lineages and \code{N(t)} counts them.
 }
 \keyword{internal}

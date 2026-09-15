@@ -5,7 +5,7 @@
 \title{Convert BDI species list to the tree data frame format used by emphasis.
 Columns: brts, n, t_ext, pd, tip_start, id, parent_id}
 \usage{
-.bdi_to_tree_df(species, bt, tp)
+.bdi_to_tree_df(species, bt, tp, unsampled = numeric(0))
 }
 \description{
 The parent recorded for a lineage born at \code{t} is the last observed

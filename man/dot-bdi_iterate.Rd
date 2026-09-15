@@ -10,19 +10,29 @@
   link,
   bt,
   tp,
-  max_iter = 20,
+  max_iter = 60,
   tol = 1e-04,
   n_grid = 500,
-  use_gaussian_closure = TRUE
+  use_gaussian_closure = TRUE,
+  rho = 1
 )
 }
 \value{
-List with p_fun, Nhat_fun, Phat_fun, Ehat_fun.
+List with p_fun, Nhat_fun, Phat_fun, Ehat_fun, and the fixed-point
+  diagnostics converged / delta / iterations.
 }
 \description{
 Mean-field state: N̂(t) = k(t) + m̂(t), P̂(t) = P_obs(t) + P̂_miss(t),
 Ê(t) = P̂(t) / N̂(t).  All three enter the rate function; inactive
 covariates (pars8 slopes pinned to 0) make the extension transparent
 for CR/DD and activate PD/EP/mixed models.
+The sweep budget is 60 because the iteration slows as \code{rho} falls: the
+unsampled extant lineages raise \code{N̂}, which feeds back into the rates
+that produced them.  On the 20-tip DD tree at \code{K = 20} the fixed point
+is reached in 6 sweeps at \code{rho = 1}, 7 at 0.9, 14 at 0.5 and 27 at 0.2.
+The old budget of 20 therefore returned a non-converged mean field at small
+\code{rho} -- \code{delta = 2.9e-3} against \code{tol = 1e-4} in that last
+case -- and the loop still breaks on \code{tol}, so raising the cap cannot
+change a run that already converged.
 }
 \keyword{internal}
