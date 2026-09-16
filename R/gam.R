@@ -825,6 +825,18 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   r_max  <- log(50 * N / 2) / T           # net rate for 50x tips
   lam_hi <- max(r_max + 0.5 * r_hat, 0.1) # allow some extinction
 
+  # Turnover headroom.  A reconstructed tree pins the NET rate r = lambda - mu,
+  # not lambda: with extinction lambda = r / (1 - eps), so at eps = 0.9 the
+  # speciation rate is ten times the net rate the tip count implies.  Capping
+  # lambda near r_max treats the two as the same quantity and puts high-turnover
+  # optima outside the box before any likelihood is evaluated -- measured on
+  # cr-n100-e09-l100-t03, whose exact MLE is lambda = 1.121 against a cap of
+  # 0.323.  The cap is only a ceiling for the feasibility search, which still
+  # decides how far the box actually reaches, so the headroom costs nothing
+  # where turnover is low.
+  eps_max <- 0.95
+  lam_hi  <- lam_hi / (1 - eps_max)
+
   # Covariate models can have much higher intercepts (slopes regulate growth)
   if (length(active) > 0L) lam_hi <- lam_hi * 5
 
