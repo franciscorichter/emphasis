@@ -180,6 +180,21 @@ for (tid in if (TIER == "ext") character(0) else cr_sub) {
          est_cost_s = val_est_cost("pipeline", NA, tt$n, calib = CALIB))
 }
 
+# --- initialiser comparison (I1 cem / I2 naive / I3 gam) -------------------
+# Same tree, same box, three starting points.  Answers whether the
+# cross-entropy search earns the draws it spends.
+for (tid in if (TIER == "ext") character(0) else cr_sub) {
+  tt <- TR[[tid]]
+  for (cfg in c("I1", "I2", "I3")) {
+    addjob(job_id = sprintf("%s--%s", tid, cfg), kind = "init", tree_id = tid,
+           cell = tt$cell, n = tt$n, config = cfg, sampler = "bdi",
+           N = 200L, init = cfg, rep = 1L, box_scale = 1,
+           seed = val_seed(paste0(tid, cfg)),
+           timeout_s = tmo("pipeline", tt$n, 200L, NA),
+           est_cost_s = val_est_cost("pipeline", NA, tt$n, calib = CALIB))
+  }
+}
+
 JT <- do.call(rbind, lapply(jobs, function(j)
   data.frame(j[c("job_id", "kind", "tree_id", "cell", "n", "config", "sampler",
                  "N", "init", "rep", "box_scale", "seed", "timeout_s",

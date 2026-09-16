@@ -455,15 +455,28 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 # asks for.
 .test_feasibility <- function(pars, model, link, max_t, max_lin,
                               n_test = 5L, tip_lo = 2, tip_hi = 500,
-                              num_threads = 1L, rho = 1.0) {
+                              num_threads = 1L, rho = 1.0,
+                              surv_tries = 20L) {
   if (!.crown_rate_positive(pars, .resolve_model(model), .resolve_link(link)))
     return(FALSE)
 
+  # The observed tree survived to the present, so feasibility is a question
+  # about the SURVIVING clades a parameter vector produces, not about how often
+  # it produces one.  Judging unconditionally made the test a survival test:
+  # at high turnover most draws die out, ntips is 0 for them, and the vector was
+  # declared infeasible however well its survivors matched the data.  That is
+  # what excluded high-turnover optima from the box before any likelihood was
+  # evaluated (audit finding H74; measured on the study's own pipeline arm, the
+  # box missed the exact MLE on 25% of trees and the conditioned MLE on 35%).
+  #
+  # A retry budget buys survivors where they are rare; the size test then runs
+  # on the survivors alone, and a vector that cannot produce two survivors
+  # within the budget is infeasible for a reason that is about survival.
   pars_mat <- matrix(rep(pars, n_test), nrow = n_test, byrow = TRUE)
   sims <- simulate_tree(
     pars = pars_mat, max_t = max_t,
     model = model, link = link,
-    max_tries = 0, max_lin = max_lin,
+    max_tries = surv_tries, max_lin = max_lin,
     num_threads = num_threads,
     rho = rho
   )
@@ -472,7 +485,9 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
       length(s$tes$tip.label) else 0L
   })
   tip_min <- max(tip_lo, 3)
-  sum(ntips >= tip_min & ntips <= tip_hi) >= ceiling(n_test / 2)
+  surv <- ntips > 0L
+  if (sum(surv) < 2L) return(FALSE)
+  sum(ntips[surv] >= tip_min & ntips[surv] <= tip_hi) >= ceiling(sum(surv) / 2)
 }
 
 

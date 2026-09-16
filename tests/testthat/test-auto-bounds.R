@@ -219,3 +219,37 @@ test_that(".observed_covariates reports N as the tip count", {
   expect_equal(oc[[1]]$name, "N")
   expect_equal(oc[[1]]$X_obs, ape::Ntip(bird.orders))
 })
+
+test_that("the feasibility test judges survivors, not survival (H74)", {
+  skip_on_cran()
+  # The observed tree survived to the present, so feasibility is a question
+  # about the surviving clades a parameter vector produces, not about how often
+  # it produces one.  Judging unconditionally made the test a survival test and
+  # excluded high-turnover regions from the box before any likelihood was
+  # evaluated.  Measured over turnover 0 to 0.9: containment of the exact MLE
+  # rose from 0.75 to 0.96 overall and from 0.33 to 1.00 at turnover 0.9, with
+  # the mu axis widening (0.55 to 1.65 mean) and the lambda axis narrowing.
+  #
+  # Containment is improved, not guaranteed: at high turnover the MLE is itself
+  # unstable and can sit well outside any box built from the observed tree's
+  # own rate scale.  The mechanism is what is pinned here.
+  set.seed(4)
+  phy  <- TreeSim::sim.bd.taxa(n = 30, numbsim = 1, lambda = 1, mu = 0.9,
+                               complete = FALSE)[[1]]
+  brts <- sort(as.numeric(ape::branching.times(phy)), decreasing = TRUE)
+  set.seed(99)
+  ab <- auto_bounds(brts, model = "cr", link = "linear", num_threads = 1L,
+                    verbose = FALSE)
+  mu_w <- unname(ab$upper_bound[2] - ab$lower_bound[2])
+  lam_w <- unname(ab$upper_bound[1] - ab$lower_bound[1])
+  # the mu axis must be able to hold a high-turnover optimum at all: before the
+  # change it was a fraction of the lambda axis on trees like this one
+  expect_gt(mu_w, 0.5)
+  expect_gt(mu_w / lam_w, 0.5)
+  # and the test itself must accept a vector whose survivors match the data
+  # even when most of its draws die out
+  expect_true(emphasis:::.test_feasibility(
+    c(1.0, 0.9), model = "cr", link = "linear",
+    max_t = brts[1], max_lin = 600L, n_test = 8L,
+    tip_lo = 3, tip_hi = 300, num_threads = 1L))
+})

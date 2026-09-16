@@ -50,6 +50,7 @@ val_run_job <- function(job, lib, trees_file, refs_file, out_file) {
       dd_fit   = .val_fit(job, tt, rf, "dd"),
       fhat     = .val_fhat(job, tt, rf),
       pipeline = .val_pipeline(job, tt, rf),
+      init     = .val_init_arm(job, tt, rf),
       stop("unknown job kind: ", job$kind))
     row <- c(row, out)
     row$outcome <- "ok"
@@ -209,6 +210,76 @@ val_run_job <- function(job, lib, trees_file, refs_file, out_file) {
   }
   list(grid = grid, fhat_rows = do.call(rbind, rows),
        se_scale = rf$se, mle = rf$mle)
+}
+
+# --- initialiser arm (I1/I2/I3) --------------------------------------------
+# Does the cross-entropy search earn its place?  The three arms share ONE
+# auto_bounds box, computed once per tree and cached, so the box is not a
+# confounder: they differ only in what they hand to MCEM.
+#
+#   I1  cem    the pipeline's own route: GAM surface, then CEM inside the box
+#   I2  naive  the box midpoint, which is what a user with no search would use
+#   I3  gam    the GAM stage's optimum, with no CEM -- isolates whether CEM
+#              adds anything over the surface it is initialised from
+#
+# Two deficits are recorded for each: the STARTING point's own deficit against
+# the exact MLE (how good is the initialiser before MCEM touches it) and the
+# final deficit after MCEM.  Cost is the E-step draws each initialiser spends.
+.val_init_arm <- function(job, tt, rf) {
+  brts  <- tt$brts
+  model <- if (tt$kind == "cr") "cr" else "dd"
+  lx    <- if (model == "dd") rf$lx else NULL
+  dl    <- function(th) ll_exact(as.numeric(th), brts, model = model, lx = lx) - rf$mle_loglik
+
+  # ONE box for all three arms.  The seed is the tree's, not the job's, so the
+  # three configs compute the same box independently -- if each seeded from its
+  # own job seed they would search inside different boxes and the comparison
+  # would be confounded by the thing it is meant to hold fixed.
+  set.seed(val_seed(paste0(job$tree_id, "-box")))
+  ab <- emphasis::auto_bounds(brts, model = model, link = "linear",
+                              num_threads = 1L, verbose = FALSE)
+  lb <- ab$lower_bound; ub <- ab$upper_bound
+  base <- list(lower_bound = lb, upper_bound = ub, num_threads = 1L,
+               max_missing = 1e4, verbose = FALSE)
+
+  t0 <- proc.time()[3]
+  set.seed(job$seed)
+  start <- switch(job$config,
+    I2 = (lb + ub) / 2,
+    I3 = {
+      g <- emphasis::estimate_rates(brts, method = "gam", model = model,
+             control = c(base, list(sample_size = 200L, grid_points = 12L)))
+      as.numeric(g$pars)
+    },
+    I1 = {
+      g <- emphasis::estimate_rates(brts, method = "gam", model = model,
+             control = c(base, list(sample_size = 200L, grid_points = 12L)))
+      c2 <- emphasis::estimate_rates(brts, method = "cem", model = model,
+              init_pars = as.numeric(g$pars),
+              control = c(base, list(num_particles = 50L, num_trees = 5L,
+                                     max_iter = 20L)))
+      as.numeric(c2$pars)
+    },
+    stop("unknown init config: ", job$config))
+  t_init <- proc.time()[3] - t0
+  start <- pmin(pmax(start, lb), ub)
+
+  set.seed(job$seed + 1L)
+  fit <- emphasis::estimate_rates(brts, method = "mcem", model = model,
+           init_pars = start,
+           control = c(base, list(sampling = "bdi", sample_size = 200L,
+                                  max_iter = 400L,
+                                  max_time = max(30, job$timeout_s - t_init - 30))))
+  list(start_pars      = start,
+       start_delta_ell = dl(start),
+       pars            = as.numeric(fit$pars),
+       delta_ell       = dl(fit$pars),
+       ll_exact_mle    = rf$mle_loglik,
+       stop_reason     = fit$stop_reason %||% NA_character_,
+       iterations      = fit$iterations %||% NA_integer_,
+       init_seconds    = t_init,
+       box_contains_mle0 = all(rf$mle >= lb) && all(rf$mle <= ub),
+       auto_lower = lb, auto_upper = ub)
 }
 
 # --- full pipeline ---------------------------------------------------------
