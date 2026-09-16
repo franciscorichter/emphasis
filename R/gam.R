@@ -137,7 +137,8 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
                         train_surv_gam = TRUE,
                         num_threads = 1L,
                         verbose = TRUE,
-                        rho = 1.0) {
+                        rho = 1.0,
+                        surv_tries = 20L) {
   .check_rho(rho, "rho")
   model_bin <- .resolve_model(model)
   link_int  <- .resolve_link(link)
@@ -195,7 +196,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   center_ok <- .test_feasibility(
     center, model, link, max_t, max_lin,
     n_test = 10L, tip_lo = tip_lo, tip_hi = tip_hi,
-    num_threads = num_threads, rho = rho
+    num_threads = num_threads, rho = rho, surv_tries = surv_tries
   )
 
   if (!center_ok) {
@@ -204,7 +205,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     center <- .find_feasible_center(
       model_bin, link_int, max_t, n_tips, model, link,
       max_lin, tip_lo, tip_hi, num_threads,
-      rho = rho
+      rho = rho, surv_tries = surv_tries
     )
     if (is.null(center)) {
       warning("auto_bounds: could not find a feasible center point.")
@@ -233,10 +234,12 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     if (verbose) cat(sprintf("    axis %s: ", pnames[j]))
     hi <- .bisect_boundary(center, j, center[j], wide$ub[j],
                            model, link, max_t, max_lin,
-                           n_test, bisect_steps, tip_lo, tip_hi, num_threads, rho = rho)
+                           n_test, bisect_steps, tip_lo, tip_hi, num_threads, rho = rho,
+                           surv_tries = surv_tries)
     lo <- .bisect_boundary(center, j, center[j], wide$lb[j],
                            model, link, max_t, max_lin,
-                           n_test, bisect_steps, tip_lo, tip_hi, num_threads, rho = rho)
+                           n_test, bisect_steps, tip_lo, tip_hi, num_threads, rho = rho,
+                           surv_tries = surv_tries)
     if (verbose) cat(sprintf("[%.4f, %.4f]\n", lo, hi))
     # Record the feasible boundary points
     pt_hi <- center; pt_hi[j] <- hi; feasible_pts[[length(feasible_pts) + 1L]] <- pt_hi
@@ -278,11 +281,11 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
       hi_pt <- .bisect_direction(center, direction, wide, 1,
                                  model, link, max_t, max_lin,
                                  n_test, bisect_steps, tip_lo, tip_hi,
-                                 num_threads, rho = rho)
+                                 num_threads, rho = rho, surv_tries = surv_tries)
       lo_pt <- .bisect_direction(center, direction, wide, -1,
                                  model, link, max_t, max_lin,
                                  n_test, bisect_steps, tip_lo, tip_hi,
-                                 num_threads, rho = rho)
+                                 num_threads, rho = rho, surv_tries = surv_tries)
       if (!is.null(hi_pt)) feasible_pts[[length(feasible_pts) + 1L]] <- hi_pt
       if (!is.null(lo_pt)) feasible_pts[[length(feasible_pts) + 1L]] <- lo_pt
 
@@ -327,10 +330,12 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 
         hi_pt <- .bisect_direction(center, direction, wide, 1,
                                    model, link, max_t, max_lin,
-                                   n_test, bisect_steps, tip_lo, tip_hi, num_threads, rho = rho)
+                                   n_test, bisect_steps, tip_lo, tip_hi, num_threads, rho = rho,
+                           surv_tries = surv_tries)
         lo_pt <- .bisect_direction(center, direction, wide, -1,
                                    model, link, max_t, max_lin,
-                                   n_test, bisect_steps, tip_lo, tip_hi, num_threads, rho = rho)
+                                   n_test, bisect_steps, tip_lo, tip_hi, num_threads, rho = rho,
+                           surv_tries = surv_tries)
 
         if (!is.null(hi_pt)) feasible_pts[[length(feasible_pts) + 1L]] <- hi_pt
         if (!is.null(lo_pt)) feasible_pts[[length(feasible_pts) + 1L]] <- lo_pt
@@ -354,10 +359,12 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 
         hi_mu <- .bisect_direction(center, dir_mu, wide, 1,
                                    model, link, max_t, max_lin,
-                                   n_test, bisect_steps, tip_lo, tip_hi, num_threads, rho = rho)
+                                   n_test, bisect_steps, tip_lo, tip_hi, num_threads, rho = rho,
+                           surv_tries = surv_tries)
         lo_mu <- .bisect_direction(center, dir_mu, wide, -1,
                                    model, link, max_t, max_lin,
-                                   n_test, bisect_steps, tip_lo, tip_hi, num_threads, rho = rho)
+                                   n_test, bisect_steps, tip_lo, tip_hi, num_threads, rho = rho,
+                           surv_tries = surv_tries)
         if (!is.null(hi_mu)) feasible_pts[[length(feasible_pts) + 1L]] <- hi_mu
         if (!is.null(lo_mu)) feasible_pts[[length(feasible_pts) + 1L]] <- lo_mu
       }
@@ -378,10 +385,12 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     direction <- direction / sqrt(sum(direction^2))
     hi_pt <- .bisect_direction(center, direction, wide, 1,
                                model, link, max_t, max_lin,
-                               n_test, bisect_steps, tip_lo, tip_hi, num_threads, rho = rho)
+                               n_test, bisect_steps, tip_lo, tip_hi, num_threads, rho = rho,
+                           surv_tries = surv_tries)
     lo_pt <- .bisect_direction(center, direction, wide, -1,
                                model, link, max_t, max_lin,
-                               n_test, bisect_steps, tip_lo, tip_hi, num_threads, rho = rho)
+                               n_test, bisect_steps, tip_lo, tip_hi, num_threads, rho = rho,
+                           surv_tries = surv_tries)
     if (!is.null(hi_pt)) feasible_pts[[length(feasible_pts) + 1L]] <- hi_pt
     if (!is.null(lo_pt)) feasible_pts[[length(feasible_pts) + 1L]] <- lo_pt
   }
@@ -545,7 +554,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 # Search for a feasible center by trying a grid of rate values.
 .find_feasible_center <- function(model_bin, link_int, max_t, n_tips,
                                   model, link, max_lin, tip_lo, tip_hi,
-                                  num_threads, rho = 1.0) {
+                                  num_threads, rho = 1.0, surv_tries = 20L) {
   r_hat  <- log(max(n_tips, 2) / 2) / max(max_t, 0.1)
   active <- which(model_bin == 1L)
 
@@ -567,7 +576,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
       ok <- .test_feasibility(
         cand, model, link, max_t, max_lin,
         n_test = 5L, tip_lo = tip_lo, tip_hi = tip_hi,
-        num_threads = num_threads, rho = rho
+        num_threads = num_threads, rho = rho, surv_tries = surv_tries
       )
       if (ok) return(cand)
     }
@@ -582,7 +591,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 .bisect_boundary <- function(center, j, safe, target,
                              model, link, max_t, max_lin,
                              n_test, steps, tip_lo, tip_hi,
-                             num_threads, rho = 1.0) {
+                             num_threads, rho = 1.0, surv_tries = 20L) {
   lo <- safe
   hi <- target
 
@@ -594,7 +603,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     ok <- .test_feasibility(
       cand, model, link, max_t, max_lin,
       n_test = n_test, tip_lo = tip_lo, tip_hi = tip_hi,
-      num_threads = num_threads, rho = rho
+      num_threads = num_threads, rho = rho, surv_tries = surv_tries
     )
 
     if (ok) {
@@ -752,7 +761,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 .bisect_direction <- function(center, direction, wide, sign = 1,
                                model, link, max_t, max_lin,
                                n_test, steps, tip_lo, tip_hi,
-                               num_threads, rho = 1.0) {
+                               num_threads, rho = 1.0, surv_tries = 20L) {
   n_pars <- length(center)
   # Find maximum step size before hitting any wide bound
   max_step <- Inf
@@ -778,7 +787,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 
     ok <- .test_feasibility(cand, model, link, max_t, max_lin,
                             n_test = n_test, tip_lo = tip_lo, tip_hi = tip_hi,
-                            num_threads = num_threads, rho = rho)
+                            num_threads = num_threads, rho = rho, surv_tries = surv_tries)
     if (ok) {
       safe_step <- mid_step
     } else {
