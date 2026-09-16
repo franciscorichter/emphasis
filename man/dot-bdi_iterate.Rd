@@ -10,7 +10,7 @@
   link,
   bt,
   tp,
-  max_iter = 60,
+  max_iter = NULL,
   tol = 1e-04,
   n_grid = 500,
   use_gaussian_closure = TRUE,

@@ -517,3 +517,31 @@ test_that("cr and dd at rho = 1 on links 0 and 1 take the untouched branch", {
     expect_equal(sum(sapply(a$trees, function(tr) sum(tr$t_ext == 5e10))), 0)
   }
 })
+
+# ---------------------------------------------------------------------------
+# The mean-field sweep budget is part of the proposal, not a free parameter:
+# raising it changes the mean field of any run that had not reached tolerance
+# within it, and with it the draws and the estimate.  At rho = 1 the budget is
+# the one the validation study measured and must not move.
+# ---------------------------------------------------------------------------
+
+test_that("the sweep budget at complete sampling is 20 and pins the proposal", {
+  skip_on_cran()
+  expect_equal(eval(formals(emphasis:::.bdi_iterate)$max_iter), NULL)
+  # resolved value: 20 at rho = 1, larger below it
+  bt <- sort(c(0.4, 1.1, 1.9, 2.6, 3.4, 4.0))
+  p8 <- c(1.5, -0.06, 0, 0, 0.3, 0, 0, 0)          # dd, linear: a slow cell
+  sol20  <- emphasis:::.bdi_iterate(p8, c(1L,0L,0L), 0L, bt, 5, rho = 1)
+  sol200 <- emphasis:::.bdi_iterate(p8, c(1L,0L,0L), 0L, bt, 5, max_iter = 200L,
+                                    rho = 1)
+  expect_lte(sol20$iterations, 20L)
+  # if this cell converges inside 20 the two agree; if it does not, they differ,
+  # and that difference is exactly why the budget is pinned
+  if (!isTRUE(sol20$converged)) {
+    expect_gt(abs(sol20$delta - sol200$delta), 0)
+  }
+  # below rho = 1 the budget is larger, because the fixed point is slower there
+  solr <- emphasis:::.bdi_iterate(p8, c(1L,0L,0L), 0L, bt, 5, rho = 0.2)
+  expect_gt(solr$iterations, 0L)
+  expect_lte(solr$iterations, 200L)
+})

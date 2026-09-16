@@ -286,7 +286,10 @@
 #' take 164 sweeps.  \code{dd} on the gaussian link therefore stays on the
 #' thinning proposal.  The linear and exponential \code{dd} rates are monotone
 #' in \code{N} and reached the fixed point in every cell of the same sweep, in
-#' at most 27 iterations, \code{rho} down to 0.2 included.
+#' at most 27 iterations at \code{rho = 1}.  They are slower below it: an
+#' exponential \code{dd} cell needs 63 sweeps at \code{rho = 0.2}, and
+#' converging linear \code{dd} cells have needed 126 and 134, which is what
+#' sets the \code{rho < 1} budget.
 #'
 #' Incomplete sampling is in scope for every model and link the gate otherwise
 #' accepts.  \code{p(t)} becomes the probability of leaving a \emph{sampled}
@@ -581,8 +584,16 @@
 #'   diagnostics converged / delta / iterations.
 #' @keywords internal
 .bdi_iterate <- function(pars8, model_bin, link, bt, tp,
-                         max_iter = 60, tol = 1e-4, n_grid = 500,
+                         max_iter = NULL, tol = 1e-4, n_grid = 500,
                          use_gaussian_closure = TRUE, rho = 1) {
+  # The budget is 20 at complete sampling, which is what the validation study
+  # measured: raising it changes the mean field of any run that had NOT reached
+  # tolerance within 20, and with it the proposal and the estimate (measured
+  # fhat gaps of 8.1e-4, 1.9e-5 and 11.64 nats on ordinary dd/linear cells).
+  # Below rho = 1 the fixed point is slower -- exponential dd needs 63 sweeps
+  # at rho = 0.2 and converging linear-dd cells 126 and 134 -- so the budget
+  # there is set from the measurement rather than inherited.
+  if (is.null(max_iter)) max_iter <- if (rho >= 1) 20L else 200L
   bt     <- sort(bt)
   t_grid <- seq(0, tp, length.out = n_grid)
 

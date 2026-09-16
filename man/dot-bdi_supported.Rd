@@ -49,7 +49,10 @@ and the whole pattern moves with \code{rho}.  Where it does converge it can
 take 164 sweeps.  \code{dd} on the gaussian link therefore stays on the
 thinning proposal.  The linear and exponential \code{dd} rates are monotone
 in \code{N} and reached the fixed point in every cell of the same sweep, in
-at most 27 iterations, \code{rho} down to 0.2 included.
+at most 27 iterations at \code{rho = 1}.  They are slower below it: an
+exponential \code{dd} cell needs 63 sweeps at \code{rho = 0.2}, and
+converging linear \code{dd} cells have needed 126 and 134, which is what
+sets the \code{rho < 1} budget.
 
 Incomplete sampling is in scope for every model and link the gate otherwise
 accepts.  \code{p(t)} becomes the probability of leaving a \emph{sampled}
