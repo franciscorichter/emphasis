@@ -90,8 +90,19 @@ for (nm in names(TREES)) {
     a_diff  <- c(a_diff,  wrong_dd - wrong_bd)
   }
 }
-chk("a1", max(abs(a_match)) < 1e-3,
-    sprintf("documented layout: max|dd(K=1e6) - bd| = %.2e (< 1e-3)", max(abs(a_match))))
+# a1 discriminates the documented pars2 layout from the wrong one.  The wrong
+# layout (a2) is off by 1.26 nats at minimum, so the threshold only has to sit
+# well below that while clearing DDD's own integrator noise.  That noise is
+# platform-dependent: max|dd(K=1e6) - bd| is 3.4e-04 under clang/macOS but
+# 3.9e-03 under gcc/Linux, and it does NOT shrink with lx -- doubling lx on the
+# n = 60 tree moves it -3.90e-03 -> +5.70e-04 -> +5.08e-03, so dd_loglik is
+# limited by ODE tolerance, not by truncation.  A2_MIN_GAP / 60 keeps a 60x
+# margin to the signal a1 exists to catch.  The measured value is printed so a
+# genuine layout regression cannot hide inside the tolerance.
+A1_TOL <- 2e-2
+chk("a1", max(abs(a_match)) < A1_TOL,
+    sprintf("documented layout: max|dd(K=1e6) - bd| = %.2e (< %.0e; a2 gap >= 1.26)",
+            max(abs(a_match)), A1_TOL))
 chk("a2", min(abs(a_diff)) > 1,
     sprintf("ref_check.R layout (verbose=2, soc=0): gap %.2f to %.2f, theta-dependent",
             min(a_diff), max(a_diff)))
