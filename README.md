@@ -311,7 +311,7 @@ data.frame(
 
 See the [wiki](https://github.com/franciscorichter/emphasis/wiki) for the full derivation of the model and inference machinery, method details, and worked examples.
 
-## Status (2026-09-13)
+## Status (2026-09-16)
 
 - Version 0.4; `main` is the working branch and is identical on the forge and on GitHub.
 - The `{N, D}` covariate basis, survival-conditioned inference and the docs site are in; the BDI
@@ -346,12 +346,27 @@ likelihood gives positive density (H45). The last of those is what makes a `d` o
 measurement: the importance sampler's unbiasedness can now be checked against a brute-force
 marginal likelihood on a tree with observed splits, and it passes.
 
-Wave 3 is not applied. The largest open items, in the order the validation study says they would
-pay off: the BDI proposal now also covers the gaussian link for `"cr"` and every supported model
-at `rho < 1`, which removes two of the three reasons the thinning proposal was forced into the
-high-turnover regimes where its effective sample size collapses, but a `d` or `nd` model still has
-no exact proposal; and convergence is declared on a parameter step that is not referred to the
-Monte Carlo noise of the iterate it tests. There are no vignettes.
+The exact proposal has been widened, which was the validation study's first recommendation. It
+now covers the gaussian link for `"cr"` and every supported model at `rho < 1`, so incomplete
+sampling no longer falls back to the proposal whose weights collapse: on the cells where thinning
+retains 1.2–2.3 % of its effective sample and reads 1.9 to 12.9 nats low, the exact proposal holds
+100 % and is accurate to around 1e-12. It costs 2.2–2.5× the wall clock of thinning; accuracy is
+what it buys, not speed.
+
+Two things it does not cover, both by measurement rather than omission. `"dd"` on the gaussian
+link is refused because the mean-field iteration diverges there (above). A `d` or `nd` model has
+no exact proposal at all, and cannot: the BDI construction rests on a rate that is a function of
+the lineage count alone, while a `D`-model's rate depends on each lineage's own pendant age.
+
+Open: convergence is declared on a parameter step that is not referred to the Monte Carlo noise of
+the iterate it tests. A replacement was designed, implemented and measured, and is **not** shipped
+— `dev/stopping-rule/FINDING.md` has the numbers. The short version is that the two deficit
+distributions cross: it trims the tail and degrades the centre, at +26 % of draws. The useful
+result there is about the study rather than the rule — over the cells that fail the convergence
+criterion the rule in force has a median deficit of −0.002 nats, so those fits are not landing far
+from the maximum, they are declining to say that they converged.
+
+There are no vignettes.
 
 ### Validation
 
