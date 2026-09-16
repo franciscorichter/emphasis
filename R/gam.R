@@ -243,6 +243,57 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     pt_lo <- center; pt_lo[j] <- lo; feasible_pts[[length(feasible_pts) + 1L]] <- pt_lo
   }
 
+  # Phase 1b: the constant-net-rate ray (turnover).
+  # A reconstructed tree pins the net rate lambda - mu far more tightly than it
+  # pins turnover mu / lambda, so the likelihood runs along a ridge on which
+  # both rates rise together.  Axis-aligned probes cannot follow that ridge:
+  # raising lambda with mu held low inflates the net rate until the simulated
+  # trees are too big to be feasible, and raising mu with lambda held low drives
+  # the net rate negative until they die out.  Both stop early, so the box ends
+  # up centred on the low-turnover guess it started from.  Probe the direction
+  # that holds lambda - mu fixed to first order at the center instead.  Under
+  # the linear link the parameters are the rates, so the ray is exact.
+  if (n_pars >= 2L) {
+    i_lam <- 1L
+    i_mu  <- 2L + length(active)
+    # d(rate)/d(intercept) at the center, by link.
+    d_of <- function(par, li) {
+      if (li == 1L) return(exp(par))        # rate = exp(par)
+      if (li == 2L) return(1 / exp(0.5))    # rate = par / exp(0.5)
+      1                                     # linear: rate = par
+    }
+    d_lam <- d_of(center[i_lam], link_int)
+    d_mu  <- d_of(center[i_mu],  link_int)
+    s_turn <- if (is.finite(d_lam / d_mu) && d_mu > 0) d_lam / d_mu else 1
+    slopes_turn <- unique(c(s_turn, 1))
+    slopes_turn <- slopes_turn[is.finite(slopes_turn) & slopes_turn > 0]
+
+    if (verbose) cat("  Phase 1b: constant-net-rate ray\n")
+    for (s in slopes_turn) {
+      direction <- rep(0, n_pars)
+      direction[i_lam] <- 1
+      direction[i_mu]  <- s
+      direction <- direction / sqrt(sum(direction^2))
+
+      hi_pt <- .bisect_direction(center, direction, wide, 1,
+                                 model, link, max_t, max_lin,
+                                 n_test, bisect_steps, tip_lo, tip_hi,
+                                 num_threads, rho = rho)
+      lo_pt <- .bisect_direction(center, direction, wide, -1,
+                                 model, link, max_t, max_lin,
+                                 n_test, bisect_steps, tip_lo, tip_hi,
+                                 num_threads, rho = rho)
+      if (!is.null(hi_pt)) feasible_pts[[length(feasible_pts) + 1L]] <- hi_pt
+      if (!is.null(lo_pt)) feasible_pts[[length(feasible_pts) + 1L]] <- lo_pt
+
+      if (verbose) {
+        hi_str <- if (!is.null(hi_pt)) sprintf("(%.4f, %.4f)", hi_pt[i_lam], hi_pt[i_mu]) else "---"
+        lo_str <- if (!is.null(lo_pt)) sprintf("(%.4f, %.4f)", lo_pt[i_lam], lo_pt[i_mu]) else "---"
+        cat(sprintf("    slope=%.2f: %s .. %s\n", s, lo_str, hi_str))
+      }
+    }
+  }
+
   # Phase 2: Compensatory diagonals
   # For each active covariate, explore the direction where the intercept
   # and the covariate coefficient compensate each other, keeping the
