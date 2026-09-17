@@ -14,6 +14,17 @@
 #
 # EMPHASIS_LIB selects the library emphasis is loaded from.  Leave it unset to
 # use the normal library.  Numbers from a pre-wave-1 build are not final.
+#
+# Export R_LIBS to the same library as well: EMPHASIS_LIB is prepended only
+# inside val_load_emphasis(), so 02-reference.R (numDeriv, future.apply) and
+# the multisession workers resolve packages from the default paths otherwise.
+#
+#   export R_LIBS=$HOME/rlib-emphasis EMPHASIS_LIB=$HOME/rlib-emphasis WORKERS=24
+#   nohup ./run.sh main > run.log 2>&1 &
+#
+# A run can be sharded across hosts with --only <kinds> and --jobs <regex>
+# (passed through to 03-fit.R); merge the hosts' results/<tier>/jobs/ files
+# and run 04-analyse.R --allow-mixed-builds, then 04b-init-table.R.
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
