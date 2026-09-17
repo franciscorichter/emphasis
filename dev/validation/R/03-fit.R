@@ -36,6 +36,7 @@ TIER    <- getarg("--tier", "smoke")
 WORKERS <- as.integer(getarg("--workers", "10"))
 LIB     <- getarg("--lib", Sys.getenv("EMPHASIS_LIB", NA_character_))
 ONLY    <- if (!is.null(getarg("--only"))) strsplit(getarg("--only"), ",")[[1]] else NULL
+JOBS_RE <- getarg("--jobs")   # regex on job_id, applied after --only; for stragglers
 DRY     <- any(args == "--dry-run")
 FORCE   <- any(args == "--force")
 NOGATE  <- any(args == "--no-gate")
@@ -207,6 +208,7 @@ JT <- do.call(rbind, lapply(jobs, function(j)
                  "N", "init", "rep", "box_scale", "seed", "timeout_s",
                  "est_cost_s")], stringsAsFactors = FALSE)))
 if (!is.null(ONLY)) { keep <- JT$kind %in% ONLY; JT <- JT[keep, ]; jobs <- jobs[keep] }
+if (!is.null(JOBS_RE)) { keep <- grepl(JOBS_RE, JT$job_id); JT <- JT[keep, ]; jobs <- jobs[keep] }
 ord <- order(-JT$est_cost_s)
 JT <- JT[ord, ]; jobs <- jobs[ord]
 rownames(JT) <- NULL
