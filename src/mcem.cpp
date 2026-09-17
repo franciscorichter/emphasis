@@ -41,11 +41,12 @@ namespace emphasis {
               double xtol,
               int num_threads,
               conditional_fun_t* conditional,
-              const std::vector<double>& parent_tip_start)
+              const std::vector<double>& parent_tip_start,
+              const std::vector<int>& parent_id)
   {
     auto EM = mcem_t();
     EM.e = E_step(N, maxN, pars, brts, model, max_missing, max_lambda, num_threads,
-                  0.0, parent_tip_start);
+                  0.0, parent_tip_start, parent_id);
     // optimize
     if (!EM.e.trees.empty()) {
       EM.m = M_step(pars, EM.e.trees, EM.e.weights, model, lower_bound, upper_bound, xtol, num_threads, conditional);

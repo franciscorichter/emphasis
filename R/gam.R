@@ -10,8 +10,8 @@
 #' @param pars_mat Numeric matrix whose rows are the parameter vectors used to
 #'   generate \code{simulations}.  Column names are used as predictor names; if
 #'   absent, names are auto-generated from \code{model}.
-#' @param model String or length-3 binary integer vector matching the model
-#'   used in simulation.  Used only when \code{pars_mat} has no column names.
+#' @param model String or binary integer vector (length 3 or 4) matching the
+#'   model used in simulation.  Used only when \code{pars_mat} has no column names.
 #'   Default \code{"cr"}.
 #' @param spline_type \code{"univariate"} (default) fits independent smooth
 #'   terms \code{s(x)} for each varying predictor.  \code{"bivariate"} fits
@@ -642,7 +642,8 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
           model = as.integer(model_bin),
           link  = as.integer(link_int),
           rho   = as.numeric(rho),
-          parent_tip_start = .pts(brts)
+          parent_tip_start = .pts(brts),
+          parent_id = .pid(brts)
         )
         if (length(raw$trees) == 0L) FALSE
         else {
@@ -891,7 +892,8 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 #' @param pars_mat Numeric matrix whose rows are compact parameter vectors
 #'   (same layout as \code{pars} in \code{\link{estimate_rates}}).
 #' @param model Model specification: \code{"cr"}, \code{"dd"}, \code{"d"},
-#'   \code{"nd"}, or a length-3 binary integer vector.
+#'   \code{"nd"}, \code{"ed"}, \code{"ned"}, or a binary integer vector
+#'   (length 3 or 4).
 #' @param sample_size Number of augmented trees per grid point (default 200).
 #' @param link \code{"linear"}, \code{"exponential"}, or \code{"gaussian"}.
 #' @param max_missing Maximum missing lineages per augmentation (default 1e4).
@@ -950,7 +952,8 @@ estimate_likelihood_surface <- function(tree, pars_mat, model = "cr",
         max_lambda = as.numeric(max_lambda),
         num_threads = if (use_r_parallel) 1L else as.integer(num_threads),
         model = as.integer(model_bin), link = as.integer(link_int),
-        rho = as.numeric(rho), parent_tip_start = pts
+        rho = as.numeric(rho), parent_tip_start = pts,
+        parent_id = .pid(brts)
       ),
       error = function(e) NULL
     )

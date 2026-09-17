@@ -310,9 +310,11 @@
   # rather than silently routed elsewhere.
   rho_ok    <- is.numeric(rho) && length(rho) == 1L && is.finite(rho) &&
     rho > 0 && rho <= 1 + 1e-12
-  if (!rho_ok || length(model_bin) != 3L) return(FALSE)
-  # N-only: no M covariate, no D covariate.
-  if (model_bin[2L] != 0L || model_bin[3L] != 0L) return(FALSE)
+  if (!rho_ok || !(length(model_bin) %in% c(3L, 4L))) return(FALSE)
+  model_bin <- .pad_model_bin(model_bin)
+  # N-only: no M covariate, no D covariate, no ED covariate (each is
+  # per-lineage or closes the mean-field state on something other than N).
+  if (model_bin[2L] != 0L || model_bin[3L] != 0L || model_bin[4L] != 0L) return(FALSE)
   if (link %in% c(0L, 1L)) return(TRUE)
   # gaussian: constant rates only (see above).
   link == 2L && model_bin[1L] == 0L
@@ -330,8 +332,15 @@
   if (!(is.numeric(rho) && length(rho) == 1L && is.finite(rho) &&
         rho > 0 && rho <= 1 + 1e-12))
     return(sprintf("rho = %s (outside (0, 1])", format(rho)))
-  if (length(model_bin) != 3L)
-    return("a model vector that is not length 3")
+  if (!(length(model_bin) %in% c(3L, 4L)))
+    return("a model vector that is not length 3 or 4")
+  model_bin <- .pad_model_bin(model_bin)
+  if (model_bin[4L] != 0L)
+    return(paste0("an ED-dependent model: the BDI conditional distribution is ",
+                  "built on one survival probability p(t) shared by every ",
+                  "lineage alive at t, and an ED-model's rate depends on each ",
+                  "lineage's own evolutionary distinctiveness, so no single ",
+                  "p(t) exists"))
   if (model_bin[3L] != 0L)
     return(paste0("a D-dependent model: the BDI conditional distribution is ",
                   "built on one survival probability p(t) shared by every ",

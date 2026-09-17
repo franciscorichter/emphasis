@@ -99,15 +99,18 @@ List rcpp_mce(const std::vector<double>& brts,
               int link = 0,
               double rho = 1.0,
               Rcpp::NumericVector parent_tip_start = Rcpp::NumericVector::create(),
-              int seed = 0)
+              int seed = 0,
+              Rcpp::IntegerVector parent_id = Rcpp::IntegerVector::create())
 {
   emphasis::rng::set_seed(emphasis::resolve_seed(seed));
   const std::vector<double> pts(parent_tip_start.begin(), parent_tip_start.end());
-  if (pars.size() != 8) {
-    throw std::invalid_argument("augment_trees: pars must have length 8 (got " +
+  const std::vector<int> pid(parent_id.begin(), parent_id.end());
+  if (pars.size() != 8 && pars.size() != emphasis::n_params) {
+    throw std::invalid_argument("augment_trees: pars must have length 8 or 10 (got " +
       std::to_string(pars.size()) + ")");
   }
-  std::vector<int> model_bin = {model[0], model[1], model[2]};
+  const std::vector<double> pars10 = emphasis::pad_params(pars);
+  std::vector<int> model_bin(model.begin(), model.end());
   // The proposal reads M = P/N at the segment start. Without the observed
   // topology P is the legacy quantity (every observed lineage dated from the
   // crown), which the scorer cannot reproduce from the finished tree, so
@@ -119,8 +122,15 @@ List rcpp_mce(const std::vector<double>& brts,
       "Pass parent_tip_start; without it log q is not the density the sampler "
       "draws from.");
   }
+  // ED is a function of the ancestry, so the observed lineages must be named:
+  // refused here, once, rather than in every augmentation attempt.
+  if (model_bin.size() > 3 && model_bin[3] == 1 && (pid.empty() || pts.empty())) {
+    throw std::invalid_argument(
+      "augment_trees: the ED covariate needs the tree's topology: pass a phylo object "
+      "(or a simulate_tree() result), not a bare branching-time vector.");
+  }
   // Bounds are only needed for M-step (nlopt); E-step does not use them.
-  std::vector<double> lb8(8, -1e6), ub8(8, 1e6);
+  std::vector<double> lb8(emphasis::n_params, -1e6), ub8(emphasis::n_params, 1e6);
   auto mdl = emphasis::Model(lb8, ub8, model_bin, link, rho);
 
   // The envelope counter is process-wide and accumulates across calls and
@@ -130,14 +140,15 @@ List rcpp_mce(const std::vector<double>& brts,
 
   auto E = emphasis::E_step(sample_size,
                             maxN,
-                            pars,
+                            pars10,
                             brts,
                             mdl,
                             max_missing,
                             max_lambda,
                             num_threads,
                             0.0,
-                            pts);
+                            pts,
+                            pid);
   List ret;
   List trees;
   for (const emphasis::tree_t& tree : E.trees) {
@@ -236,11 +247,14 @@ DataFrame rcpp_attachments(const Rcpp::DataFrame& tree)
 // [[Rcpp::export(name = "eval_pendant_sweep")]]
 DataFrame rcpp_pendant_sweep(const Rcpp::DataFrame& tree,
                              Rcpp::NumericVector parent_tip_start =
-                               Rcpp::NumericVector::create())
+                               Rcpp::NumericVector::create(),
+                             Rcpp::IntegerVector parent_id =
+                               Rcpp::IntegerVector::create())
 {
   auto local_tree = loglik::pack(tree);
   if (local_tree.empty()) return tree;
   const std::vector<double> pts(parent_tip_start.begin(), parent_tip_start.end());
+  const std::vector<int> pid(parent_id.begin(), parent_id.end());
   if (!pts.empty()) {
     // The observed nodes are the tips the caller supplied, ids 0 .. m-1 in
     // forward-time order; everything the augmentation added is missing or
@@ -259,6 +273,7 @@ DataFrame rcpp_pendant_sweep(const Rcpp::DataFrame& tree,
       const size_t k = static_cast<size_t>(node.id);
       node.focal_tip_start = (k + 1 < m) ? pts[k] : emphasis::ts_unknown;
       node.clade = emphasis::clade_topology;   // as create_tree marks them
+      if (k < pid.size()) node.parent_id = pid[k];
     }
   }
   emphasis::pendant_sweep_tree(local_tree);

@@ -4,7 +4,11 @@
 \alias{eval_pendant_sweep}
 \title{Replay the forward pendant sweep over an augmented tree}
 \usage{
-eval_pendant_sweep(tree, parent_tip_start = as.numeric(c()))
+eval_pendant_sweep(
+  tree,
+  parent_tip_start = as.numeric(c()),
+  parent_id = as.integer(c())
+)
 }
 \arguments{
 \item{tree}{One augmented-tree data frame from \code{\link{augment_trees}}.}

@@ -71,6 +71,27 @@ eval_nh_rate <- function(pars, tree, times, model = as.integer( c(0, 0, 0)), lin
     .Call('_emphasis_eval_nh_rate_cpp', PACKAGE = 'emphasis', pars, tree, times, model, link, rho)
 }
 
+#' Evolutionary distinctiveness of a lineage forest at a time
+#'
+#' The fair-proportion routine the likelihood and the simulator share
+#' (\code{inst/include/ed_covariate.hpp}), exposed so that it can be checked
+#' against an independent computation on an \code{ape} tree.
+#'
+#' @param parent Integer vector: for each lineage, the (1-based) index of the
+#'   lineage it split from, or \code{0} for a crown lineage.
+#' @param birth Numeric vector: each lineage's birth time (forward).
+#' @param alive Logical vector: whether each lineage is alive on the segment
+#'   being evaluated.
+#' @param t The evaluation time.
+#' @return A data frame with one row per lineage: \code{c} and \code{ts} such
+#'   that \code{ED(u) = c + (u - ts)} for \code{u} in the segment (\code{NA}
+#'   for a lineage not alive), \code{ed} the value at \code{t}, and
+#'   \code{n_desc} the alive lineages in its subtree.
+#' @keywords internal
+ed_fair_proportion <- function(parent, birth, alive, t) {
+    .Call('_emphasis_rcpp_ed_fair_proportion', PACKAGE = 'emphasis', parent, birth, alive, t)
+}
+
 #' Draw augmented trees via importance sampling
 #'
 #' Augments an observed extant tree (given by its branching times) with
@@ -120,8 +141,8 @@ eval_nh_rate <- function(pars, tree, times, model = as.integer( c(0, 0, 0)), lin
 #'   \item{time}{Elapsed time (ms).}
 #' }
 #' @keywords internal
-augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, parent_tip_start = as.numeric( c()), seed = 0L) {
-    .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link, rho, parent_tip_start, seed)
+augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, parent_tip_start = as.numeric( c()), seed = 0L, parent_id = as.integer( c())) {
+    .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link, rho, parent_tip_start, seed, parent_id)
 }
 
 #' What the proposal could attach an augmented lineage to
@@ -173,8 +194,8 @@ eval_attachments <- function(tree) {
 #' @return The same data frame with \code{tip_start}, \code{focal_tip_start}
 #'   and \code{pd} rewritten by the sweep.
 #' @keywords internal
-eval_pendant_sweep <- function(tree, parent_tip_start = as.numeric( c())) {
-    .Call('_emphasis_rcpp_pendant_sweep', PACKAGE = 'emphasis', tree, parent_tip_start)
+eval_pendant_sweep <- function(tree, parent_tip_start = as.numeric( c()), parent_id = as.integer( c())) {
+    .Call('_emphasis_rcpp_pendant_sweep', PACKAGE = 'emphasis', tree, parent_tip_start, parent_id)
 }
 
 #' Count thinning candidates with acceptance probability above 1
@@ -236,8 +257,8 @@ thinning_envelope_violations <- function(reset = FALSE) {
 #'  \item{logg}{vector of log q(z_i | obs, theta) for each valid tree}
 #' }
 #' @keywords internal
-em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, rconditional = NULL, parent_tip_start = as.numeric( c()), seed = 0L) {
-    .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model, link, rho, rconditional, parent_tip_start, seed)
+em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, rconditional = NULL, parent_tip_start = as.numeric( c()), seed = 0L, parent_id = as.integer( c())) {
+    .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model, link, rho, rconditional, parent_tip_start, seed, parent_id)
 }
 
 #' function to perform one step of the E-M algorithm

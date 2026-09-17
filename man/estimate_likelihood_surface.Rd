@@ -28,7 +28,8 @@ accepted by \code{\link{estimate_rates}}.}
 (same layout as \code{pars} in \code{\link{estimate_rates}}).}
 
 \item{model}{Model specification: \code{"cr"}, \code{"dd"}, \code{"d"},
-\code{"nd"}, or a length-3 binary integer vector.}
+\code{"nd"}, \code{"ed"}, \code{"ned"}, or a binary integer vector
+(length 3 or 4).}
 
 \item{sample_size}{Number of augmented trees per grid point (default 200).}
 

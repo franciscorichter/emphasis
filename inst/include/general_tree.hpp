@@ -27,6 +27,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <limits>
+#include "ed_covariate.hpp"
 
 namespace sim_tree {
 
@@ -88,22 +90,54 @@ struct general_div {
   double max_t;
   float  t;
   size_t max_N, N;
-  std::array<double, 8> pars;   // beta_0..beta_E, gamma_0..gamma_E
-  std::array<int, 3>    model;  // {use_N, use_P, use_E}
-  int    link;                  // 0 = linear, 1 = exponential, 2 = gaussian
+  // {beta_0, beta_N, beta_M, beta_D, gamma_0, gamma_N, gamma_M, gamma_D,
+  //  beta_ED, gamma_ED}: the ED coefficients are appended, as in model.hpp.
+  std::array<double, 10> pars;
+  std::array<int, 4>     model;  // {use_N, use_M, use_D, use_ED}
+  int    link;                   // 0 = linear, 1 = exponential, 2 = gaussian
 
   std::vector<gbranch> ltable;
   breaks break_type;
   rnd_t  rndgen;
 
   general_div(double total_time,
-              const std::array<double, 8>& p,
-              const std::array<int, 3>&    m,
+              const std::array<double, 10>& p,
+              const std::array<int, 4>&     m,
               size_t maxN,
               int link_type,
               uint64_t seed)
     : max_t(total_time), t(0.f), max_N(maxN), N(0),
       pars(p), model(m), link(link_type), break_type(none), rndgen(seed) {}
+
+  // Evolutionary distinctiveness of every row of the L-table at time tt:
+  // ED_i(tt) for an alive row, NaN otherwise.  The first two rows are the
+  // crown lineages and have no parent; every other row's parent is the row
+  // whose label its parent_label names.  Same routine as the likelihood's
+  // (ed_covariate.hpp), so the simulator and the scorer agree on ED.
+  std::vector<double> ed_now(double tt) const {
+    const size_t n = ltable.size();
+    std::vector<int>    parent(n, emphasis::ed::no_parent_idx);
+    std::vector<double> birth(n);
+    std::vector<char>   alive(n);
+    std::vector<int>    row_of_label;   // label -> row, labels are small ints of either sign
+    int lo = 0, hi = 0;
+    for (const auto& br : ltable) { lo = std::min(lo, br.label); hi = std::max(hi, br.label); }
+    row_of_label.assign(static_cast<size_t>(hi - lo + 1), -1);
+    for (size_t i = 0; i < n; ++i) row_of_label[static_cast<size_t>(ltable[i].label - lo)] = static_cast<int>(i);
+    for (size_t i = 0; i < n; ++i) {
+      birth[i] = static_cast<double>(ltable[i].start_date);
+      alive[i] = (ltable[i].end_date == -1.f) ? 1 : 0;
+      if (i >= 2) {
+        const int pl = ltable[i].parent_label;
+        if (pl >= lo && pl <= hi) parent[i] = row_of_label[static_cast<size_t>(pl - lo)];
+      }
+    }
+    emphasis::ed::result_t r;
+    emphasis::ed::fair_proportion(parent, birth, alive, tt, r);
+    std::vector<double> out(n, std::numeric_limits<double>::quiet_NaN());
+    for (size_t i = 0; i < n; ++i) if (alive[i]) out[i] = r.c[i] + (tt - r.ts[i]);
+    return out;
+  }
 
   // Apply link function to linear predictor (linear and exponential only)
   double apply_link(double eta) const {
@@ -120,27 +154,28 @@ struct general_div {
   // Orthogonal covariate basis {N, M=P/N, D=E-M}. Inputs are still (N, P, E);
   // the transform to (M, D) happens here so callers pass raw covariates.
 
-  // Per-lineage speciation rate
-  double compute_lambda(double Nval, double Pval, double Eval) const {
+  // Per-lineage speciation rate; EDval is the lineage's evolutionary
+  // distinctiveness (0 when the ED covariate is inactive)
+  double compute_lambda(double Nval, double Pval, double Eval, double EDval = 0.0) const {
     const double M = (Nval > 0.0) ? Pval / Nval : 0.0;
     const double D = Eval - M;
     if (link == 2) {
       double eta_cov = pars[1] * Nval + pars[2] * M + pars[3] * D;
       return gaussian_rate(pars[0], eta_cov);
     }
-    double eta = pars[0] + pars[1] * Nval + pars[2] * M + pars[3] * D;
+    double eta = pars[0] + pars[1] * Nval + pars[2] * M + pars[3] * D + pars[8] * EDval;
     return apply_link(eta);
   }
 
   // Per-lineage extinction rate
-  double compute_mu(double Nval, double Pval, double Eval) const {
+  double compute_mu(double Nval, double Pval, double Eval, double EDval = 0.0) const {
     const double M = (Nval > 0.0) ? Pval / Nval : 0.0;
     const double D = Eval - M;
     if (link == 2) {
       double eta_cov = pars[5] * Nval + pars[6] * M + pars[7] * D;
       return gaussian_rate(pars[4], eta_cov);
     }
-    double eta = pars[4] + pars[5] * Nval + pars[6] * M + pars[7] * D;
+    double eta = pars[4] + pars[5] * Nval + pars[6] * M + pars[7] * D + pars[9] * EDval;
     return apply_link(eta);
   }
 
@@ -171,7 +206,13 @@ struct general_div {
     //   sum_exp_bE = Σ_{alive s} exp(-β_E · tip_start_s)
     //   sum_exp_gE = Σ_{alive s} exp(-γ_E · tip_start_s)
     // Allows: total_λ = exp(β₀+β_N·N+β_P·P+β_E·t) · sum_exp_bE
-    const bool ep_exp = (model[2] == 1 && link == 1);
+    // Per-lineage rates are needed for D and for ED; the factored running sums
+    // serve D alone under the exponential link, since a lineage's ED constant
+    // changes at every event in its clade and cannot be maintained
+    // incrementally.
+    const bool use_ed      = (model[3] == 1);
+    const bool per_lineage = (model[2] == 1) || use_ed;
+    const bool ep_exp = (model[2] == 1 && !use_ed && link == 1);
     double sum_exp_bE = ep_exp ? 2.0 * std::exp(-pars[3] * 0.0) : 0.0;  // 2 lineages at ts=0
     double sum_exp_gE = ep_exp ? 2.0 * std::exp(-pars[7] * 0.0) : 0.0;
 
@@ -187,11 +228,21 @@ struct general_div {
       // ------------------------------------------------------------------
       double total_rate = 0.0;
 
-      if (!model[2]) {
+      if (!per_lineage) {
         // No E-dependence: all lineages share the same per-lineage rates — O(1)
         const double lam = compute_lambda(Nval, Pval, 0.0);
         const double mu  = compute_mu   (Nval, Pval, 0.0);
         total_rate = Nval * (lam + mu);
+      } else if (use_ed) {
+        // ED (with or without D): O(N) per-lineage loop over the alive rows,
+        // each with its own pendant age and its own ED at the current time.
+        const std::vector<double> edv = ed_now(static_cast<double>(t));
+        for (size_t i = 0; i < ltable.size(); ++i) {
+          const auto& br = ltable[i];
+          if (br.end_date != -1.f) continue;
+          const double E = static_cast<double>(t) - static_cast<double>(br.tip_start);
+          total_rate += compute_lambda(Nval, Pval, E, edv[i]) + compute_mu(Nval, Pval, E, edv[i]);
+        }
       } else if (ep_exp) {
         // EP + exponential link, orthogonal basis {N, M=P/N, D=E-M}: O(1) via
         // factored running sums.  With D = (t - ts_s) - M,
@@ -229,21 +280,23 @@ struct general_div {
       size_t focal;
       bool   is_spec;
 
-      if (!model[2]) {
+      if (!per_lineage) {
         const double lam = compute_lambda(Nval, Pval2, 0.0);
         const double mu  = compute_mu   (Nval, Pval2, 0.0);
         focal   = sample_tip();
         is_spec = rndgen.bernouilli(lam / (lam + mu));
       } else {
         // Weighted selection: precompute per-lineage rates at new t, then sample
+        const std::vector<double> edv = use_ed ? ed_now(static_cast<double>(t))
+                                               : std::vector<double>(ltable.size(), 0.0);
         std::vector<size_t> alive_idx;
         std::vector<double> lam_vec, mu_vec;
         double rate_sum = 0.0;
         for (size_t i = 0; i < ltable.size(); ++i) {
           if (ltable[i].end_date != -1.f) continue;
           const double E   = static_cast<double>(t) - static_cast<double>(ltable[i].tip_start);
-          const double lam = compute_lambda(Nval, Pval2, E);
-          const double mu  = compute_mu   (Nval, Pval2, E);
+          const double lam = compute_lambda(Nval, Pval2, E, edv[i]);
+          const double mu  = compute_mu   (Nval, Pval2, E, edv[i]);
           alive_idx.push_back(i);
           lam_vec.push_back(lam);
           mu_vec.push_back(mu);

@@ -15,7 +15,8 @@ auto_bounds(
   train_surv_gam = TRUE,
   num_threads = 1L,
   verbose = TRUE,
-  rho = 1
+  rho = 1,
+  surv_tries = 20L
 )
 }
 \arguments{

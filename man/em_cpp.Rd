@@ -21,7 +21,8 @@ em_cpp(
   rho = 1,
   rconditional = NULL,
   parent_tip_start = as.numeric(c()),
-  seed = 0L
+  seed = 0L,
+  parent_id = as.integer(c())
 )
 }
 \arguments{

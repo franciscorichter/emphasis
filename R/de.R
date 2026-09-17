@@ -148,7 +148,8 @@
       model       = as.integer(model_bin),
       link        = as.integer(link),
       rho         = as.numeric(rho),
-      parent_tip_start = .pts(brts)
+      parent_tip_start = .pts(brts),
+      parent_id        = .pid(brts)
     ),
     error = function(e) NULL
   )

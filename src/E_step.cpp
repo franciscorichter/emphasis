@@ -43,13 +43,19 @@ namespace emphasis {
     //                          bare branching-time vector can support.
     //   brts.size() - 1      : one entry per observed branching event.
     //   brts.size()          : one entry per node; the last is ignored.
-    tree_t create_tree(brts_t brts, const std::vector<double>& parent_tip_start)
+    tree_t create_tree(brts_t brts, const std::vector<double>& parent_tip_start,
+                       const std::vector<int>& parent_id)
     {
       inplace_cumsum_of_diff(brts);
       const size_t m = brts.size();
       const size_t np = parent_tip_start.size();
       if (np != 0 && np != m && np + 1 != m) {
         throw emphasis_error("create_tree: parent_tip_start must be empty, or hold one "
+                             "entry per observed branching event");
+      }
+      const size_t nid = parent_id.size();
+      if (nid != 0 && nid != m && nid + 1 != m) {
+        throw emphasis_error("create_tree: parent_id must be empty, or hold one "
                              "entry per observed branching event");
       }
       const bool topology = (np != 0);
@@ -69,7 +75,10 @@ namespace emphasis {
         node.focal_tip_start = (topology && (i + 1 < m)) ? parent_tip_start[i] : ts_unknown;
         node.clade = topology ? clade_topology : 0;
         node.id = -1;
-        node.parent_id = -1;
+        // The lineage this event splits, when the caller named it; the
+        // augmentation assigns node ids in this same forward-time order, so
+        // the caller's indices and the ids agree.
+        node.parent_id = (nid != 0 && i < nid) ? parent_id[i] : -1;
         tree.push_back(node);
       }
       std::sort(tree.begin(), tree.end(), detail::node_less{});
@@ -88,7 +97,8 @@ namespace emphasis {
                   double max_lambda,
                   int num_threads,
                   double max_time_seconds,  // 0 = default 120s safety limit
-                  const std::vector<double>& parent_tip_start)
+                  const std::vector<double>& parent_tip_start,
+                  const std::vector<int>& parent_id)
   {
     // N < 1 leaves the sample empty on every path: nothing is stored, the
     // `num_trees < N` test below is false, and max_element/fhat would then
@@ -101,7 +111,7 @@ namespace emphasis {
     std::mutex mutex;
     std::atomic<bool> stop{ false };
 
-    tree_t init_tree = detail::create_tree(brts, parent_tip_start);
+    tree_t init_tree = detail::create_tree(brts, parent_tip_start, parent_id);
     auto E = E_step_t{};
     auto T0 = std::chrono::high_resolution_clock::now();
 

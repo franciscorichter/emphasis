@@ -16,7 +16,8 @@ augment_trees(
   link = 0L,
   rho = 1,
   parent_tip_start = as.numeric(c()),
-  seed = 0L
+  seed = 0L,
+  parent_id = as.integer(c())
 )
 }
 \arguments{

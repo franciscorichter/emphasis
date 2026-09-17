@@ -87,16 +87,24 @@ List rcpp_mcem(const std::vector<double>& brts,
                double rho = 1.0,
                Nullable<Function> rconditional = R_NilValue,
                Rcpp::NumericVector parent_tip_start = Rcpp::NumericVector::create(),
-               int seed = 0)
+               int seed = 0,
+               Rcpp::IntegerVector parent_id = Rcpp::IntegerVector::create())
 {
   emphasis::rng::set_seed(emphasis::resolve_seed(seed));
   const std::vector<double> pts(parent_tip_start.begin(), parent_tip_start.end());
-  if (init_pars.size() != 8 || lower_bound.size() != 8 || upper_bound.size() != 8) {
-    throw std::invalid_argument("em_cpp: init_pars, lower_bound and upper_bound must have length 8 (got " +
+  const std::vector<int> pid(parent_id.begin(), parent_id.end());
+  // 8 slots means ED absent; the internal layout is 10 (model.hpp).
+  const bool ok_len = (init_pars.size() == 8 || init_pars.size() == emphasis::n_params) &&
+                      init_pars.size() == lower_bound.size() && init_pars.size() == upper_bound.size();
+  if (!ok_len) {
+    throw std::invalid_argument("em_cpp: init_pars, lower_bound and upper_bound must have length 8 or 10, equal (got " +
       std::to_string(init_pars.size()) + ", " + std::to_string(lower_bound.size()) + ", " +
       std::to_string(upper_bound.size()) + ")");
   }
-  std::vector<int> model_bin = {model[0], model[1], model[2]};
+  const std::vector<double> init_pars10 = emphasis::pad_params(init_pars);
+  const std::vector<double> lower10 = emphasis::pad_params(lower_bound);
+  const std::vector<double> upper10 = emphasis::pad_params(upper_bound);
+  std::vector<int> model_bin(model.begin(), model.end());
   // The proposal reads M = P/N at the segment start. Without the observed
   // topology P is the legacy quantity (every observed lineage dated from the
   // crown), which the scorer cannot reproduce from the finished tree, so
@@ -108,27 +116,35 @@ List rcpp_mcem(const std::vector<double>& brts,
       "Pass parent_tip_start; without it log q is not the density the sampler "
       "draws from.");
   }
-  auto mdl = emphasis::Model(lower_bound, upper_bound, model_bin, link, rho);
+  if (model_bin.size() > 3 && model_bin[3] == 1 && (pid.empty() || pts.empty())) {
+    throw std::invalid_argument(
+      "em_cpp: the ED covariate needs the tree's topology: pass a phylo object "
+      "(or a simulate_tree() result), not a bare branching-time vector.");
+  }
+  auto mdl = emphasis::Model(lower10, upper10, model_bin, link, rho);
 
   emphasis::conditional_fun_t conditional{};
   if (rconditional.isNotNull()) {
-    conditional = [cond= Function(rconditional)](const emphasis::param_t& pars) {
-      return as<double>( cond(NumericVector(pars.cbegin(), pars.cend())) );
+    // The R-side conditional receives the layout the caller used.
+    const std::size_t n_out = init_pars.size();
+    conditional = [cond= Function(rconditional), n_out](const emphasis::param_t& pars) {
+      return as<double>( cond(NumericVector(pars.cbegin(), pars.cbegin() + static_cast<long>(n_out))) );
     };
   }
   auto mcem = emphasis::mcem(sample_size,
                              maxN,
-                             init_pars,
+                             init_pars10,
                              brts,
                              mdl,
                              max_missing,
                              max_lambda,
-                             lower_bound,
-                             upper_bound,
+                             lower10,
+                             upper10,
                              xtol_rel,
                              num_threads,
                              conditional ? &conditional : nullptr,
-                             pts);
+                             pts,
+                             pid);
   if (mcem.e.trees.empty()) {
     throw std::runtime_error("no trees, no optimization");
   }
@@ -148,7 +164,11 @@ List rcpp_mcem(const std::vector<double>& brts,
   ret["rejected_zero_weights"] = mcem.e.info.rejected_zero_weights;
   ret["rejected_nonfinite"] = mcem.e.info.rejected_nonfinite;
   ret["num_trees"] = mcem.e.info.num_trees;
-  ret["estimates"] = NumericVector(mcem.m.estimates.begin(), mcem.m.estimates.end());
+  {
+    // Returned in the layout the caller used: 8 slots when it passed 8.
+    const long n_out = static_cast<long>(std::min(init_pars.size(), mcem.m.estimates.size()));
+    ret["estimates"] = NumericVector(mcem.m.estimates.begin(), mcem.m.estimates.begin() + n_out);
+  }
   ret["nlopt"] = mcem.m.opt;
   ret["fhat"]  = mcem.e.info.fhat;
   ret["time"]  = mcem.e.info.elapsed + mcem.m.elapsed;

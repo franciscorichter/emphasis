@@ -112,7 +112,7 @@ test_that("estimate_rates CR with mcem runs end-to-end", {
   expect_equal(length(fit$pars), 2L)
   expect_true(is.finite(fit$loglik))
   expect_equal(fit$method, "mcem")
-  expect_equal(fit$model, c(0L, 0L, 0L))
+  expect_equal(fit$model, c(0L, 0L, 0L, 0L))
   expect_equal(fit$AIC, -2 * fit$loglik + 2 * fit$n_pars)
   expect_true(all(fit$pars >= c(0, 0) - 1e-8))
   expect_true(all(fit$pars <= c(2, 1) + 1e-8))

@@ -107,6 +107,10 @@ namespace emphasis {
   // parent_tip_start: tip_start of the lineage that splits at each observed
   // branching event, in the forward-time order of `brts`.  Empty when the
   // caller has only branching times and no topology.
+  // parent_id: the id of that splitting lineage per observed event, in the
+  // same order -- a crown id (crown_id_a / crown_id_b) or the index of the
+  // earlier event whose daughter it is -- which is what the ED covariate
+  // needs to know which lineage is which.  Empty when not supplied.
   E_step_t E_step(int N,      // sample size
                   int maxN,   // max number of augmented trees (incl. invalid)
                   const param_t& pars,
@@ -116,7 +120,8 @@ namespace emphasis {
                   double max_lambda = default_max_aug_lambda,
                   int num_threads = 0,
                   double max_time_seconds = 0,  // 0 = no time limit
-                  const std::vector<double>& parent_tip_start = {});
+                  const std::vector<double>& parent_tip_start = {},
+                  const std::vector<int>& parent_id = {});
 
 
   // results from m
@@ -170,7 +175,8 @@ namespace emphasis {
               double xtol_rel = 0.001,
               int num_threads = 0,
               conditional_fun_t* conditional = nullptr,
-              const std::vector<double>& parent_tip_start = {});
+              const std::vector<double>& parent_tip_start = {},
+              const std::vector<int>& parent_id = {});
 
 }
 

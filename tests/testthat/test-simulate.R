@@ -55,14 +55,15 @@ test_that("simulate_tree errors on negative max_t", {
 })
 
 test_that(".resolve_model handles shortcuts and binary vectors", {
-  expect_equal(emphasis:::.resolve_model("cr"), c(0L, 0L, 0L))
-  expect_equal(emphasis:::.resolve_model("dd"), c(1L, 0L, 0L))
-  expect_equal(emphasis:::.resolve_model("d"), c(0L, 0L, 1L))
-  expect_equal(emphasis:::.resolve_model("ep"), c(0L, 0L, 1L))
-  expect_equal(emphasis:::.resolve_model(c(1, 0, 1)), c(1L, 0L, 1L))
+  # four slots {N, M, D, ED}; a length-3 vector is the pre-ED layout, padded
+  expect_equal(emphasis:::.resolve_model("cr"), c(0L, 0L, 0L, 0L))
+  expect_equal(emphasis:::.resolve_model("dd"), c(1L, 0L, 0L, 0L))
+  expect_equal(emphasis:::.resolve_model("d"), c(0L, 0L, 1L, 0L))
+  expect_equal(emphasis:::.resolve_model("ep"), c(0L, 0L, 1L, 0L))
+  expect_equal(emphasis:::.resolve_model(c(1, 0, 1)), c(1L, 0L, 1L, 0L))
   expect_error(
     emphasis:::.resolve_model(c(1, 2, 0)),
-    "length-3 binary integer vector"
+    "binary integer vector of length 3 or 4"
   )
 })
 

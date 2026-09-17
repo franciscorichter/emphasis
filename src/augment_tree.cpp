@@ -196,9 +196,16 @@ namespace emphasis {
           auto it = alive_.end();
           bool known = true;
           if (observed) {
-            double want = node.focal_tip_start;
-            if (want < 0.0) { want = 0.0; known = false; }
-            it = nearest_observed(want);
+            // Named by id when the caller passed the topology's lineage ids
+            // (an exact match); by the tip start it reports otherwise.
+            if (has_parent(node.parent_id)) {
+              it = by_id(node.parent_id);
+              if (it == alive_.end()) known = false;
+            } else {
+              double want = node.focal_tip_start;
+              if (want < 0.0) { want = 0.0; known = false; }
+              it = nearest_observed(want);
+            }
           }
           else {
             it = by_id(node.parent_id);
@@ -576,12 +583,14 @@ namespace emphasis {
     rng::stream(worker_substream());
     pooled.resize(input_tree.size());
     std::copy(input_tree.cbegin(), input_tree.cend(), pooled.begin());
-    // assign sequential IDs to initial tree nodes; augmented nodes get IDs starting after
+    // assign sequential IDs to initial tree nodes; augmented nodes get IDs
+    // starting after.  An observed node keeps the parent_id create_tree gave
+    // it (the lineage it splits, when the caller named it), which is what the
+    // ED covariate reads the ancestry from.
     int next_id = 0;
     for (auto& node : pooled) {
       if (!detail::is_extinction(node)) {
         node.id = next_id++;
-        node.parent_id = -1;
       } else {
         node.id = -1;
         node.parent_id = -1;
@@ -614,8 +623,7 @@ namespace emphasis {
           int next_id = 0;
           for (auto& node : trees[i]) {
             if (!detail::is_extinction(node)) {
-              node.id = next_id++;
-              node.parent_id = -1;
+              node.id = next_id++;          // parent_id kept, as in augment_tree()
             } else {
               node.id = -1;
               node.parent_id = -1;

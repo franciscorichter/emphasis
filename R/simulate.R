@@ -6,24 +6,33 @@
 #' augmented with stochastically drawn extinct lineages.
 #'
 #' @section Model specification:
-#' The model uses the orthogonal covariate basis \{N, D\}: diversity \code{N}
-#' and age-imbalance \code{D = E - M} (a lineage's isolation relative to the
-#' clade mean \code{M}, which is used only internally to centre \code{D}).
-#' Selected by named shortcuts or a formula:
+#' The model's covariates are diversity \code{N}, age-imbalance
+#' \code{D = E - M} (a lineage's isolation relative to the clade mean
+#' \code{M}, which is used only internally to centre \code{D}) and
+#' evolutionary distinctiveness \code{ED} (the fair-proportion score on the
+#' complete tree: the branches from the crown to the lineage, each divided by
+#' the alive lineages below it; its last term is the pendant age and its sum
+#' over lineages is Faith's phylogenetic diversity).  Selected by named
+#' shortcuts or a formula:
 #' \tabular{ll}{
-#'   \code{"cr"} \tab constant rate\cr
-#'   \code{"dd"} \tab diversity dependence (N)\cr
-#'   \code{"d"}  \tab age-imbalance (D)\cr
-#'   \code{"nd"} \tab N + D (recommended)\cr
+#'   \code{"cr"}  \tab constant rate\cr
+#'   \code{"dd"}  \tab diversity dependence (N)\cr
+#'   \code{"d"}   \tab age-imbalance (D)\cr
+#'   \code{"nd"}  \tab N + D\cr
+#'   \code{"ed"}  \tab evolutionary distinctiveness (ED)\cr
+#'   \code{"ned"} \tab N + ED\cr
 #' }
-#' Formulas \code{~ N} and \code{~ N + D} are also accepted (\code{ep} is a
-#' legacy alias for \code{d}).
+#' Formulas \code{~ N}, \code{~ N + D} and \code{~ N + ED} are also accepted
+#' (\code{ep} is a legacy alias for \code{d}).  An \code{ED} model needs the
+#' tree's topology (a \code{phylo}, not a branching-time vector) and is not
+#' available under the gaussian link.
 #'
 #' @section Parameter vector:
-#' Compact layout for the \{N, D\} basis; \code{beta_D} is the age-imbalance
-#' coefficient (\code{M} is internal only, never part of the user vector):
-#' \preformatted{c(beta_0,  [beta_N],  [beta_D],
-#'   gamma_0, [gamma_N], [gamma_D])}
+#' Compact layout; \code{beta_D} is the age-imbalance coefficient and
+#' \code{beta_ED} the distinctiveness coefficient (\code{M} is internal only,
+#' never part of the user vector):
+#' \preformatted{c(beta_0,  [beta_N],  [beta_D],  [beta_ED],
+#'   gamma_0, [gamma_N], [gamma_D], [gamma_ED])}
 #' Only active covariates are included; length = \code{2 + 2 * sum(model)}.
 #'
 #' @section Reproducibility:
@@ -294,13 +303,18 @@ simulate_tree <- function(tree        = NULL,
 
 #' @keywords internal
 .resolve_model <- function(model) {
-  # Canonical two-covariate basis, internal slots c(use_N, use_M, use_D):
-  #   N = diversity, D = E - M age-imbalance. M (slot 2) is retained only as the
-  #   internal centering reference for D and is not user-selectable.
-  # Shortcuts: "dd" -> N, "d" -> D, "nd" -> N + D. "ep"/"rd" are legacy D aliases.
-  shortcuts <- list(cr = c(0L, 0L, 0L), dd = c(1L, 0L, 0L),
-                    d  = c(0L, 0L, 1L), nd = c(1L, 0L, 1L),
-                    rd = c(0L, 0L, 1L), ep = c(0L, 0L, 1L))
+  # Covariate slots c(use_N, use_M, use_D, use_ED):
+  #   N = diversity, D = E - M age-imbalance, ED = evolutionary distinctiveness
+  #   (fair proportion on the complete tree; see inst/include/ed_covariate.hpp).
+  #   M (slot 2) is retained only as the internal centering reference for D and
+  #   is not user-selectable.
+  # Shortcuts: "dd" -> N, "d" -> D, "nd" -> N + D, "ed" -> ED, "ned" -> N + ED.
+  # "ep"/"rd" are legacy D aliases.  A length-3 vector is the pre-ED layout
+  # and is padded.
+  shortcuts <- list(cr = c(0L, 0L, 0L, 0L), dd = c(1L, 0L, 0L, 0L),
+                    d  = c(0L, 0L, 1L, 0L), nd = c(1L, 0L, 1L, 0L),
+                    ed = c(0L, 0L, 0L, 1L), ned = c(1L, 0L, 0L, 1L),
+                    rd = c(0L, 0L, 1L, 0L), ep = c(0L, 0L, 1L, 0L))
   if (is.character(model)) {
     return(shortcuts[[match.arg(model, names(shortcuts))]])
   }
@@ -308,59 +322,87 @@ simulate_tree <- function(tree        = NULL,
     return(.parse_model_formula(model))
   }
   model <- as.integer(model)
-  if (length(model) != 3L || !all(model %in% 0:1)) {
-    stop(paste0("'model' must be a formula (e.g. ~ N + D), a string ",
-                "(\"cr\", \"dd\", \"d\", \"nd\"), or a length-3 binary ",
-                "integer vector."))
+  if (!(length(model) %in% c(3L, 4L)) || !all(model %in% 0:1)) {
+    stop(paste0("'model' must be a formula (e.g. ~ N + D, ~ N + ED), a string ",
+                "(\"cr\", \"dd\", \"d\", \"nd\", \"ed\", \"ned\"), or a binary ",
+                "integer vector of length 3 or 4."))
   }
-  model
+  .pad_model_bin(model)
 }
+
+# The canonical 4-slot model vector from a 3- or 4-slot one.
+#' @keywords internal
+.pad_model_bin <- function(model_bin) {
+  model_bin <- as.integer(model_bin)
+  if (length(model_bin) == 3L) model_bin <- c(model_bin, 0L)
+  model_bin
+}
+
+# Number of covariate slots in the canonical layout, and the full parameter
+# vector's length: c(beta_0, beta_N, beta_M, beta_D, gamma_0, gamma_N,
+# gamma_M, gamma_D, beta_ED, gamma_ED).  The ED coefficients are appended so
+# that an 8-element vector is exactly "ED absent".
+.n_slots <- 4L
+.n_full  <- 10L
 
 #' @keywords internal
 .parse_model_formula <- function(formula) {
   terms <- attr(stats::terms(formula), "term.labels")
-  # User covariates N and D (slot 3); legacy aliases EP/E for D. M (slot 2) is
-  # internal only and not user-selectable.
-  known <- c(N = 1L, D = 3L, EP = 3L, E = 3L)
+  # User covariates N, D (slot 3) and ED (slot 4); legacy aliases EP/E for D.
+  # M (slot 2) is internal only and not user-selectable.
+  known <- c(N = 1L, D = 3L, EP = 3L, E = 3L, ED = 4L)
   terms_upper <- toupper(terms)
-  model_bin <- c(0L, 0L, 0L)
+  model_bin <- c(0L, 0L, 0L, 0L)
   for (tm in terms_upper) {
     idx <- known[tm]
     if (is.na(idx)) {
-      stop(sprintf("Unknown covariate '%s' in model formula. Use N and/or D.", tm))
+      stop(sprintf("Unknown covariate '%s' in model formula. Use N, D and/or ED.", tm))
     }
     model_bin[idx] <- 1L
   }
   model_bin
 }
 
-# Expand compact pars to full 8-element vector for C++.
-# Layout: c(beta_0, beta_N, beta_M, beta_D, gamma_0, gamma_N, gamma_M, gamma_D)
+# Where each covariate slot's coefficient sits in the full vector: beta at
+# 2, 3, 4 for N, M, D and 9 for ED; gamma at 6, 7, 8 and 10.  The intercepts
+# are 1 and 5.
+.slot_beta  <- c(2L, 3L, 4L, 9L)
+.slot_gamma <- c(6L, 7L, 8L, 10L)
+
+# Expand compact pars to the full vector for C++.
+# Layout: c(beta_0, beta_N, beta_M, beta_D, gamma_0, gamma_N, gamma_M, gamma_D,
+#           beta_ED, gamma_ED).  With ED inactive the result is the first 8
+# slots, the layout every pre-ED caller expects; with ED active all 10.
 #' @keywords internal
 .expand_pars <- function(pars, model_bin) {
+  model_bin  <- .pad_model_bin(model_bin)
   expected_n <- 2L + 2L * sum(model_bin)
   if (length(pars) != expected_n) stop(.pars_error_msg(model_bin, expected_n))
   active <- which(model_bin == 1L)
   n_lam  <- 1L + length(active)
-  beta   <- c(pars[1L],         rep(0.0, 3L))
-  gamma  <- c(pars[n_lam + 1L], rep(0.0, 3L))
+  full   <- numeric(.n_full)
+  full[1L] <- pars[1L]
+  full[5L] <- pars[n_lam + 1L]
   if (length(active) > 0L) {
-    beta [active + 1L] <- pars[2L:n_lam]
-    gamma[active + 1L] <- pars[(n_lam + 2L):length(pars)]
+    full[.slot_beta[active]]  <- pars[2L:n_lam]
+    full[.slot_gamma[active]] <- pars[(n_lam + 2L):length(pars)]
   }
-  c(beta, gamma)
+  if (model_bin[4L] == 1L) full else full[1:8]
 }
 
 #' @keywords internal
 .pars_error_msg <- function(model_bin, expected_n) {
+  model_bin <- .pad_model_bin(model_bin)
   lam <- paste(c("beta_0",
                  if (model_bin[1]) "beta_N",
                  if (model_bin[2]) "beta_M",
-                 if (model_bin[3]) "beta_D"), collapse = ", ")
+                 if (model_bin[3]) "beta_D",
+                 if (model_bin[4]) "beta_ED"), collapse = ", ")
   mu  <- paste(c("gamma_0",
                  if (model_bin[1]) "gamma_N",
                  if (model_bin[2]) "gamma_M",
-                 if (model_bin[3]) "gamma_D"), collapse = ", ")
+                 if (model_bin[3]) "gamma_D",
+                 if (model_bin[4]) "gamma_ED"), collapse = ", ")
   sprintf("model = c(%s) requires %d parameters: c(%s, %s)",
           paste(model_bin, collapse = ", "), expected_n, lam, mu)
 }
@@ -565,6 +607,7 @@ simulate_tree <- function(tree        = NULL,
     link        = as.integer(link),
     rho         = as.numeric(rho),
     parent_tip_start = .pts(brts),
-    seed        = as.integer(seed)
+    seed        = as.integer(seed),
+    parent_id   = .pid(brts)
   )
 }

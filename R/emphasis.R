@@ -82,6 +82,7 @@
   # Empty when only branching times were passed: M and D then fall back to the
   # crown-age convention, as documented on estimate_rates().
   parent_tip_start <- .pts(brts)
+  parent_id        <- .pid(brts)
 
   # Convergence metric: max_j |theta_k,j - theta_{k-1,j}| / max(|theta_{k-1,j}|, floor).
   # The bound box does not enter; the floor keeps parameters at or near zero
@@ -121,7 +122,8 @@
              link = as.integer(link),
              rho = as.numeric(rho),
              rconditional = conditional,
-             parent_tip_start = parent_tip_start),
+             parent_tip_start = parent_tip_start,
+             parent_id = parent_id),
       error = function(e) NULL
     )
   }
@@ -335,7 +337,8 @@
            copy_trees   = FALSE,
            model        = as.integer(model),
            link         = as.integer(link),
-           parent_tip_start = .pts(brts))
+           parent_tip_start = .pts(brts),
+           parent_id    = .pid(brts))
     NULL
   }, error = function(e) conditionMessage(e))
 

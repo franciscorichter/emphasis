@@ -94,13 +94,18 @@ List rcpp_mcm(List e_step,
               double rho = 1.0,
               Nullable<Function> rconditional = R_NilValue)
 {
-  // The internal parameter layout has 8 slots; Model::loglik indexes all of
-  // them, so shorter vectors read past the end.
-  if (init_pars.size() != 8 || lower_bound.size() != 8 || upper_bound.size() != 8) {
-    throw std::invalid_argument("m_cpp: init_pars, lower_bound and upper_bound must have length 8 (got " +
+  // The internal parameter layout has 10 slots (the last two the ED
+  // coefficients); an 8-element vector means ED absent and is padded.
+  const bool ok_len = (init_pars.size() == 8 || init_pars.size() == emphasis::n_params) &&
+                      init_pars.size() == lower_bound.size() && init_pars.size() == upper_bound.size();
+  if (!ok_len) {
+    throw std::invalid_argument("m_cpp: init_pars, lower_bound and upper_bound must have length 8 or 10, equal (got " +
       std::to_string(init_pars.size()) + ", " + std::to_string(lower_bound.size()) + ", " +
       std::to_string(upper_bound.size()) + ")");
   }
+  const std::vector<double> init_pars10 = emphasis::pad_params(init_pars);
+  const std::vector<double> lower10 = emphasis::pad_params(lower_bound);
+  const std::vector<double> upper10 = emphasis::pad_params(upper_bound);
   auto E = emphasis::E_step_t{};
   E.trees = pack(as<List>(e_step["trees"]));
   E.weights = as<std::vector<double>>(e_step["weights"]);
@@ -119,25 +124,30 @@ List rcpp_mcm(List e_step,
   if (E.trees.empty()) {
     throw std::runtime_error("no trees, no optimization");
   }
-  std::vector<int> model_bin = {model[0], model[1], model[2]};
-  auto mdl = emphasis::Model(lower_bound, upper_bound, model_bin, link, rho);
+  std::vector<int> model_bin(model.begin(), model.end());
+  auto mdl = emphasis::Model(lower10, upper10, model_bin, link, rho);
   emphasis::conditional_fun_t conditional{};
   if (rconditional.isNotNull()) {
-    conditional = [cond= Function(rconditional)](const emphasis::param_t& pars) {
-      return as<double>( cond(NumericVector(pars.cbegin(), pars.cend())) );
+    // The R-side conditional receives the layout it was written for: 8
+    // slots when the caller passed 8, the full 10 otherwise.
+    const std::size_t n_out = init_pars.size();
+    conditional = [cond= Function(rconditional), n_out](const emphasis::param_t& pars) {
+      return as<double>( cond(NumericVector(pars.cbegin(), pars.cbegin() + static_cast<long>(n_out))) );
     };
   }
-  auto M = emphasis::M_step(init_pars,
+  auto M = emphasis::M_step(init_pars10,
                             E.trees,
                             E.weights,
                             mdl,
-                            lower_bound,
-                            upper_bound,
+                            lower10,
+                            upper10,
                             xtol_rel,
                             num_threads,
                             conditional ? &conditional : nullptr);
   List ret;
-  ret["estimates"] = NumericVector(M.estimates.begin(), M.estimates.end());
+  // Returned in the layout the caller used: 8 slots when it passed 8.
+  const long n_out = static_cast<long>(std::min(init_pars.size(), M.estimates.size()));
+  ret["estimates"] = NumericVector(M.estimates.begin(), M.estimates.begin() + n_out);
   ret["nlopt"] = M.opt;
   ret["time"]  = M.elapsed;
   return ret;

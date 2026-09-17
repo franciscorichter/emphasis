@@ -19,8 +19,8 @@ train_GAM(
 generate \code{simulations}.  Column names are used as predictor names; if
 absent, names are auto-generated from \code{model}.}
 
-\item{model}{String or length-3 binary integer vector matching the model
-used in simulation.  Used only when \code{pars_mat} has no column names.
+\item{model}{String or binary integer vector (length 3 or 4) matching the
+model used in simulation.  Used only when \code{pars_mat} has no column names.
 Default \code{"cr"}.}
 
 \item{spline_type}{\code{"univariate"} (default) fits independent smooth

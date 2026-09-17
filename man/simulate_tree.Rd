@@ -100,26 +100,35 @@ augmented with stochastically drawn extinct lineages.
 }
 \section{Model specification}{
 
-The model uses the orthogonal covariate basis \{N, D\}: diversity \code{N}
-and age-imbalance \code{D = E - M} (a lineage's isolation relative to the
-clade mean \code{M}, which is used only internally to centre \code{D}).
-Selected by named shortcuts or a formula:
+The model's covariates are diversity \code{N}, age-imbalance
+\code{D = E - M} (a lineage's isolation relative to the clade mean
+\code{M}, which is used only internally to centre \code{D}) and
+evolutionary distinctiveness \code{ED} (the fair-proportion score on the
+complete tree: the branches from the crown to the lineage, each divided by
+the alive lineages below it; its last term is the pendant age and its sum
+over lineages is Faith's phylogenetic diversity).  Selected by named
+shortcuts or a formula:
 \tabular{ll}{
-  \code{"cr"} \tab constant rate\cr
-  \code{"dd"} \tab diversity dependence (N)\cr
-  \code{"d"}  \tab age-imbalance (D)\cr
-  \code{"nd"} \tab N + D (recommended)\cr
+  \code{"cr"}  \tab constant rate\cr
+  \code{"dd"}  \tab diversity dependence (N)\cr
+  \code{"d"}   \tab age-imbalance (D)\cr
+  \code{"nd"}  \tab N + D\cr
+  \code{"ed"}  \tab evolutionary distinctiveness (ED)\cr
+  \code{"ned"} \tab N + ED\cr
 }
-Formulas \code{~ N} and \code{~ N + D} are also accepted (\code{ep} is a
-legacy alias for \code{d}).
+Formulas \code{~ N}, \code{~ N + D} and \code{~ N + ED} are also accepted
+(\code{ep} is a legacy alias for \code{d}).  An \code{ED} model needs the
+tree's topology (a \code{phylo}, not a branching-time vector) and is not
+available under the gaussian link.
 }
 
 \section{Parameter vector}{
 
-Compact layout for the \{N, D\} basis; \code{beta_D} is the age-imbalance
-coefficient (\code{M} is internal only, never part of the user vector):
-\preformatted{c(beta_0,  [beta_N],  [beta_D],
-  gamma_0, [gamma_N], [gamma_D])}
+Compact layout; \code{beta_D} is the age-imbalance coefficient and
+\code{beta_ED} the distinctiveness coefficient (\code{M} is internal only,
+never part of the user vector):
+\preformatted{c(beta_0,  [beta_N],  [beta_D],  [beta_ED],
+  gamma_0, [gamma_N], [gamma_D], [gamma_ED])}
 Only active covariates are included; length = \code{2 + 2 * sum(model)}.
 }
 

@@ -316,8 +316,10 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #' @keywords internal
 .extract_brts <- function(tree) {
   with_pts <- function(brts, phy) {
-    if (!is.null(phy))
+    if (!is.null(phy)) {
       attr(brts, "parent_tip_start") <- c(.observed_parent_tip_start(phy), -1)
+      attr(brts, "parent_id")        <- c(.observed_parent_id(phy), -1L)
+    }
     brts
   }
   if (is.numeric(tree)) {
@@ -326,8 +328,10 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
     # keep them, unless sorting moved an entry, which would break the
     # event-to-entry correspondence.
     pts <- attr(tree, "parent_tip_start")
-    if (!is.null(pts) && identical(unname(out), unname(as.numeric(tree))))
+    if (!is.null(pts) && identical(unname(out), unname(as.numeric(tree)))) {
       attr(out, "parent_tip_start") <- pts
+      attr(out, "parent_id")        <- attr(tree, "parent_id")
+    }
     return(out)
   }
   if (inherits(tree, "phylo")) {
@@ -355,6 +359,59 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 .pts <- function(brts) {
   p <- attr(brts, "parent_tip_start")
   if (is.null(p)) numeric(0) else as.numeric(p)
+}
+
+#' The lineage that splits at each observed branching event
+#'
+#' The ED covariate needs to know which lineage is which across events, which
+#' the tip start of \code{.observed_parent_tip_start} does not say.  Lineages
+#' are named as the C++ layer names them: the two crown lineages are
+#' \code{-2} (the one that splits first) and \code{-3}; the daughter born at
+#' the k-th observed branching event (forward-time order, 0-based) is lineage
+#' \code{k}.  Which child of a node continues the parent's lineage is fixed by
+#' a convention that any consistent rule would do for: the child whose subtree
+#' holds the lowest tip label continues, the other is the daughter.
+#'
+#' @param phy A \code{phylo} object.
+#' @return Integer vector of length \code{Nnode(phy) - 1}, in forward-time
+#'   order: the id of the lineage splitting at each event.
+#' @keywords internal
+.observed_parent_id <- function(phy) {
+  ntip <- ape::Ntip(phy)
+  root <- ntip + 1L
+  nn   <- max(phy$edge)
+  h    <- ape::node.depth.edgelength(phy)
+  int  <- setdiff(seq.int(root, nn), root)
+  if (length(int) == 0L) return(integer(0))
+  ord  <- int[order(h[int])]                      # events in forward time
+  ev   <- integer(nn); ev[] <- NA_integer_
+  ev[ord] <- seq_along(ord) - 1L                  # event index = daughter id
+  par  <- integer(nn); par[phy$edge[, 2L]] <- phy$edge[, 1L]
+  kids <- split(phy$edge[, 2L], phy$edge[, 1L])
+  # lowest tip label in every subtree, tips first then nodes bottom-up
+  rep_ <- integer(nn); rep_[seq_len(ntip)] <- seq_len(ntip)
+  for (v in rev(order(h[seq.int(root, nn)])) + root - 1L)
+    rep_[v] <- min(rep_[kids[[as.character(v)]]])
+  # the crown lineages: the root child that splits first is -2
+  rc <- kids[[as.character(root)]]
+  first <- function(v) if (v <= ntip) Inf else h[v]
+  crown <- if (first(rc[1]) <= first(rc[2])) c(-2L, -3L) else c(-3L, -2L)
+  crown_of <- stats::setNames(crown, rc)
+  # lineage through each internal node, parents before children
+  lin <- integer(nn); lin[] <- NA_integer_
+  for (v in ord) {
+    p <- par[v]
+    lin[v] <- if (p == root) crown_of[[as.character(v)]]
+              else if (rep_[v] == rep_[p]) lin[p] else ev[p]
+  }
+  unname(lin[ord])
+}
+
+#' The lineage ids carried by a branching-time vector, or \code{integer(0)}.
+#' @keywords internal
+.pid <- function(brts) {
+  p <- attr(brts, "parent_id")
+  if (is.null(p)) integer(0) else as.integer(p)
 }
 
 #' Relative parameter change, the statistic both MCEM stopping rules use
@@ -396,16 +453,20 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 
 #' @keywords internal
 .par_names <- function(model_bin) {
-  # Orthogonal covariate basis {N, M = P/N, D = E - M}: slot 2 is the mean-age
-  # coefficient (beta_M), slot 3 the deviation coefficient (beta_D).
+  # Covariate slots {N, M = P/N, D = E - M, ED}: slot 2 is the mean-age
+  # coefficient (beta_M), slot 3 the deviation coefficient (beta_D), slot 4
+  # the evolutionary-distinctiveness coefficient (beta_ED).
+  model_bin <- .pad_model_bin(model_bin)
   lam <- c("beta_0",
            if (model_bin[1]) "beta_N",
            if (model_bin[2]) "beta_M",
-           if (model_bin[3]) "beta_D")
+           if (model_bin[3]) "beta_D",
+           if (model_bin[4]) "beta_ED")
   mu <- c("gamma_0",
           if (model_bin[1]) "gamma_N",
           if (model_bin[2]) "gamma_M",
-          if (model_bin[3]) "gamma_D")
+          if (model_bin[3]) "gamma_D",
+          if (model_bin[4]) "gamma_ED")
   c(lam, mu)
 }
 
@@ -508,9 +569,12 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 
 #' @keywords internal
 .contract_pars <- function(pars8, model_bin) {
+  # pars8 is the full vector in either width: 8 (ED absent) or 10.
+  model_bin <- .pad_model_bin(model_bin)
+  if (length(pars8) < .n_full) pars8 <- c(pars8, rep(0, .n_full - length(pars8)))
   active <- which(model_bin == 1L)
-  lam <- c(pars8[1L], pars8[active + 1L])
-  mu  <- c(pars8[5L], pars8[active + 5L])
+  lam <- c(pars8[1L], pars8[.slot_beta[active]])
+  mu  <- c(pars8[5L], pars8[.slot_gamma[active]])
   c(lam, mu)
 }
 
@@ -840,14 +904,17 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'   }
 #' @param model Model specification. Accepts:
 #'   \itemize{
-#'     \item a formula such as \code{~ N} or \code{~ N + D},
+#'     \item a formula such as \code{~ N}, \code{~ N + D} or \code{~ N + ED},
 #'     \item a string shortcut (\code{"cr"}, \code{"dd"}, \code{"d"},
-#'       \code{"nd"}), or
-#'     \item a length-3 binary integer vector \code{c(use_N, use_M, use_D)}
-#'       (\code{use_M} is internal only and should be 0).
+#'       \code{"nd"}, \code{"ed"}, \code{"ned"}), or
+#'     \item a binary integer vector \code{c(use_N, use_M, use_D, use_ED)}
+#'       (\code{use_M} is internal only and should be 0; a length-3 vector is
+#'       the pre-ED layout and is padded).
 #'   }
-#'   Default \code{"cr"} (constant rate). The recommended covariate model is
-#'   \code{"nd"} (\code{~ N + D}): diversity and age-imbalance.
+#'   Default \code{"cr"} (constant rate). \code{"nd"} (\code{~ N + D}) is
+#'   diversity and age-imbalance; \code{"ned"} (\code{~ N + ED}) diversity and
+#'   evolutionary distinctiveness, which needs a \code{phylo} and uses the
+#'   thinning sampler.
 #' @param init_pars Starting parameter vector. Required for \code{"mcem"};
 #'   ignored for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the
 #'   midpoint of the bounds is used, with covariate slopes started at 0
@@ -1222,8 +1289,8 @@ compare_models <- function(...) {
 
 #' @keywords internal
 .model_label <- function(model_bin) {
-  # {N = diversity, M = mean pendant age, D = focal deviation}
-  covs <- c("N", "M", "D")[which(model_bin == 1L)]
+  # {N = diversity, M = mean pendant age, D = focal deviation, ED = distinctiveness}
+  covs <- c("N", "M", "D", "ED")[which(model_bin == 1L)]
   if (length(covs) == 0L) return("CR")
   paste(covs, collapse = " + ")
 }

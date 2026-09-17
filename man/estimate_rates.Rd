@@ -49,14 +49,17 @@ from branching times.}
 
 \item{model}{Model specification. Accepts:
 \itemize{
-  \item a formula such as \code{~ N} or \code{~ N + D},
+  \item a formula such as \code{~ N}, \code{~ N + D} or \code{~ N + ED},
   \item a string shortcut (\code{"cr"}, \code{"dd"}, \code{"d"},
-    \code{"nd"}), or
-  \item a length-3 binary integer vector \code{c(use_N, use_M, use_D)}
-    (\code{use_M} is internal only and should be 0).
+    \code{"nd"}, \code{"ed"}, \code{"ned"}), or
+  \item a binary integer vector \code{c(use_N, use_M, use_D, use_ED)}
+    (\code{use_M} is internal only and should be 0; a length-3 vector is
+    the pre-ED layout and is padded).
 }
-Default \code{"cr"} (constant rate). The recommended covariate model is
-\code{"nd"} (\code{~ N + D}): diversity and age-imbalance.}
+Default \code{"cr"} (constant rate). \code{"nd"} (\code{~ N + D}) is
+diversity and age-imbalance; \code{"ned"} (\code{~ N + ED}) diversity and
+evolutionary distinctiveness, which needs a \code{phylo} and uses the
+thinning sampler.}
 
 \item{init_pars}{Starting parameter vector. Required for \code{"mcem"};
 ignored for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the
