@@ -244,20 +244,28 @@ val_run_job <- function(job, lib, trees_file, refs_file, out_file) {
 
   t0 <- proc.time()[3]
   set.seed(job$seed)
+  # The gam and cem stages take their time budget from the job, as the mcem
+  # stage below does; without it estimate_rates() applies its own default of
+  # 3600 s, which the surface over a wide box on a 100-tip, high-turnover tree
+  # exceeds (144 grid points at ~25 s each), whatever timeout the driver set.
+  t_budget <- max(60, job$timeout_s - 60)
   start <- switch(job$config,
     I2 = (lb + ub) / 2,
     I3 = {
       g <- emphasis::estimate_rates(brts, method = "gam", model = model,
-             control = c(base, list(sample_size = 200L, grid_points = 12L)))
+             control = c(base, list(sample_size = 200L, grid_points = 12L,
+                                    max_time = t_budget)))
       as.numeric(g$pars)
     },
     I1 = {
       g <- emphasis::estimate_rates(brts, method = "gam", model = model,
-             control = c(base, list(sample_size = 200L, grid_points = 12L)))
+             control = c(base, list(sample_size = 200L, grid_points = 12L,
+                                    max_time = t_budget)))
       c2 <- emphasis::estimate_rates(brts, method = "cem", model = model,
               init_pars = as.numeric(g$pars),
               control = c(base, list(num_particles = 50L, num_trees = 5L,
-                                     max_iter = 20L)))
+                                     max_iter = 20L,
+                                     max_time = max(60, t_budget - (proc.time()[3] - t0)))))
       as.numeric(c2$pars)
     },
     stop("unknown init config: ", job$config))
