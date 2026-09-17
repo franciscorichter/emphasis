@@ -104,6 +104,46 @@ cat(sprintf("Best stage, %s: %s.  %s: %s.\n\n", la,
             paste(names(bs), bs, sep = "=", collapse = ", "), lb,
             paste(names(bs2), bs2, sep = "=", collapse = ", ")))
 
+# Where the time goes: each finished pipeline job carries run_log, a data
+# frame with one row per stage (bounds, gam, cem, mcem) and its elapsed
+# seconds.  A timed-out job has no run_log, so this is the cost of the jobs
+# that finished; the timeout count next to it says how many did not.
+stage_times <- function(dir) {
+  fs <- list.files(file.path(dir, "results", TIER, "jobs"), pattern = "--C10[.]rds$", full.names = TRUE)
+  rows <- lapply(fs, function(f) {
+    x <- tryCatch(readRDS(f), error = function(e) NULL)
+    if (is.null(x) || !identical(x$outcome, "ok") || !is.data.frame(x$run_log)) return(NULL)
+    data.frame(job_id = x$job_id, cell = x$cell, stage = x$run_log$stage,
+               elapsed = x$run_log$elapsed, stringsAsFactors = FALSE)
+  })
+  do.call(rbind, rows)
+}
+sta <- stage_times(A); stb <- stage_times(B)
+if (!is.null(sta) && !is.null(stb)) {
+  cat("### Wall-clock by pipeline stage (finished jobs only)\n\n")
+  stages <- c("bounds", "gam", "cem", "mcem")
+  hdr("stage", paste0("median s ", la), paste0("median s ", lb), "ratio B/A", paste0("share of job ", la), paste0("share of job ", lb))
+  tot_a <- sum(sta$elapsed); tot_b <- sum(stb$elapsed)
+  for (s in stages) {
+    a <- sta$elapsed[sta$stage == s]; b <- stb$elapsed[stb$stage == s]
+    if (!length(a) && !length(b)) next
+    row(s, num(med(a), 1), num(med(b), 1), num(med(b) / med(a), 2),
+        pct(sum(a) / tot_a), pct(sum(b) / tot_b))
+  }
+  cat(sprintf("\nFinished pipeline jobs with a stage log: %d in %s, %d in %s; timed out: %d and %d.\n\n",
+              length(unique(sta$job_id)), la, length(unique(stb$job_id)), lb,
+              sum(pa$outcome == "timeout"), sum(pb$outcome == "timeout")))
+  cat("### GAM stage by cell (median s)\n\n")
+  hdr("cell", paste0("gam ", la), paste0("gam ", lb), paste0("whole job ", la), paste0("whole job ", lb))
+  for (cl in sort(unique(c(sta$cell, stb$cell)))) {
+    ga <- sta$elapsed[sta$cell == cl & sta$stage == "gam"]; gb <- stb$elapsed[stb$cell == cl & stb$stage == "gam"]
+    ja <- tapply(sta$elapsed[sta$cell == cl], sta$job_id[sta$cell == cl], sum)
+    jb <- tapply(stb$elapsed[stb$cell == cl], stb$job_id[stb$cell == cl], sum)
+    row(cl, num(med(ga), 0), num(med(gb), 0), num(med(ja), 0), num(med(jb), 0))
+  }
+  cat("\n")
+}
+
 # --- 2. init arm -------------------------------------------------------------
 ia <- rd(A, "init.csv"); ib <- rd(B, "init.csv")
 cat("## 2. Initialiser arm (one auto_bounds box per tree, three starting points)\n\n")
