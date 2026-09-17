@@ -366,8 +366,10 @@ fits against 78 %, the eleven trees whose box newly contains it move from a medi
 −2.60 to −0.17 nats, and the 42 already contained move from −0.035 to −0.075. The cost is in the
 cross-entropy stage, which covers a box twenty times wider in λ with the same particle budget: it
 takes 383 s against 11 at the median and a pipeline fit 955 s against 218. Where MCEM does the
-final search itself the wide box costs nothing but time. The 2218 fits that use a box scaled
-around the MLE are unchanged: 1925 are identical to 1e-9 in both parameters.
+final search itself the wide box costs time and not precision: over the 145 initialiser runs
+whose box contained the MLE both times, the paired median change in deficit is 0.000 nats, and
+the 25 newly contained go from −5.9 to −0.7. The 2218 fits that use a box scaled around the MLE
+are unchanged: 1925 are identical to 1e-9 in both parameters.
 
 Open: the cross-entropy stage's particle budget does not scale with the box, which is where the
 precision on easy trees goes when the box is widened. Also open: convergence is declared on a
