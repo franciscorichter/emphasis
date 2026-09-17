@@ -311,7 +311,7 @@ data.frame(
 
 See the [wiki](https://github.com/franciscorichter/emphasis/wiki) for the full derivation of the model and inference machinery, method details, and worked examples.
 
-## Status (2026-09-16)
+## Status (2026-09-17)
 
 - Version 0.4; `main` is the working branch and is identical on the forge and on GitHub.
 - The `{N, D}` covariate basis, survival-conditioned inference and the docs site are in; the BDI
@@ -358,8 +358,20 @@ link is refused because the mean-field iteration diverges there (above). A `d` o
 no exact proposal at all, and cannot: the BDI construction rests on a rate that is a function of
 the lineage count alone, while a `D`-model's rate depends on each lineage's own pendant age.
 
-Open: convergence is declared on a parameter step that is not referred to the Monte Carlo noise of
-the iterate it tests. A replacement was designed, implemented and measured, and is **not** shipped
+`auto_bounds()` gives its λ ceiling turnover headroom — the net rate the tip count implies,
+divided by 1 − 0.95 — and probes the constant-net-rate ray, so that a high-turnover optimum is
+inside the box before any likelihood is evaluated. Measured by re-running the validation study's
+main tier job for job on the widened box: the box contains the exact MLE on 98 % of pipeline
+fits against 78 %, the eleven trees whose box newly contains it move from a median deficit of
+−2.60 to −0.17 nats, and the 42 already contained move from −0.035 to −0.075. The cost is in the
+cross-entropy stage, which covers a box twenty times wider in λ with the same particle budget: it
+takes 383 s against 11 at the median and a pipeline fit 955 s against 218. Where MCEM does the
+final search itself the wide box costs nothing but time. The 2218 fits that use a box scaled
+around the MLE are unchanged: 1925 are identical to 1e-9 in both parameters.
+
+Open: the cross-entropy stage's particle budget does not scale with the box, which is where the
+precision on easy trees goes when the box is widened. Also open: convergence is declared on a
+parameter step that is not referred to the Monte Carlo noise of the iterate it tests. A replacement was designed, implemented and measured, and is **not** shipped
 — `dev/stopping-rule/FINDING.md` has the numbers. The short version is that the two deficit
 distributions cross: it trims the tail and degrades the centre, at +26 % of draws. The useful
 result there is about the study rather than the rule — over the cells that fail the convergence
@@ -378,7 +390,11 @@ Diversity programme.
 per tree, against `DDD::bd_ML` for constant rates and `DDD::dd_ML` for the linear
 diversity-dependent model. `00-design.md` states the estimands, the reference calls and their
 conditioning flags, the decision rules, and what the study cannot conclude; `run.sh` runs it in
-tiers; a reference gate asserts the identities the study rests on before any fit runs.
+tiers; a reference gate asserts the identities the study rests on before any fit runs. A run can
+be split across hosts by job kind or job id (`03-fit.R --only`, `--jobs`) and merged
+(`04-analyse.R --allow-mixed-builds`, then `04b-init-table.R`); `05-compare.R` pairs two result
+directories and prints what moved. Result directories are not committed; `results-run2-20260916/`
+is the study's fits and `results-run3-20260917/` the re-run on the widened box.
 
 ## Author
 
