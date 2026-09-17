@@ -31,11 +31,18 @@ A    <- getarg("--a"); B <- getarg("--b")
 TIER <- getarg("--tier", "main")
 if (is.null(A) || is.null(B)) stop("usage: 05-compare.R --a <dir> --b <dir> [--tier main]")
 
+# A table 04-analyse.R did not write (a partial run, or a kind that was not
+# run) returns NULL and its section is skipped with a note, so the sections
+# that do have both inputs still print.
 rd <- function(dir, f) {
   p <- file.path(dir, "results", TIER, f)
-  if (!file.exists(p)) stop("missing: ", p)
+  if (!file.exists(p)) {
+    cat(sprintf("_%s is missing in %s; the section that needs it is skipped._\n\n", f, basename(dir)))
+    return(NULL)
+  }
   utils::read.csv(p, stringsAsFactors = FALSE)
 }
+both <- function(a, b) !is.null(a) && !is.null(b)
 la <- basename(A); lb <- basename(B)
 
 num <- function(x, d = 3) ifelse(is.na(x), "NA", formatC(x, format = "f", digits = d))
@@ -54,6 +61,7 @@ cat("\n")
 
 # --- 1. pipeline arm --------------------------------------------------------
 pa <- rd(A, "pipe.csv"); pb <- rd(B, "pipe.csv")
+if (both(pa, pb)) {
 pj <- merge(pa, pb, by = "job_id", suffixes = c(".a", ".b"))
 cat("## 1. Pipeline arm (auto_bounds → GAM → CEM → MCEM)\n\n")
 cat(sprintf("%d jobs in A, %d in B, %d paired.\n\n", nrow(pa), nrow(pb), nrow(pj)))
@@ -144,8 +152,11 @@ if (!is.null(sta) && !is.null(stb)) {
   cat("\n")
 }
 
+}
+
 # --- 2. init arm -------------------------------------------------------------
 ia <- rd(A, "init.csv"); ib <- rd(B, "init.csv")
+if (both(ia, ib)) {
 cat("## 2. Initialiser arm (one auto_bounds box per tree, three starting points)\n\n")
 cat("`box` is whether that tree's auto_bounds box contains the exact MLE; `start`/`after` are the deficit handed to MCEM and the deficit it returns.\n\n")
 ij <- merge(ia, ib, by = c("tree", "cell", "cfg"), suffixes = c(".a", ".b"))
@@ -184,8 +195,11 @@ for (tr in list(c(FALSE, TRUE), c(TRUE, TRUE), c(TRUE, FALSE), c(FALSE, FALSE)))
 }
 cat("\n")
 
+}
+
 # --- 3. fit cells (regression guard) ----------------------------------------
 ca <- rd(A, "cells.csv"); cb <- rd(B, "cells.csv")
+if (both(ca, cb)) {
 key <- function(d) paste(d$cell, d$config, sep = "|")
 cj <- merge(transform(ca, k = key(ca)), transform(cb, k = key(cb)), by = "k", suffixes = c(".a", ".b"))
 cat("## 3. Fit cells C1–C8 / D1–D4 (boxes scaled around the MLE — a bounds change must not move these)\n\n")
@@ -210,8 +224,11 @@ if (nrow(mv) == 0) {
   }
   cat("\n")
 }
+}
+
 # --- 4. outcomes --------------------------------------------------------------
 fa <- rd(A, "fits.csv"); fb <- rd(B, "fits.csv")
+if (both(fa, fb)) {
 cat("## 4. Outcomes by kind\n\n")
 oa <- as.data.frame(table(kind = fa$kind, outcome = fa$outcome)); ob <- as.data.frame(table(kind = fb$kind, outcome = fb$outcome))
 oj <- merge(oa, ob, by = c("kind", "outcome"), all = TRUE, suffixes = c(".a", ".b"))
@@ -223,3 +240,4 @@ fj <- merge(fa[, c("job_id", "outcome", "elapsed", "at_bound")], fb[, c("job_id"
 cat(sprintf("Paired fit jobs: %d.  at_bound A: %s, B: %s.  Wall-clock ratio B/A median %s.\n",
             nrow(fj), pct(mean(fj$at_bound.a, na.rm = TRUE)), pct(mean(fj$at_bound.b, na.rm = TRUE)),
             num(med(fj$elapsed.b / fj$elapsed.a), 2)))
+}
