@@ -714,8 +714,13 @@ namespace emphasis {
       std::vector<double> kED;         // c_s - ts_s per alive lineage per segment
       std::vector<double> tsD;         // the D branches' tip start per alive lineage per segment
       std::vector<double> focal;       // per node: ED of the event's lineage at the event time
+      // Per segment, the sums and ranges of the per-lineage constants, for
+      // the closed form the linear link has when no lineage's rate is
+      // clipped on the segment (see loglik_ed).
+      std::vector<double> sum_kED, sum_tsD, min_kED, max_kED, min_tsD, max_tsD;
       std::size_t bytes() const {
-        return sizeof(double) * (kED.size() + tsD.size() + focal.size()) + sizeof(int) * seg_begin.size();
+        return sizeof(double) * (kED.size() + tsD.size() + focal.size() + 6 * sum_kED.size())
+             + sizeof(int) * seg_begin.size();
       }
     };
 
@@ -732,6 +737,10 @@ namespace emphasis {
       tab.seg_begin.assign(n_nodes + 1, 0);
       tab.kED.clear(); tab.tsD.clear();
       tab.focal.assign(n_nodes, 0.0);
+      const double inf = std::numeric_limits<double>::infinity();
+      tab.sum_kED.assign(n_nodes, 0.0); tab.sum_tsD.assign(n_nodes, 0.0);
+      tab.min_kED.assign(n_nodes, inf);  tab.max_kED.assign(n_nodes, -inf);
+      tab.min_tsD.assign(n_nodes, inf);  tab.max_tsD.assign(n_nodes, -inf);
       double prev_brts = 0.0;
       for (std::size_t i = 0; i < n_nodes; ++i) {
         const auto& node = tree[i];
@@ -740,8 +749,13 @@ namespace emphasis {
         for (std::size_t k = 0; k < alive.size(); ++k) {
           if (!alive[k]) continue;
           const int ni = forest.lineage_node[k];
-          tab.kED.push_back(edr.c[k] - edr.ts[k]);
-          tab.tsD.push_back((ni < 0) ? 0.0 : tree[static_cast<std::size_t>(ni)].tip_start);
+          const double kv = edr.c[k] - edr.ts[k];
+          const double tv = (ni < 0) ? 0.0 : tree[static_cast<std::size_t>(ni)].tip_start;
+          tab.kED.push_back(kv);
+          tab.tsD.push_back(tv);
+          tab.sum_kED[i] += kv; tab.sum_tsD[i] += tv;
+          tab.min_kED[i] = std::min(tab.min_kED[i], kv); tab.max_kED[i] = std::max(tab.max_kED[i], kv);
+          tab.min_tsD[i] = std::min(tab.min_tsD[i], tv); tab.max_tsD[i] = std::max(tab.max_tsD[i], tv);
         }
         tab.seg_begin[i + 1] = static_cast<int>(tab.kED.size());
         // ED of the lineage whose event this is, at the event time: the
@@ -829,17 +843,50 @@ namespace emphasis {
           const double b_lam = pars[3] + bED;
           const double b_mu  = pars[7] + gED;
           double seg = 0.0;
-          for (int p = tab->seg_begin[i]; p < tab->seg_begin[i + 1]; ++p) {
-            const double kED = tab->kED[static_cast<std::size_t>(p)];
-            const double tsD = tab->tsD[static_cast<std::size_t>(p)];
-            const double A_lam = base_lam - pars[3] * tsD + bED * kED;
-            const double A_mu  = base_mu  - pars[7] * tsD + gED * kED;
-            if (link_ == LinkType::exponential) {
-              seg += exp_integral(A_lam, b_lam, prev_brts, node.brts)
-                   + exp_integral(A_mu,  b_mu,  prev_brts, node.brts);
-            } else {
-              seg += relu_integral(A_lam, b_lam, prev_brts, node.brts)
-                   + relu_integral(A_mu,  b_mu,  prev_brts, node.brts);
+          const int p0 = tab->seg_begin[i], p1 = tab->seg_begin[i + 1];
+          const double n_al = static_cast<double>(p1 - p0);
+          // Linear link, no clipping: every lineage's argument A_s + b u is
+          // positive at both ends of the segment (a line is monotone, so at
+          // both ends is everywhere), which the smallest A_s decides.  Then
+          // sum_s int max(0, A_s + b u) du = (sum_s A_s) dt + n b (t2^2 - t1^2)/2,
+          // O(1) from the segment's sums; the per-lineage loop is the
+          // fallback wherever clipping may occur.
+          auto min_A = [&](double base, double bD, double bE) {
+            return base
+              + (bD >= 0.0 ? -bD * tab->max_tsD[i] : -bD * tab->min_tsD[i])
+              + (bE >= 0.0 ?  bE * tab->min_kED[i] :  bE * tab->max_kED[i]);
+          };
+          auto sum_A = [&](double base, double bD, double bE) {
+            return n_al * base - bD * tab->sum_tsD[i] + bE * tab->sum_kED[i];
+          };
+          auto unclipped = [&](double base, double bD, double bE, double b) {
+            const double a = min_A(base, bD, bE);
+            return n_al > 0.0 && a + b * prev_brts > 0.0 && a + b * node.brts > 0.0;
+          };
+          const double t1 = prev_brts, t2 = node.brts;
+          bool done_lam = false, done_mu = false;
+          if (link_ == LinkType::linear) {
+            if (unclipped(base_lam, pars[3], bED, b_lam)) {
+              seg += sum_A(base_lam, pars[3], bED) * (t2 - t1) + n_al * b_lam * 0.5 * (t2 * t2 - t1 * t1);
+              done_lam = true;
+            }
+            if (unclipped(base_mu, pars[7], gED, b_mu)) {
+              seg += sum_A(base_mu, pars[7], gED) * (t2 - t1) + n_al * b_mu * 0.5 * (t2 * t2 - t1 * t1);
+              done_mu = true;
+            }
+          }
+          if (!(done_lam && done_mu)) {
+            for (int p = p0; p < p1; ++p) {
+              const double kED = tab->kED[static_cast<std::size_t>(p)];
+              const double tsD = tab->tsD[static_cast<std::size_t>(p)];
+              const double A_lam = base_lam - pars[3] * tsD + bED * kED;
+              const double A_mu  = base_mu  - pars[7] * tsD + gED * kED;
+              if (link_ == LinkType::exponential) {
+                seg += exp_integral(A_lam, b_lam, t1, t2) + exp_integral(A_mu, b_mu, t1, t2);
+              } else {
+                if (!done_lam) seg += relu_integral(A_lam, b_lam, t1, t2);
+                if (!done_mu)  seg += relu_integral(A_mu,  b_mu,  t1, t2);
+              }
             }
           }
           inte += seg;
