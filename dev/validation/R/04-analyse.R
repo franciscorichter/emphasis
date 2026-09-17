@@ -45,10 +45,14 @@ rows <- Filter(Negate(is.null), rows)
 keys <- unique(vapply(rows, function(r)
   if (is.null(r$build)) NA_character_ else val_fingerprint_key(r$build), ""))
 keys <- keys[!is.na(keys)]
-if (length(keys) > 1L)
+# A run sharded across hosts (03-fit.R --only / --jobs on each) merges job
+# files from one build per host.  --allow-mixed-builds accepts that and puts
+# every fingerprint in the report's build line; without it the mix is refused.
+ALLOW_MIXED <- any(commandArgs(trailingOnly = TRUE) == "--allow-mixed-builds")
+if (length(keys) > 1L && !ALLOW_MIXED)
   stop("rows from more than one emphasis build in ", JOBS, ":\n  ",
-       paste(keys, collapse = "\n  "))
-BUILD <- if (length(keys)) keys else "unknown"
+       paste(keys, collapse = "\n  "), "\n  (pass --allow-mixed-builds for a run sharded across hosts)")
+BUILD <- if (length(keys)) paste(keys, collapse = " + ") else "unknown"
 
 g1 <- function(r, k, d = NA) { v <- r[[k]]; if (is.null(v)) d else v[1] }
 
