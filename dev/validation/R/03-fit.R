@@ -87,9 +87,16 @@ if (!is.null(CALIB)) cat("  cost model: results/smoke/cost-calibration.csv\n") e
 # Per-job hard timeout: the larger of the kind/size default and 3x the cost
 # model, floor 120 s.  With a smoke calibration on disk this is the design's
 # "3 x the measured cost" rule; without one it is the pre-fix default.
+#
+# --timeout-mult <x> scales every job's timeout by x.  It exists for re-running
+# jobs that a configuration change made slower than the calibration assumed:
+# delete their results/<tier>/jobs/<job_id>.rds, then re-run with --only <kind>
+# and a multiplier, and the resume logic picks up only those.  The value used
+# is recorded in each job's row as timeout_s.
+TMULT <- as.numeric(getarg("--timeout-mult", "1"))
 tmo <- function(kind, n, N, sampler = NA) {
   est <- val_est_cost(kind, sampler, n, N, calib = CALIB)
-  max(120, val_timeout(kind, n, N), 3 * est)
+  TMULT * max(120, val_timeout(kind, n, N), 3 * est)
 }
 
 cr_ids <- names(TR)[vapply(TR, function(x) x$kind == "cr", TRUE)]
