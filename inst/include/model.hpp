@@ -35,6 +35,9 @@
 #include <atomic>
 #include <cstdint>
 #include <unordered_map>
+#include <mutex>
+#include <memory>
+#include <cstring>
 #include "model_helpers.hpp"
 #include "ed_covariate.hpp"
 
@@ -405,6 +408,7 @@ namespace emphasis {
       std::vector<int>    node_lineage;   // per node: lineage index of the lineage it names (-1 for the present marker)
       std::vector<int>    lineage_node;   // per lineage: the node it was born at (-1 for a crown lineage)
       std::unordered_map<int, int> idx;   // lineage id -> index
+      ed::forest_index    ix;             // birth order and children, built once per tree
       bool complete = true;
       int lookup(int id) const {
         auto it = idx.find(id);
@@ -442,19 +446,21 @@ namespace emphasis {
         const double death = is_missing(node) ? node.t_ext : inf;
         f.node_lineage[i] = add(node.id, p, node.brts, death, static_cast<int>(i));
       }
+      f.ix.build(f.parent, f.birth);
       return f;
     }
 
     // ED constants for the lineages alive on the segment (t0, t1]: alive means
     // born at or before t0 and not dead before t1, the alive set the
-    // compensator's other branches use.
+    // compensator's other branches use.  No allocation beyond the reused
+    // buffers: this runs once per segment per likelihood evaluation.
     static void segment_ed(const forest_t& f, double t0, double t1,
                            std::vector<char>& alive, ed::result_t& out) {
       const std::size_t n = f.parent.size();
-      alive.assign(n, 0);
+      alive.resize(n);
       for (std::size_t i = 0; i < n; ++i)
         alive[i] = (f.birth[i] <= t0 && f.death[i] >= t1) ? 1 : 0;
-      ed::fair_proportion(f.parent, f.birth, alive, t0, out);
+      ed::fair_proportion(f.ix, f.parent, f.birth, alive, t0, out);
     }
 
     // Draw extinction time from truncated exponential with rate = mu at speciation time.
@@ -696,8 +702,24 @@ namespace emphasis {
     // The linear link integrates the clipped line (relu_integral), the
     // exponential link the exponential of it (exp_integral); the gaussian link
     // is refused at construction.
-    double loglik_ed(const param_t& pars, const tree_t& tree) const {
-      const double bED = beta_ed(pars), gED = gamma_ed(pars);
+    // Everything the ED likelihood needs from a tree and nothing it needs from
+    // the parameters: per segment i, over the alive lineages, the constant
+    // k_s = c_s - ts_s of the affine argument and the tip start ts^D_s the D
+    // terms read, packed as flat arrays (one entry per alive lineage, with
+    // the segment's offsets); per event node, the focal lineage's ED at the
+    // event time.  Built once per tree and cached (below), because the
+    // M-step evaluates the same trees at hundreds of parameter values.
+    struct ed_table_t {
+      std::vector<int>    seg_begin;   // size n_nodes + 1: offsets into the flat arrays
+      std::vector<double> kED;         // c_s - ts_s per alive lineage per segment
+      std::vector<double> tsD;         // the D branches' tip start per alive lineage per segment
+      std::vector<double> focal;       // per node: ED of the event's lineage at the event time
+      std::size_t bytes() const {
+        return sizeof(double) * (kED.size() + tsD.size() + focal.size()) + sizeof(int) * seg_begin.size();
+      }
+    };
+
+    static void build_ed_table(const tree_t& tree, ed_table_t& tab) {
       forest_t forest = build_forest(tree);
       if (!forest.complete) {
         throw std::invalid_argument(
@@ -706,22 +728,88 @@ namespace emphasis {
       }
       std::vector<char> alive;
       ed::result_t edr;
-
-      // ED of the lineage whose event node i is, at time t: the splitting
-      // lineage of a birth, the dying lineage of an extinction.  A birth with
-      // no lineage on record reads the mean ED of the alive lineages, which is
-      // Faith's PD over N -- the same marginalisation D makes when it reads M.
-      auto focal_ed = [&](std::size_t i, double t) -> double {
+      const std::size_t n_nodes = tree.size();
+      tab.seg_begin.assign(n_nodes + 1, 0);
+      tab.kED.clear(); tab.tsD.clear();
+      tab.focal.assign(n_nodes, 0.0);
+      double prev_brts = 0.0;
+      for (std::size_t i = 0; i < n_nodes; ++i) {
         const auto& node = tree[i];
-        const int k = is_extinction(node) ? forest.node_lineage[i]
-                                          : forest.lookup(node.parent_id);
-        if (k >= 0 && alive[static_cast<std::size_t>(k)])
-          return edr.c[static_cast<std::size_t>(k)] + (t - edr.ts[static_cast<std::size_t>(k)]);
-        double s = 0.0; int m = 0;
-        for (std::size_t j = 0; j < alive.size(); ++j)
-          if (alive[j]) { s += edr.c[j] + (t - edr.ts[j]); ++m; }
-        return m ? s / m : 0.0;
-      };
+        segment_ed(forest, prev_brts, node.brts, alive, edr);
+        // the compensator's per-lineage terms on this segment
+        for (std::size_t k = 0; k < alive.size(); ++k) {
+          if (!alive[k]) continue;
+          const int ni = forest.lineage_node[k];
+          tab.kED.push_back(edr.c[k] - edr.ts[k]);
+          tab.tsD.push_back((ni < 0) ? 0.0 : tree[static_cast<std::size_t>(ni)].tip_start);
+        }
+        tab.seg_begin[i + 1] = static_cast<int>(tab.kED.size());
+        // ED of the lineage whose event this is, at the event time: the
+        // splitting lineage of a birth, the dying lineage of an extinction.
+        // A birth with no lineage on record reads the mean ED of the alive
+        // lineages, which is Faith's PD over N -- the same marginalisation D
+        // makes when it reads M.
+        const double t = node.brts;
+        const int k = is_extinction(node) ? forest.node_lineage[i] : forest.lookup(node.parent_id);
+        if (k >= 0 && alive[static_cast<std::size_t>(k)]) {
+          tab.focal[i] = edr.c[static_cast<std::size_t>(k)] + (t - edr.ts[static_cast<std::size_t>(k)]);
+        } else {
+          double s = 0.0; int m = 0;
+          for (std::size_t j = 0; j < alive.size(); ++j)
+            if (alive[j]) { s += edr.c[j] + (t - edr.ts[j]); ++m; }
+          tab.focal[i] = m ? s / m : 0.0;
+        }
+        prev_brts = node.brts;
+      }
+    }
+
+    // A content fingerprint of a tree (FNV-1a over the fields the ED table
+    // depends on), so that a cached table is never read for a different
+    // tree that happens to occupy the same memory.
+    static uint64_t tree_fingerprint(const tree_t& tree) {
+      uint64_t h = 1469598103934665603ull;
+      auto mix = [&](uint64_t v) { h ^= v; h *= 1099511628211ull; };
+      auto mixd = [&](double d) { uint64_t v; std::memcpy(&v, &d, sizeof v); mix(v); };
+      mix(static_cast<uint64_t>(tree.size()));
+      for (const auto& node : tree) {
+        mixd(node.brts); mixd(node.t_ext); mixd(node.tip_start);
+        mix(static_cast<uint64_t>(static_cast<int64_t>(node.id)));
+        mix(static_cast<uint64_t>(static_cast<int64_t>(node.parent_id)));
+      }
+      return h;
+    }
+
+    // The table for a tree, from the cache or built and (budget permitting)
+    // cached.  The cache is per Model, shared by the M-step's threads under a
+    // mutex, and emptied when it exceeds its budget: the next M-step refills
+    // it with the trees then in use.
+    struct ed_cache_t {
+      std::mutex mutex;
+      std::unordered_map<uint64_t, std::shared_ptr<const ed_table_t>> map;
+      std::size_t bytes  = 0;
+      std::size_t budget = static_cast<std::size_t>(1) << 30;   // 1 GB per Model
+    };
+
+    std::shared_ptr<const ed_table_t> ed_table(const tree_t& tree) const {
+      const uint64_t fp = tree_fingerprint(tree);
+      ed_cache_t& cache = *ed_cache_;
+      {
+        std::lock_guard<std::mutex> lock(cache.mutex);
+        auto it = cache.map.find(fp);
+        if (it != cache.map.end()) return it->second;
+      }
+      auto tab = std::make_shared<ed_table_t>();
+      build_ed_table(tree, *tab);
+      const std::size_t b = tab->bytes();
+      std::lock_guard<std::mutex> lock(cache.mutex);
+      if (cache.bytes + b > cache.budget) { cache.map.clear(); cache.bytes = 0; }
+      if (b <= cache.budget) { cache.map[fp] = tab; cache.bytes += b; }
+      return tab;
+    }
+
+    double loglik_ed(const param_t& pars, const tree_t& tree) const {
+      const double bED = beta_ed(pars), gED = gamma_ed(pars);
+      const std::shared_ptr<const ed_table_t> tab = ed_table(tree);
 
       log_sum log_lambda{};
       double log_mu_sum = 0.0;
@@ -732,7 +820,6 @@ namespace emphasis {
       for (std::size_t i = 0; i < tree.size(); ++i) {
         const auto& node = tree[i];
         const double dt = node.brts - prev_brts;
-        segment_ed(forest, prev_brts, node.brts, alive, edr);
 
         if (dt > 0.0) {
           const double N_seg = node.n;
@@ -742,11 +829,9 @@ namespace emphasis {
           const double b_lam = pars[3] + bED;
           const double b_mu  = pars[7] + gED;
           double seg = 0.0;
-          for (std::size_t k = 0; k < alive.size(); ++k) {
-            if (!alive[k]) continue;
-            const int ni = forest.lineage_node[k];
-            const double tsD = (ni < 0) ? 0.0 : tree[static_cast<std::size_t>(ni)].tip_start;
-            const double kED = edr.c[k] - edr.ts[k];
+          for (int p = tab->seg_begin[i]; p < tab->seg_begin[i + 1]; ++p) {
+            const double kED = tab->kED[static_cast<std::size_t>(p)];
+            const double tsD = tab->tsD[static_cast<std::size_t>(p)];
             const double A_lam = base_lam - pars[3] * tsD + bED * kED;
             const double A_mu  = base_mu  - pars[7] * tsD + gED * kED;
             if (link_ == LinkType::exponential) {
@@ -761,11 +846,11 @@ namespace emphasis {
         }
 
         if (is_extinction(node)) {
-          const double mu = extinction_rate_ep(pars, node, focal_ed(i, node.brts));
+          const double mu = extinction_rate_ep(pars, node, tab->focal[i]);
           log_mu_sum += std::log(std::max(mu, 1e-300));
         }
         else if (i != last) {
-          log_lambda += speciation_rate_ep(pars, node, focal_ed(i, node.brts));
+          log_lambda += speciation_rate_ep(pars, node, tab->focal[i]);
         }
         prev_brts = node.brts;
       }
@@ -943,6 +1028,9 @@ namespace emphasis {
     param_t lower_bound_;
     param_t upper_bound_;
     std::vector<int> model_bin_ = {0, 0, 0, 0};
+    // The ED tables of the trees a Model has scored, shared by every copy of
+    // the Model and by the M-step's threads (see ed_table()).
+    std::shared_ptr<ed_cache_t> ed_cache_ = std::make_shared<ed_cache_t>();
     LinkType link_ = LinkType::linear;
     double rho_ = 1.0;
   };
