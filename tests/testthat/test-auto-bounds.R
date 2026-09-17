@@ -57,7 +57,9 @@ test_that(".wide_bounds leaves the linear and exponential boxes alone", {
   # with the extra 3 log-units of headroom below on gamma_0.
   max_t <- 20; n_tips <- 23
   r_hat  <- log(n_tips / 2) / max_t
-  lam_hi <- max(log(50 * n_tips / 2) / max_t + 0.5 * r_hat, 0.1)
+  # The ceiling is the net rate for 50x the tips, opened up by the turnover
+  # headroom lambda = r / (1 - eps) at eps = 0.95 (see .wide_bounds).
+  lam_hi <- max(log(50 * n_tips / 2) / max_t + 0.5 * r_hat, 0.1) / (1 - 0.95)
   lam_lo <- max(0.1 * r_hat, 1e-4)
 
   lin <- emphasis:::.wide_bounds(c(0L, 0L, 0L), 0L, max_t, n_tips)
@@ -247,9 +249,14 @@ test_that("the feasibility test judges survivors, not survival (H74)", {
   expect_gt(mu_w, 0.5)
   expect_gt(mu_w / lam_w, 0.5)
   # and the test itself must accept a vector whose survivors match the data
-  # even when most of its draws die out
+  # even when most of its draws die out.  The call draws its own trees, so it
+  # is seeded here rather than inheriting whatever state auto_bounds left; and
+  # it is given enough draws and retries that the verdict is the mechanism's,
+  # not one draw's: at the defaults (8 draws, 20 tries) it accepted this vector
+  # on 35 of 40 seeds, at (20, 50) on 40 of 40, with survivors of 7 to 59 tips.
+  set.seed(7)
   expect_true(emphasis:::.test_feasibility(
     c(1.0, 0.9), model = "cr", link = "linear",
-    max_t = brts[1], max_lin = 600L, n_test = 8L,
+    max_t = brts[1], max_lin = 600L, n_test = 20L, surv_tries = 50L,
     tip_lo = 3, tip_hi = 300, num_threads = 1L))
 })
