@@ -102,6 +102,41 @@
 }
 
 
+#' The importance-sampling summary of one draw: the estimate and the ESS
+#'
+#' One denominator for both proposals.  Three kinds of draw carry weight zero
+#' and all three belong in it: a draw whose log-weight is \code{-Inf} because
+#' the model gives its tree probability zero; a draw the proposal rejected for
+#' a reason that depends on the parameters -- a missing lineage still alive at
+#' the present under complete sampling, whose density under \eqn{f} is zero;
+#' and nothing else.  A draw rejected for a reason that does not depend on the
+#' parameters, an overrun of the missing-lineage budget, is not a sample and
+#' stays out.
+#'
+#' The two proposals reached this denominator by different routes -- the
+#' thinning path through \code{n_zero_weight}, the conditional path through a
+#' separate acceptance factor -- and the difference between the two routes is
+#' the size of the effect they are used to measure.
+#'
+#' @param lw Log-weights of the completed draws.
+#' @param n_zero_weight Completed draws whose weight is zero.
+#' @param n_rejected Draws rejected for a parameter-dependent reason.
+#' @return A list: \code{fhat}, \code{ess}, \code{n_finite}, \code{n_den}.
+#' @keywords internal
+.is_summary <- function(lw, n_zero_weight = 0L, n_rejected = 0L) {
+  fin   <- lw[is.finite(lw)]
+  n_den <- length(fin) + as.integer(n_zero_weight) + as.integer(n_rejected)
+  if (length(fin) == 0L || n_den == 0L)
+    return(list(fhat = NA_real_, ess = NA_real_,
+                n_finite = length(fin), n_den = n_den))
+  m <- max(fin); w <- exp(fin - m)
+  list(fhat     = m + log(sum(w) / n_den),
+       ess      = sum(w)^2 / sum(w^2),
+       n_finite = length(fin),
+       n_den    = n_den)
+}
+
+
 #' Effective Sample Size from IS log-weights
 #'
 #' \eqn{\text{ESS} = (\sum w_i)^2 / \sum w_i^2}, computed in log-space for

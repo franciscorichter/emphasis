@@ -1,0 +1,3 @@
+"n_target","n_tips","tree","seed","crown","b_ED","ed_bar","ess_thin_ed","ess_thin_mf","ess_bdi","nd_thin_ed","nd_thin_mf","nd_bdi"
+25,19,1,1,41.935302734375,-0.0265157738405281,2.82850504198245,NA,NA,NA,0,0,200
+50,33,1,1,49.34375,-0.0276404638506925,2.71341321929809,NA,NA,NA,0,0,200

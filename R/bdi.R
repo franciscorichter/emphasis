@@ -733,7 +733,8 @@
 .bdi_augment_one <- function(bt, pars8, model_bin, link, tp,
                              p_fun = NULL, Nhat_fun = NULL,
                              Phat_fun = NULL, Ehat_fun = NULL,
-                             max_missing = 1e4L, rho = 1) {
+                             max_missing = 1e4L, rho = 1,
+                             track_parents = FALSE, first_aug_id = 0L) {
   bt <- sort(bt)
   is_cr <- all(model_bin == 0L)
   complete <- (rho >= 1)
@@ -747,6 +748,19 @@
   species <- list()
   n_total <- 0L
   logg    <- 0
+
+  # Parent recording.  The lineage a birth attaches to is read off the same
+  # uniform that chose the event, so the random stream is untouched and every
+  # draw is the draw the sampler made before (dev/bdi_invariance.R).
+  alive_id  <- integer(0)     # id of each missing lineage alive now
+  alive_par <- integer(0)     # the lineage it was born from
+  sp_id     <- integer(0)     # ids, in the order species[] records deaths
+  sp_par    <- integer(0)
+  next_id   <- as.integer(first_aug_id)
+  # The observed lineages alive when k of them are: the two crown lineages,
+  # then the daughter of each observed branching event.  This is the naming
+  # the C++ layer uses and .observed_parent_id() reports in.
+  obs_ids <- function(k) c(-2L, -3L, if (k > 2L) seq_len(k - 2L) - 1L else integer(0))
 
   k_of_t <- function(t) 2L + sum(bt <= t)
 
@@ -815,11 +829,24 @@
       r <- stats::runif(1) * total
       if (r < n_alive * la) {
         logg    <- logg + log(la)           # per-species birth rate
+        if (track_parents) {
+          # every alive missing lineage carries the same rate la, so r/la is
+          # already a uniform index into them
+          j <- min(n_alive, as.integer(floor(r / la)) + 1L)
+          alive_par <- c(alive_par, alive_id[j])
+          alive_id  <- c(alive_id, next_id); next_id <- next_id + 1L
+        }
         alive   <- c(alive, t)
         n_alive <- n_alive + 1L
         n_total <- n_total + 1L
       } else if (r < n_alive * la + nu) {
         logg    <- logg + log(la)           # per-lineage immigration rate
+        if (track_parents) {
+          # the k observed lineages share nu equally
+          j <- min(k, as.integer(floor((r - n_alive * la) / (nu / k))) + 1L)
+          alive_par <- c(alive_par, obs_ids(k)[j])
+          alive_id  <- c(alive_id, next_id); next_id <- next_id + 1L
+        }
         alive   <- c(alive, t)
         n_alive <- n_alive + 1L
         n_total <- n_total + 1L
@@ -827,6 +854,10 @@
         logg <- logg + log(mu_r)            # per-species death rate
         idx  <- sample.int(n_alive, 1L)
         species[[length(species) + 1L]] <- c(alive[idx], t)
+        if (track_parents) {
+          sp_id  <- c(sp_id, alive_id[idx]); sp_par <- c(sp_par, alive_par[idx])
+          alive_id <- alive_id[-idx]; alive_par <- alive_par[-idx]
+        }
         alive   <- alive[-idx]
         n_alive <- n_alive - 1L
       }
@@ -842,7 +873,9 @@
   if (complete && n_alive > 0L) return(list(reason = "survivor"))
 
   list(reason = "accepted", species = species,
-       unsampled = alive, n_alive_at_tp = n_alive, logg = logg)
+       unsampled = alive, n_alive_at_tp = n_alive, logg = logg,
+       sp_id = sp_id, sp_par = sp_par,
+       uns_id = alive_id, uns_par = alive_par)
 }
 
 
@@ -861,7 +894,15 @@
 #' \code{.augment_tree_bdi} documentation for what that costs and what fixing
 #' it would take.
 #' @keywords internal
-.bdi_to_tree_df <- function(species, bt, tp, unsampled = numeric(0)) {
+.bdi_to_tree_df <- function(species, bt, tp, unsampled = numeric(0),
+                            obs_parent_id = NULL, obs_focal_ts = NULL,
+                            aug_id = NULL, aug_par = NULL,
+                            uns_id = NULL, uns_par = NULL) {
+  # With the observed topology named, the frame carries the real parent of
+  # every node -- observed ones from the caller, augmented ones from the draw
+  # that made them -- instead of the last-branching guess below, and gains the
+  # two columns the covariate sweep reads (audit finding H45).
+  topology <- !is.null(obs_parent_id)
   bt_sorted <- sort(bt)
   n_obs     <- length(bt_sorted)
   n_aug     <- length(species)
@@ -876,6 +917,8 @@
   v_tip_start <- numeric(n_total)
   v_id        <- integer(n_total)
   v_parent_id <- integer(n_total)
+  v_focal_ts  <- rep(-1, n_total)      # ts_unknown
+  v_clade     <- rep(if (topology) 1L else 0L, n_total)
 
   # Observed speciation nodes
   idx <- seq_len(n_obs)
@@ -883,7 +926,8 @@
   v_t_ext[idx]     <- 1e11   # t_ext_tip
   v_tip_start[idx] <- 0
   v_id[idx]        <- seq(0L, n_obs - 1L)
-  v_parent_id[idx] <- -1L
+  v_parent_id[idx] <- if (topology) as.integer(obs_parent_id) else -1L
+  if (topology && !is.null(obs_focal_ts)) v_focal_ts[idx] <- as.numeric(obs_focal_ts)
 
   # The last observed branching at or before `birth`; see the note above and
   # in .augment_tree_bdi on what this assignment costs (audit finding H45).
@@ -898,8 +942,8 @@
     for (i in seq_along(species)) {
       sp    <- species[[i]]
       birth <- sp[1]; death <- sp[2]
-      sid   <- as.integer(n_obs + i - 1L)
-      parent <- parent_of(birth)
+      sid   <- if (topology) as.integer(aug_id[i]) else as.integer(n_obs + i - 1L)
+      parent <- if (topology) as.integer(aug_par[i]) else parent_of(birth)
       j <- off + 2L * (i - 1L)
       # Speciation node
       v_brts[j + 1L]      <- birth
@@ -926,13 +970,13 @@
     off <- n_obs + 2L * n_aug
     for (i in seq_along(unsampled)) {
       birth <- unsampled[i]
-      sid   <- as.integer(n_obs + n_aug + i - 1L)
+      sid   <- if (topology) as.integer(uns_id[i]) else as.integer(n_obs + n_aug + i - 1L)
       j <- off + i
       v_brts[j]      <- birth
       v_t_ext[j]     <- 5e10       # t_ext_unsampled
       v_tip_start[j] <- birth
       v_id[j]        <- sid
-      v_parent_id[j] <- parent_of(birth)
+      v_parent_id[j] <- if (topology) as.integer(uns_par[i]) else parent_of(birth)
     }
   }
 
@@ -950,6 +994,8 @@
   v_tip_start <- v_tip_start[ord]
   v_id        <- v_id[ord]
   v_parent_id <- v_parent_id[ord]
+  v_focal_ts  <- v_focal_ts[ord]
+  v_clade     <- v_clade[ord]
 
   # Compute n: n[i] = lineage count during [brts[i-1], brts[i]).
   # C++ convention: n[i] = n_after(event i-1) = n[i-1] + type(event i-1).
@@ -963,7 +1009,7 @@
     }
   }
 
-  data.frame(
+  out <- data.frame(
     brts      = v_brts,
     n         = v_n,
     t_ext     = v_t_ext,
@@ -973,6 +1019,12 @@
     parent_id = v_parent_id,
     stringsAsFactors = FALSE
   )
+  if (!topology) return(out)
+  # The sweep reads the convention off the last node, so every row carries it.
+  out$focal_tip_start <- v_focal_ts
+  out$clade           <- v_clade
+  out[c("brts", "n", "t_ext", "pd", "tip_start", "focal_tip_start",
+        "clade", "id", "parent_id")]
 }
 
 
@@ -1053,7 +1105,8 @@
                               max_missing = 1e4,
                               link        = 0L,
                               rho         = 1.0,
-                              use_gaussian_closure = TRUE) {
+                              use_gaussian_closure = TRUE,
+                              topology    = NULL) {
   brts  <- .extract_brts(tree)
   # Accept either compact or 8-element pars
   if (length(pars) == 8L) {
@@ -1067,6 +1120,25 @@
   # emphasis brts: tp, t_{n-1}, ..., t_1 (decreasing, present = 0)
   # forward time bt: tp - brts (increasing from 0)
   bt <- sort(tp - brts[-1L])
+
+  # The observed topology, when the branching times carry it: which lineage
+  # splits at each event and when that lineage became a pendant tip.  With it
+  # the draw records the real parent of every augmented birth, and the tree it
+  # returns can be scored by a per-lineage covariate.  Without it the frame is
+  # what it has always been -- see .bdi_to_tree_df.
+  n_obs   <- length(bt)
+  # The attributes carry one entry per branching time, the last a sentinel for
+  # the present; the events are the first n_obs, in forward-time order, which
+  # is the order bt is in.
+  ok_len  <- function(x) length(x) == n_obs || length(x) == n_obs + 1L
+  obs_pid <- utils::head(.pid(brts), n_obs)
+  obs_pts <- utils::head(.pts(brts), n_obs)
+  use_top <- if (is.null(topology)) {
+    ok_len(.pid(brts)) && ok_len(.pts(brts))
+  } else isTRUE(topology)
+  if (use_top && (length(obs_pid) != n_obs || length(obs_pts) != n_obs))
+    stop(".augment_tree_bdi: topology requested but the branching times carry ",
+         "no parent_id/parent_tip_start of the right length", call. = FALSE)
 
   is_cr <- all(model_bin == 0L)
 
@@ -1112,13 +1184,24 @@
     n_attempts <- n_attempts + 1L
     aug <- .bdi_augment_one(bt, pars8, model_bin, link, tp,
                             p_fun, Nhat_fun, Phat_fun, Ehat_fun,
-                            max_missing, rho = rho)
+                            max_missing, rho = rho,
+                            track_parents = use_top, first_aug_id = n_obs)
     if (aug$reason == "survivor")    { n_rej_surv <- n_rej_surv + 1L; next }
     if (aug$reason == "max_missing") { n_rej_mm   <- n_rej_mm   + 1L; next }
 
     n_valid <- n_valid + 1L
-    trees[[n_valid]] <- .bdi_to_tree_df(aug$species, bt, tp,
-                                        unsampled = aug$unsampled)
+    df <- if (use_top) {
+      .bdi_to_tree_df(aug$species, bt, tp, unsampled = aug$unsampled,
+                      obs_parent_id = obs_pid, obs_focal_ts = obs_pts,
+                      aug_id = aug$sp_id, aug_par = aug$sp_par,
+                      uns_id = aug$uns_id, uns_par = aug$uns_par)
+    } else {
+      .bdi_to_tree_df(aug$species, bt, tp, unsampled = aug$unsampled)
+    }
+    # The frame names the events; the sweep turns them into the state the
+    # covariates are read from (tip_start, focal_tip_start and pendant PD).
+    if (use_top) df <- eval_pendant_sweep(df)
+    trees[[n_valid]] <- df
     logg[n_valid]     <- aug$logg
   }
 
@@ -1163,13 +1246,9 @@
   # sample from g / P(accept | theta) and log(acc) restores that factor.
   # max_missing overflows are left out of the denominator (E_step.cpp).
   acc <- if (n_valid + n_rej_surv > 0L) n_valid / (n_valid + n_rej_surv) else NA_real_
-  if (length(weights) > 0L) {
-    max_lw <- max(weights)
-    sum_w  <- sum(exp(weights - max_lw))
-    fhat   <- log(sum_w / n_valid) + max_lw + log(acc)
-  } else {
-    fhat <- -Inf
-  }
+  # one denominator for both proposals -- see .is_summary
+  summ <- .is_summary(weights, n_zero_weight = n_nonfinite, n_rejected = n_rej_surv)
+  fhat <- if (is.na(summ$fhat)) -Inf else summ$fhat
 
   list(trees   = trees,
        logf    = logf,
