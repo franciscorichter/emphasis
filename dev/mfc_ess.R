@@ -29,7 +29,6 @@ LINK <- 0L; TURNOVER <- 0.33; B0 <- 0.5; CROWN <- 15
 ED_EFFECT <- -0.15
 G0   <- TURNOVER * B0
 # K such that the N-only part of the rate vanishes at K lineages
-Kof  <- function(n) 1.4 * n
 mb_ned <- .resolve_model("ned")
 mb_dd  <- .resolve_model("dd")
 
@@ -48,16 +47,20 @@ draw_one <- function(cp, T_use, model, seed) {
   length(s$tes$tip.label)
 }
 
-# The clade's size is set by how long it runs, so the crown age is bisected to
-# the target rather than fixed: at a fixed age the ED term moves the size.
-calibrate_T <- function(cp, n, seed, model = "ned", hi = 120) {
-  lo <- 1; best <- CROWN
-  for (it in 1:14) {
+# The clade's size is set at a fixed crown age by its capacity, so the
+# capacity is bisected to the target rather than the age: calibrating the age
+# instead drives it up under a negative ED effect, and a long age at a small
+# size is a tree that is almost all missing lineage.
+calibrate_K <- function(n, seed, bED, model, lo = 0.5 * n, hi = 12 * n) {
+  best <- 1.4 * n
+  for (it in 1:16) {
     mid <- (lo + hi) / 2
+    bN  <- -(B0 - G0) / mid
+    cp  <- if (model == "dd") c(B0, bN, G0, 0) else c(B0, bN, bED, G0, 0, 0)
     m <- stats::median(vapply(seq_len(12), function(i)
-                                draw_one(cp, mid, model, seed + 31 * it + i), 1L),
+                                draw_one(cp, CROWN, model, seed + 31 * it + i), 1L),
                        na.rm = TRUE)
-    if (is.na(m)) { hi <- mid; next }
+    if (is.na(m)) { lo <- mid; next }
     best <- mid
     if (m < n) lo <- mid else hi <- mid
     if (abs(m - n) <= 0.05 * n) break
@@ -67,9 +70,9 @@ calibrate_T <- function(cp, n, seed, model = "ned", hi = 120) {
 
 # Mean fair-proportion ED of the clade with no ED effect: summed over the tips
 # it is Faith's PD, so the mean is PD per tip.
-ed_bar <- function(cp0, T_use, seed) {
+ed_bar <- function(cp0, seed) {
   v <- vapply(seq_len(12), function(i) {
-    s <- sim_raw(cp0, T_use, "dd", seed + 517 + i)
+    s <- sim_raw(cp0, CROWN, "dd", seed + 517 + i)
     if (is.null(s) || !identical(s$status, "done") || is.null(s$tas)) return(NA_real_)
     sum(s$tas$edge.length) / length(s$tas$tip.label)
   }, 1)
@@ -77,26 +80,25 @@ ed_bar <- function(cp0, T_use, seed) {
 }
 
 sim_one <- function(n, seed) {
-  K  <- Kof(n); bN <- -(B0 - G0) / K
-  # the same clade with no ED effect fixes the age and the ED scale, then the
-  # coefficient is set from that scale and the age re-calibrated under it
-  cp0   <- c(B0, bN, G0, 0)                 # the same clade as "dd"
-  T0    <- calibrate_T(cp0, n, seed, model = "dd")
-  edbar <- ed_bar(cp0, T0, seed)
+  # the same clade with no ED effect fixes the capacity and the ED scale, then
+  # the coefficient is set from that scale and the capacity re-calibrated
+  K0    <- calibrate_K(n, seed, 0, "dd")
+  edbar <- ed_bar(c(B0, -(B0 - G0) / K0, G0, 0), seed)
   if (!is.finite(edbar) || edbar <= 0) return(NULL)
   BED   <- ED_EFFECT * B0 / edbar
-  cp <- c(B0, bN, BED, G0, 0, 0)          # compact: simulate_tree expands it
-  pn <- .expand_pars(cp, mb_ned)
-  T_use <- calibrate_T(cp, n, seed, model = "ned", hi = 3 * T0)
+  K     <- calibrate_K(n, seed, BED, "ned")
+  bN    <- -(B0 - G0) / K
+  cp    <- c(B0, bN, BED, G0, 0, 0)
+  pn    <- .expand_pars(cp, mb_ned)
   for (try in seq_len(400)) {
     set.seed(seed * 1000 + try)
-    s <- tryCatch(simulate_tree(pars = cp, max_t = T_use, model = "ned", rho = 1,
+    s <- tryCatch(simulate_tree(pars = cp, max_t = CROWN, model = "ned", rho = 1,
                                 max_lin = 20000L, num_threads = 1L),
                   error = function(e) NULL)
     if (is.null(s) || !identical(s$status, "done") || is.null(s$tes)) next
     nt <- length(s$tes$tip.label)
     if (nt >= 0.6 * n && nt <= 1.6 * n)
-      return(list(phy = s$tes, n = nt, pars = pn, bN = bN, T_use = T_use,
+      return(list(phy = s$tes, n = nt, pars = pn, bN = bN, T_use = CROWN, K = K,
                   bED = BED, edbar = edbar))
   }
   NULL
@@ -141,7 +143,7 @@ for (n in SIZES) for (tr in seq_len(NTREE)) {
     tm[3] <- system.time({ set.seed(4242 + sd); d <- ess_bdi(brts, s$pars, s$bN, s$bED, s$edbar) })[["elapsed"]]
     rows[[length(rows) + 1L]] <- data.frame(
       n_target = n, n_tips = s$n, tree = tr, seed = sd,
-      crown = s$T_use, b_ED = s$bED, ed_bar = s$edbar,
+      crown = s$T_use, K = s$K, b_ED = s$bED, ed_bar = s$edbar,
       ess_thin_ed = a[["ess"]], ess_thin_mf = b[["ess"]], ess_bdi = d[["ess"]],
       nd_thin_ed = a[["n"]], nd_thin_mf = b[["n"]], nd_bdi = d[["n"]],
       sec_thin_ed = tm[1], sec_thin_mf = tm[2], sec_bdi = tm[3])

@@ -312,9 +312,13 @@
     rho > 0 && rho <= 1 + 1e-12
   if (!rho_ok || !(length(model_bin) %in% c(3L, 4L))) return(FALSE)
   model_bin <- .pad_model_bin(model_bin)
-  # N-only: no M covariate, no D covariate, no ED covariate (each is
-  # per-lineage or closes the mean-field state on something other than N).
-  if (model_bin[2L] != 0L || model_bin[3L] != 0L || model_bin[4L] != 0L) return(FALSE)
+  # No M covariate and no D covariate: each would close the mean-field state
+  # on something the iteration does not carry.  ED is admitted on the linear
+  # and exponential links: its clade mean is P-hat/N-hat, which the iteration
+  # already solves for, so the proposal can read the mean-field ED rate and
+  # leave the per-lineage departure from it to the importance weights.
+  if (model_bin[2L] != 0L || model_bin[3L] != 0L) return(FALSE)
+  if (model_bin[4L] != 0L) return(link %in% c(0L, 1L))
   if (link %in% c(0L, 1L)) return(TRUE)
   # gaussian: constant rates only (see above).
   link == 2L && model_bin[1L] == 0L
@@ -335,12 +339,9 @@
   if (!(length(model_bin) %in% c(3L, 4L)))
     return("a model vector that is not length 3 or 4")
   model_bin <- .pad_model_bin(model_bin)
-  if (model_bin[4L] != 0L)
-    return(paste0("an ED-dependent model: the BDI conditional distribution is ",
-                  "built on one survival probability p(t) shared by every ",
-                  "lineage alive at t, and an ED-model's rate depends on each ",
-                  "lineage's own evolutionary distinctiveness, so no single ",
-                  "p(t) exists"))
+  if (model_bin[4L] != 0L && !(link %in% c(0L, 1L)))
+    return(paste0("an ED-dependent model on the gaussian link: the mean-field ",
+                  "ED rate the proposal is built on is not available there"))
   if (model_bin[3L] != 0L)
     return(paste0("a D-dependent model: the BDI conditional distribution is ",
                   "built on one survival probability p(t) shared by every ",
@@ -594,7 +595,9 @@
 #' @keywords internal
 .bdi_iterate <- function(pars8, model_bin, link, bt, tp,
                          max_iter = NULL, tol = 1e-4, n_grid = 500,
-                         use_gaussian_closure = TRUE, rho = 1) {
+                         use_gaussian_closure = TRUE, rho = 1,
+                         pd_mode = c("pendant", "faith")) {
+  pd_mode <- match.arg(pd_mode)
   # The budget is 20 at complete sampling, which is what the validation study
   # measured: raising it changes the mean field of any run that had NOT reached
   # tolerance within 20, and with it the proposal and the estimate (measured
@@ -608,7 +611,20 @@
 
   k_of_t <- function(t) 2L + sum(bt <= t)
   k_vals     <- sapply(t_grid, k_of_t)
-  P_obs_vals <- k_vals * t_grid
+  # Two conventions, because two covariates need two different quantities.
+  #
+  #   "pendant"  every observed lineage is dated from the crown (tip_start = 0
+  #              in the frame), so its pendant edge at t is t and the clade's
+  #              is k(t) * t.  This is what the D covariate is defined on and
+  #              what the sampler has always used.
+  #   "faith"    the sum of the tree's branch lengths, which is what the
+  #              fair-proportion ED of the lineages sums to.  It grows at the
+  #              lineage count, dPD/dt = k(t), so PD(t) = integral of k -- not
+  #              k(t) * t, which counts every lineage's whole history as if it
+  #              had been alive since the crown and overstates PD severalfold.
+  P_obs_vals <- if (pd_mode == "faith") {
+    2 * t_grid + vapply(t_grid, function(t) sum(pmax(0, t - bt)), 1)
+  } else k_vals * t_grid
 
   # Initial guess: m = 0, P_miss = 0 ⇒ N̂ = k, P̂ = P_obs, Ê = P̂/N̂.
   Nhat_vals <- k_vals
@@ -734,7 +750,8 @@
                              p_fun = NULL, Nhat_fun = NULL,
                              Phat_fun = NULL, Ehat_fun = NULL,
                              max_missing = 1e4L, rho = 1,
-                             track_parents = FALSE, first_aug_id = 0L) {
+                             track_parents = FALSE, first_aug_id = 0L,
+                             step_max = Inf) {
   bt <- sort(bt)
   is_cr <- all(model_bin == 0L)
   complete <- (rho >= 1)
@@ -813,12 +830,20 @@
 
         if (total < 1e-15) break
         dt <- stats::rexp(1, total)
-        tn <- t + dt
-        if (tn >= t1) {
-          logg <- logg - total * (t1 - t)
-          break
+        # The rates are held at their value at t for the whole step, so a step
+        # long enough for the lineage count to move is charged at rates that
+        # no longer hold.  step_max re-evaluates them on a mesh: a step cut
+        # short carries no event, only its own survival term.  At step_max =
+        # Inf the cut is the segment boundary and this is the plain Gillespie
+        # step it was.
+        cap <- min(step_max, t1 - t)
+        if (dt > cap) {
+          logg <- logg - total * cap
+          t <- t + cap
+          if (t >= t1 - 1e-13) break
+          next
         }
-        t <- tn
+        t <- t + dt
         logg <- logg - total * dt
       }
 
@@ -1106,13 +1131,28 @@
                               link        = 0L,
                               rho         = 1.0,
                               use_gaussian_closure = TRUE,
-                              topology    = NULL) {
+                              topology    = NULL,
+                              mesh        = NULL) {
   brts  <- .extract_brts(tree)
-  # Accept either compact or 8-element pars
-  if (length(pars) == 8L) {
-    pars8 <- pars
-  } else {
-    pars8 <- .expand_pars(pars, model_bin)
+  mb4   <- .pad_model_bin(model_bin)
+  # Accept compact, 8-element (no ED) or 10-element (with ED) pars
+  pars_full <- if (length(pars) %in% c(8L, 10L)) pars else .expand_pars(pars, mb4)
+  use_ed    <- mb4[4L] != 0L
+  if (use_ed && length(pars_full) < 10L)
+    stop(".augment_tree_bdi: an ED model needs the 10-element parameter vector",
+         call. = FALSE)
+  # The proposal is the mean-field one: every lineage alive at t is given the
+  # rate the clade's average lineage has there.  The clade mean of
+  # fair-proportion ED is the pendant PD per lineage, P-hat/N-hat, which the
+  # iteration already carries as E-hat -- so the ED coefficient enters the
+  # proposal through the same slot the mean isolation time does.  What each
+  # lineage's own ED does to its rate is left to the importance weights.
+  pars8 <- pars_full[1:8]
+  mb_prop <- mb4[1:3]
+  if (use_ed) {
+    pars8[4L] <- pars_full[9L]
+    pars8[8L] <- pars_full[10L]
+    mb_prop[3L] <- 1L
   }
   tp    <- brts[1L]
 
@@ -1140,16 +1180,21 @@
     stop(".augment_tree_bdi: topology requested but the branching times carry ",
          "no parent_id/parent_tip_start of the right length", call. = FALSE)
 
-  is_cr <- all(model_bin == 0L)
+  is_cr <- all(mb_prop == 0L)
+
+  # How finely the approximate Gillespie re-evaluates its frozen rates, as a
+  # number of steps per crown age.  NULL leaves the step uncapped.
+  step_max <- if (is.null(mesh) || !is.finite(mesh) || mesh <= 0) Inf else tp / mesh
 
   # Solve BDI rates
   p_fun <- Nhat_fun <- Phat_fun <- Ehat_fun <- NULL
   mf_converged <- NA
   mf_delta     <- NA_real_
   if (!is_cr) {
-    sol <- .bdi_iterate(pars8, model_bin, link, bt, tp,
+    sol <- .bdi_iterate(pars8, mb_prop, link, bt, tp,
                         use_gaussian_closure = use_gaussian_closure,
-                        rho = rho)
+                        rho = rho,
+                        pd_mode = if (use_ed) "faith" else "pendant")
     p_fun    <- sol$p_fun
     Nhat_fun <- sol$Nhat_fun
     Phat_fun <- sol$Phat_fun
@@ -1182,10 +1227,11 @@
   for (attempt in seq_len(max_tries)) {
     if (n_valid >= sample_size) break
     n_attempts <- n_attempts + 1L
-    aug <- .bdi_augment_one(bt, pars8, model_bin, link, tp,
+    aug <- .bdi_augment_one(bt, pars8, mb_prop, link, tp,
                             p_fun, Nhat_fun, Phat_fun, Ehat_fun,
                             max_missing, rho = rho,
-                            track_parents = use_top, first_aug_id = n_obs)
+                            track_parents = use_top, first_aug_id = n_obs,
+                            step_max = step_max)
     if (aug$reason == "survivor")    { n_rej_surv <- n_rej_surv + 1L; next }
     if (aug$reason == "max_missing") { n_rej_mm   <- n_rej_mm   + 1L; next }
 
@@ -1221,8 +1267,8 @@
   # eval_logf also returns a thinning-based logg — we discard it
   # and use the Gillespie-accumulated logg from above instead.
   if (n_valid > 0L) {
-    ev   <- eval_logf(pars8, trees,
-                      model = as.integer(model_bin),
+    ev   <- eval_logf(pars_full, trees,
+                      model = as.integer(mb4),
                       link  = as.integer(link),
                       rho   = as.numeric(rho))
     logf <- ev$logf
