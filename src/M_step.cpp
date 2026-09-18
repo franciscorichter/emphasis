@@ -139,6 +139,25 @@ namespace emphasis {
     if (!lower.empty()) nlopt.set_lower_bounds(lower);
     auto upper = upper_bound.empty() ? model.upper_bound() : upper_bound;
     if (!upper.empty()) nlopt.set_upper_bounds(upper);
+    // The first simplex's step, per coordinate: a tenth of the box where the
+    // box is finite and not the +-1e6 placeholder, NLopt's own default
+    // otherwise (a quarter of |x|, or 1 at x = 0).  NLopt's default under
+    // finite bounds is 0.75 of the distance to the nearer bound, which for a
+    // start a hair inside a bound -- the warm start of a nested fit clipped
+    // to the box lands there -- is that hair: sbplx then satisfies its
+    // x-tolerance on the spot and returns the start unchanged, at every EM
+    // iteration, as XTOL_REACHED.  Measured on the ED simulation arm
+    // (2026-09-18): a start 1.7e-18 above the lower bound of beta_N froze
+    // every M-step of the fit; the same start 1e-6 inside moved.
+    if (!lower.empty() && !upper.empty() && lower.size() == pars.size() && upper.size() == pars.size()) {
+      std::vector<double> step(pars.size());
+      for (size_t i = 0; i < pars.size(); ++i) {
+        const double width = upper[i] - lower[i];
+        const bool boxed = std::isfinite(width) && width > 0.0 && width <= 1e4;
+        step[i] = boxed ? 0.1 * width : (pars[i] != 0.0 ? 0.25 * std::abs(pars[i]) : 1.0);
+      }
+      nlopt.set_initial_step(step);
+    }
     nlopt.set_min_objective(objective, &sd);
     arena.execute([&] {
       M.minf = nlopt.optimize(M.estimates);

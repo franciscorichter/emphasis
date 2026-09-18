@@ -28,6 +28,7 @@ REMP_EXPORT nlopt_result(*remp_set_upper_bounds)(nlopt_opt, const double *);
 REMP_EXPORT nlopt_result(*remp_set_upper_bounds1)(nlopt_opt, double);
 REMP_EXPORT nlopt_result(*remp_set_xtol_rel)(nlopt_opt, double);
 REMP_EXPORT nlopt_result(*remp_set_xtol_abs)(nlopt_opt, double);
+REMP_EXPORT nlopt_result(*remp_set_initial_step)(nlopt_opt, const double *);
 
 
 #ifdef __cplusplus

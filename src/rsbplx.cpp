@@ -122,6 +122,15 @@ namespace emphasis {
     }
   }
 
+  void sbplx::set_initial_step(const std::vector<double>& val)
+  {
+    step_ = val;
+    if (NLOPT_SUCCESS > (result_ = remp_set_initial_step(nlopt_, step_.data()))) {
+      throw emphasis_error("nlopt_set_initial_step failed");
+    }
+  }
+
+
   void sbplx::set_min_objective(nlopt_func dx, void* fdata)
   {
     if (NLOPT_SUCCESS > (result_ = remp_set_min_objective(nlopt_, dx, fdata))) {

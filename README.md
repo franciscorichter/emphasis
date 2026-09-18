@@ -339,6 +339,9 @@ See the [wiki](https://github.com/franciscorichter/emphasis/wiki) for the full d
 - The `{N, D, ED}` covariate basis, survival-conditioned inference and the docs site are in; the
   BDI sampler is the default augmentation proposal within the scope stated above, and the
   thinning sampler reads ED for the ED models.
+- The M-step sizes its first simplex from the box (a tenth of its width per coordinate). Left
+  to NLopt's default, a start one ulp inside a bound got a step of one ulp and the optimiser
+  returned the start at every iteration (audit H106, `tests/testthat/test-mstep-start.R`).
 
 ### Audit
 

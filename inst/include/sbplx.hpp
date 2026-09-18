@@ -43,6 +43,11 @@ namespace emphasis {
     void set_xtol_rel(double);
     void set_lower_bounds(const std::vector<double>&);
     void set_upper_bounds(const std::vector<double>&);
+    // The step the first simplex is built with, per coordinate.  Left unset,
+    // NLopt takes 0.75 of the distance to the nearer bound, so a start a hair
+    // inside a bound gets a step of that hair and the optimiser stops on its
+    // x-tolerance before it has tried anything (see M_step).
+    void set_initial_step(const std::vector<double>&);
     void set_min_objective(nlopt_func, void*);
     void set_max_objective(nlopt_func, void*);
     double optimize(std::vector<double>&);
@@ -51,7 +56,7 @@ namespace emphasis {
   private:
     nlopt_opt nlopt_ = nullptr;
     nlopt_result result_ = nlopt_result::NLOPT_FAILURE;
-    std::vector<double> lower_, upper_;
+    std::vector<double> lower_, upper_, step_;
   };
 
 }
