@@ -116,7 +116,7 @@ List rcpp_mcem(const std::vector<double>& brts,
       "Pass parent_tip_start; without it log q is not the density the sampler "
       "draws from.");
   }
-  if (model_bin.size() > 3 && model_bin[3] == 1 && (pid.empty() || pts.empty())) {
+  if (model_bin.size() > 3 && model_bin[3] != 0 && (pid.empty() || pts.empty())) {
     throw std::invalid_argument(
       "em_cpp: the ED covariate needs the tree's topology: pass a phylo object "
       "(or a simulate_tree() result), not a bare branching-time vector.");

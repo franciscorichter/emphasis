@@ -459,6 +459,17 @@ namespace emphasis {
       for (const auto& node : tree) {
         if (detail::is_tip(node) && node.id >= 0) obs_focal[node.id] = node.focal_tip_start;
       }
+      // The ED-aware proposal (Model::ed_proposal_seg_t) reads every alive
+      // lineage's ED at the segment start off the lineage forest of the tree
+      // as it stands.  The forest changes only when a lineage is inserted, so
+      // it is rebuilt after an insertion and reused across the segments in
+      // between; the per-segment pass over it is O(N).
+      const bool ed_mode = model.ed_proposal();
+      Model::forest_t forest;
+      bool forest_dirty = true;
+      std::vector<char> alive_scratch;
+      ed::result_t edr;
+      Model::ed_proposal_seg_t seg;
       while (cbt < b) {
         auto next_it = std::upper_bound(tree.begin(), tree.end(), cbt, detail::node_less{});
         if (next_it == tree.end()) next_it = tree.end() - 1;
@@ -468,8 +479,18 @@ namespace emphasis {
           next_it->pd = sweep.pd_of(*next_it);
           // nh falls within a segment, so the rate at its start is the
           // dominating envelope — there is nothing to inflate, and the
-          // envelope and the bound max_lambda test the same number.
-          const double lambda_start = segment_start_rate(cbt, next_bt, pars, tree, model);
+          // envelope and the bound max_lambda test the same number.  The
+          // ED-aware proposal's envelope is the product of its two factors'
+          // maxima (Model::ed_proposal_seg_t::envelope).
+          double lambda_start = 0.0;
+          if (ed_mode) {
+            if (forest_dirty) { forest = Model::build_forest(tree); forest_dirty = false; }
+            model.ed_proposal_segment(pars, tree, *next_it, cbt, next_bt, forest,
+                                      alive_scratch, edr, seg);
+            lambda_start = std::max(0.0, seg.envelope());
+          } else {
+            lambda_start = segment_start_rate(cbt, next_bt, pars, tree, model);
+          }
           if (lambda_start > max_lambda) throw augmentation_lambda{};
           lambda_max = lambda_start;
           new_interval = false;
@@ -481,7 +502,9 @@ namespace emphasis {
         }
         if (next_speciation_time < next_bt) {
           const double u2 = std::uniform_real_distribution<>()(reng);
-          double pt = std::max(0.0, model.nh_rate(next_speciation_time, pars, tree)) / lambda_max;
+          const double nh_here = ed_mode ? seg.nh(next_speciation_time)
+                                         : model.nh_rate(next_speciation_time, pars, tree);
+          double pt = std::max(0.0, nh_here) / lambda_max;
           if (pt > 1.0 + pt_tolerance) {
             ++envelope_violations;
           }
@@ -489,7 +512,9 @@ namespace emphasis {
           // for every pt >= 1. The candidate is accepted either way.
           pt = std::min(pt, 1.0);
           if (u2 < pt) {
-            double ext_time = model.extinction_time(next_speciation_time, pars, tree);
+            double ext_time = ed_mode
+              ? model.extinction_time_at(next_speciation_time, seg.mu_bar, b)
+              : model.extinction_time(next_speciation_time, pars, tree);
             // The parent: uniform over the labelled attachments, which is the
             // K = 2*tips + Ne that Model::sampling_prob charges -log K for.
             //
@@ -506,10 +531,16 @@ namespace emphasis {
             // The sweep is the authority for which lineages are alive: it holds
             // every event up to cbt and none after it, and the two crown
             // lineages, which carry no node, are in it from the start.
-            const auto& alive = sweep.alive();
-            const long long attachments = sweep.attachments();
+            //
+            // The ED-aware proposal weighs each attachment by the lineage's
+            // own rate at the birth time, w_s * lambda_s(t), and its density
+            // charges log of that share (Model::sampling_prob_ed).
             int chosen_parent_id = no_parent;
-            {
+            if (ed_mode) {
+              chosen_parent_id = seg.id[seg.draw_parent(next_speciation_time, reng)];
+            } else {
+              const auto& alive = sweep.alive();
+              const long long attachments = sweep.attachments();
               std::uniform_int_distribution<long long> uid(0, attachments - 1);
               long long k = uid(reng);
               for (const auto& l : alive) {
@@ -537,6 +568,7 @@ namespace emphasis {
               throw augmentation_overrun{};
             }
             new_interval = true;   // tree changed
+            forest_dirty = true;
           }
           // a rejected candidate keeps lambda_max for the rest of the segment
         }

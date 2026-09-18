@@ -124,7 +124,7 @@ List rcpp_mce(const std::vector<double>& brts,
   }
   // ED is a function of the ancestry, so the observed lineages must be named:
   // refused here, once, rather than in every augmentation attempt.
-  if (model_bin.size() > 3 && model_bin[3] == 1 && (pid.empty() || pts.empty())) {
+  if (model_bin.size() > 3 && model_bin[3] != 0 && (pid.empty() || pts.empty())) {
     throw std::invalid_argument(
       "augment_trees: the ED covariate needs the tree's topology: pass a phylo object "
       "(or a simulate_tree() result), not a bare branching-time vector.");

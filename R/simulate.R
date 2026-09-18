@@ -330,6 +330,20 @@ simulate_tree <- function(tree        = NULL,
   .pad_model_bin(model)
 }
 
+# The model vector the thinning sampler is handed: with the ED covariate
+# active, slot 4 also names the proposal (1 the ED-aware one, 2 the mean-field
+# one; inst/include/model.hpp, Model::ed_proposal).  The user-facing model
+# vector stays binary; only the sampler reads the code.
+#' @keywords internal
+.proposal_model <- function(model_bin, proposal = "ed") {
+  if (!is.character(proposal) || length(proposal) != 1L || !proposal %in% c("ed", "meanfield")) {
+    stop("control$proposal must be \"ed\" or \"meanfield\".")
+  }
+  model_bin <- .pad_model_bin(model_bin)
+  if (model_bin[4L] != 0L) model_bin[4L] <- if (proposal == "ed") 1L else 2L
+  model_bin
+}
+
 # The canonical 4-slot model vector from a 3- or 4-slot one.
 #' @keywords internal
 .pad_model_bin <- function(model_bin) {
@@ -387,7 +401,7 @@ simulate_tree <- function(tree        = NULL,
     full[.slot_beta[active]]  <- pars[2L:n_lam]
     full[.slot_gamma[active]] <- pars[(n_lam + 2L):length(pars)]
   }
-  if (model_bin[4L] == 1L) full else full[1:8]
+  if (model_bin[4L] != 0L) full else full[1:8]
 }
 
 #' @keywords internal

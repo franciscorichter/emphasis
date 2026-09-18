@@ -279,6 +279,11 @@ namespace emphasis {
     int nparams() const { return static_cast<int>(n_params); }
     const std::vector<int>& model_bin() const { return model_bin_; }
     bool uses_ed() const { return model_bin_[3] != 0; }
+    // With the covariate active, model_bin[3] also selects the proposal the
+    // thinning sampler draws from: 1 the ED-aware proposal (ed_proposal_seg_t
+    // below), 2 the mean-field one (nh_rate), kept so that the two can be run
+    // on the same trees and compared.
+    bool ed_proposal() const { return model_bin_[3] == 1; }
 
     // Apply link function to linear predictor
     double apply_link(double eta) const {
@@ -471,16 +476,21 @@ namespace emphasis {
     // factor of nh_rate used to decide that the lineage is missing at all and
     // the same one sampling_prob charges the lifetime with.
     double extinction_time(double t_speciation, const param_t& pars, const tree_t& tree) const {
-      // The stream the augmentation that called this is already drawing from,
-      // so the lifetime and the birth times it goes with come off one seeded
-      // engine rather than off a second, clock-seeded one.
-      reng_t& reng_ = rng::engine();
       const node_t* first = reinterpret_cast<const node_t*>(tree.data());
       auto it = lower_bound_node(t_speciation, tree.size(), first);
       double lambda = 0.0, mu = 0.0;
       proposal_rates(pars, *it, segment_start(it, first), lambda, mu);
       (void)lambda;
-      const double T = tree.back().brts;
+      return extinction_time_at(t_speciation, mu, tree.back().brts);
+    }
+
+    // The lifetime draw itself, at a given rate: the ED-aware proposal calls
+    // this with the rate of its own segment.
+    double extinction_time_at(double t_speciation, double mu, double T) const {
+      // The stream the augmentation that called this is already drawing from,
+      // so the lifetime and the birth times it goes with come off one seeded
+      // engine rather than off a second, clock-seeded one.
+      reng_t& reng_ = rng::engine();
       const double remaining = T - t_speciation;
       if (rho_ < 1.0) {
         // P(unsampled extant) = (1-rho)*exp(-mu*remaining) / (1 - rho*exp(-mu*remaining))
@@ -570,6 +580,229 @@ namespace emphasis {
       return lambda * it->n * (1.0 - rho_ * std::exp(-mu * (T - t)));
     }
 
+    // -----------------------------------------------------------------------
+    // The ED-aware proposal (model_bin[3] == 1).
+    //
+    // With the ED covariate active the model's speciation rate is per lineage,
+    // lambda_s(t) = link(eta_s(t)), and its total over the alive lineages is
+    // the rate at which the augmentation's missing births should be drawn.
+    // The mean-field proposal (nh_rate) draws them at N * lambda(N, M), the
+    // rate at ED = 0, which under a negative beta_ED sits far above the
+    // model's total, and it attaches each birth to a lineage drawn uniformly,
+    // which under the model may have rate zero.  The main tier of the ED
+    // simulation arm (ed-diversification, 2026-09-18) measured what that
+    // costs: at turnover 0.5 the ESS of 200 draws was 1-7 and the ED
+    // coefficients never left their start.
+    //
+    // On the segment (t0, t1] this proposal holds, per alive lineage s,
+    //
+    //   eta_s(t) = beta_0 + beta_N N + beta_M M + beta_ED ED_s(t),
+    //   ED_s(t)  = ED_s(t0) + (t - t0),
+    //
+    // with N and M = P(t0)/N the segment's values (D is never read, as in
+    // proposal_rates), so every eta_s is affine in t with slope beta_ED.  It
+    // draws
+    //
+    //   birth times  a Poisson process of intensity
+    //                nh(t) = S(t) Lambda(t),  Lambda(t) = sum_s lambda_s(t),
+    //                S(t) = 1 - rho exp(-mu_bar (T - t)),
+    //                by thinning a homogeneous process at envelope();
+    //   a parent     lineage p with probability w_p lambda_p(t) / sum_s w_s
+    //                lambda_s(t), w = 2 for an observed lineage and 1 for an
+    //                augmented one (the labelled attachments sampling_prob
+    //                counts);
+    //   a lifetime   as the mean-field proposal does, at the segment's rate
+    //                mu_bar = link(gamma_0 + gamma_N N + gamma_M M + gamma_ED
+    //                mean_s ED_s(t0)), floored at 1e-10.
+    //
+    // At beta_ED = gamma_ED = 0 every lambda_s is lambda(N, M), the intensity
+    // is N lambda S(t), the parent draw is uniform over the attachments and
+    // mu_bar is the mean-field mu: the mean-field proposal, term for term,
+    // which is what test-ed-proposal.R holds the density to.
+    //
+    // Lambda(t) under the linear link is a sum of lines clipped at zero, so
+    // with the eta_s sorted it is one binary search and two prefix sums;
+    // under the exponential link it is exp(beta_ED (t - t0)) times a
+    // constant.  The compensator int nh dt has a closed form on each piece
+    // where no line is clipped (piece() below), and the sum of lines is a
+    // line, so an unclipped segment costs O(1) and a clipped one O(n).
+    // -----------------------------------------------------------------------
+    struct ed_proposal_seg_t {
+      double t0 = 0.0, t1 = 0.0, T = 0.0, rho = 1.0;
+      LinkType link = LinkType::linear;
+      double b = 0.0;            // slope of eta_s in t: beta_ED
+      double mu_bar = 1e-10;     // the segment's extinction rate
+      std::vector<int>    id;    // lineage id, for the sampler's parent draw
+      std::vector<double> eta;   // eta_s(t0)
+      std::vector<char>   w;     // labelled attachments: 2 observed, 1 augmented
+      std::vector<double> eta_sorted, eta_prefix;   // linear link
+      double sum_exp_eta = 0.0;                     // exponential link
+      std::vector<double> scratch;
+
+      std::size_t size() const { return eta.size(); }
+
+      void clear() { id.clear(); eta.clear(); w.clear(); }
+
+      // Called once the per-lineage entries are in.
+      void finish() {
+        const std::size_t n = eta.size();
+        if (link == LinkType::exponential) {
+          sum_exp_eta = 0.0;
+          for (double e : eta) sum_exp_eta += std::exp(e);
+        } else {
+          eta_sorted = eta;
+          std::sort(eta_sorted.begin(), eta_sorted.end());
+          eta_prefix.assign(n + 1, 0.0);
+          for (std::size_t k = 0; k < n; ++k) eta_prefix[k + 1] = eta_prefix[k] + eta_sorted[k];
+        }
+      }
+
+      double lambda_s(std::size_t k, double t) const {
+        const double e = eta[k] + b * (t - t0);
+        return (link == LinkType::exponential) ? std::exp(e) : std::max(0.0, e);
+      }
+
+      // sum_s lambda_s(t)
+      double Lambda(double t) const {
+        const double dt = t - t0;
+        if (link == LinkType::exponential) return sum_exp_eta * std::exp(b * dt);
+        // lambda_s(t) > 0 iff eta_s > -b dt
+        const double theta = -b * dt;
+        const std::size_t n = eta_sorted.size();
+        const std::size_t k = static_cast<std::size_t>(
+          std::upper_bound(eta_sorted.begin(), eta_sorted.end(), theta) - eta_sorted.begin());
+        return (eta_prefix[n] - eta_prefix[k]) + static_cast<double>(n - k) * b * dt;
+      }
+
+      double survival(double t) const { return 1.0 - rho * std::exp(-mu_bar * (T - t)); }
+      double nh(double t) const { return survival(t) * Lambda(t); }
+
+      // nh on (t0, t1] is dominated by the product of its two factors' maxima:
+      // S falls with t; Lambda falls with t when b <= 0 and rises when b > 0.
+      double envelope() const { return survival(t0) * Lambda(b > 0.0 ? t1 : t0); }
+
+      // The mark of one labelled attachment of lineage k: lambda_k(t) /
+      // sum_j w_j lambda_j(t).  Lineage k is drawn with probability w_k times
+      // this, and a labelled augmentation names one of its w_k attachments,
+      // as sampling_prob's -log K prices one of the K.
+      double log_mark(std::size_t k, double t) const {
+        const double num = lambda_s(k, t);
+        double den = 0.0;
+        for (std::size_t j = 0; j < eta.size(); ++j) den += static_cast<double>(w[j]) * lambda_s(j, t);
+        if (!(num > 0.0) || !(den > 0.0)) return -std::numeric_limits<double>::infinity();
+        return std::log(num) - std::log(den);
+      }
+
+      // A parent, with probability proportional to w_s lambda_s(t).
+      std::size_t draw_parent(double t, reng_t& reng) {
+        const std::size_t n = eta.size();
+        scratch.resize(n);
+        double total = 0.0;
+        for (std::size_t j = 0; j < n; ++j) {
+          total += static_cast<double>(w[j]) * lambda_s(j, t);
+          scratch[j] = total;
+        }
+        const double u = std::uniform_real_distribution<>()(reng) * total;
+        std::size_t k = static_cast<std::size_t>(
+          std::upper_bound(scratch.begin(), scratch.end(), u) - scratch.begin());
+        return (k < n) ? k : n - 1;
+      }
+
+      // int_lo^hi (a + bb t) (1 - rho e^{-mu (T - t)}) dt, written so that
+      // mu -> 0 is exact rather than a cancellation: with u = t - lo,
+      //   int_0^L (a + bb lo + bb u) e^{mu u} du = (a + bb lo) I0 + bb I1,
+      //   I0 = (e^{mu L} - 1) / mu -> L,   I1 = (L mu e^{mu L} - (e^{mu L} - 1)) / mu^2 -> L^2/2.
+      double piece(double a, double bb, double lo, double hi) const {
+        const double L = hi - lo;
+        const double lin = a * L + 0.5 * bb * (hi * hi - lo * lo);
+        const double mL = mu_bar * L;
+        double I0, I1;
+        if (mL < 1e-4) {
+          I0 = L * (1.0 + 0.5 * mL + mL * mL / 6.0);
+          I1 = L * L * (0.5 + mL / 3.0 + mL * mL / 8.0);
+        } else {
+          const double em1 = std::expm1(mL);
+          I0 = em1 / mu_bar;
+          I1 = (L * mu_bar * (em1 + 1.0) - em1) / (mu_bar * mu_bar);
+        }
+        return lin - rho * std::exp(-mu_bar * (T - lo)) * ((a + bb * lo) * I0 + bb * I1);
+      }
+
+      // int_{t0}^{t1} nh(t) dt
+      double compensator() const {
+        if (t1 <= t0 || eta.empty()) return 0.0;
+        if (link == LinkType::exponential) {
+          const double L = t1 - t0;
+          const double first  = (std::abs(b) < 1e-12) ? L : std::expm1(b * L) / b;
+          const double c      = b + mu_bar;
+          const double second = (std::abs(c) < 1e-12) ? L : std::expm1(c * L) / c;
+          return sum_exp_eta * (first - rho * std::exp(-mu_bar * (T - t0)) * second);
+        }
+        // Linear link.  Unclipped on the whole segment when the smallest
+        // eta_s is positive at both ends; then the sum of the lines is a line.
+        const double emin = eta_sorted.front();
+        if (emin > 0.0 && emin + b * (t1 - t0) > 0.0) {
+          const double n = static_cast<double>(eta.size());
+          return piece(eta_prefix.back() - n * b * t0, n * b, t0, t1);
+        }
+        double sum = 0.0;
+        for (double e : eta) {
+          const double a = e - b * t0;               // eta_s(t) = a + b t
+          double lo = t0, hi = t1;
+          if (b != 0.0) {
+            const double root = -a / b;
+            if (b > 0.0) lo = std::max(lo, root); else hi = std::min(hi, root);
+          } else if (a <= 0.0) {
+            continue;
+          }
+          if (hi <= lo) continue;
+          sum += piece(a, b, lo, hi);
+        }
+        return sum;
+      }
+    };
+
+    // The proposal's linear predictors: the D-free arguments of
+    // speciation_rate / extinction_rate with the ED term added.
+    double proposal_eta_lambda(const param_t& pars, double N, double M, double ed) const {
+      return pars[0] + pars[1] * N + pars[2] * M + beta_ed(pars) * ed;
+    }
+    double proposal_eta_mu(const param_t& pars, double N, double M, double ed) const {
+      return pars[4] + pars[5] * N + pars[6] * M + gamma_ed(pars) * ed;
+    }
+
+    // The proposal on the segment (t0, t1] that `node` governs, from the
+    // lineages alive there in `forest`.  `alive` and `edr` are reusable
+    // scratch; the sampler calls this once per segment, with a forest it
+    // rebuilds only after an insertion.
+    void ed_proposal_segment(const param_t& pars, const tree_t& tree, const node_t& node,
+                             double t0, double t1, const forest_t& forest,
+                             std::vector<char>& alive, ed::result_t& edr,
+                             ed_proposal_seg_t& seg) const {
+      segment_ed(forest, t0, t1, alive, edr);
+      const double N = node.n;
+      const double M = (N > 0.0) ? pendant_pd(node, t0) / N : 0.0;
+      seg.t0 = t0; seg.t1 = t1; seg.T = tree.back().brts; seg.rho = rho_; seg.link = link_;
+      seg.b = beta_ed(pars);
+      seg.clear();
+      double ed_sum = 0.0;
+      for (std::size_t k = 0; k < alive.size(); ++k) {
+        if (!alive[k]) continue;
+        const double ed0 = edr.c[k] + (t0 - edr.ts[k]);
+        ed_sum += ed0;
+        const int ni = forest.lineage_node[k];
+        const bool observed = (ni < 0) || is_tip(tree[static_cast<std::size_t>(ni)]);
+        seg.id.push_back(ni < 0 ? (k == 0 ? crown_id_a : crown_id_b)
+                                : tree[static_cast<std::size_t>(ni)].id);
+        seg.eta.push_back(proposal_eta_lambda(pars, N, M, ed0));
+        seg.w.push_back(observed ? 2 : 1);
+      }
+      const double n_al = static_cast<double>(seg.eta.size());
+      const double ed_bar = (n_al > 0.0) ? ed_sum / n_al : 0.0;
+      seg.mu_bar = std::max(apply_link(proposal_eta_mu(pars, N, M, ed_bar)), 1e-10);
+      seg.finish();
+    }
+
 
     // log q(z | obs, theta): the log density of the augmentation the thinning
     // sampler drew (src/augment_tree.cpp, do_augment_tree_cont).
@@ -598,6 +831,7 @@ namespace emphasis {
     // single exponential in t, whose integral is the closed form below for
     // every link.
     double sampling_prob(const param_t& pars, const tree_t& tree) const {
+      if (ed_proposal()) return sampling_prob_ed(pars, tree);
       double inte = 0;
       double logg = 0;
       double prev_brts = 0;
@@ -718,9 +952,15 @@ namespace emphasis {
       // the closed form the linear link has when no lineage's rate is
       // clipped on the segment (see loglik_ed).
       std::vector<double> sum_kED, sum_tsD, min_kED, max_kED, min_tsD, max_tsD;
+      // For the ED-aware proposal's density: per alive lineage per segment
+      // its labelled attachments (2 observed, 1 augmented), and per augmented
+      // birth node the flat index of its parent's entry in the segment that
+      // ends at the node (-1 when the parent is not alive there).
+      std::vector<char>   w;
+      std::vector<int>    par_entry;
       std::size_t bytes() const {
         return sizeof(double) * (kED.size() + tsD.size() + focal.size() + 6 * sum_kED.size())
-             + sizeof(int) * seg_begin.size();
+             + sizeof(int) * (seg_begin.size() + par_entry.size()) + w.size();
       }
     };
 
@@ -741,6 +981,9 @@ namespace emphasis {
       tab.sum_kED.assign(n_nodes, 0.0); tab.sum_tsD.assign(n_nodes, 0.0);
       tab.min_kED.assign(n_nodes, inf);  tab.max_kED.assign(n_nodes, -inf);
       tab.min_tsD.assign(n_nodes, inf);  tab.max_tsD.assign(n_nodes, -inf);
+      tab.w.clear();
+      tab.par_entry.assign(n_nodes, -1);
+      std::vector<int> entry_of(forest.parent.size(), -1);   // lineage -> its entry on this segment
       double prev_brts = 0.0;
       for (std::size_t i = 0; i < n_nodes; ++i) {
         const auto& node = tree[i];
@@ -751,6 +994,9 @@ namespace emphasis {
           const int ni = forest.lineage_node[k];
           const double kv = edr.c[k] - edr.ts[k];
           const double tv = (ni < 0) ? 0.0 : tree[static_cast<std::size_t>(ni)].tip_start;
+          const bool observed = (ni < 0) || is_tip(tree[static_cast<std::size_t>(ni)]);
+          entry_of[k] = static_cast<int>(tab.kED.size());
+          tab.w.push_back(observed ? 2 : 1);
           tab.kED.push_back(kv);
           tab.tsD.push_back(tv);
           tab.sum_kED[i] += kv; tab.sum_tsD[i] += tv;
@@ -767,6 +1013,7 @@ namespace emphasis {
         const int k = is_extinction(node) ? forest.node_lineage[i] : forest.lookup(node.parent_id);
         if (k >= 0 && alive[static_cast<std::size_t>(k)]) {
           tab.focal[i] = edr.c[static_cast<std::size_t>(k)] + (t - edr.ts[static_cast<std::size_t>(k)]);
+          if (is_missing(node) || is_unsampled(node)) tab.par_entry[i] = entry_of[static_cast<std::size_t>(k)];
         } else {
           double s = 0.0; int m = 0;
           for (std::size_t j = 0; j < alive.size(); ++j)
@@ -913,6 +1160,62 @@ namespace emphasis {
         log_sampling = n_obs * std::log(rho_) + n_unsamp * std::log(1.0 - rho_);
       }
       return log_mu_sum + log_lambda.result() - inte + log_sampling;
+    }
+
+    // The ED-aware proposal on the segment ending at node i, from the table:
+    // the same numbers ed_proposal_segment gave the sampler, read off the
+    // finished tree (kED + t0 is ED_s(t0)).
+    void ed_proposal_segment_from_table(const param_t& pars, const tree_t& tree, std::size_t i,
+                                        const ed_table_t& tab, double t0,
+                                        ed_proposal_seg_t& seg) const {
+      const node_t& node = tree[i];
+      const double N = node.n;
+      const double M = (N > 0.0) ? pendant_pd(node, t0) / N : 0.0;
+      seg.t0 = t0; seg.t1 = node.brts; seg.T = tree.back().brts; seg.rho = rho_; seg.link = link_;
+      seg.b = beta_ed(pars);
+      seg.clear();
+      const int p0 = tab.seg_begin[i], p1 = tab.seg_begin[i + 1];
+      double ed_sum = 0.0;
+      for (int p = p0; p < p1; ++p) {
+        const double ed0 = tab.kED[static_cast<std::size_t>(p)] + t0;
+        ed_sum += ed0;
+        seg.eta.push_back(proposal_eta_lambda(pars, N, M, ed0));
+        seg.w.push_back(tab.w[static_cast<std::size_t>(p)]);
+      }
+      const double n_al = static_cast<double>(p1 - p0);
+      const double ed_bar = (n_al > 0.0) ? ed_sum / n_al : 0.0;
+      seg.mu_bar = std::max(apply_link(proposal_eta_mu(pars, N, M, ed_bar)), 1e-10);
+      seg.finish();
+    }
+
+    // log q(z | obs, theta) under the ED-aware proposal: per augmented birth
+    // at t on parent p, log Lambda(t) + the parent's mark + the lifetime term
+    // (the survival factor cancels against the lifetime's normalisation, as
+    // in sampling_prob), and the compensator int nh dt over every segment.
+    double sampling_prob_ed(const param_t& pars, const tree_t& tree) const {
+      const std::shared_ptr<const ed_table_t> tab = ed_table(tree);
+      const double neg_inf = -std::numeric_limits<double>::infinity();
+      ed_proposal_seg_t seg;
+      double inte = 0.0, logg = 0.0, prev_brts = 0.0;
+      const double T = tree.back().brts;
+      for (std::size_t i = 0; i < tree.size(); ++i) {
+        const auto& node = tree[i];
+        ed_proposal_segment_from_table(pars, tree, i, *tab, prev_brts, seg);
+        inte += seg.compensator();
+        if (is_missing(node) || is_unsampled(node)) {
+          const int pe = tab->par_entry[i];
+          if (pe < 0) return neg_inf;                     // no alive parent on record
+          const std::size_t k = static_cast<std::size_t>(pe - tab->seg_begin[i]);
+          const double t = node.brts;
+          const double Lam = seg.Lambda(t);
+          if (!(Lam > 0.0)) return neg_inf;
+          logg += std::log(Lam) + seg.log_mark(k, t);
+          if (is_missing(node)) logg += std::log(seg.mu_bar) - seg.mu_bar * (node.t_ext - t);
+          else                  logg += std::log(1.0 - rho_) - seg.mu_bar * (T - t);
+        }
+        prev_brts = node.brts;
+      }
+      return logg - inte;
     }
 
     double loglik(const param_t& pars, const tree_t& tree) const {

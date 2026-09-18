@@ -67,6 +67,14 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     the weights vary. \code{"bdi"} falls back to \code{"dynamic_fresh"},
 #'     with a message naming the reason, for a D- or M-dependent model and for
 #'     dd on the gaussian link.}
+#'   \item{\code{proposal}}{The thinning sampler's proposal for an ED model
+#'     (\code{"ed"}, \code{"ned"}, \code{~ ED}): \code{"ed"} (default) draws
+#'     the missing births at the model's total speciation rate over the alive
+#'     lineages, each at its own ED, and attaches a birth to a lineage in
+#'     proportion to that lineage's rate; \code{"meanfield"} draws them at
+#'     \code{N * lambda(N, M)} with the ED term at zero and attaches uniformly,
+#'     as for every other model. The two are the same proposal at
+#'     \code{beta_ED = gamma_ED = 0}. Ignored for a model without ED.}
 #'   \item{\code{num_trees}}{Augmented trees per EM iteration. Default
 #'     \code{200}. Alias: \code{sample_size}.}
 #'   \item{\code{xtol}}{Relative tolerance for the M-step optimiser.
@@ -140,6 +148,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   if (method == "mcem") {
     c(common, list(
       sampling    = "bdi",      # BDI exact sampler (default); "dynamic_fresh" for thinning
+      proposal    = "ed",       # thinning proposal for an ED model: "ed" or "meanfield"
       sample_size = 200L,       # alias: num_trees
       max_iter    = 200L,
       maxN        = NULL,       # total augmentation attempts (thinning only); NULL -> max(2000, 10 * sample_size)
@@ -620,6 +629,11 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
             "; using the thinning sampler (\"dynamic_fresh\") instead.")
     ctrl$sampling <- "dynamic_fresh"
   }
+  # The model vector the thinning sampler is handed also names its proposal
+  # for an ED model (.proposal_model).  Resolved here, before the dispatch,
+  # so that a bad control$proposal is an error of this call and not an
+  # E-step failure the driver retries.
+  model_thinning <- .proposal_model(model, if (is.null(ctrl$proposal)) "ed" else ctrl$proposal)
   # A sample size below 1 reaches the C++ E-step as a loop that accepts no
   # tree and then indexes an empty weight vector.
   if (!is.finite(ctrl$sample_size) || ctrl$sample_size < 1L)
@@ -671,7 +685,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       num_threads = ctrl$num_threads,
       verbose     = ctrl$verbose,
       conditional = cond_fun,
-      model       = model,
+      model       = model_thinning,
       link        = link,
       max_time    = ctrl$max_time,
       rho         = ctrl$rho
