@@ -673,7 +673,12 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       model       = model,
       link        = link,
       max_time    = ctrl$max_time,
-      rho         = ctrl$rho
+      rho         = ctrl$rho,
+      stop_rule   = ctrl$stop_rule %||% "rel_change",
+      mc_batches  = ctrl$mc_batches %||% 5L,
+      mc_z        = ctrl$mc_z %||% 1.0,
+      mc_grow     = ctrl$mc_grow %||% 1.5,
+      max_draws   = ctrl$max_draws
     ),
     dynamic_fresh   = .mcem_dynamic_fresh(
       brts        = brts,

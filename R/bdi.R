@@ -1258,7 +1258,16 @@
                       model      = c(0L, 0L, 0L),
                       link       = 0L,
                       max_time   = NULL,
-                      rho        = 1.0) {
+                      rho        = 1.0,
+                      stop_rule  = c("rel_change", "mc_error"),
+                      mc_batches = 5L,
+                      mc_z       = 1.0,
+                      mc_grow    = 1.5,
+                      max_draws  = NULL) {
+  stop_rule <- match.arg(stop_rule)
+  if (is.null(max_draws) || !is.finite(max_draws)) max_draws <- as.integer(8L * sample_size)
+  max_draws <- as.integer(max(max_draws, sample_size))
+  prev_iterate <- pars
 
   if (inherits(brts, "phylo"))
     brts <- sort(ape::branching.times(brts), decreasing = TRUE)
@@ -1317,6 +1326,10 @@
       n_valid     = .n0(e$n_valid),
       num_trees   = length(e$trees),
       ESS         = .ess_from_lw(e$weights),
+      # "mc_error" only: the step in units of its own Monte Carlo standard
+      # error, and the draws the E-step used at that iteration.
+      mc_z        = NA_real_,
+      sample_size = sample_size,
       time        = elapsed_e * 1000 + m_time
     ))
   }
@@ -1447,14 +1460,59 @@
 
     # Check convergence.  An M-step that returned its start unchanged says
     # nothing about stability (the objective may have been undefined there),
-    # so it does not count toward patience.
-    if (!m_moved) {
-      streak <- 0L
-    } else if (delta_max < tol) {
-      streak <- streak + 1L
-      if (streak >= patience) { stop_reason <- "converged"; break }
+    # so it does not count toward patience under either rule.
+    #
+    # "rel_change" is the package's original rule: `patience` consecutive
+    # iterations whose relative parameter change is below `tol`, at a fixed
+    # number of draws.  "mc_error" compares the step with its own Monte Carlo
+    # standard error instead, estimated by re-running the M-step on batches of
+    # the same draws; when the step is inside that noise the draws are grown,
+    # and the run stops only once they have reached max_draws.  The estimate
+    # returned is then the mean of the last `patience` iterates.  See
+    # .mcem_dynamic_fresh for the references.
+    if (stop_rule == "rel_change") {
+      if (!m_moved) {
+        streak <- 0L
+      } else if (delta_max < tol) {
+        streak <- streak + 1L
+        if (streak >= patience) { stop_reason <- "converged"; break }
+      } else {
+        streak <- 0L
+      }
     } else {
-      streak <- 0L
+      se <- local({
+        B <- as.integer(mc_batches); nn <- length(e_step$trees)
+        if (B < 2L || nn < 2L * B) return(NULL)
+        idx <- split(seq_len(nn), rep(seq_len(B), length.out = nn))
+        est <- lapply(idx, function(ii) {
+          if (!any(e_step$weights[ii] > 0)) return(NULL)
+          eb <- e_step; eb$trees <- e_step$trees[ii]; eb$weights <- e_step$weights[ii]
+          m <- tryCatch(m_cpp(eb, pars, "rpd1", lower_bound, upper_bound, xtol,
+                              as.integer(num_threads), model = model_bin, link = link_int,
+                              rho = as.numeric(rho), rconditional = conditional),
+                        error = function(e) NULL)
+          if (is.null(m)) NULL else as.numeric(m$estimates)[seq_along(pars)]
+        })
+        est <- do.call(rbind, Filter(Negate(is.null), est))
+        if (is.null(est) || nrow(est) < 2L) return(NULL)
+        apply(est, 2, stats::sd) / sqrt(nrow(est))
+      })
+      z <- if (is.null(se)) NA_real_ else max(abs(new_pars - prev_iterate) / pmax(se, .Machine$double.eps))
+      mcem$mc_z[nrow(mcem)] <- z
+      mcem$sample_size[nrow(mcem)] <- sample_size
+      if (!m_moved || is.na(z)) {
+        streak <- 0L
+      } else if (z < mc_z) {
+        streak <- streak + 1L
+        if (sample_size < max_draws) {
+          sample_size <- min(as.integer(ceiling(mc_grow * sample_size)), max_draws)
+          streak <- 0L
+          if (verbose) message(sprintf("  step within Monte Carlo error (z = %.2f): draws -> %d", z, sample_size))
+        } else if (streak >= patience) { stop_reason <- "converged"; break }
+      } else {
+        streak <- 0L
+      }
+      prev_iterate <- new_pars
     }
 
     # Time budget
@@ -1466,6 +1524,15 @@
         break
       }
     }
+  }
+
+  # Under "mc_error" the returned estimate is the mean of the last `patience`
+  # iterates: at the fixed point they fluctuate around the maximiser with the
+  # Monte Carlo error the rule measured, and averaging removes part of it.
+  if (stop_rule == "mc_error" && n_iter >= 2L) {
+    take <- history[seq(max(2L, n_iter + 1L - patience + 1L), n_iter + 1L)]
+    take <- Filter(function(x) is.numeric(x) && length(x) == length(pars), take)
+    if (length(take) >= 2L) pars <- colMeans(do.call(rbind, take))
   }
 
   # ── Final E-step at the returned iterate ──
