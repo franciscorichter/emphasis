@@ -148,6 +148,23 @@ A model with a $D$ or $M$ term. The BDI construction conditions on a single surv
 
 `"cr"` on the gaussian link is in scope because $\eta_{\text{cov}} = 0$ there, so $\lambda = \beta_0 e^{-1/2}$ is constant: constant rates under a reparameterisation, sampled exactly like the other two links.
 
+**The thinning proposal reads ED.** For a model with the $\mathrm{ED}$ covariate the sampler
+draws the missing births at the model's total speciation rate over the lineages alive on the
+segment, $\Lambda(t) = \sum_s \lambda_s(t)$ with each lineage at its own $\mathrm{ED}_s(t)$, and
+attaches a birth to lineage $p$ with probability proportional to $\lambda_p(t)$; the segment's
+extinction rate reads the mean $\mathrm{ED}$. The density mirrors it through the ED table
+(`Model::ed_proposal_seg_t`, `Model::sampling_prob_ed`), and at $\beta_{ED} = \gamma_{ED} = 0$
+it is the mean-field density term for term (`tests/testthat/test-ed-proposal.R`). The
+mean-field proposal, $N\lambda(N, M)$ with the ED term at zero and uniform attachment, stays
+reachable through `control = list(proposal = "meanfield")`. Measured on the main tier of the ED
+simulation arm (`forge:pancho/ed-diversification`, 200 draws at the generating values): at
+turnover 0.5 the mean-field proposal returned zero weight on 3,933–4,000 of 4,000 attempts,
+because a uniform draw attaches the birth to a lineage whose rate the model clips to zero; the
+ED-aware proposal completes in about a second per tree, with augmented trees a fifth the size,
+at an ESS of 1.5–12 of 200, the same range the thinning proposal gives `"dd"` on those trees
+(1.1–7.3). What is left there is the thinning construction's limit under heavy turnover, not
+the covariate.
+
 ### Estimation pipeline
 
 The package provides a multi-stage pipeline that combines three complementary methods:
@@ -316,11 +333,12 @@ data.frame(
 
 See the [wiki](https://github.com/franciscorichter/emphasis/wiki) for the full derivation of the model and inference machinery, method details, and worked examples.
 
-## Status (2026-09-17)
+## Status (2026-09-18)
 
 - Version 0.4; `main` is the working branch and is identical on the forge and on GitHub.
-- The `{N, D}` covariate basis, survival-conditioned inference and the docs site are in; the BDI
-  sampler is the default augmentation proposal within the scope stated above.
+- The `{N, D, ED}` covariate basis, survival-conditioned inference and the docs site are in; the
+  BDI sampler is the default augmentation proposal within the scope stated above, and the
+  thinning sampler reads ED for the ED models.
 
 ### Audit
 
