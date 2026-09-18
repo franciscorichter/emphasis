@@ -69,7 +69,13 @@
                       link = 0L,
                       max_time = NULL,
                       rho = 1.0,
-                      rel_floor = 1e-2) {
+                      rel_floor = 1e-2,
+                      stop_rule = c("rel_change", "mc_error"),
+                      mc_batches = 5L,
+                      mc_z = 1.0,
+                      mc_grow = 1.5,
+                      max_draws = NULL) {
+  stop_rule <- match.arg(stop_rule)
   if (inherits(brts, "phylo")) {
     # .extract_brts also carries the tip starts M and D are measured from.
     brts <- .extract_brts(brts)
@@ -97,6 +103,9 @@
   n_success    <- 0L      # completed EM iterations
   prev_pars    <- pars    # last successful M-step estimate (init until the first success)
   cur_pars     <- pars    # point the next E-step samples at and the M-step starts from
+  prev_iterate <- pars    # the iterate the "mc_error" rule measures the step from
+  if (is.null(max_draws) || !is.finite(max_draws)) max_draws <- as.integer(8L * sample_size)
+  max_draws    <- as.integer(max(max_draws, sample_size))
   par_hist     <- list()  # successful iterates, for the windowed drift
   mcem         <- NULL
   had_success  <- FALSE   # at least one iteration completed, so `pars` is an estimate
@@ -104,6 +113,35 @@
   t0_mcem      <- proc.time()[3]
   center_pars  <- (lower_bound + upper_bound) / 2
   maxN_cap     <- 50000L
+
+  # Monte Carlo error of one M-step estimate, by batch means: the E-step's
+  # draws are split into `mc_batches` blocks, the M-step is re-run on each
+  # from the full-sample estimate, and the standard error of the full-sample
+  # estimate is the between-batch standard deviation over sqrt(B).  This is
+  # what the "mc_error" rule compares the EM step against, so that a step is
+  # called small only when it is small relative to the noise that produced it
+  # (Booth & Hobert 1999; Caffo, Jank & Jones 2005).
+  mc_se <- function(results, at) {
+    trees <- results$trees
+    w     <- as.numeric(results$weights)
+    B     <- as.integer(mc_batches)
+    if (is.null(trees) || !length(trees) || length(w) != length(trees) || B < 2L) return(NULL)
+    n <- length(trees)
+    if (n < 2L * B) return(NULL)
+    idx <- split(seq_len(n), rep(seq_len(B), length.out = n))
+    est <- lapply(idx, function(ii) {
+      if (!any(w[ii] > 0)) return(NULL)
+      e <- list(trees = trees[ii], weights = w[ii], rejected = 0L, rejected_overruns = 0L,
+                rejected_lambda = 0L, rejected_zero_weights = 0L, time = 0, fhat = 0)
+      m <- tryCatch(m_cpp(e, at, "rpd5c", lower_bound, upper_bound, xtol, num_threads,
+                          model = as.integer(model), link = as.integer(link), rho = as.numeric(rho),
+                          rconditional = conditional), error = function(err) NULL)
+      if (is.null(m)) NULL else as.numeric(m$estimates)[seq_along(at)]
+    })
+    est <- do.call(rbind, Filter(Negate(is.null), est))
+    if (is.null(est) || nrow(est) < 2L) return(NULL)
+    apply(est, 2, stats::sd) / sqrt(nrow(est))
+  }
 
   run_em <- function(at, maxN_now) {
     tryCatch(
@@ -117,7 +155,7 @@
              upper_bound = upper_bound,
              xtol_rel = xtol,
              num_threads = num_threads,
-             copy_trees = FALSE,
+             copy_trees = (stop_rule == "mc_error"),
              model = as.integer(model),
              link = as.integer(link),
              rho = as.numeric(rho),
@@ -163,6 +201,10 @@
                               else .n0(results$num_trees),
       maxN                  = maxN_used,
       ESS                   = .ess_from_lw(lw),
+      # "mc_error" only: the step in units of its own Monte Carlo standard
+      # error, and the number of draws the E-step used at that iteration.
+      mc_z                  = NA_real_,
+      sample_size           = sample_size,
       time                  = results$time
     ))
   }
@@ -230,21 +272,62 @@
                         if (m_moved) "" else "  (M-step returned its start)"))
       }
 
-      # Convergence: `patience` consecutive iterations with rel_delta < tol.
+      # Convergence.
+      #
+      # "rel_change" (the package's original rule): `patience` consecutive
+      # iterations with rel_delta < tol.  It compares the EM step with a fixed
+      # tolerance and never looks at the Monte Carlo noise that produced the
+      # step, so at a fixed number of draws it stops when three successive
+      # random steps happen to be small.
+      #
+      # "mc_error": the step is compared with its own Monte Carlo standard
+      # error (mc_se above).  A step smaller than `mc_z` standard errors in
+      # every coordinate is indistinguishable from noise; when that happens
+      # the number of draws is raised by `mc_grow` (so the next step is
+      # measured more finely) and the run stops only once the draws have
+      # reached `max_draws` and the step has stayed inside the noise for
+      # `patience` iterations.  The estimate returned is then the mean of the
+      # last `patience` iterates, which removes part of the remaining Monte
+      # Carlo error.  Booth & Hobert (1999) and Caffo, Jank & Jones (2005).
+      #
       # An M-step that returned its starting point unchanged says nothing
       # about stability (the objective may have been undefined there), so it
-      # does not count toward patience.
-      if (!m_moved) {
-        streak <- 0L
-      } else if (delta_max < tol) {
-        streak <- streak + 1L
-        if (streak >= patience) {
-          stop_reason <- "converged"
-          break
+      # does not count toward patience under either rule.
+      if (stop_rule == "rel_change") {
+        if (!m_moved) {
+          streak <- 0L
+        } else if (delta_max < tol) {
+          streak <- streak + 1L
+          if (streak >= patience) {
+            stop_reason <- "converged"
+            break
+          }
+        } else {
+          streak <- 0L
         }
       } else {
-        streak <- 0L
+        se <- mc_se(results, new_pars)
+        z  <- if (is.null(se)) NA_real_ else max(abs(new_pars - prev_iterate) / pmax(se, .Machine$double.eps))
+        mcem$mc_z[nrow(mcem)] <- z
+        mcem$sample_size[nrow(mcem)] <- sample_size
+        if (!m_moved || is.na(z)) {
+          streak <- 0L
+        } else if (z < mc_z) {
+          streak <- streak + 1L
+          if (sample_size < max_draws) {
+            sample_size <- min(as.integer(ceiling(mc_grow * sample_size)), max_draws)
+            maxN <- max(maxN, 10L * sample_size)
+            streak <- 0L
+            if (verbose) message(sprintf("  step within Monte Carlo error (z = %.2f): draws -> %d", z, sample_size))
+          } else if (streak >= patience) {
+            stop_reason <- "converged"
+            break
+          }
+        } else {
+          streak <- 0L
+        }
       }
+      prev_iterate <- new_pars
     }
 
     # Time budget check (counts failed iterations as well)
@@ -256,6 +339,17 @@
         break
       }
     }
+  }
+
+  # Under "mc_error" the returned estimate is the mean of the last `patience`
+  # successful iterates rather than the last one: at the fixed point the
+  # iterates fluctuate around the maximiser with the Monte Carlo error the
+  # rule measured, and averaging them removes part of it (Caffo, Jank & Jones
+  # 2005).  The final E-step below is then run at that average, so the
+  # reported likelihood describes the point that is returned.
+  if (stop_rule == "mc_error" && had_success && n_success >= 2L) {
+    take <- par_hist[seq(max(1L, n_success - patience + 1L), n_success)]
+    prev_pars <- colMeans(do.call(rbind, take))
   }
 
   # Final E-step at the returned iterate, so that fhat, loglik_var and final_IS
@@ -314,6 +408,8 @@
     stop_reason = stop_reason,
     final_estep = final_estep,
     maxN        = maxN,
+    stop_rule   = stop_rule,
+    sample_size = sample_size,
     loglik      = loglik,
     loglik_var  = loglik_var,
     final_IS    = final_IS

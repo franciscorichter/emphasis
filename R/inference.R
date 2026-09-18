@@ -149,6 +149,11 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
     c(common, list(
       sampling    = "bdi",      # BDI exact sampler (default); "dynamic_fresh" for thinning
       proposal    = "ed",       # thinning proposal for an ED model: "ed" or "meanfield"
+      stop_rule   = "rel_change", # "rel_change" or "mc_error" (Monte Carlo error aware)
+      mc_batches  = 5L,         # mc_error: batches the Monte Carlo error is estimated from
+      mc_z        = 1.0,        # mc_error: a step below this many standard errors is noise
+      mc_grow     = 1.5,        # mc_error: factor the draws grow by when a step is noise
+      max_draws   = NULL,       # mc_error: cap on the grown draws; NULL -> 8 * num_trees
       sample_size = 200L,       # alias: num_trees
       max_iter    = 200L,
       maxN        = NULL,       # total augmentation attempts (thinning only); NULL -> max(2000, 10 * sample_size)
@@ -685,6 +690,11 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       num_threads = ctrl$num_threads,
       verbose     = ctrl$verbose,
       conditional = cond_fun,
+      stop_rule   = ctrl$stop_rule %||% "rel_change",
+      mc_batches  = ctrl$mc_batches %||% 5L,
+      mc_z        = ctrl$mc_z %||% 1.0,
+      mc_grow     = ctrl$mc_grow %||% 1.5,
+      max_draws   = ctrl$max_draws,
       model       = model_thinning,
       link        = link,
       max_time    = ctrl$max_time,
