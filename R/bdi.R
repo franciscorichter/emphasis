@@ -1388,7 +1388,8 @@
                       mc_batches = 5L,
                       mc_z       = 1.0,
                       mc_grow    = 1.5,
-                      max_draws  = NULL) {
+                      max_draws  = NULL,
+                      mesh       = NULL) {
   stop_rule <- match.arg(stop_rule)
   if (is.null(max_draws) || !is.finite(max_draws)) max_draws <- as.integer(8L * sample_size)
   max_draws <- as.integer(max(max_draws, sample_size))
@@ -1422,7 +1423,8 @@
         sample_size = as.integer(sample_size),
         max_missing = as.integer(max_missing),
         link        = link_int,
-        rho         = as.numeric(rho)
+        rho         = as.numeric(rho),
+        mesh        = mesh
       ),
       error = function(e) NULL
     )

@@ -63,10 +63,18 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     sampler, which covers every model, link and \code{rho}. Under constant
 #'     rates the BDI proposal is the exact conditional distribution, so its
 #'     weights are constant and its effective sample size is the number of
-#'     draws; under diversity dependence it is a mean-field approximation and
-#'     the weights vary. \code{"bdi"} falls back to \code{"dynamic_fresh"},
-#'     with a message naming the reason, for a D- or M-dependent model and for
-#'     dd on the gaussian link.}
+#'     draws; under diversity dependence and under ED it is a mean-field
+#'     approximation and the weights vary. \code{"bdi"} falls back to
+#'     \code{"dynamic_fresh"}, with a message naming the reason, for a D- or
+#'     M-dependent model and for dd or ED on the gaussian link.}
+#'   \item{\code{mesh}}{BDI only, and only where its Gillespie branch runs
+#'     (any model but \code{"cr"}): the number of steps per crown age the
+#'     frozen rates are re-evaluated on. \code{NULL} (default) leaves the
+#'     step uncapped, which is a rate held over a whole waiting time. A mesh
+#'     tightens the weights --- on a 60-tip dd tree the standard deviation of
+#'     the log-weight falls from 0.465 to 0.061 at 2000 steps per crown age,
+#'     and the effective sample from 600 draws rises from 527 to 598 --- and
+#'     does not move the estimate (\code{dev/mfc_mesh.R}).}
 #'   \item{\code{proposal}}{The thinning sampler's proposal for an ED model
 #'     (\code{"ed"}, \code{"ned"}, \code{~ ED}): \code{"ed"} (default) draws
 #'     the missing births at the model's total speciation rate over the alive
@@ -153,6 +161,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       mc_batches  = 5L,         # mc_error: batches the Monte Carlo error is estimated from
       mc_z        = 1.0,        # mc_error: a step below this many standard errors is noise
       mc_grow     = 1.5,        # mc_error: factor the draws grow by when a step is noise
+      mesh        = NULL,       # bdi: steps per crown age the frozen Gillespie rates are
+                                #   re-evaluated on; NULL leaves the step uncapped
       max_draws   = NULL,       # mc_error: cap on the grown draws; NULL -> 8 * num_trees
       sample_size = 200L,       # alias: num_trees
       max_iter    = 200L,
@@ -679,7 +689,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       mc_batches  = ctrl$mc_batches %||% 5L,
       mc_z        = ctrl$mc_z %||% 1.0,
       mc_grow     = ctrl$mc_grow %||% 1.5,
-      max_draws   = ctrl$max_draws
+      max_draws   = ctrl$max_draws,
+      mesh        = ctrl$mesh
     ),
     dynamic_fresh   = .mcem_dynamic_fresh(
       brts        = brts,
