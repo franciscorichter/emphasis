@@ -204,10 +204,13 @@ test_that("cr and dd log-likelihoods do not read the pendant-age columns", {
 
 test_that("cr and dd MCEM fits return the estimates they did before the fix", {
   skip_on_cran()
-  # Pinned from the build that preceded the topology change; the BDI sampler
-  # is pure R, so a seeded fit is reproducible.  cr and dd have model_bin
-  # c(0,0,0) and c(1,0,0): neither M nor D enters a rate, and both fits have
-  # to come back unmoved.
+  # Pinned values, re-taken at the M-step's initial-step fix (audit H106,
+  # a38a9e8): sizing the first simplex from the box moves every M-step a
+  # little, so the values pinned before it no longer hold and the guard
+  # measured that rather than what it was written for.  The BDI sampler is
+  # pure R, so a seeded fit is reproducible.  cr and dd have model_bin
+  # c(0,0,0) and c(1,0,0): neither M nor D enters a rate, and neither the
+  # topology now carried in the frame nor the ED gate may move them.
   set.seed(42)
   phy <- ape::rphylo(12, 0.5, 0)
 
@@ -217,9 +220,9 @@ test_that("cr and dd MCEM fits return the estimates they did before the fix", {
                          control = list(lower_bound = c(0, 0),
                                         upper_bound = c(2, 1),
                                         num_trees = 30L, max_iter = 5L))
-  expect_equal(unname(f_cr$pars), c(0.5847607702017, 0.0864009000326),
+  expect_equal(unname(f_cr$pars), c(0.589424195886, 0.087076327205),
                tolerance = 1e-10)
-  expect_equal(f_cr$loglik, -16.0992102587, tolerance = 1e-10)
+  expect_equal(f_cr$loglik, -16.0986410361, tolerance = 1e-10)
 
   set.seed(9)
   f_dd <- estimate_rates(phy, method = "mcem", model = "dd",
@@ -228,9 +231,9 @@ test_that("cr and dd MCEM fits return the estimates they did before the fix", {
                                         upper_bound = c(3, 0.01, 1, 0.01),
                                         num_trees = 30L, max_iter = 5L))
   expect_equal(unname(f_dd$pars),
-               c(0.595602943635, 0.01, 0.136509120974, 0.01),
+               c(0.589209485828, 0.01, 0.130313707174, 0.009922713960),
                tolerance = 1e-10)
-  expect_equal(f_dd$loglik, -15.6308203252, tolerance = 1e-10)
+  expect_equal(f_dd$loglik, -15.7729469159, tolerance = 1e-10)
 })
 
 
