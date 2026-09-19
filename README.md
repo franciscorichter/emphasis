@@ -106,7 +106,7 @@ The two covariates form an **orthogonal basis** — one for each dimension of a 
 
 $N$ and $D$ are orthogonal: because $\sum_s D_s = 0$, the age-imbalance $D$ is a pure within-clade signal, uncorrelated with diversity. $N$ measures **when** the clade diversifies; $D$ measures **the age structure of which lineages do**. The mean pendant age $M = P/N$ is used only internally to centre $D$ and is not a user covariate. See **[the biological meaning of D](https://franciscorichter.github.io/emphasis/D.html)** for what $\beta_D$ tests (age-dependent speciation).
 
-$\mathrm{ED}$ is the per-lineage form of phylodiversity-dependence: it is defined on the complete tree, so hidden lineages count among a branch's descendants and contribute branches, and the augmentation supplies them. It needs the tree's topology (a `phylo`, not a branching-time vector), and it has no exact (BDI) proposal — a per-lineage covariate has no single survival probability — so its fits use the thinning sampler and report their effective sample size. The gaussian link is not available with $\mathrm{ED}$. The same routine computes it in the simulator and in the likelihood (`inst/include/ed_covariate.hpp`), and `ed_fair_proportion()` exposes it for checking against an `ape` computation. Its cost is quadratic in the *augmented* tree — every segment's tables over every alive lineage, built once per tree and cached across the parameter values an M-step tries — and the augmentation builds the complete clade the current parameters imply, so an $\mathrm{ED}$ fit is started near a plausible net rate: in practice from the estimate of the nested model (`ed` from `cr`, `ned` from `dd`) with the $\mathrm{ED}$ coefficients at zero. From a point at 1.7 times the generating net rate, a 54-tip tree at $\rho = 0.7$ augments to a median 6,586 nodes and the E-step's time runs out before 50 draws; from the `dd` estimate the same fit takes seconds.
+$\mathrm{ED}$ is the per-lineage form of phylodiversity-dependence: it is defined on the complete tree, so hidden lineages count among a branch's descendants and contribute branches, and the augmentation supplies them. It needs the tree's topology (a `phylo`, not a branching-time vector). It has no *exact* proposal — a per-lineage covariate has no single survival probability — but the conditional (BDI) sampler serves it as a mean-field proposal: every lineage alive at $t$ is offered the rate the clade's average lineage has there, and the importance weights carry each lineage's own departure from it. The clade mean of fair-proportion ED is Faith's PD per lineage, which the sampler's backward–forward iteration already produces. On $\mathrm{ED}$ trees at complete sampling that leaves 4 to 24 times the effective sample the thinning proposal does — the gain grows with the tree, because the thinning proposal's effective sample falls from 20 at 25 tips to under 2 at 200 while the conditional proposal's does not fall — and from 50 tips on it is also the faster of the two, by 2.4× at 200 tips (`dev/mfc_ess.R`). Below $\rho = 1$ the comparison reverses and the thinning proposal is the better one. The gaussian link is not available with $\mathrm{ED}$. The same routine computes it in the simulator and in the likelihood (`inst/include/ed_covariate.hpp`), and `ed_fair_proportion()` exposes it for checking against an `ape` computation. Its cost is quadratic in the *augmented* tree — every segment's tables over every alive lineage, built once per tree and cached across the parameter values an M-step tries — and the augmentation builds the complete clade the current parameters imply, so an $\mathrm{ED}$ fit is started near a plausible net rate: in practice from the estimate of the nested model (`ed` from `cr`, `ned` from `dd`) with the $\mathrm{ED}$ coefficients at zero. From a point at 1.7 times the generating net rate, a 54-tip tree at $\rho = 0.7$ augments to a median 6,586 nodes and the E-step's time runs out before 50 draws; from the `dd` estimate the same fit takes seconds.
 
 Setting coefficients to zero recovers the model classes:
 
@@ -137,14 +137,19 @@ Two proposals $q$ are available, selected with `simulate_tree(method = )` for co
 
 | Sampler | Where | Scope | Property |
 | ------- | ----- | ----- | -------- |
-| `"bdi"` (default) | `R/bdi.R` | N-only models (`"cr"`, `"dd"`) on the linear and exponential links, `"cr"` also on the gaussian link, at any $\rho \in (0,1]$ | Draws from the exact conditional distribution under constant rates (ESS = sample size, zero IS variance); under diversity dependence uses a self-consistent backward–forward mean-field iteration |
+| `"bdi"` (default) | `R/bdi.R` | N-only models (`"cr"`, `"dd"`) on the linear and exponential links, `"cr"` also on the gaussian link, $\mathrm{ED}$ models on the linear and exponential links, at any $\rho \in (0,1]$ | Draws from the exact conditional distribution under constant rates (ESS = sample size, zero IS variance); under diversity dependence and under $\mathrm{ED}$ it is a mean-field proposal built on a self-consistent backward–forward iteration, and the weights carry the approximation |
 | `"thinning"` (`sampling = "dynamic_fresh"`) | `src/augment_tree.cpp` | Every model and link | Poisson-thinning proposal, C++ with TBB parallelism |
 
-`.bdi_supported(model_bin, link, rho)` gates both entry points, and `.bdi_unsupported_reason()` supplies the phrase the fallback message carries. Two things are routed to thinning.
+`.bdi_supported(model_bin, link, rho)` gates both entry points, and `.bdi_unsupported_reason()` supplies the phrase the fallback message carries. Three things are routed to thinning.
 
-A model with a $D$ or $M$ term. The BDI construction conditions on a single survival probability $p(t)$ shared by every lineage alive at $t$; a $D$-model's rate depends on each lineage's own pendant age, so no single $p(t)$ exists. This is a property of the construction, not a gap in the code.
+A model with a $D$ or $M$ term. A mean-field proposal needs a clade-level trajectory for its covariate, and the iteration carries $\hat N$ and $\hat P$ but not the mean pendant age a $D$- or $M$-model would close on. ($\mathrm{ED}$ is admitted because its clade mean *is* $\hat P / \hat N$ — see above. That the resulting proposal is not exact costs nothing but weight variance: exactness is not what importance sampling requires.)
 
 `"dd"` on the gaussian link. There $\lambda(N) = \beta_0 e^{-(\beta_N N - 1)^2/2}$ is a function of $N$ alone, but it is not monotone: it peaks at $N = 1/\beta_N$ and falls after it, and the mean-field Picard iteration does not contract past the peak. Measured on a 20-tip tree over a $4\times 8\times 4$ grid in $(\beta_0, \beta_N, \rho)$ with a 200-sweep budget, it failed to reach tolerance in 36 of 128 cells with the residual running to 104 — divergence, not slow convergence — and the failing cells are interleaved with converging ones rather than forming a region that could be excluded. The linear and exponential `"dd"` rates are monotone in $N$ and converged in every cell of the same sweep, in at most 27 iterations at $\rho = 1$; below it they are slower, needing up to 134, which is what sets the sweep budget for incomplete sampling.
+
+An $\mathrm{ED}$ model on the gaussian link. There the rate is
+$\beta_0 e^{-(\eta_{\text{cov}} - 1)^2/2}$ with $\eta_{\text{cov}}$ carrying the ED term, so
+the same non-monotonicity applies and the mean-field iteration has the same failure to
+contract; the linear and exponential links are where $\mathrm{ED}$ is admitted.
 
 `"cr"` on the gaussian link is in scope because $\eta_{\text{cov}} = 0$ there, so $\lambda = \beta_0 e^{-1/2}$ is constant: constant rates under a reparameterisation, sampled exactly like the other two links.
 
@@ -337,8 +342,9 @@ See the [wiki](https://github.com/franciscorichter/emphasis/wiki) for the full d
 
 - Version 0.4; `main` is the working branch and is identical on the forge and on GitHub.
 - The `{N, D, ED}` covariate basis, survival-conditioned inference and the docs site are in; the
-  BDI sampler is the default augmentation proposal within the scope stated above, and the
-  thinning sampler reads ED for the ED models.
+  BDI sampler is the default augmentation proposal within the scope stated above, which since
+  version 0.4 includes the ED models through their clade mean; the thinning sampler also reads
+  ED and remains the better proposal for them below $\rho = 1$.
 - The M-step sizes its first simplex from the box (a tenth of its width per coordinate). Left
   to NLopt's default, a start one ulp inside a bound got a step of one ulp and the optimiser
   returned the start at every iteration (audit H106, `tests/testthat/test-mstep-start.R`).
