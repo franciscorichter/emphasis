@@ -746,12 +746,40 @@
 #'   drawn) or \code{"survivor"} (a missing lineage still alive at tp; only
 #'   reachable at \code{rho = 1}, where such a tree has f = 0).
 #' @keywords internal
+#' Attachment weights: each lineage\'s own rate, around the aggregate
+#'
+#' The proposal\'s aggregate rate already carries the clade mean of the
+#' covariate, so a lineage\'s own rate is that aggregate plus its own
+#' departure from the mean, \code{lam + beta * (c_s - mean(c))} -- not
+#' \code{lam + beta * c_s}, which shifts every lineage instead of spreading
+#' them and leaves the mean in twice.
+#'
+#' Weights are floored away from zero rather than at it.  A lineage the
+#' model gives a positive rate must stay reachable, or the proposal no
+#' longer covers the target and the estimate is biased rather than merely
+#' noisy.  The floor is a thousandth of the aggregate, which costs a
+#' bounded amount of weight variance and keeps the support.
+#'
+#' @param cov Per-lineage covariate values (here the pendant age).
+#' @param lam The aggregate rate the mean field supplies.
+#' @param beta The covariate\'s coefficient.
+#' @return A positive weight per lineage, averaging \code{lam}.
+#' @keywords internal
+.attach_w <- function(cov, lam, beta) {
+  n <- length(cov)
+  if (n == 0L) return(numeric(0))
+  if (!is.finite(lam) || lam <= 0) return(rep(1, n))
+  v <- lam + beta * (cov - mean(cov))
+  pmax(v, lam * 1e-3)
+}
+
+
 .bdi_augment_one <- function(bt, pars8, model_bin, link, tp,
                              p_fun = NULL, Nhat_fun = NULL,
                              Phat_fun = NULL, Ehat_fun = NULL,
                              max_missing = 1e4L, rho = 1,
                              track_parents = FALSE, first_aug_id = 0L,
-                             step_max = Inf) {
+                             step_max = Inf, obs_pid = NULL, beta_ed = 0) {
   bt <- sort(bt)
   is_cr <- all(model_bin == 0L)
   complete <- (rho >= 1)
@@ -760,6 +788,7 @@
   mu0  <- .bdi_mu(pars8, 0, 0, 0, model_bin, link)
 
   boundaries <- c(0, bt, tp)
+  cur_la_raw <- NA_real_
   alive   <- numeric(0)
   n_alive <- 0L
   species <- list()
@@ -779,6 +808,56 @@
   # the C++ layer uses and .observed_parent_id() reports in.
   obs_ids <- function(k) c(-2L, -3L, if (k > 2L) seq_len(k - 2L) - 1L else integer(0))
 
+  # Rate-proportional attachment.  The proposal's *timing* has to be
+  # mean-field -- the conditioned waiting time is built on one total rate and
+  # one shared survival probability p(t), and there is no per-lineage p(t).
+  # The *attachment* does not: which lineage a birth joins is a discrete
+  # choice at a known instant, so it can be drawn in proportion to that
+  # lineage's own rate.  The two decisions are separable, and only the second
+  # one is cheap to do exactly.
+  #
+  # The per-lineage quantity used here is the pendant age t - tip_start, which
+  # is what ED is mostly made of and is free to carry.  It is a proxy for ED,
+  # not ED, and the weight prices the difference like every other one.
+  #
+  # Measured paired against the uniform draw -- same tree, same seed, 300
+  # draws, 4 trees x 3 seeds per cell -- the gain tracks the effect size,
+  # which is what the parent-identity term in the weight does too:
+  #
+  #             25 tips   50    100    200
+  #   -0.35 l0    1.66   1.63   1.35   1.58     uniform ESS  9,  10,  8,  2
+  #   -0.15 l0    0.76   1.08   0.62   0.98     uniform ESS 105, 101, 76, 70
+  #
+  # It helps where the sampler is starving and costs a little where it is
+  # already rich, so it is the default.  At a weak effect the lineages barely
+  # differ, the tilt is mostly the proxy's own error, and uniform is as good
+  # or better -- pass attach = "uniform" there if the draw is cheap anyway.
+  attach_ed <- isTRUE(track_parents) && is.finite(beta_ed) && beta_ed != 0
+  # Tip start of each observed lineage, carried forward: a lineage is pendant
+  # from its last split, so this is updated as each observed event is passed,
+  # never precomputed over events that have not happened yet.
+  ts_obs <- new.env(parent = emptyenv())
+  assign("-2", 0, envir = ts_obs); assign("-3", 0, envir = ts_obs)
+  note_event <- function(e) {              # observed event e (1-based into bt)
+    if (!attach_ed || is.null(obs_pid) || e < 1L || e > length(obs_pid)) return(invisible())
+    assign(as.character(obs_pid[e]), bt[e], envir = ts_obs)   # the splitter
+    assign(as.character(e - 1L),     bt[e], envir = ts_obs)   # its daughter
+    invisible()
+  }
+  ts_at <- function(k) {
+    vapply(obs_ids(k), function(i) {
+      nm <- as.character(i)
+      if (exists(nm, envir = ts_obs, inherits = FALSE)) get(nm, envir = ts_obs) else 0
+    }, 0)
+  }
+  # draw an index in proportion to v, using the uniform already in hand
+  pick <- function(u, v) {
+    cs <- cumsum(v)
+    tot <- cs[length(cs)]
+    if (!is.finite(tot) || tot <= 0) return(min(length(v), as.integer(floor(u * length(v))) + 1L))
+    min(length(v), sum(cs < u * tot) + 1L)
+  }
+
   k_of_t <- function(t) 2L + sum(bt <= t)
 
   for (seg_idx in seq_len(length(boundaries) - 1L)) {
@@ -786,6 +865,7 @@
     t1 <- boundaries[seg_idx + 1L]
     k  <- k_of_t(t0 + 1e-12)
     t  <- t0
+    if (seg_idx >= 2L) note_event(seg_idx - 1L)   # the split that opened this segment
 
     while (t < t1) {
       if (is_cr) {
@@ -823,6 +903,7 @@
         Nh <- Nhat_fun(t); Ph <- Phat_fun(t); Eh <- Ehat_fun(t)
         la_raw <- .bdi_lam(pars8, Nh, Ph, Eh, model_bin, link)
         mu_raw <- .bdi_mu(pars8, Nh, Ph, Eh, model_bin, link)
+        cur_la_raw <- la_raw      # the aggregate the attachment tilts around
         la   <- la_raw * omp
         mu_r <- mu_raw / max(omp, 1e-15)
         nu   <- 2 * k * la_raw * omp
@@ -855,9 +936,22 @@
       if (r < n_alive * la) {
         logg    <- logg + log(la)           # per-species birth rate
         if (track_parents) {
-          # every alive missing lineage carries the same rate la, so r/la is
-          # already a uniform index into them
-          j <- min(n_alive, as.integer(floor(r / la)) + 1L)
+          if (attach_ed) {
+            # in proportion to each lineage's own rate, through its pendant
+            # age; the uniform that chose the event is reused as the variate,
+            # so the timing stream is untouched
+            v  <- .attach_w(t - alive, cur_la_raw, beta_ed)
+            u  <- r / (n_alive * la)
+            j  <- pick(u, v)
+            # the attachment is no longer 1/n_alive, and logg says so
+            sv <- sum(v)
+            if (is.finite(sv) && sv > 0)
+              logg <- logg + log(n_alive * v[j] / sv)
+          } else {
+            # every alive missing lineage carries the same rate la, so r/la is
+            # already a uniform index into them
+            j <- min(n_alive, as.integer(floor(r / la)) + 1L)
+          }
           alive_par <- c(alive_par, alive_id[j])
           alive_id  <- c(alive_id, next_id); next_id <- next_id + 1L
         }
@@ -867,8 +961,17 @@
       } else if (r < n_alive * la + nu) {
         logg    <- logg + log(la)           # per-lineage immigration rate
         if (track_parents) {
-          # the k observed lineages share nu equally
-          j <- min(k, as.integer(floor((r - n_alive * la) / (nu / k))) + 1L)
+          if (attach_ed) {
+            v  <- .attach_w(t - ts_at(k), cur_la_raw, beta_ed)
+            u  <- (r - n_alive * la) / nu
+            j  <- pick(u, v)
+            sv <- sum(v)
+            if (is.finite(sv) && sv > 0)
+              logg <- logg + log(k * v[j] / sv)
+          } else {
+            # the k observed lineages share nu equally
+            j <- min(k, as.integer(floor((r - n_alive * la) / (nu / k))) + 1L)
+          }
           alive_par <- c(alive_par, obs_ids(k)[j])
           alive_id  <- c(alive_id, next_id); next_id <- next_id + 1L
         }
@@ -1132,7 +1235,9 @@
                               rho         = 1.0,
                               use_gaussian_closure = TRUE,
                               topology    = NULL,
-                              mesh        = NULL) {
+                              mesh        = NULL,
+                              attach      = c("rate", "uniform")) {
+  attach <- match.arg(attach)
   brts  <- .extract_brts(tree)
   mb4   <- .pad_model_bin(model_bin)
   # Accept compact, 8-element (no ED) or 10-element (with ED) pars
@@ -1231,7 +1336,8 @@
                             p_fun, Nhat_fun, Phat_fun, Ehat_fun,
                             max_missing, rho = rho,
                             track_parents = use_top, first_aug_id = n_obs,
-                            step_max = step_max)
+                            step_max = step_max, obs_pid = obs_pid,
+                            beta_ed = if (use_ed && attach == "rate") pars_full[9L] else 0)
     if (aug$reason == "survivor")    { n_rej_surv <- n_rej_surv + 1L; next }
     if (aug$reason == "max_missing") { n_rej_mm   <- n_rej_mm   + 1L; next }
 
