@@ -1224,6 +1224,12 @@ print.emphasis_fit <- function(x, ...) {
   cat("\nLog-likelihood:", round(x$loglik, 4))
   if (!is.na(x$loglik_var))
     cat(sprintf("  (MC se: %.4f)", sqrt(x$loglik_var)))
+  ess <- .fit_ess(x); gap <- .fit_gap(x)
+  if (is.finite(ess)) {
+    cat(sprintf("\n  effective sample: %.0f", ess))
+    if (is.finite(gap) && gap >= 5e-4)
+      cat(sprintf("; the estimate sits at least %.3f below the truth (a log of a\n  Monte Carlo mean is biased down), which moves AIC by %.3f", gap, 2 * gap))
+  }
   cat("\nAIC:           ", round(x$AIC, 4), "\n")
   cat("n_pars:        ", x$n_pars, "\n")
   if (!is.null(x$rho) && is.finite(x$rho) && x$rho < 1)
@@ -1274,6 +1280,54 @@ print.emphasis_fit <- function(x, ...) {
 #' compare_models(CR = fit_cr, DD = fit_dd)
 #' }
 #' @keywords internal
+#' The effective sample size behind a fit's log-likelihood
+#'
+#' Wherever the fit recorded it: the MCEM drivers leave it in
+#' \code{details$final_IS}, the CEM driver in \code{details$best_IS}.
+#' @keywords internal
+.fit_ess <- function(f) {
+  for (slot in c("final_IS", "best_IS")) {
+    v <- f$details[[slot]]$ESS
+    if (!is.null(v) && length(v) >= 1L && is.finite(v[1L])) return(as.numeric(v[1L]))
+  }
+  NA_real_
+}
+
+#' Whether a fit's draw is heavy enough that its gap is unquantified
+#' @keywords internal
+.fit_gap_heavy <- function(f) {
+  for (slot in c("final_IS", "best_IS")) {
+    v <- f$details[[slot]]$gap_heavy
+    if (!is.null(v) && length(v) >= 1L && !is.na(v[1L])) return(isTRUE(v[1L]))
+  }
+  n <- NA_real_
+  for (slot in c("final_IS", "best_IS")) {
+    lw <- f$details[[slot]]$lw
+    if (!is.null(lw)) { n <- length(lw); break }
+  }
+  isTRUE(.jensen_gap(.fit_ess(f), n)$heavy)
+}
+
+#' The amount by which a fit's log-likelihood sits below the truth
+#'
+#' Recomputed from the recorded effective sample size when the fit predates
+#' the field, so that an old fit still compares safely.
+#' @keywords internal
+.fit_gap <- function(f) {
+  for (slot in c("final_IS", "best_IS")) {
+    v <- f$details[[slot]]$gap
+    if (!is.null(v) && length(v) >= 1L && is.finite(v[1L])) return(as.numeric(v[1L]))
+  }
+  ess <- .fit_ess(f)
+  n <- NA_real_
+  for (slot in c("final_IS", "best_IS")) {
+    lw <- f$details[[slot]]$lw
+    if (!is.null(lw)) { n <- length(lw); break }
+  }
+  .jensen_gap(ess, n)$gap
+}
+
+
 compare_models <- function(...) {
   fits <- list(...)
   if (length(fits) < 2L)
@@ -1287,6 +1341,9 @@ compare_models <- function(...) {
 
   get_var <- function(f) if (!is.null(f$loglik_var)) f$loglik_var else NA_real_
   vars <- vapply(fits, get_var, numeric(1L))
+  esss <- vapply(fits, .fit_ess, numeric(1L))
+  gaps <- vapply(fits, .fit_gap, numeric(1L))
+  heavy <- vapply(fits, .fit_gap_heavy, logical(1L))
 
   tab <- data.frame(
     model     = nms,
@@ -1300,12 +1357,52 @@ compare_models <- function(...) {
   if (any(!is.na(vars))) {
     tab$loglik_se <- sqrt(vars)
   }
+  # Each log-likelihood is a log of a Monte Carlo mean, so each sits below the
+  # truth by an amount that grows as its own effective sample falls.  The
+  # amounts do not cancel between models, so they are carried, not hidden.
+  if (any(!is.na(esss))) { tab$ESS <- esss; tab$loglik_gap <- gaps; tab$gap_heavy <- heavy }
 
   tab <- tab[order(tab$AIC, na.last = TRUE), ]
   tab$delta_AIC <- tab$AIC - min(tab$AIC, na.rm = TRUE)
   w <- exp(-0.5 * tab$delta_AIC)
   tab$AICw <- w / sum(w, na.rm = TRUE)
   rownames(tab) <- NULL
+
+  # Could the ranking be an artefact of unequal Monte Carlo precision?
+  #
+  # AIC = 2k - 2*loglik, and each loglik sits below the truth by its own gap
+  # g, so each AIC sits ABOVE the truth by 2g.  The model that is harder to
+  # sample carries the larger g and is penalised for that alone.  Correcting
+  # both, the gap between a model and the leader closes by 2(g_model -
+  # g_best), so the ordering is not safe wherever that reaches delta_AIC.
+  at_risk <- character(0)
+  if ("loglik_gap" %in% names(tab) && any(is.finite(tab$loglik_gap))) {
+    g_best <- tab$loglik_gap[1L]
+    swing  <- 2 * (tab$loglik_gap - g_best)
+    # `swing` understates once a draw is heavy (see .jensen_gap), so a heavy
+    # fit with any handicap at all is unquantified, not safe.
+    hv     <- if ("gap_heavy" %in% names(tab)) tab$gap_heavy %in% TRUE else rep(FALSE, nrow(tab))
+    risk   <- which(seq_len(nrow(tab)) > 1L & is.finite(swing) &
+                    (swing >= tab$delta_AIC | (hv & swing > 0)))
+    tab$AIC_swing <- swing
+    if (length(risk)) {
+      at_risk <- tab$model[risk]
+      warning(sprintf(paste0(
+        "compare_models(): the ranking is not safe against Monte Carlo ",
+        "precision. %s %s behind \"%s\" by %s AIC, but %s effective sample ",
+        "is smaller, which inflates %s AIC by up to %s on its own. Raise ",
+        "num_trees on the lower-ESS fits and compare again."),
+        paste(sprintf("\"%s\"", at_risk), collapse = ", "),
+        if (length(at_risk) == 1L) "is" else "are",
+        tab$model[1L],
+        paste(sprintf("%.2f", tab$delta_AIC[risk]), collapse = ", "),
+        if (length(at_risk) == 1L) "its" else "their",
+        if (length(at_risk) == 1L) "its" else "their",
+        paste(sprintf("%.2f", swing[risk]), collapse = ", ")),
+        call. = FALSE)
+    }
+  }
+  attr(tab, "ranking_at_risk") <- at_risk
 
   # Pairwise AIC Gaussian test when all fits have bootstrap variance
   if (all(!is.na(vars)) && length(fits) >= 2L) {

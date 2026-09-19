@@ -131,6 +131,18 @@ $$
 
 We estimate this by **importance sampling**: stochastically augmenting the observed tree with latent extinct lineages, then weighting each augmented tree by $f_\theta / q$.
 
+### The reported log-likelihood is biased downward, and by how much is recorded
+
+Two different Monte Carlo averages appear in an MCEM fit, and only one of them is safe.
+
+The **EM objective** is an expectation of a log, $Q(\theta)=E[\log f(y,z\mid\theta)]$, and the M-step averages $\log f$ directly (`src/M_step.cpp`). Averaging logs to estimate a mean of logs is unbiased; nothing to correct.
+
+The **log-likelihood** is not. $\hat\ell=\log\big(\tfrac1N\sum_i w_i\big)$ is a log of a mean, so by Jensen's inequality $E[\hat\ell]\le\log p(y\mid\theta)$ — biased down, never up, by an amount that grows as the effective sample falls. `AIC` inherits it doubled, and it does **not** cancel between models: the model that is harder to sample is penalised for being harder to sample.
+
+Every fit therefore records `details$final_IS$ESS` and `$gap`, and `compare_models()` reports both and **warns when a ranking is not safe against them** — when the handicap of a lower-ESS model reaches the AIC gap it is losing by, or when its draw is heavy enough that the handicap cannot be quantified at all. `print()` on a fit shows the effective sample and, when it matters, how far below the truth the estimate sits.
+
+`gap` is an indicator of size and not a bound. Against log-normal weights at $N=200$ it overstates the true bias where that bias is negligible (ratio 4.9 at $n_{\text{eff}}=188$, absolute size $3\times10^{-5}$) and understates it where it is not (ratio 0.46 at $n_{\text{eff}}=17$, 0.16 at $n_{\text{eff}}=6$ where the true bias is half a nat). The `gap_heavy` flag marks $n_{\text{eff}}<N/10$, which is where the ratio first falls below one half, and a heavy draw is treated as unquantified rather than as the number returned.
+
 ### Augmentation samplers
 
 Two proposals $q$ are available, selected with `simulate_tree(method = )` for conditional simulation and `control = list(sampling = )` for MCEM:

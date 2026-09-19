@@ -1705,6 +1705,12 @@
       lw    = lw,
       fhat  = e_final$fhat,
       ESS   = .ess_from_lw(lw),
+      gap   = .jensen_gap(.ess_from_lw(lw),
+                          length(lw) + .n0(e_final$n_nonfinite) +
+                            .n0(e_final$n_rejected))$gap,
+      gap_heavy = .jensen_gap(.ess_from_lw(lw),
+                              length(lw) + .n0(e_final$n_nonfinite) +
+                                .n0(e_final$n_rejected))$heavy,
       n_rejected = .n0(e_final$n_rejected),
       rejected_max_missing  = .n0(e_final$n_rejected_max_missing),
       rejected_zero_weights = .n0(e_final$n_nonfinite) +

@@ -394,6 +394,12 @@
         fhat  = .is_fhat(fin$logf, fin$logg,
                          n_zero_weight = .n0(fin$rejected_zero_weights)),
         ESS   = .ess_from_lw(lw),
+        # fhat is a log of a mean, so it sits below log p(y | theta); this is
+        # how far, at least (.jensen_gap)
+        gap   = .jensen_gap(.ess_from_lw(lw),
+                            length(lw) + .n0(fin$rejected_zero_weights))$gap,
+        gap_heavy = .jensen_gap(.ess_from_lw(lw),
+                                length(lw) + .n0(fin$rejected_zero_weights))$heavy,
         n_rejected = n_rejected_of(fin),
         rejected_zero_weights = .n0(fin$rejected_zero_weights)
       )

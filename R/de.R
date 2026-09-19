@@ -102,6 +102,48 @@
 }
 
 
+#' The downward bias of \code{log(mean(w))}, from the effective sample size
+#'
+#' \eqn{\widehat\ell = \log(\frac1N \sum_i w_i)} estimates \eqn{\log E[w]},
+#' and a log of a mean is not the mean of a log: by Jensen's inequality
+#' \eqn{E[\widehat\ell] \le \log E[w]}, always downward, never up.  The
+#' EM objective is unaffected -- it is an expectation of a log, and the
+#' M-step averages \eqn{\log f} directly (\code{src/M_step.cpp}) -- but the
+#' log-likelihood a fit reports is exactly this estimator, and so is the
+#' \code{AIC} built from it.
+#'
+#' The delta method gives the bias as \eqn{-\mathrm{Var}(w)/(2N E[w]^2)},
+#' which in terms of the effective sample size \eqn{n_{\mathrm{eff}} =
+#' N/(1+\mathrm{CV}^2)} is \eqn{-\frac12(1/n_{\mathrm{eff}} - 1/N)}: a
+#' quantity already on record for every fit.
+#'
+#' It is an indicator of size, not a bound in either direction, and its
+#' error runs the wrong way where the quantity matters.  Measured on
+#' log-normal weights with \eqn{N = 200}, as the ratio of what this returns
+#' to the true bias: 4.9 at \eqn{n_{\mathrm{eff}} = 188}, 2.0 at 157, 0.90
+#' at 82, 0.75 at 36, 0.46 at 17, 0.27 at 9, 0.16 at 6.  It overstates only
+#' where the bias is negligible anyway (below \eqn{2\times10^{-4}}), and
+#' \emph{understates} once the weights are heavy -- by a factor of six at
+#' \eqn{n_{\mathrm{eff}} = 6}, where the true bias is half a nat.
+#' \code{heavy} marks that regime, \eqn{n_{\mathrm{eff}} < N/10}, which is
+#' where the ratio first falls below one half.  A caller deciding anything
+#' on the size of the gap must treat a heavy draw as unquantified rather
+#' than as the number returned.
+#'
+#' @param ess Effective sample size of the draw.
+#' @param n Number of draws the estimator averaged over.
+#' @return A list: \code{gap} (a non-negative magnitude, the amount by which
+#'   the reported log-likelihood sits \emph{below} the truth) and
+#'   \code{heavy} (\code{TRUE} when \code{gap} understates it).
+#' @keywords internal
+.jensen_gap <- function(ess, n) {
+  if (!is.finite(ess) || !is.finite(n) || ess <= 0 || n <= 0)
+    return(list(gap = NA_real_, heavy = NA))
+  gap <- max(0, 0.5 * (1 / ess - 1 / n))
+  list(gap = gap, heavy = isTRUE(ess < n / 10))
+}
+
+
 #' The importance-sampling summary of one draw: the estimate and the ESS
 #'
 #' One denominator for both proposals.  Three kinds of draw carry weight zero
@@ -130,10 +172,15 @@
     return(list(fhat = NA_real_, ess = NA_real_,
                 n_finite = length(fin), n_den = n_den))
   m <- max(fin); w <- exp(fin - m)
+  ess <- sum(w)^2 / sum(w^2)
+  jg  <- .jensen_gap(ess, n_den)
   list(fhat     = m + log(sum(w) / n_den),
-       ess      = sum(w)^2 / sum(w^2),
+       ess      = ess,
        n_finite = length(fin),
-       n_den    = n_den)
+       n_den    = n_den,
+       # how far below log p(y | theta) fhat sits, at least -- see .jensen_gap
+       gap      = jg$gap,
+       gap_heavy = jg$heavy)
 }
 
 
