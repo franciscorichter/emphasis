@@ -67,6 +67,20 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     approximation and the weights vary. \code{"bdi"} falls back to
 #'     \code{"dynamic_fresh"}, with a message naming the reason, for a D- or
 #'     M-dependent model and for dd or ED on the gaussian link.}
+#'   \item{\code{damping}}{BDI only: under-relaxation of the mean-field sweep,
+#'     which is a Picard iteration \eqn{x \leftarrow F(x)}. Where its map
+#'     expands the iteration diverges and a larger budget makes it worse: on a
+#'     416-tip tree at rates whose equilibrium is critical the residual is 305
+#'     after 20 sweeps and 329 after 200. A partial step,
+#'     \eqn{x \leftarrow (1-\omega)x + \omega F(x)}, contracts it.
+#'     \code{"auto"} (default) starts at \eqn{\omega = 1} and halves it
+#'     whenever the residual grows; on that tree it converges in 40 sweeps, and
+#'     where the map already contracts it is the plain iteration to the bit.
+#'     A number in \eqn{(0, 1]} fixes \eqn{\omega} instead; \code{1} is the
+#'     plain iteration. Relaxation below about \eqn{1/20} converges too slowly
+#'     to be useful. It fixes the iteration and nothing else: at 416 tips the
+#'     effective sample is 2.1 of 97 even with a converged mean field, because
+#'     the proposal must invent some 600 missing lineages there (audit H108).}
 #'   \item{\code{mesh}}{BDI only, and only where its Gillespie branch runs
 #'     (any model but \code{"cr"}): the number of steps per crown age the
 #'     frozen rates are re-evaluated on. \code{NULL} (default) leaves the
@@ -163,6 +177,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       mc_grow     = 1.5,        # mc_error: factor the draws grow by when a step is noise
       mesh        = NULL,       # bdi: steps per crown age the frozen Gillespie rates are
                                 #   re-evaluated on; NULL leaves the step uncapped
+      damping     = "auto",     # bdi: under-relaxation of the mean-field sweep;
+                                #   "auto", or a number in (0, 1]
       max_draws   = NULL,       # mc_error: cap on the grown draws; NULL -> 8 * num_trees
       sample_size = 200L,       # alias: num_trees
       max_iter    = 200L,
@@ -690,7 +706,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       mc_z        = ctrl$mc_z %||% 1.0,
       mc_grow     = ctrl$mc_grow %||% 1.5,
       max_draws   = ctrl$max_draws,
-      mesh        = ctrl$mesh
+      mesh        = ctrl$mesh,
+      damping     = ctrl$damping %||% "auto"
     ),
     dynamic_fresh   = .mcem_dynamic_fresh(
       brts        = brts,

@@ -596,8 +596,26 @@
 .bdi_iterate <- function(pars8, model_bin, link, bt, tp,
                          max_iter = NULL, tol = 1e-4, n_grid = 500,
                          use_gaussian_closure = TRUE, rho = 1,
-                         pd_mode = c("pendant", "faith")) {
+                         pd_mode = c("pendant", "faith"),
+                         damping = "auto") {
   pd_mode <- match.arg(pd_mode)
+  # Under-relaxation.  The sweep is a Picard iteration x <- F(x), and where its
+  # map expands it diverges: on a 416-tip tree at rates whose equilibrium is
+  # critical the residual reaches 305 after 20 sweeps and 329 after 200, so a
+  # bigger budget makes it worse (audit H108).  Taking a partial step,
+  # x <- (1 - w) x + w F(x), contracts a map whose expansion is mild enough,
+  # at the cost of needing more sweeps when it was already contracting.
+  #
+  # damping = 1 is the plain iteration and is what every caller got before.
+  # "auto" starts there and halves w whenever the residual grows, which costs
+  # nothing where the map already contracts and is the only setting that needs
+  # no knowledge of the map.
+  auto_damp <- identical(damping, "auto")
+  omega <- if (auto_damp) 1 else as.numeric(damping)
+  if (!auto_damp && (!is.finite(omega) || omega <= 0 || omega > 1))
+    stop(".bdi_iterate: damping must be \"auto\" or a number in (0, 1].",
+         call. = FALSE)
+  omega_min <- 1 / 64
   # The budget is 20 at complete sampling, which is what the validation study
   # measured: raising it changes the mean field of any run that had NOT reached
   # tolerance within 20, and with it the proposal and the estimate (measured
@@ -638,6 +656,7 @@
 
   p_vals <- rep(0, length(t_grid))
   delta  <- NA_real_
+  prev_delta <- Inf
   n_iter_used <- 0L
 
   for (iter in seq_len(max_iter)) {
@@ -681,13 +700,36 @@
     # Clip to [0, tp]: E_s is a pendant age.
     Ehat_new <- pmin(pmax(Ehat_raw, 0), tp)
 
+    # The residual of the map, not the step that is taken: it is zero at a
+    # fixed point whatever the relaxation is, so `tol` means the same thing at
+    # every omega.
     delta_N <- max(abs(Nhat_new - Nhat_vals))
     delta_P <- max(abs(Phat_new - Phat_vals)) / Pscale
     delta   <- max(delta_N, delta_P)
 
-    Nhat_vals <- Nhat_new
-    Phat_vals <- Phat_new
-    Ehat_vals <- Ehat_new
+    if (auto_damp && is.finite(prev_delta) && delta > prev_delta &&
+        omega > omega_min) {
+      omega <- max(omega / 2, omega_min)
+    }
+    prev_delta <- delta
+
+    if (omega >= 1) {
+      Nhat_vals <- Nhat_new
+      Phat_vals <- Phat_new
+      Ehat_vals <- Ehat_new
+    } else {
+      Nhat_vals <- (1 - omega) * Nhat_vals + omega * Nhat_new
+      Phat_vals <- (1 - omega) * Phat_vals + omega * Phat_new
+      # E-hat is a function of the pair, so it is recomputed from the relaxed
+      # pair rather than relaxed itself, which would leave the three mutually
+      # inconsistent.
+      Eh <- ifelse(Nhat_vals > 0,
+                   Phat_vals / Nhat_vals
+                   - cNP_vals / pmax(Nhat_vals, 1e-12)^2
+                   + Phat_vals * vN_vals / pmax(Nhat_vals, 1e-12)^3,
+                   0)
+      Ehat_vals <- pmin(pmax(Eh, 0), tp)
+    }
     Pscale    <- max(max(Phat_vals), 1)
 
     if (delta < tol) break
@@ -1236,7 +1278,8 @@
                               use_gaussian_closure = TRUE,
                               topology    = NULL,
                               mesh        = NULL,
-                              attach      = c("rate", "uniform")) {
+                              attach      = c("rate", "uniform"),
+                              damping     = "auto") {
   attach <- match.arg(attach)
   brts  <- .extract_brts(tree)
   mb4   <- .pad_model_bin(model_bin)
@@ -1299,7 +1342,8 @@
     sol <- .bdi_iterate(pars8, mb_prop, link, bt, tp,
                         use_gaussian_closure = use_gaussian_closure,
                         rho = rho,
-                        pd_mode = if (use_ed) "faith" else "pendant")
+                        pd_mode = if (use_ed) "faith" else "pendant",
+                        damping = damping)
     p_fun    <- sol$p_fun
     Nhat_fun <- sol$Nhat_fun
     Phat_fun <- sol$Phat_fun
@@ -1495,7 +1539,8 @@
                       mc_z       = 1.0,
                       mc_grow    = 1.5,
                       max_draws  = NULL,
-                      mesh       = NULL) {
+                      mesh       = NULL,
+                      damping    = "auto") {
   stop_rule <- match.arg(stop_rule)
   if (is.null(max_draws) || !is.finite(max_draws)) max_draws <- as.integer(8L * sample_size)
   max_draws <- as.integer(max(max_draws, sample_size))
@@ -1530,7 +1575,8 @@
         max_missing = as.integer(max_missing),
         link        = link_int,
         rho         = as.numeric(rho),
-        mesh        = mesh
+        mesh        = mesh,
+        damping     = damping
       ),
       error = function(e) NULL
     )
