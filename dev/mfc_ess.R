@@ -116,14 +116,23 @@ ess_thin <- function(brts, pn, slot4) {
   c(ess = .ess_from_lw(a$logf - a$logg), n = length(a$logf))
 }
 
-ess_bdi <- function(brts, pn, bN, bED, edbar) {
-  # the proposal sees N only; the mean ED effect is folded into the intercept
-  # so the mean-field rate matches the true rate at the average lineage
-  p8 <- .expand_pars(c(B0 + bED * edbar, bN, G0, 0), mb_dd)
-  a <- tryCatch(.augment_tree_bdi(brts, p8, model_bin = mb_dd[1:3],
-                                  sample_size = DRAWS, link = LINK, rho = 1.0),
-                error = function(e) { message("  bdi: ", conditionMessage(e)); NULL })
+# The mean-field conditional proposal: the rate every lineage is given is the
+# one the clade's average lineage has, and the weights carry the rest.  `fold`
+# is the cruder version of the same idea -- the mean ED effect folded into the
+# intercept once, instead of following P-hat/N-hat over time.
+ess_bdi <- function(brts, pn, bN, bED, edbar, fold = FALSE, mesh = NULL) {
+  a <- tryCatch({
+    if (fold) {
+      p8 <- .expand_pars(c(B0 + bED * edbar, bN, G0, 0), mb_dd)
+      .augment_tree_bdi(brts, p8, model_bin = mb_dd[1:3], sample_size = DRAWS,
+                        link = LINK, rho = 1.0, mesh = mesh)
+    } else {
+      .augment_tree_bdi(brts, pn, model_bin = mb_ned[1:4], sample_size = DRAWS,
+                        link = LINK, rho = 1.0, mesh = mesh)
+    }
+  }, error = function(e) { message("  bdi: ", conditionMessage(e)); NULL })
   if (is.null(a) || !length(a$trees)) return(c(ess = NA_real_, n = 0))
+  if (!fold) return(c(ess = .ess_from_lw(a$weights), n = length(a$trees)))
   ev <- tryCatch(eval_logf(pn, a$trees, model = as.integer(mb_ned[1:4]),
                            link = LINK, rho = 1.0), error = function(e) NULL)
   if (is.null(ev)) return(c(ess = NA_real_, n = 0))
@@ -137,25 +146,27 @@ for (n in SIZES) for (tr in seq_len(NTREE)) {
   if (is.null(s)) { cat(sprintf("[mfc] n=%d tree %d: no tree in range\n", n, tr)); next }
   brts <- .extract_brts(s$phy)
   for (sd in seq_len(NSEED)) {
-    tm <- numeric(3)
+    tm <- numeric(4)
     tm[1] <- system.time({ set.seed(4242 + sd); a <- ess_thin(brts, s$pars, 1L) })[["elapsed"]]
     tm[2] <- system.time({ set.seed(4242 + sd); b <- ess_thin(brts, s$pars, 2L) })[["elapsed"]]
     tm[3] <- system.time({ set.seed(4242 + sd); d <- ess_bdi(brts, s$pars, s$bN, s$bED, s$edbar) })[["elapsed"]]
+    tm[4] <- system.time({ set.seed(4242 + sd); e <- ess_bdi(brts, s$pars, s$bN, s$bED, s$edbar, fold = TRUE) })[["elapsed"]]
     rows[[length(rows) + 1L]] <- data.frame(
       n_target = n, n_tips = s$n, tree = tr, seed = sd,
       crown = s$T_use, K = s$K, b_ED = s$bED, ed_bar = s$edbar,
       ess_thin_ed = a[["ess"]], ess_thin_mf = b[["ess"]], ess_bdi = d[["ess"]],
+      ess_bdi_fold = e[["ess"]], nd_bdi_fold = e[["n"]], sec_bdi_fold = tm[4],
       nd_thin_ed = a[["n"]], nd_thin_mf = b[["n"]], nd_bdi = d[["n"]],
       sec_thin_ed = tm[1], sec_thin_mf = tm[2], sec_bdi = tm[3])
-    cat(sprintf("[mfc] n=%3d (%3d tips) tree %d seed %d  thin-ED %7.1f (%4.1fs)  thin-MF %7.1f (%4.1fs)  bdi %7.1f (%4.1fs)\n",
-                n, s$n, tr, sd, a[["ess"]], tm[1], b[["ess"]], tm[2], d[["ess"]], tm[3]))
+    cat(sprintf("[mfc] n=%3d (%3d tips) tree %d seed %d  thin-ED %7.1f (%4.1fs)  thin-MF %7.1f (%4.1fs)  bdi %7.1f (%4.1fs)  bdi-fold %7.1f (%4.1fs)\n",
+                n, s$n, tr, sd, a[["ess"]], tm[1], b[["ess"]], tm[2], d[["ess"]], tm[3], e[["ess"]], tm[4]))
     utils::flush.console()
   }
 }
 d <- do.call(rbind, rows)
 write.csv(d, OUT, row.names = FALSE)
 cat("\n== median ESS of", DRAWS, "draws ==\n")
-agg <- aggregate(cbind(ess_thin_ed, ess_thin_mf, ess_bdi) ~ n_target, d, median, na.rm = TRUE)
+agg <- aggregate(cbind(ess_thin_ed, ess_thin_mf, ess_bdi, ess_bdi_fold) ~ n_target, d, median, na.rm = TRUE)
 print(agg, row.names = FALSE)
 win <- sum(agg$ess_bdi > agg$ess_thin_ed & agg$ess_bdi > agg$ess_thin_mf)
 cat(sprintf("\nbdi beats both thinning arms in %d of %d cells\n", win, nrow(agg)))

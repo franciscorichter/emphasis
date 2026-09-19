@@ -101,3 +101,72 @@ test_that("the two proposals estimate the same log-likelihood", {
   # count they agree to a few hundredths of a log-likelihood unit
   expect_lt(abs(f_bdi - f_thin), 0.15)
 })
+
+# --------------------------------------------------------------------------- #
+#  ED through the clade mean
+# --------------------------------------------------------------------------- #
+
+test_that("the gate takes ED on the linear and exponential links only", {
+  mb <- emphasis:::.resolve_model("ned")
+  expect_true(emphasis:::.bdi_supported(mb, 0L))
+  expect_true(emphasis:::.bdi_supported(mb, 1L))
+  expect_false(emphasis:::.bdi_supported(mb, 2L))
+  expect_match(emphasis:::.bdi_unsupported_reason(mb, 2L), "gaussian")
+  expect_null(emphasis:::.bdi_unsupported_reason(mb, 0L))
+  # a D-dependent model is still out: its mean field is not one the iteration
+  # carries
+  expect_false(emphasis:::.bdi_supported(emphasis:::.resolve_model("nd"), 0L))
+})
+
+test_that("the mean-field PD the ED proposal reads is Faith's PD", {
+  bt <- c(1, 2, 4)                  # three observed events after the crown
+  tp <- 6
+  # PD grows at the lineage count, so PD(t) = int_0^t k(u) du
+  k  <- function(t) 2 + sum(bt <= t)
+  for (t in c(0.5, 1.5, 3, 5, 6)) {
+    exact <- stats::integrate(function(u) vapply(u, k, 1), 0, t,
+                              subdivisions = 500L)$value
+    faith <- 2 * t + sum(pmax(0, t - bt))
+    expect_equal(faith, exact, tolerance = 1e-8)
+    # the pendant convention is the other one, and is larger wherever they differ
+    expect_gte(k(t) * t, faith)
+  }
+})
+
+test_that("on an ED tree the two proposals estimate the same log-likelihood", {
+  skip_on_cran()
+  mb <- emphasis:::.resolve_model("ned")
+  B0 <- 0.5; G0 <- 0.165; K <- 70
+  cp <- c(B0, -(B0 - G0) / K, -0.0266, G0, 0, 0)
+  pn <- emphasis:::.expand_pars(cp, mb)
+  phy <- NULL
+  for (i in 1:80) {
+    set.seed(i)
+    x <- simulate_tree(pars = cp, max_t = 15, model = "ned", rho = 1,
+                       max_lin = 20000L, num_threads = 1L)
+    if (identical(x$status, "done") && length(x$tes$tip.label) >= 35) { phy <- x$tes; break }
+  }
+  skip_if(is.null(phy), "no ED tree of the target size")
+  brts <- emphasis:::.extract_brts(phy)
+  N <- 1500L
+  set.seed(77)
+  b <- emphasis:::.augment_tree_bdi(brts, pn, model_bin = mb[1:4],
+                                    sample_size = N, link = 0L, rho = 1)
+  set.seed(77)
+  t <- emphasis:::augment_trees(brts, pn, sample_size = N, maxN = 50L * N,
+                                max_missing = 5000L, max_lambda = 1e6,
+                                num_threads = 1L, model = as.integer(mb[1:4]),
+                                link = 0L, rho = 1.0,
+                                parent_tip_start = emphasis:::.pts(brts),
+                                parent_id = emphasis:::.pid(brts))
+  f_thin <- emphasis:::.is_summary(t$logf - t$logg,
+                                   n_zero_weight = t$rejected_zero_weights)$fhat
+  skip_if(!is.finite(b$fhat) || !is.finite(f_thin), "an estimate is not finite")
+  # the conditional proposal is ED-blind per lineage, so its weights are
+  # heavier and the tolerance is wider than on a dd tree -- but the two
+  # estimate the same integral
+  expect_lt(abs(b$fhat - f_thin), 1.5)
+  # and it is the cheaper of the two here
+  expect_gt(emphasis:::.ess_from_lw(b$weights),
+            emphasis:::.ess_from_lw(t$logf - t$logg))
+})

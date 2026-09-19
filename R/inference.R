@@ -624,10 +624,11 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 .run_mcem <- function(brts, init_pars, lower_bound, upper_bound, ctrl,
                       model = c(0L, 0L, 0L), link = 0L, cond_fun = NULL) {
   # BDI covers the N-only models (cr, dd) on the linear and exponential links,
-  # cr also on the gaussian link, at any rho in (0, 1].  What is left --
-  # D-dependent and M-dependent models, and dd on the gaussian link -- uses the
-  # thinning proposal.  The message is unconditional and names the reason: the
-  # sampler the user asked for is not the sampler that runs.
+  # cr also on the gaussian link, and ED models through their clade mean on
+  # the linear and exponential links, at any rho in (0, 1].  What is left --
+  # D-dependent and M-dependent models, dd on the gaussian link, and ED there
+  # -- uses the thinning proposal.  The message is unconditional and names the
+  # reason: the sampler the user asked for is not the sampler that runs.
   if (identical(ctrl$sampling, "bdi") && !.bdi_supported(model, link, ctrl$rho)) {
     reason <- .bdi_unsupported_reason(model, link, ctrl$rho)
     message("sampling = \"bdi\" is not available for ", reason,

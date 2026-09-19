@@ -204,14 +204,14 @@ test_that("CR BDI sampler is exact under the exponential link with mu > lam", {
 #  What the BDI parent assignment costs (audit finding H45, the R half)        #
 # --------------------------------------------------------------------------- #
 #
-# .bdi_to_tree_df records as the parent of a lineage born at t the last observed
-# branching at or before t, and falls back to observed node 0 when there is
-# none -- a node that is not yet born then.  .aug_to_Ltable refuses that
-# attachment rather than building a tas with an edge of negative length, so
-# method = "bdi" returns NULL for those draws.  Held here so the refusal cannot
-# quietly widen, and so the throughput it costs is on record.
+# The parent of an augmented birth is the lineage the draw attached it to, so
+# a lineage born before the first observed branching attaches to a crown
+# lineage -- the only thing alive then -- and .aug_to_Ltable builds it like any
+# other.  It used to be given the last observed branching at or before its
+# birth, which for those births is a node not yet born, and the refusal that
+# caught it cost every such draw (audit finding H45).
 
-test_that("BDI draws refused are exactly those born before the first split", {
+test_that("a birth before the first observed split attaches to a crown lineage", {
   skip_on_cran()
   set.seed(3)
   phy   <- ape::rphylo(10L, 0.8, 0.3)
@@ -226,20 +226,22 @@ test_that("BDI draws refused are exactly those born before the first split", {
   skip_if(length(aug$trees) == 0L, "BDI drew no tree")
   pre <- refused <- built <- 0L
   for (df in aug$trees) {
-    mis <- df$t_ext != 0 & df$t_ext < 1e11
-    early <- any(df$brts[mis] < first)
-    pre <- pre + early
+    mis   <- df$t_ext != 0 & df$t_ext < 1e11
+    early <- df$brts[mis] < first
+    pre   <- pre + any(early)
+    # before the first observed split the only lineages alive are the two
+    # crown lineages and whatever the draw itself has already added, so such a
+    # birth attaches to one of those and never to an observed daughter
+    n_obs <- length(brts) - 1L
+    par_e <- df$parent_id[mis][early]
+    expect_true(all(par_e < 0L | par_e >= n_obs))
     Lt <- emphasis:::.aug_to_Ltable(df, max_t, brts, L)
     if (is.null(Lt)) { refused <- refused + 1L; next }
     tas <- DDD::L2phylo(Lt, dropextinct = FALSE)
-    # what the refusal is there to prevent
     expect_gte(min(tas$edge.length), 0)
     built <- built + 1L
-    expect_false(early)
   }
-  # the refusal is exactly the pre-first-split draws, no wider and no narrower
-  expect_equal(refused, pre)
-  expect_equal(built + refused, length(aug$trees))
-  expect_gt(pre, 0L)                 # the drop is real on this tree
-  expect_gt(built, 0L)
+  expect_gt(pre, 0L)                 # such draws are real on this tree
+  expect_equal(refused, 0L)          # and none of them is thrown away
+  expect_equal(built, length(aug$trees))
 })
