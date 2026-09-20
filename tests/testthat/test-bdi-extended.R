@@ -331,14 +331,23 @@ test_that("the mean-field iteration DIVERGES for gaussian dd, and not merely slo
   bt <- sort(brts_dd20[1] - brts_dd20[-1]); tp <- brts_dd20[1]
   gp <- function(b0, bN) .expand_pars(c(b0 * exp(0.5), bN, 0.3 * exp(0.5), 0),
                                       dd_bin)
-  for (cse in list(list(b0 = 4, bN = 0.20, rho = 1),
-                   list(b0 = 2, bN = 0.10, rho = 0.5),
-                   list(b0 = 4, bN = 0.10, rho = 0.2))) {
+  # `auto` is the relaxed sweep.  It rescues the first two cases and only
+  # shrinks the third, which is why the gate on this link stays shut: a
+  # relaxation that fixes most of a region is not a licence to admit the region.
+  for (cse in list(list(b0 = 4, bN = 0.20, rho = 1,   auto_ok = TRUE),
+                   list(b0 = 2, bN = 0.10, rho = 0.5, auto_ok = TRUE),
+                   list(b0 = 4, bN = 0.10, rho = 0.2, auto_ok = FALSE))) {
+    # damping = 1 is the plain Picard iteration, which is what this measures.
     s <- .bdi_iterate(gp(cse$b0, cse$bN), dd_bin, 2L, bt, tp, rho = cse$rho,
-                      max_iter = 200L)
+                      max_iter = 200L, damping = 1)
     expect_false(s$converged)
     expect_gt(s$delta, 1)
     expect_identical(s$iterations, 200L)
+    sd <- .bdi_iterate(gp(cse$b0, cse$bN), dd_bin, 2L, bt, tp, rho = cse$rho,
+                       max_iter = 200L, damping = "auto")
+    expect_identical(sd$converged, cse$auto_ok)
+    # and it never leaves the residual larger than the plain iteration did
+    expect_lte(sd$delta, s$delta)
   }
   # And the failing region is not an interval that could be carved out: at
   # rho = 0.5, beta_0 = 1 the iteration converges at beta_N = 0.08, fails at
@@ -346,15 +355,22 @@ test_that("the mean-field iteration DIVERGES for gaussian dd, and not merely slo
   # honest one.
   conv <- vapply(c(0.08, 0.1, 0.2), function(bN)
     .bdi_iterate(gp(1, bN), dd_bin, 2L, bt, tp, rho = 0.5,
-                 max_iter = 200L)$converged, logical(1))
+                 max_iter = 200L, damping = 1)$converged, logical(1))
   expect_identical(conv, c(TRUE, FALSE, TRUE))
+  # Relaxed, the hole closes: all three converge.  So "the failing region is
+  # not an interval" is a statement about the plain iteration only.
+  convd <- vapply(c(0.08, 0.1, 0.2), function(bN)
+    .bdi_iterate(gp(1, bN), dd_bin, 2L, bt, tp, rho = 0.5,
+                 max_iter = 200L, damping = "auto")$converged, logical(1))
+  expect_identical(convd, c(TRUE, TRUE, TRUE))
 
   # A non-converged mean field is announced rather than used silently -- the
   # gate keeps dd/gaussian out of estimate_rates, but .augment_tree_bdi is
-  # callable directly and must not stay quiet about it.
+  # callable directly and must not stay quiet about it.  With the relaxation
+  # off, so that there is a non-convergence left to announce.
   expect_warning(
     .augment_tree_bdi(brts_dd20, c(4 * exp(0.5), 0.1, 0.3 * exp(0.5), 0), dd_bin,
-                      sample_size = 5L, link = 2L, rho = 0.2),
+                      sample_size = 5L, link = 2L, rho = 0.2, damping = 1),
     "mean-field iteration did not converge")
 })
 
