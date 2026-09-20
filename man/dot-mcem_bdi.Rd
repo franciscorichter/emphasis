@@ -21,7 +21,14 @@
   model = c(0L, 0L, 0L),
   link = 0L,
   max_time = NULL,
-  rho = 1
+  rho = 1,
+  stop_rule = c("rel_change", "mc_error"),
+  mc_batches = 5L,
+  mc_z = 1,
+  mc_grow = 1.5,
+  max_draws = NULL,
+  mesh = NULL,
+  damping = "auto"
 )
 }
 \value{

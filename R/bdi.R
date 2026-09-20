@@ -816,6 +816,49 @@
 }
 
 
+#' Draw one augmented tree via the BDI process.
+#'
+#' Under CR: uses exact time-change method with analytical cumulative hazard.
+#'   The event times are drawn from the correct inhomogeneous BDI process,
+#'   giving zero-variance IS weights (logf - logg = constant).
+#' Under DD: uses approximate Gillespie with piecewise-constant rates.
+#'   IS weights have nonzero variance (importance sampling, not exact).
+#'
+#' At \code{rho < 1} a missing lineage still alive at tp is not a rejection but
+#' an \emph{unsampled extant} lineage: the conditioning event is "leaves no
+#' sampled descendant", and at the present that is satisfied by being alive and
+#' unsampled, an event of probability \code{1 - rho}.  Those lineages are
+#' returned in \code{$unsampled} (birth times) and written with the \code{5e10}
+#' sentinel by \code{\link{.bdi_to_tree_df}}, so \code{N(t)} counts them.
+#'
+#' @param bt Branching times, measured forward from the crown.
+#' @param pars8 The rate vector in the packed slot layout.
+#' @param model_bin Which covariate slots the model uses.
+#' @param link Link index: 0 linear, 1 exponential, 2 gaussian.
+#' @param tp The present, as a time from the crown.
+#' @param p_fun,Nhat_fun,Phat_fun,Ehat_fun The converged mean field, as
+#'   functions of time; \code{NULL} under CR, where the rates are exact.
+#' @param max_missing Draw budget for hidden lineages before the draw is
+#'   abandoned.
+#' @param rho Sampling fraction.
+#' @param track_parents Whether to record, for every inserted lineage, which
+#'   lineage it was attached to.  The parent is decoded from the same uniform
+#'   that chose the event, so recording it costs no extra draw and leaves the
+#'   stream bit-identical to a run without it.
+#' @param first_aug_id The id the inserted lineages are numbered from, so that
+#'   ids stay distinct from the observed ones.
+#' @param step_max Cap on the Gillespie step, which is how often the frozen
+#'   rates are re-evaluated.  \code{Inf} leaves the step uncapped.
+#' @param obs_pid Parent ids of the observed nodes, when the topology is known.
+#' @param beta_ed The ED coefficient, which tilts the attachment choice toward
+#'   the lineages the model gives a higher rate.  Zero attaches uniformly.
+#' @return List with \code{$reason}: \code{"accepted"} (then also
+#'   \code{$species}, \code{$unsampled}, \code{$n_alive_at_tp}, \code{$logg},
+#'   and the parent records when \code{track_parents}), \code{"max_missing"}
+#'   (more than \code{max_missing} missing lineages drawn) or
+#'   \code{"survivor"} (a missing lineage still alive at tp; only reachable at
+#'   \code{rho = 1}, where such a tree has f = 0).
+#' @keywords internal
 .bdi_augment_one <- function(bt, pars8, model_bin, link, tp,
                              p_fun = NULL, Nhat_fun = NULL,
                              Phat_fun = NULL, Ehat_fun = NULL,

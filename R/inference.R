@@ -1345,6 +1345,34 @@ print.emphasis_fit <- function(x, ...) {
 }
 
 
+#' Compare fitted models by AIC, carrying the Monte Carlo handicap
+#'
+#' Ranks two or more fits from \code{\link{estimate_rates}} by AIC. Each fit's
+#' log-likelihood is a log of a Monte Carlo mean, so it sits below the
+#' log-likelihood it estimates; how far below grows as that fit's own effective
+#' sample falls, and the amounts do not cancel between models. A model that is
+#' harder to sample is therefore penalised for being harder to sample, and the
+#' AIC difference between two fits can be smaller than the difference in their
+#' biases.
+#'
+#' The returned table carries \code{ESS} and \code{loglik_gap} per fit and
+#' \code{AIC_swing}, twice the gap, which is how much of the AIC difference the
+#' bias alone could account for. When the swing reaches the AIC difference
+#' between the top two fits, or when either draw is heavy enough that its gap is
+#' unquantified, the \code{ranking_at_risk} attribute is \code{TRUE} and a
+#' warning is issued: the ranking is then not separated by the evidence.
+#'
+#' @param ... Two or more \code{emphasis_fit} objects. Names become the row
+#'   labels; unnamed arguments are labelled from the fitted model.
+#'
+#' @return A \code{model_selection} data frame, one row per fit, with columns
+#'   \code{model}, \code{n_pars}, \code{loglik}, \code{AIC}, \code{loglik_se},
+#'   \code{ESS}, \code{loglik_gap}, \code{gap_heavy}, \code{delta_AIC},
+#'   \code{AICw} and \code{AIC_swing}, ordered by AIC, with a
+#'   \code{ranking_at_risk} attribute.
+#'
+#' @seealso \code{\link{estimate_rates}}
+#' @export
 compare_models <- function(...) {
   fits <- list(...)
   if (length(fits) < 2L)

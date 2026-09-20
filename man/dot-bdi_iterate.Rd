@@ -14,7 +14,9 @@
   tol = 1e-04,
   n_grid = 500,
   use_gaussian_closure = TRUE,
-  rho = 1
+  rho = 1,
+  pd_mode = c("pendant", "faith"),
+  damping = "auto"
 )
 }
 \value{

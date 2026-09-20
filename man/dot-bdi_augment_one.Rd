@@ -15,15 +15,56 @@
   Phat_fun = NULL,
   Ehat_fun = NULL,
   max_missing = 10000L,
-  rho = 1
+  rho = 1,
+  track_parents = FALSE,
+  first_aug_id = 0L,
+  step_max = Inf,
+  obs_pid = NULL,
+  beta_ed = 0
 )
+}
+\arguments{
+\item{bt}{Branching times, measured forward from the crown.}
+
+\item{pars8}{The rate vector in the packed slot layout.}
+
+\item{model_bin}{Which covariate slots the model uses.}
+
+\item{link}{Link index: 0 linear, 1 exponential, 2 gaussian.}
+
+\item{tp}{The present, as a time from the crown.}
+
+\item{p_fun, Nhat_fun, Phat_fun, Ehat_fun}{The converged mean field, as
+functions of time; \code{NULL} under CR, where the rates are exact.}
+
+\item{max_missing}{Draw budget for hidden lineages before the draw is
+abandoned.}
+
+\item{rho}{Sampling fraction.}
+
+\item{track_parents}{Whether to record, for every inserted lineage, which
+lineage it was attached to.  The parent is decoded from the same uniform
+that chose the event, so recording it costs no extra draw and leaves the
+stream bit-identical to a run without it.}
+
+\item{first_aug_id}{The id the inserted lineages are numbered from, so that
+ids stay distinct from the observed ones.}
+
+\item{step_max}{Cap on the Gillespie step, which is how often the frozen
+rates are re-evaluated.  \code{Inf} leaves the step uncapped.}
+
+\item{obs_pid}{Parent ids of the observed nodes, when the topology is known.}
+
+\item{beta_ed}{The ED coefficient, which tilts the attachment choice toward
+the lineages the model gives a higher rate.  Zero attaches uniformly.}
 }
 \value{
 List with \code{$reason}: \code{"accepted"} (then also
-  \code{$species}, \code{$unsampled}, \code{$n_alive_at_tp}, \code{$logg}),
-  \code{"max_missing"} (more than \code{max_missing} missing lineages
-  drawn) or \code{"survivor"} (a missing lineage still alive at tp; only
-  reachable at \code{rho = 1}, where such a tree has f = 0).
+  \code{$species}, \code{$unsampled}, \code{$n_alive_at_tp}, \code{$logg},
+  and the parent records when \code{track_parents}), \code{"max_missing"}
+  (more than \code{max_missing} missing lineages drawn) or
+  \code{"survivor"} (a missing lineage still alive at tp; only reachable at
+  \code{rho = 1}, where such a tree has f = 0).
 }
 \description{
 Under CR: uses exact time-change method with analytical cumulative hazard.

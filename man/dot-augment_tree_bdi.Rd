@@ -12,7 +12,11 @@
   max_missing = 10000,
   link = 0L,
   rho = 1,
-  use_gaussian_closure = TRUE
+  use_gaussian_closure = TRUE,
+  topology = NULL,
+  mesh = NULL,
+  attach = c("rate", "uniform"),
+  damping = "auto"
 )
 }
 \value{

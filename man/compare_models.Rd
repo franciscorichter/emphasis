@@ -2,43 +2,38 @@
 % Please edit documentation in R/inference.R
 \name{compare_models}
 \alias{compare_models}
-\title{Compare fitted emphasis models via AIC}
+\title{Compare fitted models by AIC, carrying the Monte Carlo handicap}
 \usage{
 compare_models(...)
 }
 \arguments{
-\item{...}{Two or more \code{emphasis_fit} objects (results of
-\code{\link{estimate_rates}}). Optionally named; unnamed fits are
-auto-labelled from their model specification.}
+\item{...}{Two or more \code{emphasis_fit} objects. Names become the row
+labels; unnamed arguments are labelled from the fitted model.}
 }
 \value{
-A data frame with columns \code{model}, \code{n_pars},
-  \code{loglik}, \code{AIC}, \code{delta_AIC}, and \code{AICw}.
-  If bootstrap variances are present, an additional \code{loglik_se}
-  column is included and pairwise p-values are printed as a message.
+A \code{model_selection} data frame, one row per fit, with columns
+  \code{model}, \code{n_pars}, \code{loglik}, \code{AIC}, \code{loglik_se},
+  \code{ESS}, \code{loglik_gap}, \code{gap_heavy}, \code{delta_AIC},
+  \code{AICw} and \code{AIC_swing}, ordered by AIC, with a
+  \code{ranking_at_risk} attribute.
 }
 \description{
-Given two or more \code{\link{estimate_rates}} results, returns a summary
-table sorted by AIC. The model with the lowest AIC is preferred.
+Ranks two or more fits from \code{\link{estimate_rates}} by AIC. Each fit's
+log-likelihood is a log of a Monte Carlo mean, so it sits below the
+log-likelihood it estimates; how far below grows as that fit's own effective
+sample falls, and the amounts do not cancel between models. A model that is
+harder to sample is therefore penalised for being harder to sample, and the
+AIC difference between two fits can be smaller than the difference in their
+biases.
 }
 \details{
-When all fits carry a \code{loglik_var} (bootstrap variance, available
-when \code{control$num_trees > 1}), pairwise Gaussian tests of equal AIC
-are appended.  For each pair \eqn{(i, j)},
-\deqn{T_{ij} = \widehat{\rm AIC}_i - \widehat{\rm AIC}_j, \qquad
-  \mathrm{Var}(T_{ij}) = 4[\mathrm{Var}(\hat\ell_i) +
-  \mathrm{Var}(\hat\ell_j)]}
-and \eqn{p = 2\Phi(-|T_{ij}|/\sqrt{\mathrm{Var}(T_{ij})})} under
-the null of equal AIC.
+The returned table carries \code{ESS} and \code{loglik_gap} per fit and
+\code{AIC_swing}, twice the gap, which is how much of the AIC difference the
+bias alone could account for. When the swing reaches the AIC difference
+between the top two fits, or when either draw is heavy enough that its gap is
+unquantified, the \code{ranking_at_risk} attribute is \code{TRUE} and a
+warning is issued: the ranking is then not separated by the evidence.
 }
-\examples{
-\dontrun{
-fit_cr <- estimate_rates(tree, model = "cr",
-  lower_bound = c(0, 0), upper_bound = c(2, 1))
-fit_dd <- estimate_rates(tree, model = "dd",
-  lower_bound = c(0, -0.1, 0, -0.01),
-  upper_bound = c(2, 0.01, 0.5, 0.01))
-compare_models(CR = fit_cr, DD = fit_dd)
+\seealso{
+\code{\link{estimate_rates}}
 }
-}
-\keyword{internal}
