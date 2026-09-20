@@ -748,15 +748,28 @@
        cNP_vals = cNP_vals,
        t_grid   = t_grid,
        # The Picard iteration is not proved to contract, so a caller reads
-       # these three rather than assuming a fixed point was reached.  Measured
-       # on a 20-tip tree: the linear and exponential dd rates, which are
+       # these three rather than assuming a fixed point was reached.
+       #
+       # On a 20-tip tree the linear and exponential dd rates, which are
        # monotone in N, converged in every cell of a sweep over slope and rho
-       # (rho down to 0.2), in 3 to 15 sweeps.  The gaussian dd rate
+       # (rho down to 0.2), in 3 to 15 sweeps; the gaussian dd rate
        # lambda(N) = beta_0*exp(-(beta_N*N - 1)^2/2) peaks at N = 1/beta_N and
-       # falls after it; the map N -> rate -> N then oscillates and delta grew
+       # falls after it, the map N -> rate -> N then oscillates, and delta grew
        # to 20 in 25 of 84 cells.  That is why .bdi_supported refuses dd on the
        # gaussian link outright rather than trusting this flag per theta: the
        # failing region moves with rho, and an MCEM run walks through it.
+       #
+       # That reading held only at the tier it was measured on.  Over a sweep
+       # spanning beta_0 in {0.5, 2, 4} and rho in {1, 0.2} at 50 to 400 tips
+       # (paper E10), 144 of 377 cells fail to converge at full step, and they
+       # are spread over all three links: 68 exponential, 38 gaussian, 38
+       # linear.  So the linear and exponential rates do NOT always contract,
+       # and the gate's asymmetry does not rest on their doing so.  What the
+       # 20-tip tier does show is that the gaussian rate fails at ordinary
+       # rates, where the other two do not.  The counts are not comparable
+       # link for link -- the gaussian arm of that sweep is parameterised so
+       # that its rate AT the peak equals beta_0 -- so this is a reason to
+       # re-derive the gate, not a measurement that moves it.
        converged = isTRUE(delta < tol),
        delta     = delta,
        iterations = n_iter_used)
