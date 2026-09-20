@@ -761,15 +761,24 @@
        #
        # That reading held only at the tier it was measured on.  Over a sweep
        # spanning beta_0 in {0.5, 2, 4} and rho in {1, 0.2} at 50 to 400 tips
-       # (paper E10), 144 of 377 cells fail to converge at full step, and they
-       # are spread over all three links: 68 exponential, 38 gaussian, 38
-       # linear.  So the linear and exponential rates do NOT always contract,
-       # and the gate's asymmetry does not rest on their doing so.  What the
-       # 20-tip tier does show is that the gaussian rate fails at ordinary
-       # rates, where the other two do not.  The counts are not comparable
-       # link for link -- the gaussian arm of that sweep is parameterised so
-       # that its rate AT the peak equals beta_0 -- so this is a reason to
-       # re-derive the gate, not a measurement that moves it.
+       # (paper E10, 648 cells), 151 of the 384 cells carrying a tree fail to
+       # converge at full step, and they are spread over all three links: 75
+       # exponential, 38 gaussian, 38 linear.  So the linear and exponential
+       # rates do NOT always contract, and the gate's asymmetry does not rest
+       # on their doing so.  What the 20-tip tier does show is that the
+       # gaussian rate fails at ordinary rates, where the other two do not.
+       # The counts are not comparable link for link -- the gaussian arm of
+       # that sweep is parameterised so that its rate AT the peak equals
+       # beta_0 -- so this is a reason to re-derive the gate, not a
+       # measurement that moves it.
+       #
+       # The gate stays shut for a reason that is now measured rather than
+       # assumed.  On the cells where under-relaxation is what makes the
+       # iteration converge at all, 200 draws from the resulting proposal leave
+       # a median effective sample of 1.12 and a maximum of 4.98.  Converging
+       # the mean field and being able to sample from it are different
+       # properties, so convergence under damping is not grounds to admit a
+       # link.
        converged = isTRUE(delta < tol),
        delta     = delta,
        iterations = n_iter_used)
