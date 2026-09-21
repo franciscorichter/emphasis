@@ -1356,11 +1356,24 @@ print.emphasis_fit <- function(x, ...) {
 #' biases.
 #'
 #' The returned table carries \code{ESS} and \code{loglik_gap} per fit and
-#' \code{AIC_swing}, twice the gap, which is how much of the AIC difference the
-#' bias alone could account for. When the swing reaches the AIC difference
-#' between the top two fits, or when either draw is heavy enough that its gap is
-#' unquantified, the \code{ranking_at_risk} attribute is \code{TRUE} and a
-#' warning is issued: the ranking is then not separated by the evidence.
+#' \code{AIC_swing}, twice the gap relative to the leader's, which is how much
+#' of the AIC difference the bias alone could account for.
+#'
+#' \code{ranking_at_risk} names the models that could overtake the leader once
+#' both biases are corrected. A model qualifies only if its own gap is larger
+#' than the leader's --- so that correcting both closes the distance --- and
+#' then either the swing reaches its \code{delta_AIC} or its draw is heavy
+#' enough that the swing understates the gap. A warning is issued with it.
+#'
+#' Two things follow that a caller should not have to infer. The attribute is
+#' about the ORDER, not about precision: when the leader is itself the
+#' heavily-handicapped fit, correcting the biases only widens its lead, so
+#' nothing is named and nothing is wrong with that. And it covers bias, not
+#' variance. A fit can lead on a log-likelihood estimated from a handful of
+#' effective draws --- measured: a winner with an effective sample of 6.5 of 300
+#' --- and be named by nothing here, because its \emph{expected} position is
+#' safe while its realised one is noisy. \code{loglik_se} and \code{ESS} are
+#' the columns for that, and they are in the table to be read.
 #'
 #' @param ... Two or more \code{emphasis_fit} objects. Names become the row
 #'   labels; unnamed arguments are labelled from the fitted model.
