@@ -372,90 +372,80 @@ data.frame(
 
 See the [wiki](https://github.com/franciscorichter/emphasis/wiki) for the full derivation of the model and inference machinery, method details, and worked examples.
 
-## Status (2026-09-18)
+## Status
 
 - Version 0.4; `main` is the working branch and is identical on the forge and on GitHub.
-- The `{N, D, ED}` covariate basis, survival-conditioned inference and the docs site are in; the
-  BDI sampler is the default augmentation proposal within the scope stated above, which since
-  version 0.4 includes the ED models through their clade mean; the thinning sampler also reads
-  ED and remains the better proposal for them below $\rho = 1$.
-- The M-step sizes its first simplex from the box (a tenth of its width per coordinate). Left
-  to NLopt's default, a start one ulp inside a bound got a step of one ulp and the optimiser
-  returned the start at every iteration (audit H106, `tests/testthat/test-mstep-start.R`).
+- The `{N, D, ED}` covariate basis, survival-conditioned inference and the docs site are in.
+  The BDI sampler is the default augmentation proposal within the scope stated above, which
+  includes the ED models through their clade mean; the thinning sampler also reads ED and is
+  the better proposal for `ed` below $\rho \approx 0.8$.
+- The M-step sizes its first simplex from the box, a tenth of its width per coordinate. Left
+  to NLopt's default, a start one ulp inside a bound gets a step of one ulp and the optimiser
+  returns the start at every iteration (`tests/testthat/test-mstep-start.R`).
+- There are no vignettes.
+
+### What the exact proposal covers, and what it costs
+
+It covers the gaussian link for `"cr"` and every supported model at $\rho < 1$, so incomplete
+sampling does not fall back to a proposal whose weights collapse. On the cells where thinning
+retains 1.2--2.3 % of its effective sample and reads 1.9 to 12.9 nats low, it holds 100 % and
+is accurate to around $10^{-12}$. It costs 2.2--2.5$\times$ the wall clock of thinning:
+accuracy is what it buys, not speed.
+
+Two things it does not cover, both by measurement rather than omission. `"dd"` on the gaussian
+link is refused because the mean-field iteration diverges there (above). A `d` or `nd` model
+has no exact proposal and cannot have one: the BDI construction rests on a rate that is a
+function of the lineage count alone, while a `D`-model's rate depends on each lineage's own
+pendant age.
+
+`auto_bounds()` gives its $\lambda$ ceiling turnover headroom --- the net rate the tip count
+implies, divided by $1 - 0.95$ --- and probes the constant-net-rate ray, so a high-turnover
+optimum is inside the box before any likelihood is evaluated. The box contains the exact MLE
+on 98 % of pipeline fits. The width is paid for in the cross-entropy stage, whose particle
+budget does not scale with the box: a pipeline fit takes 955 s against 218 at the median.
+Where MCEM does the final search itself the width costs time and not precision.
 
 ### Audit
 
-`dev/audit/` holds an audit of the estimator. `01-map.md` documents what the code computes — the
-weights, `fhat`, the M-step objective, the MCEM/CEM/GAM stages and the index, time and log
-conventions — and raises 105 hypotheses; each was tested against a closed form, a property or a
+`dev/audit/` holds an audit of the estimator. `01-map.md` documents what the code computes ---
+the weights, `fhat`, the M-step objective, the MCEM/CEM/GAM stages and the index, time and log
+conventions --- and raises 105 hypotheses, each tested against a closed form, a property or a
 controlled comparison, with the reproduction scripts in `dev/audit/checks/`. `02-findings.md`
-carries the 94 confirmed findings ranked by severity — 89 defects and 5 design decisions that
-only the author can settle — the 11 refuted hypotheses with the reason each is not a defect, a fix
-plan in three waves, and 21 questions that the code cannot answer.
+carries the confirmed findings ranked by severity, the refuted hypotheses with the reason each
+is not a defect, and the questions the code cannot answer, which only the author can settle.
 
-Wave 1 — every finding that changes the numbers of a `cr` or `dd` fit — is applied. In particular
-the BDI sampler works for `mu0 >= lambda0`, its `fhat` carries the acceptance correction under
-diversity dependence, a rate of zero gives a log-density of `-Inf` rather than `+Inf`, the M-step
-scales a survival penalty by the weight sum, the thinning envelope dominates for N-only models,
-and neither MCEM stopping rule depends on the unit of time.
+The audit is a log and is written as one: it records what was found and when. The README is
+not, so what the package does now is stated here without reference to what it did before.
 
-Wave 2 is applied: `rho` reaches every stage and is refused outside (0, 1] rather than silently
-replaced, `auto_bounds()` puts the gaussian link's intercepts on the natural scale the rate is
-defined on, the samplers take a seed from R so `set.seed()` reproduces a run and forked workers
-draw independently, and the integration tests execute the compiled code instead of skipping.
+### The ED covariate
 
-The `D` covariate chain is complete: the estimator is given the observed topology that `M` and `D`
-are defined on (H9), the linear link integrates its own model per lineage rather than freezing the
-rates at the segment node (H8), `log q` is the density the thinning sampler draws from (H6), and
-the crown lineages can be drawn as parents so the proposal's support contains every attachment the
-likelihood gives positive density (H45). The last of those is what makes a `d` or `nd` fit a
-measurement: the importance sampler's unbiasedness can now be checked against a brute-force
-marginal likelihood on a tree with observed splits, and it passes.
+`ED` is in the likelihood and the simulator (`"ed"`, `"ned"`, `~ N + ED`). Its tests check the
+routine against an independent fair-proportion computation on `ape` trees and that it sums to
+Faith's PD; that the `ned` log-likelihood at $\beta_{ED} = \gamma_{ED} = 0$ equals the `dd`
+log-likelihood on the same augmented trees to $10^{-10}$; that a negative $\beta_{ED}$ makes
+simulated clades smaller; and that an `ned` fit runs end to end.
 
-The exact proposal has been widened, which was the validation study's first recommendation. It
-now covers the gaussian link for `"cr"` and every supported model at `rho < 1`, so incomplete
-sampling no longer falls back to the proposal whose weights collapse: on the cells where thinning
-retains 1.2–2.3 % of its effective sample and reads 1.9 to 12.9 nats low, the exact proposal holds
-100 % and is accurate to around 1e-12. It costs 2.2–2.5× the wall clock of thinning; accuracy is
-what it buys, not speed.
+Recovery has been measured: refitting `ned` to trees simulated from it at $n \approx 100$
+returns $\beta_{ED}$ with a median of $-0.0169$ against a generating $-0.0224$, nothing pinned
+at a box bound, the right sign in 15 of 20 trees. Selection is the weaker half --- AIC prefers
+`dd` on those trees, because the two extra parameters cost 4 AIC units and an effect of
+$-0.15\lambda$ at that size does not pay for them. Where the effect becomes selectable is
+being measured (`forge:pancho/emphasis-paper`, E12).
 
-Two things it does not cover, both by measurement rather than omission. `"dd"` on the gaussian
-link is refused because the mean-field iteration diverges there (above). A `d` or `nd` model has
-no exact proposal at all, and cannot: the BDI construction rests on a rate that is a function of
-the lineage count alone, while a `D`-model's rate depends on each lineage's own pendant age.
+### Open
 
-`auto_bounds()` gives its λ ceiling turnover headroom — the net rate the tip count implies,
-divided by 1 − 0.95 — and probes the constant-net-rate ray, so that a high-turnover optimum is
-inside the box before any likelihood is evaluated. Measured by re-running the validation study's
-main tier job for job on the widened box: the box contains the exact MLE on 98 % of pipeline
-fits against 78 %, the eleven trees whose box newly contains it move from a median deficit of
-−2.60 to −0.17 nats, and the 42 already contained move from −0.035 to −0.075. The cost is in the
-cross-entropy stage, which covers a box twenty times wider in λ with the same particle budget: it
-takes 383 s against 11 at the median and a pipeline fit 955 s against 218. Where MCEM does the
-final search itself the wide box costs time and not precision: over the 145 initialiser runs
-whose box contained the MLE both times, the paired median change in deficit is 0.000 nats, and
-the 25 newly contained go from −5.9 to −0.7. The 2218 fits that use a box scaled around the MLE
-are unchanged: 1925 are identical to 1e-9 in both parameters.
-
-The evolutionary-distinctiveness covariate `ED` is in the likelihood and the simulator (`"ed"`,
-`"ned"`, `~ N + ED`). Its tests check the routine against an independent fair-proportion
-computation on `ape` trees and that it sums to Faith's PD; that the `ned` log-likelihood at
-$\beta_{ED} = \gamma_{ED} = 0$ equals the `dd` log-likelihood on the same augmented trees to
-$10^{-10}$; that a negative $\beta_{ED}$ makes simulated clades smaller; and that an `ned` fit
-runs end to end. Beyond that it is unvalidated: no simulation study has yet measured how well
-$\beta_{ED}$ is recovered at realistic tree sizes, which is the first arm of the study it was
-built for (`forge:pancho/ed-diversification`).
-
-Open: the cross-entropy stage's particle budget does not scale with the box, which is where the
-precision on easy trees goes when the box is widened. Also open: convergence is declared on a
-parameter step that is not referred to the Monte Carlo noise of the iterate it tests. A replacement was designed, implemented and measured, and is **not** shipped
-— `dev/stopping-rule/FINDING.md` has the numbers. The short version is that the two deficit
-distributions cross: it trims the tail and degrades the centre, at +26 % of draws. The useful
-result there is about the study rather than the rule — over the cells that fail the convergence
-criterion the rule in force has a median deficit of −0.002 nats, so those fits are not landing far
-from the maximum, they are declining to say that they converged.
-
-There are no vignettes.
+- The cross-entropy stage's particle budget does not scale with the box, which is where the
+  precision on easy trees goes when the box is wide.
+- Convergence is declared on a parameter step that is not referred to the Monte Carlo noise of
+  the iterate it tests. A replacement is measured and **not** shipped; `dev/stopping-rule/FINDING.md`
+  has the numbers. The two deficit distributions cross: it trims the tail and degrades the
+  centre, at +26 % of draws. The useful result there is about the study rather than the rule ---
+  over the cells that fail the convergence criterion the rule in force has a median deficit of
+  $-0.002$ nats, so those fits are not landing far from the maximum, they are declining to say
+  that they converged.
+- `damping = "auto"` is the relaxation default and is not the best step available: over a sweep
+  of 151 diverging cells a fixed $\omega = 1/8$ converges 69 and `"auto"` 50, and `"auto"`
+  converges none that no fixed step converges.
 
 ### Validation
 
