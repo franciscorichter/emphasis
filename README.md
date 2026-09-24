@@ -156,6 +156,26 @@ Two proposals $q$ are available, selected with `simulate_tree(method = )` for co
 
 **Supported is not the same as better.** The gate admits `ed` at every $\rho$, and it runs there, but below $\rho \approx 0.8$ the thinning proposal leaves the larger effective sample — 2.6× at $\rho = 0.6$ — so on an `ed` model at incomplete sampling the default is not the choice to make. `dd` and `ned` do not cross: the conditional proposal leads at every $\rho$ tested.
 
+**Where the conditional proposal is usable.** Measured over 72 cells at complete sampling,
+10 trees each, 200 draws (`sim/E7-feasibility.R` in the paper repository). The limit is the
+ED effect rather than the tree:
+
+| model | what happens as the tree grows | where the effective sample falls below 10 of 200 |
+|---|---|---|
+| `dd` | *improves*, 42 → 169 effective draws from 25 to 400 tips | nowhere in that range |
+| `ed` | barely moves; the ED coefficient sets the level | at $-0.60\lambda$, and at $-0.35\lambda$ once turnover reaches 0.5 |
+| `ned` | falls once the ED term is strong | at $-0.35\lambda$ from 50 tips when turnover is 0.25; at $-0.15\lambda$ only at 400 tips with turnover 0.5 |
+
+Every cell below 10 carries a strong ED term. The thinning proposal falls below 10 in twelve
+cells over the same grid, all of them plain `dd` — it starves where this proposal is
+strongest, which is why the two are not interchangeable. Parameters combining a strong ED
+brake with high turnover produce no clade of the requested size at all, so they are a corner
+of the parameter space rather than a case to plan for.
+
+A note on reading the ED effect: it is quoted as a fraction of the speciation rate at the
+average lineage, not as a bare coefficient, because fair-proportion ED carries units of time
+and a fixed coefficient means a different effect at every clade size.
+
 A model with a $D$ or $M$ term. A mean-field proposal needs a clade-level trajectory for its covariate, and the iteration carries $\hat N$ and $\hat P$ but not the mean pendant age a $D$- or $M$-model would close on. ($\mathrm{ED}$ is admitted because its clade mean *is* $\hat P / \hat N$ — see above. That the resulting proposal is not exact costs nothing but weight variance: exactness is not what importance sampling requires.)
 
 `"dd"` on the gaussian link. There $\lambda(N) = \beta_0 e^{-(\beta_N N - 1)^2/2}$ is a function of $N$ alone, but it is not monotone: it peaks at $N = 1/\beta_N$ and falls after it, and the mean-field Picard iteration does not contract past the peak. Measured on a 20-tip tree over a $4\times 8\times 4$ grid in $(\beta_0, \beta_N, \rho)$ with a 200-sweep budget, it failed to reach tolerance in 36 of 128 cells with the residual running to 104 — divergence, not slow convergence — and the failing cells are interleaved with converging ones rather than forming a region that could be excluded. The linear and exponential `"dd"` rates are monotone in $N$ and converged in every cell of that sweep, in at most 27 iterations at $\rho = 1$; below it they are slower, needing up to 134, which is what sets the sweep budget for incomplete sampling. That sweep was a 20-tip tree, and monotonicity does not buy contraction everywhere: on a 416-tip tree at $\beta_0 = 1.2$, $\beta_N = -0.001875$, $\gamma_0 = 0.4$ — where the rates are equal at the equilibrium the parameters imply, so the process is critical there — the linear iteration diverges, with a residual of 305 after 20 sweeps and 329 after 200. The proposal is then built on a mean field that has blown up and its effective sample falls to one. See audit finding H108.
