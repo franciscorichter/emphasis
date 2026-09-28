@@ -1360,9 +1360,13 @@
   # iteration already carries as E-hat -- so the ED coefficient enters the
   # proposal through the same slot the mean isolation time does.  What each
   # lineage's own ED does to its rate is left to the importance weights.
+  # Centred ED (mb4[4] == 3) has clade mean zero by construction, so its
+  # mean-field rate is the N-only one and the coefficient enters the proposal
+  # only through the attachment tilt below.
+  ed_centred <- use_ed && mb4[4L] >= 3L
   pars8 <- pars_full[1:8]
   mb_prop <- mb4[1:3]
-  if (use_ed) {
+  if (use_ed && !ed_centred) {
     pars8[4L] <- pars_full[9L]
     pars8[8L] <- pars_full[10L]
     mb_prop[3L] <- 1L
@@ -1407,7 +1411,7 @@
     sol <- .bdi_iterate(pars8, mb_prop, link, bt, tp,
                         use_gaussian_closure = use_gaussian_closure,
                         rho = rho,
-                        pd_mode = if (use_ed) "faith" else "pendant",
+                        pd_mode = if (use_ed && !ed_centred) "faith" else "pendant",
                         damping = damping)
     p_fun    <- sol$p_fun
     Nhat_fun <- sol$Nhat_fun

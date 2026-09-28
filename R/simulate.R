@@ -21,8 +21,10 @@
 #'   \code{"nd"}  \tab N + D\cr
 #'   \code{"ed"}  \tab evolutionary distinctiveness (ED)\cr
 #'   \code{"ned"} \tab N + ED\cr
+#'   \code{"edc"} \tab centred ED (ED minus its mean over the lineages alive)\cr
+#'   \code{"nedc"} \tab N + centred ED\cr
 #' }
-#' Formulas \code{~ N}, \code{~ N + D} and \code{~ N + ED} are also accepted
+#' Formulas \code{~ N}, \code{~ N + D}, \code{~ N + ED} and \code{~ N + EDc} are also accepted
 #' (\code{ep} is a legacy alias for \code{d}).  An \code{ED} model needs the
 #' tree's topology (a \code{phylo}, not a branching-time vector) and is not
 #' available under the gaussian link.
@@ -231,7 +233,7 @@ simulate_tree <- function(tree        = NULL,
   if (!is.numeric(max_lin) || length(max_lin) != 1L || max_lin <= 0)
     stop("'max_lin' must be a positive number.")
 
-  expected_n <- 2L + 2L * sum(model_bin)
+  expected_n <- 2L + 2L * sum(model_bin != 0L)
   if (length(pars) != expected_n) stop(.pars_error_msg(model_bin, expected_n))
 
   pars8       <- .expand_pars(pars, model_bin)
@@ -308,12 +310,15 @@ simulate_tree <- function(tree        = NULL,
   #   (fair proportion on the complete tree; see inst/include/ed_covariate.hpp).
   #   M (slot 2) is retained only as the internal centering reference for D and
   #   is not user-selectable.
-  # Shortcuts: "dd" -> N, "d" -> D, "nd" -> N + D, "ed" -> ED, "ned" -> N + ED.
-  # "ep"/"rd" are legacy D aliases.  A length-3 vector is the pre-ED layout
-  # and is padded.
+  # Shortcuts: "dd" -> N, "d" -> D, "nd" -> N + D, "ed" -> ED, "ned" -> N + ED,
+  # "edc" -> EDc, "nedc" -> N + EDc.  Slot 4 takes the value 3 for the centred
+  # covariate EDc = ED - mean ED over the lineages alive at t (model.hpp,
+  # Model::ed_centred); 1 is the raw fair proportion.  "ep"/"rd" are legacy D
+  # aliases.  A length-3 vector is the pre-ED layout and is padded.
   shortcuts <- list(cr = c(0L, 0L, 0L, 0L), dd = c(1L, 0L, 0L, 0L),
                     d  = c(0L, 0L, 1L, 0L), nd = c(1L, 0L, 1L, 0L),
                     ed = c(0L, 0L, 0L, 1L), ned = c(1L, 0L, 0L, 1L),
+                    edc = c(0L, 0L, 0L, 3L), nedc = c(1L, 0L, 0L, 3L),
                     rd = c(0L, 0L, 1L, 0L), ep = c(0L, 0L, 1L, 0L))
   if (is.character(model)) {
     return(shortcuts[[match.arg(model, names(shortcuts))]])
@@ -322,10 +327,13 @@ simulate_tree <- function(tree        = NULL,
     return(.parse_model_formula(model))
   }
   model <- as.integer(model)
-  if (!(length(model) %in% c(3L, 4L)) || !all(model %in% 0:1)) {
-    stop(paste0("'model' must be a formula (e.g. ~ N + D, ~ N + ED), a string ",
-                "(\"cr\", \"dd\", \"d\", \"nd\", \"ed\", \"ned\"), or a binary ",
-                "integer vector of length 3 or 4."))
+  ok <- length(model) %in% c(3L, 4L) && all(model[1:3] %in% 0:1) &&
+    (length(model) == 3L || model[4L] %in% c(0L, 1L, 3L))
+  if (!ok) {
+    stop(paste0("'model' must be a formula (e.g. ~ N + D, ~ N + ED, ~ N + EDc), a string ",
+                "(\"cr\", \"dd\", \"d\", \"nd\", \"ed\", \"ned\", \"edc\", \"nedc\"), ",
+                "or an integer vector of length 3 or 4 (slots 0/1; slot 4 may be 3 for ",
+                "the centred ED covariate)."))
   }
   .pad_model_bin(model)
 }
@@ -340,7 +348,10 @@ simulate_tree <- function(tree        = NULL,
     stop("control$proposal must be \"ed\" or \"meanfield\".")
   }
   model_bin <- .pad_model_bin(model_bin)
-  if (model_bin[4L] != 0L) model_bin[4L] <- if (proposal == "ed") 1L else 2L
+  # 1/2 on the raw covariate, 3/4 on the centred one (Model::ed_centred).
+  if (model_bin[4L] != 0L) {
+    model_bin[4L] <- (if (proposal == "ed") 1L else 2L) + (if (model_bin[4L] >= 3L) 2L else 0L)
+  }
   model_bin
 }
 
@@ -364,15 +375,15 @@ simulate_tree <- function(tree        = NULL,
   terms <- attr(stats::terms(formula), "term.labels")
   # User covariates N, D (slot 3) and ED (slot 4); legacy aliases EP/E for D.
   # M (slot 2) is internal only and not user-selectable.
-  known <- c(N = 1L, D = 3L, EP = 3L, E = 3L, ED = 4L)
+  known <- c(N = 1L, D = 3L, EP = 3L, E = 3L, ED = 4L, EDC = 4L)
   terms_upper <- toupper(terms)
   model_bin <- c(0L, 0L, 0L, 0L)
   for (tm in terms_upper) {
     idx <- known[tm]
     if (is.na(idx)) {
-      stop(sprintf("Unknown covariate '%s' in model formula. Use N, D and/or ED.", tm))
+      stop(sprintf("Unknown covariate '%s' in model formula. Use N, D, ED and/or EDc.", tm))
     }
-    model_bin[idx] <- 1L
+    model_bin[idx] <- if (tm == "EDC") 3L else 1L
   }
   model_bin
 }
@@ -390,9 +401,9 @@ simulate_tree <- function(tree        = NULL,
 #' @keywords internal
 .expand_pars <- function(pars, model_bin) {
   model_bin  <- .pad_model_bin(model_bin)
-  expected_n <- 2L + 2L * sum(model_bin)
+  expected_n <- 2L + 2L * sum(model_bin != 0L)
   if (length(pars) != expected_n) stop(.pars_error_msg(model_bin, expected_n))
-  active <- which(model_bin == 1L)
+  active <- which(model_bin != 0L)
   n_lam  <- 1L + length(active)
   full   <- numeric(.n_full)
   full[1L] <- pars[1L]
@@ -435,7 +446,7 @@ simulate_tree <- function(tree        = NULL,
   brts  <- .extract_brts(tree)
   max_t <- brts[1L]
 
-  expected_n <- 2L + 2L * sum(model_bin)
+  expected_n <- 2L + 2L * sum(model_bin != 0L)
   if (length(pars) != expected_n) stop(.pars_error_msg(model_bin, expected_n))
 
   L_extant <- .extract_Ltable(tree)

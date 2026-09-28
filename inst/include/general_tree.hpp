@@ -136,6 +136,14 @@ struct general_div {
     emphasis::ed::fair_proportion(parent, birth, alive, tt, r);
     std::vector<double> out(n, std::numeric_limits<double>::quiet_NaN());
     for (size_t i = 0; i < n; ++i) if (alive[i]) out[i] = r.c[i] + (tt - r.ts[i]);
+    // Centred covariate (model[3] >= 3, model.hpp Model::ed_centred): ED minus
+    // its mean over the lineages alive now.
+    if (model[3] >= 3) {
+      double s = 0.0; int m = 0;
+      for (size_t i = 0; i < n; ++i) if (alive[i]) { s += out[i]; ++m; }
+      const double mean = m ? s / m : 0.0;
+      for (size_t i = 0; i < n; ++i) if (alive[i]) out[i] -= mean;
+    }
     return out;
   }
 
@@ -210,7 +218,7 @@ struct general_div {
     // serve D alone under the exponential link, since a lineage's ED constant
     // changes at every event in its clade and cannot be maintained
     // incrementally.
-    const bool use_ed      = (model[3] == 1);
+    const bool use_ed      = (model[3] != 0);
     const bool per_lineage = (model[2] == 1) || use_ed;
     const bool ep_exp = (model[2] == 1 && !use_ed && link == 1);
     double sum_exp_bE = ep_exp ? 2.0 * std::exp(-pars[3] * 0.0) : 0.0;  // 2 lineages at ts=0

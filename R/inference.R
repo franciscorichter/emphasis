@@ -536,7 +536,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 
   n_pars   <- length(init_pars)
   n_lam    <- n_pars %/% 2L    # number of lambda params (beta_0 + slopes)
-  active   <- which(model_bin == 1L)
+  active   <- which(model_bin != 0L)
   cov_names <- c("N", "M", "D")
   changed  <- FALSE
 
@@ -612,7 +612,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   # pars8 is the full vector in either width: 8 (ED absent) or 10.
   model_bin <- .pad_model_bin(model_bin)
   if (length(pars8) < .n_full) pars8 <- c(pars8, rep(0, .n_full - length(pars8)))
-  active <- which(model_bin == 1L)
+  active <- which(model_bin != 0L)
   lam <- c(pars8[1L], pars8[.slot_beta[active]])
   mu  <- c(pars8[5L], pars8[.slot_gamma[active]])
   c(lam, mu)
@@ -964,15 +964,19 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'   \itemize{
 #'     \item a formula such as \code{~ N}, \code{~ N + D} or \code{~ N + ED},
 #'     \item a string shortcut (\code{"cr"}, \code{"dd"}, \code{"d"},
-#'       \code{"nd"}, \code{"ed"}, \code{"ned"}), or
-#'     \item a binary integer vector \code{c(use_N, use_M, use_D, use_ED)}
+#'       \code{"nd"}, \code{"ed"}, \code{"ned"}, \code{"edc"}, \code{"nedc"}), or
+#'     \item an integer vector \code{c(use_N, use_M, use_D, use_ED)}
 #'       (\code{use_M} is internal only and should be 0; a length-3 vector is
-#'       the pre-ED layout and is padded).
+#'       the pre-ED layout and is padded; \code{use_ED = 3} selects the
+#'       centred covariate).
 #'   }
 #'   Default \code{"cr"} (constant rate). \code{"nd"} (\code{~ N + D}) is
 #'   diversity and age-imbalance; \code{"ned"} (\code{~ N + ED}) diversity and
 #'   evolutionary distinctiveness, which needs a \code{phylo} and uses the
-#'   thinning sampler.
+#'   thinning sampler. \code{"nedc"} (\code{~ N + EDc}) reads ED minus its
+#'   mean over the lineages alive at the same time, a covariate with clade
+#'   mean zero, so that \code{beta_ED} carries only the within-clade contrast
+#'   and none of the clade-level level that \code{N} tracks.
 #' @param init_pars Starting parameter vector. Required for \code{"mcem"};
 #'   ignored for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the
 #'   midpoint of the bounds is used, with covariate slopes started at 0
@@ -1072,7 +1076,7 @@ estimate_rates <- function(tree,
   if (length(lower_bound) != length(upper_bound))
     stop("'lower_bound' and 'upper_bound' must have the same length.")
 
-  expected_n <- 2L + 2L * sum(model_bin)
+  expected_n <- 2L + 2L * sum(model_bin != 0L)
   if (length(lower_bound) != expected_n)
     stop(.pars_error_msg(model_bin, expected_n))
 
@@ -1096,7 +1100,7 @@ estimate_rates <- function(tree,
     # Start slopes near zero so lambda stays positive during early E-steps.
     if (link_int == 0L && any(model_bin != 0L)) {
       n_pars <- length(init_pars)
-      slope_idx <- which(model_bin == 1L)           # which covariates are active
+      slope_idx <- which(model_bin != 0L)           # which covariates are active
       lam_slopes <- 1L + slope_idx                   # compact positions for beta_X
       mu_slopes  <- (n_pars / 2L) + 1L + slope_idx  # compact positions for gamma_X
       all_slopes <- c(lam_slopes, mu_slopes)
@@ -1486,7 +1490,7 @@ compare_models <- function(...) {
 #' @keywords internal
 .model_label <- function(model_bin) {
   # {N = diversity, M = mean pendant age, D = focal deviation, ED = distinctiveness}
-  covs <- c("N", "M", "D", "ED")[which(model_bin == 1L)]
+  covs <- c("N", "M", "D", if (model_bin[4L] >= 3L) "EDc" else "ED")[which(model_bin != 0L)]
   if (length(covs) == 0L) return("CR")
   paste(covs, collapse = " + ")
 }

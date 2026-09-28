@@ -283,7 +283,13 @@ namespace emphasis {
     // thinning sampler draws from: 1 the ED-aware proposal (ed_proposal_seg_t
     // below), 2 the mean-field one (nh_rate), kept so that the two can be run
     // on the same trees and compared.
-    bool ed_proposal() const { return model_bin_[3] == 1; }
+    bool ed_proposal() const { return model_bin_[3] == 1 || model_bin_[3] == 3; }
+    // Codes 3 and 4 are the same two proposals on the centred covariate
+    // ED* = ED - mean over the lineages alive at t.  Within a segment every
+    // ED_s(t) grows at slope one, so the clade mean does too and ED*_s is
+    // constant on the segment: the rate keeps the per-lineage constant
+    // k_s = c_s - ts_s minus its segment mean, and loses its slope in t.
+    bool ed_centred() const { return model_bin_[3] >= 3; }
 
     // Apply link function to linear predictor
     double apply_link(double eta) const {
@@ -783,12 +789,21 @@ namespace emphasis {
       const double N = node.n;
       const double M = (N > 0.0) ? pendant_pd(node, t0) / N : 0.0;
       seg.t0 = t0; seg.t1 = t1; seg.T = tree.back().brts; seg.rho = rho_; seg.link = link_;
-      seg.b = beta_ed(pars);
+      const bool centred = ed_centred();
+      seg.b = centred ? 0.0 : beta_ed(pars);
       seg.clear();
+      double cED = 0.0;
+      if (centred) {
+        double s = 0.0; int m = 0;
+        for (std::size_t k = 0; k < alive.size(); ++k)
+          if (alive[k]) { s += edr.c[k] - edr.ts[k]; ++m; }
+        cED = m ? s / m : 0.0;
+      }
       double ed_sum = 0.0;
       for (std::size_t k = 0; k < alive.size(); ++k) {
         if (!alive[k]) continue;
-        const double ed0 = edr.c[k] + (t0 - edr.ts[k]);
+        const double ed0 = centred ? (edr.c[k] - edr.ts[k]) - cED
+                                   : edr.c[k] + (t0 - edr.ts[k]);
         ed_sum += ed0;
         const int ni = forest.lineage_node[k];
         const bool observed = (ni < 0) || is_tip(tree[static_cast<std::size_t>(ni)]);
@@ -1070,6 +1085,7 @@ namespace emphasis {
 
     double loglik_ed(const param_t& pars, const tree_t& tree) const {
       const double bED = beta_ed(pars), gED = gamma_ed(pars);
+      const bool centred = ed_centred();
       const std::shared_ptr<const ed_table_t> tab = ed_table(tree);
 
       log_sum log_lambda{};
@@ -1082,16 +1098,21 @@ namespace emphasis {
         const auto& node = tree[i];
         const double dt = node.brts - prev_brts;
 
+        // The segment's alive lineages, and the mean of their ED constants
+        // when the covariate is centred (0 otherwise, so the raw formulas
+        // below are unchanged).
+        const int p0 = tab->seg_begin[i], p1 = tab->seg_begin[i + 1];
+        const double n_al = static_cast<double>(p1 - p0);
+        const double cED = (centred && n_al > 0.0) ? tab->sum_kED[i] / n_al : 0.0;
+
         if (dt > 0.0) {
           const double N_seg = node.n;
           const double M_seg = (N_seg > 0.0) ? node.pd / N_seg : 0.0;
           const double base_lam = pars[0] + pars[1] * N_seg + (pars[2] - pars[3]) * M_seg;
           const double base_mu  = pars[4] + pars[5] * N_seg + (pars[6] - pars[7]) * M_seg;
-          const double b_lam = pars[3] + bED;
-          const double b_mu  = pars[7] + gED;
+          const double b_lam = pars[3] + (centred ? 0.0 : bED);
+          const double b_mu  = pars[7] + (centred ? 0.0 : gED);
           double seg = 0.0;
-          const int p0 = tab->seg_begin[i], p1 = tab->seg_begin[i + 1];
-          const double n_al = static_cast<double>(p1 - p0);
           // Linear link, no clipping: every lineage's argument A_s + b u is
           // positive at both ends of the segment (a line is monotone, so at
           // both ends is everywhere), which the smallest A_s decides.  Then
@@ -1101,10 +1122,10 @@ namespace emphasis {
           auto min_A = [&](double base, double bD, double bE) {
             return base
               + (bD >= 0.0 ? -bD * tab->max_tsD[i] : -bD * tab->min_tsD[i])
-              + (bE >= 0.0 ?  bE * tab->min_kED[i] :  bE * tab->max_kED[i]);
+              + (bE >= 0.0 ?  bE * (tab->min_kED[i] - cED) :  bE * (tab->max_kED[i] - cED));
           };
           auto sum_A = [&](double base, double bD, double bE) {
-            return n_al * base - bD * tab->sum_tsD[i] + bE * tab->sum_kED[i];
+            return n_al * base - bD * tab->sum_tsD[i] + bE * (tab->sum_kED[i] - n_al * cED);
           };
           auto unclipped = [&](double base, double bD, double bE, double b) {
             const double a = min_A(base, bD, bE);
@@ -1124,7 +1145,7 @@ namespace emphasis {
           }
           if (!(done_lam && done_mu)) {
             for (int p = p0; p < p1; ++p) {
-              const double kED = tab->kED[static_cast<std::size_t>(p)];
+              const double kED = tab->kED[static_cast<std::size_t>(p)] - cED;
               const double tsD = tab->tsD[static_cast<std::size_t>(p)];
               const double A_lam = base_lam - pars[3] * tsD + bED * kED;
               const double A_mu  = base_mu  - pars[7] * tsD + gED * kED;
@@ -1139,12 +1160,15 @@ namespace emphasis {
           inte += seg;
         }
 
+        // The event lineage's ED at the event; centred, its constant minus
+        // the segment mean (focal = k + t, and the mean at t is cED + t).
+        const double fED = centred ? tab->focal[i] - (cED + node.brts) : tab->focal[i];
         if (is_extinction(node)) {
-          const double mu = extinction_rate_ep(pars, node, tab->focal[i]);
+          const double mu = extinction_rate_ep(pars, node, fED);
           log_mu_sum += std::log(std::max(mu, 1e-300));
         }
         else if (i != last) {
-          log_lambda += speciation_rate_ep(pars, node, tab->focal[i]);
+          log_lambda += speciation_rate_ep(pars, node, fED);
         }
         prev_brts = node.brts;
       }
@@ -1172,12 +1196,15 @@ namespace emphasis {
       const double N = node.n;
       const double M = (N > 0.0) ? pendant_pd(node, t0) / N : 0.0;
       seg.t0 = t0; seg.t1 = node.brts; seg.T = tree.back().brts; seg.rho = rho_; seg.link = link_;
-      seg.b = beta_ed(pars);
+      const bool centred = ed_centred();
+      seg.b = centred ? 0.0 : beta_ed(pars);
       seg.clear();
       const int p0 = tab.seg_begin[i], p1 = tab.seg_begin[i + 1];
+      const double cED = (centred && p1 > p0) ? tab.sum_kED[i] / static_cast<double>(p1 - p0) : 0.0;
       double ed_sum = 0.0;
       for (int p = p0; p < p1; ++p) {
-        const double ed0 = tab.kED[static_cast<std::size_t>(p)] + t0;
+        const double ed0 = centred ? tab.kED[static_cast<std::size_t>(p)] - cED
+                                   : tab.kED[static_cast<std::size_t>(p)] + t0;
         ed_sum += ed0;
         seg.eta.push_back(proposal_eta_lambda(pars, N, M, ed0));
         seg.w.push_back(tab.w[static_cast<std::size_t>(p)]);

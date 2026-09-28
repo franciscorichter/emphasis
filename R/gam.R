@@ -142,7 +142,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   .check_rho(rho, "rho")
   model_bin <- .resolve_model(model)
   link_int  <- .resolve_link(link)
-  n_pars    <- 2L + 2L * sum(model_bin)
+  n_pars    <- 2L + 2L * sum(model_bin != 0L)
   pnames    <- .par_names(model_bin)
 
   # Crown age and target tips from observed tree
@@ -176,7 +176,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     center_lam <- c(.rate_intercept(lam_hat, link_int))
     center_mu  <- c(.rate_intercept(mu_hat, link_int))
   }
-  active <- which(model_bin == 1L)
+  active <- which(model_bin != 0L)
   center <- c(center_lam, rep(0, length(active)),
               center_mu,  rep(0, length(active)))
   names(center) <- pnames
@@ -556,7 +556,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
                                   model, link, max_lin, tip_lo, tip_hi,
                                   num_threads, rho = 1.0, surv_tries = 20L) {
   r_hat  <- log(max(n_tips, 2) / 2) / max(max_t, 0.1)
-  active <- which(model_bin == 1L)
+  active <- which(model_bin != 0L)
 
   # Try a grid of baseline rate multipliers
   mults <- c(1, 0.5, 2, 0.25, 3, 0.1, 5)
@@ -675,7 +675,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 #   intercept_idx, coeff_idx, mu_intercept_idx, mu_coeff_idx, X_obs, name
 .observed_covariates <- function(brts, model_bin) {
   n_tips <- length(brts) + 1L
-  active <- which(model_bin == 1L)
+  active <- which(model_bin != 0L)
   if (length(active) == 0L) return(list())
 
   # Typical covariate values at the present for the observed tree (orthogonal
@@ -818,7 +818,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 # We multiply lam_hi by 5x for covariate models to avoid excluding the
 # true parameter region.
 .wide_bounds <- function(model_bin, link_int, max_t, n_tips) {
-  active <- which(model_bin == 1L)
+  active <- which(model_bin != 0L)
   T <- max(max_t, 0.1)
   N <- max(n_tips, 2)
 
