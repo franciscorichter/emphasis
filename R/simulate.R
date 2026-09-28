@@ -332,7 +332,7 @@ simulate_tree <- function(tree        = NULL,
   if (!ok) {
     stop(paste0("'model' must be a formula (e.g. ~ N + D, ~ N + ED, ~ N + EDc), a string ",
                 "(\"cr\", \"dd\", \"d\", \"nd\", \"ed\", \"ned\", \"edc\", \"nedc\"), ",
-                "or an integer vector of length 3 or 4 (slots 0/1; slot 4 may be 3 for ",
+                "or a binary integer vector of length 3 or 4 (slot 4 may also be 3, ",
                 "the centred ED covariate)."))
   }
   .pad_model_bin(model)

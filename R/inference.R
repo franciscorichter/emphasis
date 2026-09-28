@@ -1490,6 +1490,7 @@ compare_models <- function(...) {
 #' @keywords internal
 .model_label <- function(model_bin) {
   # {N = diversity, M = mean pendant age, D = focal deviation, ED = distinctiveness}
+  model_bin <- .pad_model_bin(model_bin)
   covs <- c("N", "M", "D", if (model_bin[4L] >= 3L) "EDc" else "ED")[which(model_bin != 0L)]
   if (length(covs) == 0L) return("CR")
   paste(covs, collapse = " + ")
