@@ -429,8 +429,14 @@ Recovery has been measured: refitting `ned` to trees simulated from it at $n \ap
 returns $\beta_{ED}$ with a median of $-0.0169$ against a generating $-0.0224$, nothing pinned
 at a box bound, the right sign in 15 of 20 trees. Selection is the weaker half --- AIC prefers
 `dd` on those trees, because the two extra parameters cost 4 AIC units and an effect of
-$-0.15\lambda$ at that size does not pay for them. Where the effect becomes selectable is
-being measured (`forge:pancho/emphasis-paper`, E12).
+$-0.15\lambda$ at that size does not pay for them. Where it becomes selectable is measured: at turnover
+0.10, AIC selects `ned` over `dd` on about 0.8 of trees at an effect of $-0.35\lambda$ and on
+almost none at $-0.15\lambda$, with 3% false positives at zero (paper E12). Given the
+iterations to get there, $\beta_{ED}$ comes back at 0.97 of its generating value at 100 tips.
+Getting there is the cost: at 600 draws one EM iteration of a `ned` fit takes under a minute
+at 100 tips and 40--60 minutes at 200--400, where the ED effect makes the augmented clade
+large and the ED tables are quadratic in it, so a four-hour fit completes a handful of
+iterations and has not moved far from its start.
 
 ### Open
 
