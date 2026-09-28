@@ -118,8 +118,12 @@ Setting coefficients to zero recovers the model classes:
 | `"nd"` | $N + D_s$ | $(\beta_0, \beta_N, \beta_D, \gamma_0, \gamma_N, \gamma_D)$ | Both  |
 | `"ed"` | $\mathrm{ED}_s$ | $(\beta_0, \beta_{ED}, \gamma_0, \gamma_{ED})$ | Distinctiveness-dependent diversification |
 | `"ned"` | $N + \mathrm{ED}_s$ | $(\beta_0, \beta_N, \beta_{ED}, \gamma_0, \gamma_N, \gamma_{ED})$ | Distinctiveness over and above diversity |
+| `"edc"` | $\mathrm{ED}^{c}_s$ | $(\beta_0, \beta_{ED}, \gamma_0, \gamma_{ED})$ | The same, on the centred covariate |
+| `"nedc"` | $N + \mathrm{ED}^{c}_s$ | $(\beta_0, \beta_N, \beta_{ED}, \gamma_0, \gamma_N, \gamma_{ED})$ | Within-clade distinctiveness over and above diversity |
 
-Models can also be given as a formula: `model = ~ N + D`, `model = ~ N + ED`. (`"ep"` is a legacy alias for `"d"`.) Internally a model is a four-slot vector `c(use_N, use_M, use_D, use_ED)` and the full parameter vector has ten slots, the two $\mathrm{ED}$ coefficients appended last, so that the eight-slot vectors and three-slot model vectors of earlier versions mean exactly what they did.
+Models can also be given as a formula: `model = ~ N + D`, `model = ~ N + ED`, `model = ~ N + EDc`. (`"ep"` is a legacy alias for `"d"`.) Internally a model is a four-slot vector `c(use_N, use_M, use_D, use_ED)`, where the last slot is 1 for the raw covariate and 3 for the centred one, and the full parameter vector has ten slots, the two $\mathrm{ED}$ coefficients appended last, so that the eight-slot vectors and three-slot model vectors of earlier versions mean exactly what they did.
+
+$\mathrm{ED}^{c}_s(t) = \mathrm{ED}_s(t) - \overline{\mathrm{ED}}(t)$ is the fair proportion minus its mean over the lineages alive at $t$. Fair-proportion $\mathrm{ED}$ is not centred: its clade mean is Faith's PD over $N$, a clade-level quantity that the $N$ term already tracks, so in an `ned` fit $\beta_{ED}$ carries a clade-level component and a within-clade contrast at once. The centred covariate carries only the contrast: it sums to zero over the alive lineages at every instant, and because every lineage's $\mathrm{ED}$ grows at unit slope between events, $\mathrm{ED}^{c}_s$ is constant between events, which is what makes its compensator cheap. At $\beta_{ED} = \gamma_{ED} = 0$ `nedc` is `dd`; on a tree whose alive lineages always have equal $\mathrm{ED}$ it is `cr` at any $\beta_{ED}$ (`tests/testthat/test-ed.R` checks both). The simulator, both thinning proposals and the conditional sampler read the same centred value; under the conditional sampler the mean-field rate is the `dd` one, since the covariate's clade mean is zero by construction.
 
 ## Inference
 
