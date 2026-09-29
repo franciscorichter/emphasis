@@ -101,6 +101,29 @@ Rcpp::List eval_logf_cpp(const std::vector<double>& pars,
 }
 
 
+//' The per-lineage design an augmented tree's likelihood is built on
+//'
+//' One row per lineage alive on each segment between consecutive events:
+//' the segment, the lineage (index and id), whether that lineage's event ends
+//' the segment (0 none, 1 speciation, 2 extinction), the segment's bounds,
+//' N, M, the lineage's pendant start (so D = (t - ts) - M) and its ED at the
+//' segment start (ED grows at slope one within the segment).
+//' @param tree One augmented-tree data frame with the topology (ids).
+//' @keywords internal
+// [[Rcpp::export(name = "lineage_table_cpp")]]
+Rcpp::DataFrame lineage_table_cpp(const Rcpp::DataFrame& tree) {
+  emphasis::param_t lb8(8, -1e6), ub8(8, 1e6);
+  std::vector<int> mb{1, 0, 1, 1};
+  auto mdl = emphasis::Model(lb8, ub8, mb, 0, 1.0);
+  auto local_tree = loglik::pack(tree);
+  auto r = mdl.lineage_table(local_tree);
+  return Rcpp::DataFrame::create(
+    Rcpp::Named("seg") = r.seg, Rcpp::Named("lineage") = r.lin, Rcpp::Named("id") = r.id,
+    Rcpp::Named("event") = r.ev, Rcpp::Named("t0") = r.t0, Rcpp::Named("t1") = r.t1,
+    Rcpp::Named("N") = r.N, Rcpp::Named("M") = r.M, Rcpp::Named("ts") = r.ts,
+    Rcpp::Named("ed0") = r.ed0);
+}
+
 //' The pendant PD and thinning rate the sampler sees at arbitrary times
 //'
 //' \code{Model::pendant_pd_at} reads P off the node that governs the segment a

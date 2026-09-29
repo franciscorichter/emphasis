@@ -115,8 +115,10 @@ shortcuts or a formula:
   \code{"nd"}  \tab N + D\cr
   \code{"ed"}  \tab evolutionary distinctiveness (ED)\cr
   \code{"ned"} \tab N + ED\cr
+  \code{"edc"} \tab centred ED (ED minus its mean over the lineages alive)\cr
+  \code{"nedc"} \tab N + centred ED\cr
 }
-Formulas \code{~ N}, \code{~ N + D} and \code{~ N + ED} are also accepted
+Formulas \code{~ N}, \code{~ N + D}, \code{~ N + ED} and \code{~ N + EDc} are also accepted
 (\code{ep} is a legacy alias for \code{d}).  An \code{ED} model needs the
 tree's topology (a \code{phylo}, not a branching-time vector) and is not
 available under the gaussian link.

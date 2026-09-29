@@ -51,15 +51,19 @@ from branching times.}
 \itemize{
   \item a formula such as \code{~ N}, \code{~ N + D} or \code{~ N + ED},
   \item a string shortcut (\code{"cr"}, \code{"dd"}, \code{"d"},
-    \code{"nd"}, \code{"ed"}, \code{"ned"}), or
-  \item a binary integer vector \code{c(use_N, use_M, use_D, use_ED)}
+    \code{"nd"}, \code{"ed"}, \code{"ned"}, \code{"edc"}, \code{"nedc"}), or
+  \item an integer vector \code{c(use_N, use_M, use_D, use_ED)}
     (\code{use_M} is internal only and should be 0; a length-3 vector is
-    the pre-ED layout and is padded).
+    the pre-ED layout and is padded; \code{use_ED = 3} selects the
+    centred covariate).
 }
 Default \code{"cr"} (constant rate). \code{"nd"} (\code{~ N + D}) is
 diversity and age-imbalance; \code{"ned"} (\code{~ N + ED}) diversity and
 evolutionary distinctiveness, which needs a \code{phylo} and uses the
-thinning sampler.}
+thinning sampler. \code{"nedc"} (\code{~ N + EDc}) reads ED minus its
+mean over the lineages alive at the same time, a covariate with clade
+mean zero, so that \code{beta_ED} carries only the within-clade contrast
+and none of the clade-level level that \code{N} tracks.}
 
 \item{init_pars}{Starting parameter vector. Required for \code{"mcem"};
 ignored for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the

@@ -49,6 +49,19 @@ eval_logf <- function(pars, trees, model = as.integer( c(0, 0, 0)), link = 0L, r
     .Call('_emphasis_eval_logf_cpp', PACKAGE = 'emphasis', pars, trees, model, link, rho)
 }
 
+#' The per-lineage design an augmented tree's likelihood is built on
+#'
+#' One row per lineage alive on each segment between consecutive events:
+#' the segment, the lineage (index and id), whether that lineage's event ends
+#' the segment (0 none, 1 speciation, 2 extinction), the segment's bounds,
+#' N, M, the lineage's pendant start (so D = (t - ts) - M) and its ED at the
+#' segment start (ED grows at slope one within the segment).
+#' @param tree One augmented-tree data frame with the topology (ids).
+#' @keywords internal
+lineage_table_cpp <- function(tree) {
+    .Call('_emphasis_lineage_table_cpp', PACKAGE = 'emphasis', tree)
+}
+
 #' The pendant PD and thinning rate the sampler sees at arbitrary times
 #'
 #' \code{Model::pendant_pd_at} reads P off the node that governs the segment a

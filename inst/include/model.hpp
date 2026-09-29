@@ -37,6 +37,7 @@
 #include <unordered_map>
 #include <mutex>
 #include <set>
+#include <algorithm>
 #include <memory>
 #include <cstring>
 #include "model_helpers.hpp"
@@ -460,6 +461,77 @@ namespace emphasis {
       }
       f.ix.build(f.parent, f.birth);
       return f;
+    }
+
+    // Each lineage's split times, from the forest: the births of its children.
+    // A lineage's pendant start at time t is its last split at or before t,
+    // or its birth -- the rule the forward sweep applies to node.pd and the
+    // event terms read through focal_tip_start.
+    static std::vector<std::vector<double>> lineage_splits(const forest_t& f) {
+      std::vector<std::vector<double>> out(f.parent.size());
+      for (std::size_t c = 0; c < f.parent.size(); ++c) {
+        const int p = f.parent[c];
+        if (p >= 0) out[static_cast<std::size_t>(p)].push_back(f.birth[c]);
+      }
+      for (auto& v : out) std::sort(v.begin(), v.end());
+      return out;
+    }
+    static double pendant_start(const std::vector<std::vector<double>>& splits,
+                                const forest_t& f, std::size_t k, double t) {
+      const auto& v = splits[k];
+      auto it = std::upper_bound(v.begin(), v.end(), t);
+      return (it == v.begin()) ? f.birth[k] : *(it - 1);
+    }
+
+    // One row per lineage alive on each segment of an augmented tree: the
+    // covariates the rates read there, and which lineage's event ends the
+    // segment.  This is the design the likelihood is built on, exposed so that
+    // a path over the covariates (covariate_path in R) can be run on the same
+    // numbers the M-step maximises.
+    struct lineage_rows_t {
+      std::vector<int>    seg, lin, id, ev;      // ev: 0 none, 1 speciates at t1, 2 dies at t1
+      std::vector<double> t0, t1, N, M, ts, ed0; // ts: pendant start; ed0: ED at t0 (slope one after)
+    };
+    lineage_rows_t lineage_table(const tree_t& tree) const {
+      forest_t forest = build_forest(tree);
+      if (!forest.complete) {
+        throw std::invalid_argument(
+          "the lineage table needs the tree's topology: pass a phylo object, not a "
+          "bare branching-time vector");
+      }
+      const auto splits = lineage_splits(forest);
+      lineage_rows_t out;
+      std::vector<char> alive;
+      ed::result_t edr;
+      const std::size_t last = tree.size() - 1;
+      double prev = 0.0;
+      for (std::size_t i = 0; i < tree.size(); ++i) {
+        const auto& node = tree[i];
+        const double t0 = prev, t1 = node.brts;
+        if (t1 > t0) {
+          segment_ed(forest, t0, t1, alive, edr);
+          const double N = node.n;
+          const double M = (N > 0.0) ? node.pd / N : 0.0;
+          int ev_lin = -1, ev = 0;
+          if (is_extinction(node)) { ev_lin = forest.node_lineage[i]; ev = 2; }
+          else if (i != last)      { ev_lin = forest.lookup(node.parent_id); ev = 1; }
+          for (std::size_t k = 0; k < alive.size(); ++k) {
+            if (!alive[k]) continue;
+            const int ni = forest.lineage_node[k];
+            out.seg.push_back(static_cast<int>(i));
+            out.lin.push_back(static_cast<int>(k));
+            out.id.push_back(ni < 0 ? (k == 0 ? crown_id_a : crown_id_b)
+                                    : tree[static_cast<std::size_t>(ni)].id);
+            out.ev.push_back(static_cast<int>(k) == ev_lin ? ev : 0);
+            out.t0.push_back(t0); out.t1.push_back(t1);
+            out.N.push_back(N); out.M.push_back(M);
+            out.ts.push_back(pendant_start(splits, forest, k, t0));
+            out.ed0.push_back(edr.c[k] + (t0 - edr.ts[k]));
+          }
+        }
+        prev = t1;
+      }
+      return out;
     }
 
     // ED constants for the lineages alive on the segment (t0, t1]: alive means
@@ -1000,6 +1072,7 @@ namespace emphasis {
       tab.w.clear();
       tab.par_entry.assign(n_nodes, -1);
       std::vector<int> entry_of(forest.parent.size(), -1);   // lineage -> its entry on this segment
+      const auto splits = lineage_splits(forest);
       double prev_brts = 0.0;
       for (std::size_t i = 0; i < n_nodes; ++i) {
         const auto& node = tree[i];
@@ -1009,7 +1082,8 @@ namespace emphasis {
           if (!alive[k]) continue;
           const int ni = forest.lineage_node[k];
           const double kv = edr.c[k] - edr.ts[k];
-          const double tv = (ni < 0) ? 0.0 : tree[static_cast<std::size_t>(ni)].tip_start;
+          // the D start restarts at the lineage's last split, as node.pd does
+          const double tv = pendant_start(splits, forest, k, prev_brts);
           const bool observed = (ni < 0) || is_tip(tree[static_cast<std::size_t>(ni)]);
           entry_of[k] = static_cast<int>(tab.kED.size());
           tab.w.push_back(observed ? 2 : 1);
