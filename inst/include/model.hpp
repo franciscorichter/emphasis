@@ -36,6 +36,7 @@
 #include <cstdint>
 #include <unordered_map>
 #include <mutex>
+#include <set>
 #include <memory>
 #include <cstring>
 #include "model_helpers.hpp"
@@ -1256,14 +1257,18 @@ namespace emphasis {
       double inte = 0.0;
       double prev_brts = 0.0;
 
-      // For EP+exp: running sums of exp(-β_E * ts_s) over active lineages
-      double sum_exp_bE = 0.0;  // Σ_s exp(-pars[3] * ts_s)
-      double sum_exp_gE = 0.0;  // Σ_s exp(-pars[7] * ts_s)
-
-      if (ep_exp) {
-        sum_exp_bE = tree[0].n;
-        sum_exp_gE = tree[0].n;
-      }
+      // The alive multiset of pendant starts the D compensator integrates
+      // over.  It is the one the forward sweep builds node.pd on
+      // (src/augment_tree.cpp): two crown lineages at 0; a split replaces the
+      // splitting lineage's start (node.focal_tip_start) by the event time and
+      // adds the daughter at the event time; an extinction removes the dying
+      // lineage's start (node.tip_start).  With no parent on record the sweep
+      // resets the observed lineage nearest the crown, which here is the
+      // smallest start.  Reading the same multiset keeps the compensator on
+      // the D the event terms and M are computed from: a lineage's pendant
+      // age restarts when it splits.
+      std::multiset<double> alive;
+      if (model_bin_[2]) { alive.insert(0.0); alive.insert(0.0); }
 
       for (unsigned i = 0; i < tree.size(); ++i) {
         const auto& node = tree[i];
@@ -1279,6 +1284,11 @@ namespace emphasis {
           double M_seg = (N_seg > 0.0) ? node.pd / N_seg : 0.0;
           double A_lam = pars[0] + pars[1]*N_seg + (pars[2] - pars[3])*M_seg;
           double A_mu  = pars[4] + pars[5]*N_seg + (pars[6] - pars[7])*M_seg;
+          double sum_exp_bE = 0.0, sum_exp_gE = 0.0;   // Σ_s exp(-β_D ts_s), Σ_s exp(-γ_D ts_s)
+          for (const double ts : alive) {
+            sum_exp_bE += std::exp(-pars[3] * ts);
+            sum_exp_gE += std::exp(-pars[7] * ts);
+          }
           inte += sum_exp_bE * exp_integral(A_lam, pars[3], prev_brts, node.brts)
                 + sum_exp_gE * exp_integral(A_mu,  pars[7], prev_brts, node.brts);
         } else if (ep_gauss && dt > 0.0) {
@@ -1296,15 +1306,11 @@ namespace emphasis {
           const double M_seg  = (N_seg > 0.0) ? node.pd / N_seg : 0.0;
           const double base_lam = pars[1] * N_seg + (pars[2] - pars[3]) * M_seg;
           const double base_mu  = pars[5] * N_seg + (pars[6] - pars[7]) * M_seg;
-          for (const auto& s : tree) {
-            if (is_extinction(s)) continue;
-            // lineage s alive throughout (prev_brts, node.brts)?
-            if (s.brts <= prev_brts && s.t_ext >= node.brts) {
-              const double A_lam = base_lam - pars[3] * s.tip_start;
-              const double A_mu  = base_mu  - pars[7] * s.tip_start;
-              inte += gauss_integral(pars[0], A_lam, pars[3], prev_brts, node.brts);
-              inte += gauss_integral(pars[4], A_mu,  pars[7], prev_brts, node.brts);
-            }
+          for (const double ts : alive) {
+            const double A_lam = base_lam - pars[3] * ts;
+            const double A_mu  = base_mu  - pars[7] * ts;
+            inte += gauss_integral(pars[0], A_lam, pars[3], prev_brts, node.brts);
+            inte += gauss_integral(pars[4], A_mu,  pars[7], prev_brts, node.brts);
           }
         } else if (ep_linear && dt > 0.0) {
           // EP + linear: exact per-lineage integral over the segment.
@@ -1319,10 +1325,7 @@ namespace emphasis {
           // at zero, whose kink falls inside the segment whenever the rate
           // crosses zero there.  relu_integral does that case split exactly.
           //
-          // The alive set is the exponential branch's: the two crown lineages
-          // (tip_start 0, alive throughout), plus every lineage whose birth
-          // node lies at or before the segment start and which has not died
-          // before the segment ends.  That is node.n lineages, which is what
+          // The alive set is the multiset above: node.n lineages, which is what
           // makes the branch collapse onto dt*n*(lambda+mu) when beta_D and
           // gamma_D are zero.
           const double N_seg = node.n;
@@ -1330,17 +1333,9 @@ namespace emphasis {
           const double base_lam = pars[0] + pars[1] * N_seg + (pars[2] - pars[3]) * M_seg;
           const double base_mu  = pars[4] + pars[5] * N_seg + (pars[6] - pars[7]) * M_seg;
           double seg = 0.0;
-          auto add_lineage = [&](double ts) {
+          for (const double ts : alive) {
             seg += relu_integral(base_lam - pars[3] * ts, pars[3], prev_brts, node.brts);
             seg += relu_integral(base_mu  - pars[7] * ts, pars[7], prev_brts, node.brts);
-          };
-          add_lineage(0.0);           // the two crown lineages
-          add_lineage(0.0);
-          const unsigned last = static_cast<unsigned>(tree.size()) - 1u;
-          for (unsigned j = 0; j < tree.size(); ++j) {
-            const auto& s = tree[j];
-            if (is_extinction(s) || j == last) continue;   // the last node marks the present
-            if (s.brts <= prev_brts && s.t_ext >= node.brts) add_lineage(s.tip_start);
           }
           inte += seg;
         } else {
@@ -1365,17 +1360,17 @@ namespace emphasis {
           log_lambda += lambda;
         }
 
-        // Update running sums for new/removed lineages
-        if (ep_exp) {
-          if (is_missing(node) || is_unsampled(node)) {
-            sum_exp_bE += std::exp(-pars[3] * node.brts);
-            sum_exp_gE += std::exp(-pars[7] * node.brts);
-          } else if (is_extinction(node)) {
-            sum_exp_bE -= std::exp(-pars[3] * node.tip_start);
-            sum_exp_gE -= std::exp(-pars[7] * node.tip_start);
-          } else if (!is_extinction(node) && i != tree.size() - 1) {
-            sum_exp_bE += std::exp(-pars[3] * node.brts);
-            sum_exp_gE += std::exp(-pars[7] * node.brts);
+        // The alive multiset after this node's event
+        if (model_bin_[2]) {
+          if (is_extinction(node)) {
+            auto it = alive.find(node.tip_start);
+            if (it != alive.end()) alive.erase(it);
+          } else if (i != tree.size() - 1) {
+            auto it = (node.focal_tip_start >= 0.0) ? alive.find(node.focal_tip_start)
+                                                     : alive.begin();
+            if (it != alive.end()) alive.erase(it);
+            alive.insert(node.brts);      // the splitting lineage, a tip again
+            alive.insert(node.brts);      // the daughter
           }
         }
 

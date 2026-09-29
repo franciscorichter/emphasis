@@ -13,13 +13,11 @@
 #     P(t) = node.pd + node.n * (t - node.brts), so the density the sampler draws
 #     from and the density the scorer charges for are built on the same P.
 #
-# The bookkeeping the compensator uses for "the lineages alive on this segment"
-# is the exponential branch's: the two crown lineages at tip_start 0, plus every
-# lineage whose birth node lies at or before the segment start and which has not
-# died before it ends.  A split adds the daughter and leaves the parent's
-# tip_start where it was, which is not what the alive multiset behind node.pd
-# does (H99, open); the reference below uses the same set, so what is tested
-# here is the integral, not that bookkeeping.
+# The lineages alive on a segment, and their pendant starts, are the multiset
+# node.pd is built on: a split resets the splitting lineage's start and adds the
+# daughter, an extinction removes the dying lineage's start.  The reference
+# below replays that multiset from the tree's own columns (.alive_before), so
+# the compensator is checked on the same D the event terms use.
 
 T_TIP <- 10e10; T_EXT <- 0
 
@@ -27,15 +25,9 @@ T_TIP <- 10e10; T_EXT <- 0
 #  References, independent of the C++                                          #
 # --------------------------------------------------------------------------- #
 
-# The lineages the ep_linear / ep_exp branches count as alive on the segment
-# that ends at node i.  Returns their tip_starts.
-.alive_ts <- function(df, i) {
-  n <- nrow(df)
-  prev <- if (i == 1L) 0 else df$brts[i - 1L]
-  j <- which(df$t_ext != T_EXT & seq_len(n) != n &
-             df$brts <= prev & df$t_ext >= df$brts[i])
-  c(0, 0, df$tip_start[j])
-}
+# The pendant starts of the lineages alive on the segment that ends at node i:
+# the multiset replayed by .alive_before, defined further down.
+.alive_ts <- function(df, i) .alive_before(df)[[i]]
 
 # Numerical integral of max(0, c + b*t) over [t1, t2].  The integrand is a line
 # with one kink; integrate() is called on each side of it, where the integrand
