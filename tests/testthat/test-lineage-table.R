@@ -41,16 +41,42 @@ test_that("the lineage table reproduces the full model's log-likelihood under th
   expect_equal(as.integer(n_seg), as.integer(aug$trees[[1L]]$n[as.integer(names(n_seg)) + 1L]))
 })
 
-test_that("the covariate path runs on a fully observed tree and returns an entry order", {
+test_that("the point-process dgLARS path agrees with dglars where exposure is constant", {
   skip_on_cran()
   skip_if_not_installed("dglars")
+  set.seed(2)
+  n <- 4000L
+  X <- cbind(N = rnorm(n), D = rnorm(n), ED = rnorm(n))
+  y <- rpois(n, exp(-1 + 0.5 * X[, 1] - 0.3 * X[, 3]))
+  ours <- emphasis:::.dglars_pp(X, y, rep(1, n), n_gamma = 80L)
+  ref <- dglars::dglars.fit(X, y, family = stats::poisson("log"))
+  # the same entry order
+  ours_entry <- vapply(colnames(X), function(j) { on <- which(ours[[j]] != 0); if (length(on)) ours$gamma[on[1L]] else NA }, 0)
+  ref_beta <- as.matrix(ref$beta)[-1L, , drop = FALSE]
+  ref_entry <- vapply(seq_len(3L), function(j) { on <- which(ref_beta[j, ] != 0); if (length(on)) ref$g[on[1L]] else NA }, 0)
+  expect_equal(order(-ours_entry), order(-ref_entry))
+  # the same end of the path: the full maximum-likelihood fit
+  full <- stats::glm(y ~ X, family = stats::poisson("log"))
+  expect_equal(unname(unlist(ours[nrow(ours), c("(Intercept)", "N", "D", "ED")])),
+               unname(stats::coef(full)), tolerance = 1e-2)
+  # and the same coefficients at a gamma both paths pass through
+  g_mid <- ref$g[ceiling(ref$np / 2)]
+  k <- which.min(abs(ours$gamma - g_mid))
+  ref_mid <- as.matrix(ref$beta)[, ceiling(ref$np / 2)]
+  expect_equal(unname(unlist(ours[k, c("N", "D", "ED")])), unname(ref_mid[-1L]), tolerance = 0.05)
+})
+
+test_that("the covariate path runs on a fully observed tree and returns an entry order", {
+  skip_on_cran()
   set.seed(3)
   phy <- ape::rphylo(30L, 0.6, 0)
-  cp <- covariate_path(phy, grid = 200L, rate = "speciation")
+  cp <- covariate_path(phy, rate = "speciation")
   expect_named(cp, "speciation")
   s <- cp$speciation
-  expect_equal(s$n_events, sum(lineage_table(phy)$event == 1L))   # every split lands in a cell
-  expect_true(all(names(s$entry_step) %in% c("N", "D", "ED")))
-  expect_true(is.finite(s$coef[[1L]]))
-  expect_equal(names(s$coef)[1L], "(Intercept)")
+  expect_equal(s$n_events, sum(lineage_table(phy)$event == 1L))
+  expect_true(all(s$entry_order %in% c("N", "D", "ED")))
+  expect_true(is.finite(s$coef[["(Intercept)"]]))
+  # the intercept at the path's start is the log of the events per unit exposure
+  tab <- lineage_table(phy)
+  expect_equal(s$path[["(Intercept)"]][1L], log(sum(tab$event == 1L) / sum(tab$t1 - tab$t0)), tolerance = 1e-6)
 })

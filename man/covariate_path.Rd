@@ -8,11 +8,10 @@ covariate_path(
   trees,
   log_weights = NULL,
   n_trees = 40L,
-  grid = 500L,
   covariates = c("N", "D", "ED"),
   rate = c("speciation", "extinction"),
   criterion = c("BIC", "AIC"),
-  control = list()
+  n_gamma = 60L
 )
 }
 \arguments{
@@ -26,8 +25,6 @@ resampled in proportion to them.}
 \item{n_trees}{How many trees to use (resampled with replacement when
 \code{log_weights} is given, the first \code{n_trees} otherwise).}
 
-\item{grid}{Number of equal cells the crown-to-present interval is cut into.}
-
 \item{covariates}{Which covariates to offer the path; any of \code{"N"},
 \code{"D"}, \code{"ED"}, \code{"EDc"} (ED centred on the alive lineages).}
 
@@ -35,31 +32,39 @@ resampled in proportion to them.}
 
 \item{criterion}{\code{"BIC"} or \code{"AIC"} along the path.}
 
-\item{control}{Passed to \code{dglars::dglars.fit}.}
+\item{n_gamma}{Number of points on the path.}
 }
 \value{
-A list with one element per rate: the \code{dglars} fit, the entry
-  order of the covariates (the first step at which each is active), the
-  coefficients at the criterion's optimum with the intercept corrected for
-  the cell width, the chosen active set, and the frame's size.
+A list with one element per rate: the path (a data frame with one
+  row per \eqn{\gamma}: the coefficients, the log-likelihood, the active
+  set size, AIC and BIC), the entry order of the covariates (the
+  \eqn{\gamma} at which each enters), the coefficients and active set at
+  the criterion's optimum, and the frame's size.
 }
 \description{
 Instead of comparing nested models one pair at a time, this traces the
-differential-geometric LARS path (Augugliaro, Mineo & Wit 2013, package
-\pkg{dglars}) over all the covariates a rate can read --- \code{N},
-\code{D} and \code{ED} --- on the same augmented trees an M-step maximises
-over.  Under the exponential link the complete-data log-likelihood is a
-log-linear point process, which on a fine time grid is a Poisson regression
-with one row per lineage and grid cell; the speciation and extinction
-halves separate, so each rate gets its own path.  The path's order of
-entry says which covariates the data ask for first, and a criterion along
-it (BIC by default) picks a point.
+differential-geometric LARS path of Augugliaro, Mineo and Wit (2013) over
+all the covariates a rate can read --- \code{N}, \code{D} and \code{ED} ---
+on the same augmented trees an M-step maximises over.  Under the
+exponential link the complete-data log-likelihood is a log-linear point
+process: one row per lineage and segment between consecutive events, with
+the rate at the segment's midpoint, the segment's length as exposure, and
+a count of one when that lineage's own event ends the segment.  The
+speciation and extinction halves separate, so each rate gets its own path.
 }
 \details{
+The path is the curve on which the Rao score statistics of the active
+covariates are equal in size and the inactive ones smaller,
+\eqn{|r_j(\beta)| = \gamma} for \eqn{j} active, traced from the
+\eqn{\gamma} at which the first covariate enters down to zero, with the
+intercept always free.  It is solved here on a grid of \eqn{\gamma} by
+Newton steps rather than by \pkg{dglars}'s predictor--corrector, because
+the point process needs a true exposure offset, which that package does
+not take; on a constant-exposure problem the two agree
+(\code{tests/testthat/test-lineage-table.R}).  The order of entry says
+which covariates the data ask for first; AIC and BIC along the path pick a
+point, with BIC's sample size the number of events.
+
 Importance weights are folded in by resampling the trees in proportion to
-them, so the frame is unweighted; the grid's constant exposure is absorbed
-by the intercept.  An extinction in the first half of a cell has no row for
-the dying lineage at that cell's midpoint, so one is added at the event
-time with the cell's exposure; with the default grid that touches under a
-percent of the compensator.
+them, so the frame is unweighted.
 }
