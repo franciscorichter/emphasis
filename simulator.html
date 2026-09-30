@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>emphasis simulator</title>
+<meta name="description" content="Interactive forward simulation of the emphasis diversification model: speciation and extinction rates that depend on diversity N, age-imbalance D and evolutionary distinctiveness ED.">
+<style>
+  :root{--paper:#f7f8f7;--card:#fff;--card-2:#f2f5f2;--ink:#16201d;--ink-2:#3f4a45;--ink-3:#68736d;--line:#dde3de;--line-2:#ccd4ce;--accent:#1d6d5a;--accent-2:#0f3d33;--accent-soft:#e2efe9;--brick:#a83a34;--ochre:#c08a2e;--gone:#c4bdb1;--code-bg:#f2f4f1;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;--sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;--mono:"SF Mono","JetBrains Mono",Menlo,monospace;--measure:68ch}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#0d1310;--card:#141d18;--card-2:#101814;--ink:#dde6e0;--ink-2:#a7b3ac;--ink-3:#7e8a83;--line:#243029;--line-2:#2e3c34;--accent:#54b79b;--accent-2:#8fd6c1;--accent-soft:#16241e;--brick:#e0776f;--ochre:#d9ad5c;--gone:#46514b;--code-bg:#0f1712}}
+  :root[data-theme="dark"]{--paper:#0d1310;--card:#141d18;--card-2:#101814;--ink:#dde6e0;--ink-2:#a7b3ac;--ink-3:#7e8a83;--line:#243029;--line-2:#2e3c34;--accent:#54b79b;--accent-2:#8fd6c1;--accent-soft:#16241e;--brick:#e0776f;--ochre:#d9ad5c;--gone:#46514b;--code-bg:#0f1712}
+  *{box-sizing:border-box}
+  body{background:var(--paper);color:var(--ink);font-family:var(--serif);font-size:17px;line-height:1.6;margin:0;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1260px;margin:0 auto;padding:0 28px 80px}
+  .mast{padding:44px 0 20px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-family:var(--sans);font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:600;margin:0 0 12px}
+  .eyebrow a{color:inherit;text-decoration:none}.eyebrow a:hover{text-decoration:underline}
+  h1{font-family:var(--sans);font-weight:700;font-size:clamp(26px,4vw,36px);line-height:1.1;letter-spacing:-.02em;margin:0}
+  .lede{color:var(--ink-2);max-width:var(--measure);margin:12px 0 0}
+  .m{font-style:italic}
+  code{font-family:var(--mono);font-size:.85em;background:var(--code-bg);padding:.1em .38em;border-radius:5px;border:1px solid var(--line);color:var(--accent-2)}
+
+  .controls{font-family:var(--sans);font-size:14px;margin:22px 0 0;display:grid;grid-template-columns:auto 1fr 1fr;gap:6px 36px;align-items:start;padding-bottom:16px;border-bottom:1px solid var(--line)}
+  .col h3 .m{text-transform:none;letter-spacing:0;font-size:14px}
+  .col h3{font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:650;margin:0 0 8px}
+  .seg{display:inline-flex;border:1px solid var(--line-2);border-radius:7px;overflow:hidden;margin:0 0 10px}
+  .seg button{font:inherit;font-size:13.5px;background:none;border:0;border-right:1px solid var(--line-2);padding:5px 11px;color:var(--ink-2);cursor:pointer}
+  .seg button:last-child{border-right:0}
+  .seg button[aria-pressed="true"]{background:var(--accent);color:var(--paper)}
+  .seg button:disabled{opacity:.35;cursor:not-allowed}
+  .row{display:grid;grid-template-columns:5.2em 1fr 4.6em;gap:10px;align-items:center;margin:3px 0}
+  .row label{font-family:var(--serif);font-style:italic;font-size:15.5px;color:var(--ink)}
+  .row output{font-variant-numeric:tabular-nums;text-align:right;color:var(--ink-2)}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  .hint{color:var(--ink-3);font-size:12.5px;margin:6px 0 0;line-height:1.45;max-width:46ch}
+  .bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;font-family:var(--sans);font-size:14px;margin:14px 0 6px}
+  .btn{font:inherit;font-size:13.5px;background:var(--card);border:1px solid var(--line-2);border-radius:7px;padding:5px 12px;color:var(--ink);cursor:pointer}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .bar label{display:flex;gap:8px;align-items:center;color:var(--ink-2)}
+  #seed{font:inherit;font-family:var(--mono);font-size:13px;width:7.5em;padding:4px 6px;border:1px solid var(--line-2);border-radius:6px;background:var(--card);color:var(--ink)}
+  #speed{width:90px}
+
+  .stage{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:26px;margin-top:6px}
+  .panel{min-width:0}
+  .ptitle{font-family:var(--sans);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:650;margin:10px 0 4px;display:flex;justify-content:space-between;gap:10px}
+  .ptitle span:last-child{text-transform:none;letter-spacing:0;font-weight:500;font-variant-numeric:tabular-nums}
+  canvas{width:100%;display:block}
+  #tree{height:600px}#ltt{height:300px}#rates{height:252px}
+  .status{font-family:var(--sans);font-size:13.5px;color:var(--ink-2);font-variant-numeric:tabular-nums;margin:8px 0 0;min-height:1.4em}
+  .status b{color:var(--brick);font-weight:600}
+  .legend{font-family:var(--sans);font-size:13px;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:4px 18px;margin:6px 0 0}
+  .legend i{display:inline-block;width:18px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+  pre{font-family:var(--mono);font-size:13px;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:12px 16px;overflow-x:auto;color:var(--ink);margin:10px 0}
+  section.notes{max-width:var(--measure);margin-top:34px;border-top:1px solid var(--line);padding-top:6px}
+  section.notes h2{font-family:var(--sans);font-size:19px;letter-spacing:-.01em;margin:22px 0 4px}
+  section.notes p{margin:10px 0}
+  .foot{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);font-family:var(--sans);font-size:12.5px;color:var(--ink-3)}
+  .foot a,section.notes a{color:var(--accent)}
+  @media(max-width:980px){.controls{grid-template-columns:1fr 1fr}.controls .col:first-child{grid-column:1/-1}}
+  @media(max-width:760px){.wrap{padding:0 16px 60px}.controls{grid-template-columns:1fr}.stage{grid-template-columns:1fr}#tree{height:440px}#ltt{height:260px}#rates{height:220px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow"><a href="index.html">emphasis</a> · simulator</p>
+    <h1>A clade diversifying under the <span class="m">emphasis</span> model</h1>
+    <p class="lede">Each lineage speciates at rate <span class="m">λ</span> and goes extinct at rate <span class="m">μ</span>, and both can depend on the clade's diversity <span class="m">N</span>, on the lineage's age-imbalance <span class="m">D</span> and on its evolutionary distinctiveness <span class="m">ED</span>. The trees are drawn by a port of the package's forward simulator, run in your browser.</p>
+  </header>
+
+  <div class="controls">
+    <div class="col">
+      <h3>Model</h3>
+      <div class="seg" id="models"></div><br>
+      <h3>Link</h3>
+      <div class="seg" id="links"></div>
+      <p class="hint" id="linkhint"></p>
+    </div>
+    <div class="col">
+      <h3>Speciation <span class="m">λ</span></h3>
+      <div id="lamrows"></div>
+      <h3 style="margin-top:12px">Clade</h3>
+      <div class="row"><label for="T">crown age</label><input type="range" id="T" min="1" max="20" step="0.5"><output id="Tv"></output></div>
+      <div class="row"><label for="rho">sampling ρ</label><input type="range" id="rho" min="0.1" max="1" step="0.05"><output id="rhov"></output></div>
+    </div>
+    <div class="col">
+      <h3>Extinction <span class="m">μ</span></h3>
+      <div id="murows"></div>
+    </div>
+  </div>
+
+  <div class="bar">
+    <div class="seg" id="views" style="margin:0"></div>
+    <button class="btn" id="play">pause</button>
+    <button class="btn" id="replay">replay</button>
+    <button class="btn" id="skip">to the present</button>
+    <label>speed <input type="range" id="speed" min="0.25" max="4" step="0.25" value="1"></label>
+    <label>seed <input id="seed" inputmode="numeric"></label>
+    <button class="btn" id="newtree">new tree</button>
+  </div>
+
+  <div class="stage">
+    <div class="panel">
+      <div class="ptitle"><span>Tree</span><span id="clock"></span></div>
+      <canvas id="tree"></canvas>
+      <div class="legend">
+        <span><i style="background:var(--accent)"></i>has a sampled living descendant</span>
+        <span><i style="background:var(--ochre)"></i>living descendants all unsampled</span>
+        <span><i style="background:var(--gone)"></i>no living descendant</span>
+      </div>
+      <p class="status" id="status"></p>
+    </div>
+    <div class="panel">
+      <div class="ptitle"><span>Lineages through time</span><span>log scale</span></div>
+      <canvas id="ltt"></canvas>
+      <div class="legend"><span><i style="background:var(--gone)"></i>complete</span><span><i style="background:var(--accent)"></i>reconstructed</span><span id="lg-samp"><i style="background:var(--ochre)"></i>sampled (at the present)</span></div>
+      <div class="ptitle"><span>Per-lineage rates</span><span id="ratenote"></span></div>
+      <canvas id="rates"></canvas>
+      <div class="legend"><span><i style="background:var(--accent)"></i><span id="lg-lam">λ</span></span><span><i style="background:var(--brick)"></i><span id="lg-mu">μ</span></span></div>
+    </div>
+  </div>
+
+  <p class="status" style="margin-top:16px">The same model in R:</p>
+  <pre id="rcall"></pre>
+
+  <section class="notes">
+    <h2>Reading the tree</h2>
+    <p>The tree is drawn forward from its crown, two lineages at time 0, to the present at the crown age. A branch is green while some lineage below it is alive, and grey once its whole subtree is extinct. At the present, the sampling fraction <span class="m">ρ</span> removes tips at random, as <code>simulate_tree(rho = …)</code> does: branches whose living descendants were all removed turn ochre.</p>
+    <p><b>Complete</b> shows every lineage that ever lived. <b>Reconstructed</b> keeps only the ancestors of living species, the tree a molecular phylogeny of every extant species would recover. <b>Sampled</b> keeps only the ancestors of the sampled tips, the tree that is actually observed. <span class="m">emphasis</span> estimates the rates from the sampled tree by drawing the missing lineages back in, which is going from the third view back to the first.</p>
+    <h2>What the covariates do</h2>
+    <p><span class="m">N</span> is the number of living lineages. A negative <span class="m">β<sub>N</sub></span> makes speciation slow as the clade fills up, and the lineages-through-time curve flattens. <span class="m">D</span> is how much longer a lineage has gone without speciating than the clade average; a negative <span class="m">β<sub>D</sub></span> makes long-isolated lineages speciate less, and the rate panel spreads into a band because every lineage has its own rate. <span class="m">ED</span> is a lineage's fair-proportion distinctiveness on the complete tree, and <span class="m">ED<sub>c</sub></span> (models <code>edc</code>, <code>nedc</code>) is the same score minus its mean over the living lineages, so it compares a lineage with its contemporaries the way <span class="m">D</span> does. See <a href="index.html#covariates">the covariates</a> and <a href="D.html">the meaning of D</a>.</p>
+    <h2>How close this is to the package</h2>
+    <p>The simulator follows <code>general_div::simulate_tree_ltable()</code> step for step: Gillespie waiting times, the focal lineage and event type drawn from the per-lineage rates, and a draw retried when either crown lineage leaves no descendant. The number of draws a tree needed is shown under it; its inverse estimates the survival probability. The random numbers come from a different generator than R's, so a seed here does not reproduce a tree in R. What agrees is the distribution: <code>dev/simulator/agreement.R</code> draws 2,000 trees per scenario from each simulator and compares them, and checks the <span class="m">ED</span> routine against the package's value tip by tip.</p>
+  </section>
+
+  <div class="foot">emphasis · <a href="index.html">documentation</a> · <a href="https://github.com/franciscorichter/emphasis">source</a></div>
+</div>
+
+<script src="assets/simulator/emphasis-sim.js"></script>
+<script>
+(function () {
+'use strict';
+const S = window.EmphasisSim;
+const $ = id => document.getElementById(id);
+
+// ---- parameter space -------------------------------------------------------
+const COV = { dd: ['N'], d: ['D'], nd: ['N', 'D'], ed: ['ED'], ned: ['N', 'ED'], edc: ['EDc'], nedc: ['N', 'EDc'], cr: [] };
+const RANGE = {
+  linear:      { i0: [0, 3, 0.01],     m0: [0, 2, 0.01] },
+  exponential: { i0: [-4, 1.5, 0.01],  m0: [-5, 1, 0.01] },
+  gaussian:    { i0: [0, 3, 0.01],     m0: [0, 2, 0.01] },
+};
+const CRANGE = { N: [-0.1, 0.1, 0.001], D: [-1, 1, 0.01], ED: [-1, 1, 0.01], EDc: [-1, 1, 0.01] };
+const hasEd = m => COV[m].some(c => c.startsWith('ED'));
+const L = Math.log;
+// compact vectors c(beta_0, betas..., gamma_0, gammas...) and crown age
+const PRESET = {
+  linear: {
+    cr: [[0.8, 0.3], 7], dd: [[1.0, -0.015, 0.1, 0], 10], d: [[0.6, -0.3, 0.15, 0], 7],
+    nd: [[1.0, -0.015, -0.3, 0.1, 0, 0], 10], ed: [[0.9, -0.1, 0.2, 0.02], 6],
+    ned: [[1.0, -0.012, -0.1, 0.15, 0, 0.02], 8],
+    edc: [[0.9, -0.2, 0.2, 0.02], 6], nedc: [[1.0, -0.012, -0.2, 0.15, 0, 0.02], 8],
+  },
+  exponential: {
+    cr: [[L(0.8), L(0.3)], 7], dd: [[0, -0.02, L(0.1), 0], 10], d: [[L(0.6), -0.4, L(0.15), 0], 7],
+    nd: [[0, -0.02, -0.3, L(0.1), 0, 0.2], 8], ed: [[0, -0.15, L(0.2), 0.05], 6],
+    ned: [[0, -0.015, -0.15, L(0.15), 0, 0.05], 7],
+    edc: [[0, -0.2, L(0.2), 0.05], 6], nedc: [[0, -0.015, -0.2, L(0.15), 0, 0.05], 7],
+  },
+  gaussian: {
+    cr: [[1.2, 0.5], 7], dd: [[1.2, 0.02, 0.2, 0], 8], d: [[1.0, 0.5, 0.2, 0], 7],
+    nd: [[1.2, 0.02, 0.3, 0.2, 0, 0], 8],
+  },
+};
+const LINKHINT = {
+  linear: 'λ = max(0, β₀ + β·x). A rate that the covariates push below zero is zero.',
+  exponential: 'λ = exp(β₀ + β·x). β₀ is the log of the rate when the covariates are zero.',
+  gaussian: 'λ = β₀ · exp(−(β·x − 1)² / 2). β₀ is the peak rate, reached where β·x = 1. Not available with ED.',
+};
+
+const st = {
+  model: 'dd', link: 'linear', pars: null, T: 10, rho: 1, seed: 1,
+  view: 'complete', speed: 1, playing: true, tDisp: 0, sim: null,
+};
+
+// ---- controls --------------------------------------------------------------
+function seg(el, items, get, set, disabled) {
+  el.innerHTML = '';
+  for (const [key, label] of items) {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.setAttribute('aria-pressed', get() === key);
+    if (disabled && disabled(key)) b.disabled = true;
+    b.onclick = () => set(key);
+    el.appendChild(b);
+  }
+}
+function renderSegs() {
+  seg($('models'), [['cr', 'cr'], ['dd', 'dd'], ['d', 'd'], ['nd', 'nd'], ['ed', 'ed'], ['ned', 'ned'], ['edc', 'edc'], ['nedc', 'nedc']],
+      () => st.model, k => { st.model = k; loadPreset(); }, k => st.link === 'gaussian' && hasEd(k));
+  seg($('links'), [['linear', 'linear'], ['exponential', 'exponential'], ['gaussian', 'gaussian']],
+      () => st.link, k => { st.link = k; if (!PRESET[k][st.model]) st.model = 'dd'; loadPreset(); },
+      k => k === 'gaussian' && hasEd(st.model));
+  seg($('views'), [['complete', 'complete'], ['recon', 'reconstructed'], ['sampled', 'sampled']],
+      () => st.view, k => { st.view = k; renderSegs(); });
+  $('linkhint').textContent = LINKHINT[st.link];
+}
+const fmt = v => {
+  if (v === 0) return '0';
+  const a = Math.abs(v);
+  return a >= 1 ? v.toFixed(2) : a >= 0.1 ? v.toFixed(2) : v.toFixed(3);
+};
+function sliderRow(parent, label, range, value, onInput) {
+  const row = document.createElement('div'); row.className = 'row';
+  const lab = document.createElement('label'); lab.innerHTML = label;
+  const inp = document.createElement('input');
+  inp.type = 'range'; [inp.min, inp.max, inp.step] = range; inp.value = value;
+  const out = document.createElement('output'); out.textContent = fmt(value);
+  inp.oninput = () => { out.textContent = fmt(+inp.value); onInput(+inp.value); };
+  row.append(lab, inp, out); parent.appendChild(row);
+}
+function renderSliders() {
+  const cov = COV[st.model], k = cov.length, R = RANGE[st.link];
+  const lam = $('lamrows'), mu = $('murows');
+  lam.innerHTML = ''; mu.innerHTML = '';
+  const sub = c => c === 'EDc' ? 'ED<sub style="font-size:.8em">c</sub>' : c;
+  sliderRow(lam, 'β<sub>0</sub>', R.i0, st.pars[0], v => { st.pars[0] = v; resim(); });
+  cov.forEach((c, j) => sliderRow(lam, 'β<sub>' + sub(c) + '</sub>', CRANGE[c], st.pars[1 + j],
+                                  v => { st.pars[1 + j] = v; resim(); }));
+  sliderRow(mu, 'γ<sub>0</sub>', R.m0, st.pars[k + 1], v => { st.pars[k + 1] = v; resim(); });
+  cov.forEach((c, j) => sliderRow(mu, 'γ<sub>' + sub(c) + '</sub>', CRANGE[c], st.pars[k + 2 + j],
+                                  v => { st.pars[k + 2 + j] = v; resim(); }));
+}
+function loadPreset() {
+  const [p, T] = PRESET[st.link][st.model];
+  st.pars = p.slice(); st.T = T;
+  $('T').value = T; $('Tv').textContent = T;
+  renderSegs(); renderSliders(); resim(true);
+}
+$('T').oninput = () => { st.T = +$('T').value; $('Tv').textContent = st.T; resim(true); };
+$('rho').oninput = () => { st.rho = +$('rho').value; $('rhov').textContent = st.rho.toFixed(2); resim(); };
+$('speed').oninput = () => { st.speed = +$('speed').value; };
+$('play').onclick = () => {
+  if (st.tDisp >= st.T) { st.tDisp = 0; st.playing = true; }
+  else st.playing = !st.playing;
+  syncPlay();
+};
+$('replay').onclick = () => { st.tDisp = 0; st.playing = true; syncPlay(); };
+$('skip').onclick = () => { st.tDisp = st.T; syncPlay(); };
+$('newtree').onclick = () => { st.seed = (Math.random() * 1e9) >>> 0; $('seed').value = st.seed; resim(true); };
+$('seed').onchange = () => { st.seed = (+$('seed').value >>> 0) || 1; $('seed').value = st.seed; resim(true); };
+function syncPlay() { $('play').textContent = st.playing && st.tDisp < st.T ? 'pause' : 'play'; }
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && e.target.tagName !== 'INPUT') { e.preventDefault(); $('play').click(); }
+});
+
+// ---- simulation ------------------------------------------------------------
+let pending = false, restart = false;
+function resim(fromStart) {
+  restart = restart || !!fromStart;
+  if (pending) return;
+  pending = true;
+  requestAnimationFrame(() => {
+    pending = false;
+    const prev = st.sim;
+    st.sim = S.simulate({ model: st.model, link: st.link, pars: st.pars, maxT: st.T, rho: st.rho,
+                          seed: st.seed, maxTries: 1000, maxLin: 3000, trace: true });
+    // carry display positions over so a slider move morphs rather than jumps
+    if (prev) st.sim.rows.forEach((r, i) => { r.y = prev.rows[i] ? prev.rows[i].y : undefined; });
+    if (restart || !prev) { st.tDisp = 0; st.playing = true; }
+    restart = false;
+    syncPlay(); writeRcall();
+  });
+}
+function writeRcall() {
+  const num = v => +v.toPrecision(4);
+  const p = st.pars.map(num).join(', ');
+  const extra = [st.link !== 'linear' ? `link = "${st.link}"` : null, st.rho < 1 ? `rho = ${st.rho}` : null]
+    .filter(Boolean).join(', ');
+  $('rcall').textContent = `simulate_tree(pars = c(${p}), max_t = ${st.T},\n              model = "${st.model}"${extra ? ', ' + extra : ''}, max_tries = 1000)`;
+}
+
+// ---- drawing ---------------------------------------------------------------
+let C = {};
+function colours() {
+  const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
+  C = { ink: v('--ink'), ink3: v('--ink-3'), line: v('--line'), accent: v('--accent'), soft: v('--accent-soft'),
+        brick: v('--brick'), ochre: v('--ochre'), gone: v('--gone'), paper: v('--paper'),
+        sans: v('--sans') };
+}
+function fit(c) {
+  const r = c.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  const W = Math.round(r.width * d), H = Math.round(r.height * d);
+  if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+  const g = c.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, r.width, r.height);
+  return [g, r.width, r.height];
+}
+function tickStep(span) { return span > 30 ? 10 : span > 12 ? 2 : span > 5 ? 1 : 0.5; }
+function timeAxis(g, X, x0, x1, y, T) {
+  g.strokeStyle = C.line; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
+  g.fillStyle = C.ink3; g.font = '11.5px ' + C.sans; g.textAlign = 'center'; g.textBaseline = 'top';
+  const s = tickStep(T);
+  for (let t = 0; t <= T + 1e-9; t += s) {
+    g.beginPath(); g.moveTo(X(t), y); g.lineTo(X(t), y + 4); g.stroke();
+    g.fillText(+t.toFixed(1), X(t), y + 6);
+  }
+}
+
+// Order of the visible rows, top to bottom.  A row's daughters branch off it
+// in birth order; the earliest go outermost, alternating above and below, so
+// no connector crosses a branch that exists at its time.
+function order(rows, vis) {
+  const out = [];
+  const place = i => {
+    const kids = rows[i].kids.filter(c => vis[c]);
+    const above = kids.filter((_, j) => j % 2 === 0);
+    const below = kids.filter((_, j) => j % 2 === 1).reverse();
+    for (const c of above) place(c);
+    out.push(i);
+    for (const c of below) place(c);
+  };
+  if (vis[0]) place(0);
+  if (vis[1]) place(1);
+  return out;
+}
+
+function frame(now) {
+  const dt = Math.min(0.05, (now - (frame.last || now)) / 1000); frame.last = now;
+  const sim = st.sim;
+  if (!sim) { requestAnimationFrame(frame); return; }
+  const T = st.T;
+  if (st.playing && st.tDisp < T) {
+    st.tDisp = Math.min(T, st.tDisp + dt * st.speed * T / 12);
+    if (st.tDisp >= T) syncPlay();
+  }
+  const tt = sim.status === 'done' ? st.tDisp : Math.min(st.tDisp, T);
+  const rows = sim.rows, atEnd = tt >= T && sim.status === 'done';
+
+  const living = S.survivors(rows, tt, false);                      // a lineage alive at tt below
+  const sampled = atEnd ? S.survivors(rows, T, true) : living;     // a sampled tip below
+  const born = rows.map(r => r.birth <= tt);
+  const vis = st.view === 'complete' ? born : st.view === 'recon' ? living : sampled;
+  const keep = st.view === 'complete' ? null : vis;
+
+  const ord = order(rows, vis), K = Math.max(ord.length, 1);
+  ord.forEach((i, k) => { rows[i].ty = (k + 0.5) / K; });
+  for (const i of ord) {
+    const r = rows[i];
+    if (r.y === undefined || Number.isNaN(r.y)) r.y = r.parent >= 0 && rows[r.parent].y !== undefined ? rows[r.parent].y : r.ty;
+    r.y += (r.ty - r.y) * 0.16;
+  }
+
+  drawTree(rows, ord, vis, keep, living, sampled, tt, K, atEnd);
+  drawLTT(rows, sim, living, sampled, tt, atEnd);
+  drawRates(sim, tt);
+  status(rows, tt, atEnd);
+  requestAnimationFrame(frame);
+}
+
+function drawTree(rows, ord, vis, keep, living, sampled, tt, K, atEnd) {
+  const [g, W, H] = fit($('tree'));
+  const p = { l: 14, r: 16, t: 8, b: 26 }, w = W - p.l - p.r, h = H - p.t - p.b, T = st.T;
+  const X = t => p.l + t / T * w, Y = y => p.t + y * h;
+  const lw = Math.max(0.55, Math.min(2.4, 240 / K));
+  g.lineCap = 'round'; g.lineWidth = lw;
+  const colOf = i => sampled[i] ? C.accent : living[i] ? C.ochre : C.gone;
+  // end of a row's drawn branch at display time tt
+  const endOf = r => {
+    if (!keep) return r.end < 0 || r.end > tt ? tt : r.end;
+    const alive = st.view === 'sampled' && atEnd ? (r.end < 0 && r.sampled) : (r.end < 0 || r.end > tt);
+    if (alive) return tt;
+    let e = r.birth;
+    for (const c of r.kids) if (keep[c] && rows[c].birth > e) e = rows[c].birth;
+    return e;
+  };
+  const passes = [C.gone, C.ochre, C.accent];
+  for (const col of passes) {
+    g.strokeStyle = col; g.beginPath();
+    for (const i of ord) {
+      if (colOf(i) !== col) continue;
+      const r = rows[i];
+      if (r.parent >= 0) { g.moveTo(X(r.birth), Y(rows[r.parent].y)); g.lineTo(X(r.birth), Y(r.y)); }
+      else g.moveTo(X(0), Y(r.y));
+      g.lineTo(X(endOf(r)), Y(r.y));
+    }
+    g.stroke();
+  }
+  // the crown: a short stem joining the two crown lineages
+  const crown = [0, 1].filter(i => vis[i]);
+  if (crown.length) {
+    g.strokeStyle = C.accent;
+    const ys = crown.map(i => Y(rows[i].y));
+    g.beginPath(); g.moveTo(X(0), Math.min(...ys)); g.lineTo(X(0), Math.max(...ys));
+    g.moveTo(X(0) - 8, (Math.min(...ys) + Math.max(...ys)) / 2); g.lineTo(X(0), (Math.min(...ys) + Math.max(...ys)) / 2);
+    g.stroke();
+  }
+  // living tips
+  const rad = Math.min(3, lw + 0.8);
+  for (const i of ord) {
+    const r = rows[i];
+    if (!(r.end < 0 || r.end > tt)) continue;
+    const uns = atEnd && !r.sampled;
+    if (uns && st.view === 'sampled') continue;
+    g.beginPath(); g.arc(X(tt), Y(r.y), rad, 0, 7);
+    if (uns) { g.strokeStyle = C.ochre; g.lineWidth = 1.2; g.stroke(); g.lineWidth = lw; }
+    else { g.fillStyle = C.accent; g.fill(); }
+  }
+  // the present
+  g.strokeStyle = C.line; g.setLineDash([3, 4]); g.lineWidth = 1;
+  g.beginPath(); g.moveTo(X(tt), p.t); g.lineTo(X(tt), H - p.b); g.stroke(); g.setLineDash([]);
+  timeAxis(g, X, p.l, W - p.r, H - p.b + 4, T);
+
+  if (st.sim.status !== 'done') {
+    g.fillStyle = C.brick; g.font = '14px ' + C.sans; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(st.sim.status === 'too_large' ? 'More than 3,000 living lineages: lower the rates or the crown age.'
+                                             : 'No draw in 1,000 survived: extinction outweighs speciation here.', W / 2, H / 2);
+  }
+}
+
+function drawLTT(rows, sim, living, sampled, tt, atEnd) {
+  const [g, W, H] = fit($('ltt'));
+  const p = { l: 40, r: 12, t: 10, b: 26 }, w = W - p.l - p.r, h = H - p.t - p.b, T = st.T;
+  const X = t => p.l + t / T * w;
+  const tr = sim.trace || [];
+  const nMax = Math.max(10, ...tr.map(s => s.N)) * 1.3;
+  const Y = n => p.t + h * (1 - Math.log(n) / Math.log(nMax));
+  g.font = '11.5px ' + C.sans; g.textAlign = 'right'; g.textBaseline = 'middle';
+  for (let v = 1; v < nMax; v *= 10) {
+    g.strokeStyle = C.line; g.lineWidth = 1; g.beginPath(); g.moveTo(p.l, Y(v)); g.lineTo(W - p.r, Y(v)); g.stroke();
+    g.fillStyle = C.ink3; g.fillText(v, p.l - 6, Y(v));
+  }
+  // complete: N at every event, a step function
+  g.strokeStyle = C.gone; g.lineWidth = 2; g.beginPath();
+  let started = false, prevN = 2;
+  for (const s of tr) {
+    if (s.t > tt) break;
+    if (!started) { g.moveTo(X(s.t), Y(s.N)); started = true; }
+    else { g.lineTo(X(s.t), Y(prevN)); g.lineTo(X(s.t), Y(s.N)); }
+    prevN = s.N;
+  }
+  if (started && prevN > 0) g.lineTo(X(tt), Y(prevN));
+  g.stroke();
+  // reconstructed and sampled: rows carrying a (sampled) living lineage below them
+  const G = 160;
+  const curve = (keep, alive, col, width) => {
+    g.strokeStyle = col; g.lineWidth = width; g.beginPath();
+    for (let k = 0; k <= G; k++) {
+      const u = k / G * tt;
+      let n = 0;
+      for (let i = 0; i < rows.length; i++) {
+        if (!keep[i] || rows[i].birth > u) continue;
+        const r = rows[i];
+        let e;
+        if (alive(r)) e = Infinity;
+        else { e = -Infinity; for (const c of r.kids) if (keep[c]) e = Math.max(e, rows[c].birth); }
+        if (e > u) n++;
+      }
+      if (n < 1) continue;
+      k === 0 ? g.moveTo(X(u), Y(n)) : g.lineTo(X(u), Y(n));
+    }
+    g.stroke();
+  };
+  if (tt > 0) {
+    curve(living, r => r.end < 0 || r.end > tt, C.accent, 2.4);
+    if (atEnd && st.rho < 1) curve(sampled, r => r.end < 0 && r.sampled, C.ochre, 2.4);
+  }
+  timeAxis(g, X, p.l, W - p.r, H - p.b + 4, T);
+  $('lg-samp').style.display = st.rho < 1 ? '' : 'none';
+}
+
+function drawRates(sim, tt) {
+  const [g, W, H] = fit($('rates'));
+  const p = { l: 40, r: 12, t: 10, b: 26 }, w = W - p.l - p.r, h = H - p.t - p.b, T = st.T;
+  const tr = sim.trace || [];
+  const top = Math.max(0.1, ...tr.map(s => Math.max(s.lamHi, s.mu))) * 1.1;
+  const X = t => p.l + t / T * w, Y = v => p.t + h * (1 - v / top);
+  const step = Math.pow(10, Math.floor(Math.log10(top / 2))), tick = top / step > 10 ? step * 5 : top / step > 4 ? step * 2 : step;
+  g.font = '11.5px ' + C.sans; g.textAlign = 'right'; g.textBaseline = 'middle';
+  for (let v = 0; v < top; v += tick) {
+    g.strokeStyle = C.line; g.lineWidth = 1; g.beginPath(); g.moveTo(p.l, Y(v)); g.lineTo(W - p.r, Y(v)); g.stroke();
+    g.fillStyle = C.ink3; g.fillText(+v.toPrecision(3), p.l - 6, Y(v));
+  }
+  const shown = tr.filter(s => s.t <= tt);
+  const perLin = COV[st.model].some(c => c === 'D' || c.startsWith('ED'));
+  if (shown.length) {
+    const ext = shown.concat([{ ...shown[shown.length - 1], t: tt }]);
+    const stepPath = key => {
+      g.beginPath(); g.moveTo(X(ext[0].t), Y(ext[0][key]));
+      for (let k = 1; k < ext.length; k++) { g.lineTo(X(ext[k].t), Y(ext[k - 1][key])); g.lineTo(X(ext[k].t), Y(ext[k][key])); }
+    };
+    if (perLin) {                                                   // band: slowest to fastest lineage
+      g.fillStyle = C.accent; g.globalAlpha = 0.16; g.beginPath();
+      g.moveTo(X(ext[0].t), Y(ext[0].lamHi));
+      for (let k = 1; k < ext.length; k++) { g.lineTo(X(ext[k].t), Y(ext[k - 1].lamHi)); g.lineTo(X(ext[k].t), Y(ext[k].lamHi)); }
+      for (let k = ext.length - 1; k > 0; k--) { g.lineTo(X(ext[k].t), Y(ext[k].lamLo)); g.lineTo(X(ext[k].t), Y(ext[k - 1].lamLo)); }
+      g.lineTo(X(ext[0].t), Y(ext[0].lamLo)); g.closePath(); g.fill(); g.globalAlpha = 1;
+    }
+    g.lineWidth = 2; g.strokeStyle = C.accent; stepPath('lam'); g.stroke();
+    g.strokeStyle = C.brick; stepPath('mu'); g.stroke();
+  }
+  timeAxis(g, X, p.l, W - p.r, H - p.b + 4, T);
+  $('lg-lam').textContent = perLin ? 'mean λ over living lineages' : 'λ, the same for every lineage';
+  $('lg-mu').textContent = perLin ? 'mean μ' : 'μ, the same for every lineage';
+  $('ratenote').textContent = perLin ? 'band: slowest to fastest lineage' : '';
+}
+
+function status(rows, tt, atEnd) {
+  const sim = st.sim;
+  $('clock').textContent = `t = ${tt.toFixed(2)} of ${st.T}`;
+  if (sim.status !== 'done') { $('status').innerHTML = ''; return; }
+  let alive = 0, dead = 0, samp = 0;
+  for (const r of rows) {
+    if (r.birth > tt) continue;
+    if (r.end < 0 || r.end > tt) { alive++; if (r.sampled) samp++; } else dead++;
+  }
+  const draws = sim.attempts === 1 ? 'survived on the first draw'
+    : `survived on draw ${sim.attempts} (both crown lineages must leave descendants)`;
+  $('status').innerHTML = `${alive} living · ${dead} extinct` +
+    (atEnd && st.rho < 1 ? ` · ${samp} sampled` : '') + ` · ${draws}`;
+}
+
+// ---- start -------------------------------------------------------------------
+colours();
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', colours);
+$('rho').value = st.rho; $('rhov').textContent = st.rho.toFixed(2);
+st.seed = (Math.random() * 1e9) >>> 0; $('seed').value = st.seed;
+const q = new URLSearchParams(location.search);
+if (q.get('model') && COV[q.get('model')]) st.model = q.get('model');
+if (q.get('link') && PRESET[q.get('link')] && PRESET[q.get('link')][st.model]) st.link = q.get('link');
+if (q.get('seed')) { st.seed = +q.get('seed') >>> 0; $('seed').value = st.seed; }
+if (q.get('rho')) { st.rho = +q.get('rho'); $('rho').value = st.rho; $('rhov').textContent = st.rho.toFixed(2); }
+if (['complete', 'recon', 'sampled'].includes(q.get('view'))) st.view = q.get('view');
+loadPreset();
+if (q.get('t')) {                       // start part-way through: ?t=5 or ?t=end
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    st.tDisp = q.get('t') === 'end' ? st.T : Math.min(st.T, +q.get('t')); syncPlay();
+  }));
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

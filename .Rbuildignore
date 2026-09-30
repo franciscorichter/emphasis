@@ -23,4 +23,5 @@
 ^\.nojekyll$
 ^assets$
 ^D\.html$
+^simulator\.html$
 ^dev$
