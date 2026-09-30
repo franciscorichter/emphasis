@@ -1,4 +1,4 @@
-// Forward simulator of the emphasis diversification model, for the browser.
+// Forward simulator of the endogenous diversification models in emphasis, for the browser.
 //
 // A port of sim_tree::general_div::simulate_tree_ltable()
 // (inst/include/general_tree.hpp) and emphasis::ed::fair_proportion()
