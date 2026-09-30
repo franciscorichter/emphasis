@@ -321,7 +321,8 @@
   model_bin <- .pad_model_bin(model_bin)
   # No M covariate: it would close the mean-field state on the clade-mean
   # pendant age, which the iteration does not carry.  ED and D are admitted on
-  # the linear and exponential links.  The proposal is the mean-field one: it
+  # the linear and exponential links (D on request: estimate_rates routes a D
+  # model to the thinning proposal unless control$sampling names this one).  The proposal is the mean-field one: it
   # gives every lineage the rate of the clade's average lineage, whose ED is
   # P-hat/N-hat (which the iteration solves for) and whose D is zero (D is
   # centred), and leaves each lineage's own departure to the importance

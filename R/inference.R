@@ -1203,6 +1203,17 @@ estimate_rates <- function(tree,
     }
   }
 
+  # A D model runs on the thinning proposal unless the caller names a sampler.
+  # The surrogate admits D (mean field D = 0, exact attachment) and on the E19
+  # design leaves 13-33 effective draws of 600 against 3-6 for thinning in four
+  # cells of five, but its fifth cell stays at 6.5 and one cell's selection
+  # rate falls (0.20 against 0.40), so the pre-registered condition for making
+  # it the D default (E19b) is not met; control$sampling = "bdi" asks for it.
+  if (method == "mcem" && model_bin[3L] != 0L && identical(ctrl$sampling, "bdi") &&
+      !("sampling" %in% names(control))) {
+    ctrl$sampling <- "dynamic_fresh"
+  }
+
   raw <- switch(method,
     mcem = .run_mcem(brts, ip8, lb8, ub8, ctrl, model = model_bin, link = link_int,
                      cond_fun = cond_fun),
@@ -1240,6 +1251,7 @@ estimate_rates <- function(tree,
   result <- list(pars = pars, loglik = loglik, loglik_var = loglik_var,
                  n_pars = n_pars, AIC = aic,
                  method = method, model = model_bin, rho = ctrl$rho,
+                 sampling = if (method == "mcem") ctrl$sampling else NA_character_,
                  stop_reason = stop_reason, iterations = iterations,
                  n_failed = n_failed,
                  cond = !is.null(cond), details = raw$details)
