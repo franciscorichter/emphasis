@@ -368,9 +368,10 @@ Poisson form of the log-linear point process --- `lineage_table()` is that form,
 lineage and segment --- with the hidden lineages entering with their importance weights, and
 picks a point on it by BIC or AIC, for the speciation and the extinction rate separately. It
 reports the order in which the covariates enter and the chosen set. On trees whose hidden
-lineages are drawn at the generating value it finds the null on 0.90 and $N$ on 0.85 of trees,
-the extinction path admits nothing spurious, and it admits the wrong one of $D$ and
-$\mathrm{ED}$ on 60--80% of trees when either is present: the two share the pendant edge.
+lineages are drawn at the generating value it chooses the null on 0.90 and $N$ on 0.85 of
+trees with $N$ at 0.85--1.00 of its value, the extinction path admits nothing spurious, and
+where $D$ or $\mathrm{ED}$ generated the tree it chooses the pair (0.45--0.60) rather than the
+right one, or $D$ alone from a generator with both (0.80): the two share the pendant edge.
 
 ## Function reference
 
