@@ -443,11 +443,13 @@ test_that(".bdi_supported accepts the widened scope", {
 })
 
 test_that(".bdi_supported still refuses what is unsupported, and names the reason", {
-  # D-dependent: out of reach by construction, not by omission.
+  # M-dependent: out of reach by construction, not by omission.  D-dependent
+  # models are admitted on the linear and exponential links (mean field D = 0,
+  # the coefficient in the attachment tilt) and refused on the gaussian one.
   for (link in c(0L, 1L, 2L)) for (rho in c(1, 0.5)) {
-    expect_false(.bdi_supported(c(0L, 0L, 1L), link, rho))
-    expect_false(.bdi_supported(c(1L, 0L, 1L), link, rho))
-    expect_false(.bdi_supported(c(0L, 1L, 0L), link, rho))   # M-dependent
+    expect_false(.bdi_supported(c(0L, 1L, 0L), link, rho))
+    expect_equal(.bdi_supported(c(0L, 0L, 1L), link, rho), link != 2L)
+    expect_equal(.bdi_supported(c(1L, 0L, 1L), link, rho), link != 2L)
   }
   # dd on the gaussian link: the Picard iteration does not converge there.
   expect_false(.bdi_supported(c(1L, 0L, 0L), 2L, 1))
@@ -457,8 +459,8 @@ test_that(".bdi_supported still refuses what is unsupported, and names the reaso
   expect_false(.bdi_supported(c(0L, 0L, 0L), 0L, 1.5))
   expect_false(.bdi_supported(c(0L, 0L, 0L), 0L, NA_real_))
 
-  expect_match(.bdi_unsupported_reason(c(0L, 0L, 1L), 0L, 1), "D-dependent")
-  expect_match(.bdi_unsupported_reason(c(0L, 0L, 1L), 0L, 1), "pendant age")
+  expect_null(.bdi_unsupported_reason(c(0L, 0L, 1L), 0L, 1))
+  expect_match(.bdi_unsupported_reason(c(0L, 0L, 1L), 2L, 1), "gaussian")
   expect_match(.bdi_unsupported_reason(c(0L, 1L, 0L), 0L, 1), "M-dependent")
   expect_match(.bdi_unsupported_reason(c(1L, 0L, 0L), 2L, 1), "gaussian")
   expect_match(.bdi_unsupported_reason(c(1L, 0L, 0L), 2L, 1), "not monotone")

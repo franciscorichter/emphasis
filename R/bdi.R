@@ -258,14 +258,18 @@
 #' aggregate Gillespie of \code{.bdi_augment_one} moves \code{n_alive} lineages
 #' with one pair of rates.  That is what an N-only model gives it.
 #'
-#' A D-dependent model (\code{model_bin[3] == 1}) does not: its rate depends on
-#' each lineage's own pendant age \code{E_s}, so the survival probability is a
-#' functional of the lineage's own history and no single \code{p(t)} exists.
-#' The construction this file is built on does not extend there, and
-#' D-dependent models stay on the thinning proposal.  The M covariate
-#' (\code{model_bin[2]}) is a clade-level mean and is not in scope here either:
-#' the sampler's own mean-field state would have to be closed on \code{P} as
-#' well as \code{N}, which is written but not gated.
+#' A lineage-level model (D, \code{model_bin[3] != 0}, or ED,
+#' \code{model_bin[4] != 0}) gives each lineage its own rate, so no single
+#' \code{p(t)} is the model's.  The sampler then conditions on the rate of the
+#' clade's average lineage instead: an ED of \code{P-hat/N-hat}, which the
+#' mean-field iteration solves for, and a D of zero, since D is centred.  The
+#' proposal is exact for that surrogate model and the importance weights carry
+#' each lineage's departure from the average; the attachment of a birth is
+#' tilted by the parent's pendant age, where D and ED read the tree.  This is
+#' available on the linear and exponential links.  The M covariate
+#' (\code{model_bin[2]}) is not in scope: the sampler's own mean-field state
+#' would have to be closed on \code{P} as well as \code{N}, which is written
+#' but not gated.
 #'
 #' Under the \code{gaussian} link the rate is
 #' \code{beta_0 * exp(-(beta_N*N - 1)^2 / 2)}, still a function of \code{N}
@@ -312,13 +316,16 @@
     rho > 0 && rho <= 1 + 1e-12
   if (!rho_ok || !(length(model_bin) %in% c(3L, 4L))) return(FALSE)
   model_bin <- .pad_model_bin(model_bin)
-  # No M covariate and no D covariate: each would close the mean-field state
-  # on something the iteration does not carry.  ED is admitted on the linear
-  # and exponential links: its clade mean is P-hat/N-hat, which the iteration
-  # already solves for, so the proposal can read the mean-field ED rate and
-  # leave the per-lineage departure from it to the importance weights.
-  if (model_bin[2L] != 0L || model_bin[3L] != 0L) return(FALSE)
-  if (model_bin[4L] != 0L) return(link %in% c(0L, 1L))
+  # No M covariate: it would close the mean-field state on the clade-mean
+  # pendant age, which the iteration does not carry.  ED and D are admitted on
+  # the linear and exponential links.  The proposal is the mean-field one: it
+  # gives every lineage the rate of the clade's average lineage, whose ED is
+  # P-hat/N-hat (which the iteration solves for) and whose D is zero (D is
+  # centred), and leaves each lineage's own departure to the importance
+  # weights; the attachment of a birth is tilted by the lineage's pendant
+  # age, which is where D and ED read the tree.
+  if (model_bin[2L] != 0L) return(FALSE)
+  if (model_bin[3L] != 0L || model_bin[4L] != 0L) return(link %in% c(0L, 1L))
   if (link %in% c(0L, 1L)) return(TRUE)
   # gaussian: constant rates only (see above).
   link == 2L && model_bin[1L] == 0L
@@ -339,14 +346,9 @@
   if (!(length(model_bin) %in% c(3L, 4L)))
     return("a model vector that is not length 3 or 4")
   model_bin <- .pad_model_bin(model_bin)
-  if (model_bin[4L] != 0L && !(link %in% c(0L, 1L)))
-    return(paste0("an ED-dependent model on the gaussian link: the mean-field ",
-                  "ED rate the proposal is built on is not available there"))
-  if (model_bin[3L] != 0L)
-    return(paste0("a D-dependent model: the BDI conditional distribution is ",
-                  "built on one survival probability p(t) shared by every ",
-                  "lineage alive at t, and a D-model's rate depends on each ",
-                  "lineage's own pendant age, so no single p(t) exists"))
+  if ((model_bin[3L] != 0L || model_bin[4L] != 0L) && !(link %in% c(0L, 1L)))
+    return(paste0("a lineage-level (D or ED) model on the gaussian link: the ",
+                  "mean-field rate the proposal is built on is not available there"))
   if (model_bin[2L] != 0L)
     return(paste0("an M-dependent model: the sampler's mean-field state would ",
                   "have to be closed on the clade-mean pendant age as well as ",
@@ -886,10 +888,20 @@
                              Phat_fun = NULL, Ehat_fun = NULL,
                              max_missing = 1e4L, rho = 1,
                              track_parents = FALSE, first_aug_id = 0L,
-                             step_max = Inf, obs_pid = NULL, beta_ed = 0) {
+                             step_max = Inf, obs_pid = NULL, beta_ed = 0,
+                             attach_fn = NULL) {
   bt <- sort(bt)
   is_cr <- all(model_bin == 0L)
   complete <- (rho >= 1)
+  # Exact attachment (D models): attach_fn(E_pool, E_all, N) returns the
+  # model's own speciation rate of each candidate parent from its pendant age,
+  # the mean pendant age over every lineage alive and the lineage count, so a
+  # birth is attached with the model's conditional probability within the
+  # pool and never to a parent whose rate is zero.  It supersedes the
+  # beta_ed tilt and needs the pendant ages kept exactly: a lineage's pendant
+  # age restarts at each of its own splits, hidden or observed.
+  exact <- is.function(attach_fn) && isTRUE(track_parents)
+  ts_mis <- numeric(0)        # pendant start of each missing lineage alive now
 
   lam0 <- .bdi_lam(pars8, 0, 0, 0, model_bin, link)
   mu0  <- .bdi_mu(pars8, 0, 0, 0, model_bin, link)
@@ -939,7 +951,7 @@
   # already rich, so it is the default.  At a weak effect the lineages barely
   # differ, the tilt is mostly the proxy's own error, and uniform is as good
   # or better -- pass attach = "uniform" there if the draw is cheap anyway.
-  attach_ed <- isTRUE(track_parents) && is.finite(beta_ed) && beta_ed != 0
+  attach_ed <- exact || (isTRUE(track_parents) && is.finite(beta_ed) && beta_ed != 0)
   # Tip start of each observed lineage, carried forward: a lineage is pendant
   # from its last split, so this is updated as each observed event is passed,
   # never precomputed over events that have not happened yet.
@@ -1047,7 +1059,8 @@
             # in proportion to each lineage's own rate, through its pendant
             # age; the uniform that chose the event is reused as the variate,
             # so the timing stream is untouched
-            v  <- .attach_w(t - alive, cur_la_raw, beta_ed)
+            v  <- if (exact) attach_fn(t - ts_mis, c(t - ts_mis, t - ts_at(k)), n_alive + k)
+                  else .attach_w(t - alive, cur_la_raw, beta_ed)
             u  <- r / (n_alive * la)
             j  <- pick(u, v)
             # the attachment is no longer 1/n_alive, and logg says so
@@ -1059,9 +1072,11 @@
             # already a uniform index into them
             j <- min(n_alive, as.integer(floor(r / la)) + 1L)
           }
+          if (exact) ts_mis[j] <- t          # the parent's pendant age restarts
           alive_par <- c(alive_par, alive_id[j])
           alive_id  <- c(alive_id, next_id); next_id <- next_id + 1L
         }
+        ts_mis  <- c(ts_mis, t)
         alive   <- c(alive, t)
         n_alive <- n_alive + 1L
         n_total <- n_total + 1L
@@ -1069,7 +1084,8 @@
         logg    <- logg + log(la)           # per-lineage immigration rate
         if (track_parents) {
           if (attach_ed) {
-            v  <- .attach_w(t - ts_at(k), cur_la_raw, beta_ed)
+            v  <- if (exact) attach_fn(t - ts_at(k), c(t - ts_mis, t - ts_at(k)), n_alive + k)
+                  else .attach_w(t - ts_at(k), cur_la_raw, beta_ed)
             u  <- (r - n_alive * la) / nu
             j  <- pick(u, v)
             sv <- sum(v)
@@ -1079,9 +1095,12 @@
             # the k observed lineages share nu equally
             j <- min(k, as.integer(floor((r - n_alive * la) / (nu / k))) + 1L)
           }
+          # the observed parent's pendant age restarts at this hidden split
+          if (exact) assign(as.character(obs_ids(k)[j]), t, envir = ts_obs)
           alive_par <- c(alive_par, obs_ids(k)[j])
           alive_id  <- c(alive_id, next_id); next_id <- next_id + 1L
         }
+        ts_mis  <- c(ts_mis, t)
         alive   <- c(alive, t)
         n_alive <- n_alive + 1L
         n_total <- n_total + 1L
@@ -1094,6 +1113,7 @@
           alive_id <- alive_id[-idx]; alive_par <- alive_par[-idx]
         }
         alive   <- alive[-idx]
+        ts_mis  <- ts_mis[-idx]
         n_alive <- n_alive - 1L
       }
 
@@ -1364,8 +1384,31 @@
   # mean-field rate is the N-only one and the coefficient enters the proposal
   # only through the attachment tilt below.
   ed_centred <- use_ed && mb4[4L] >= 3L
+  use_d <- mb4[3L] != 0L
   pars8 <- pars_full[1:8]
   mb_prop <- mb4[1:3]
+  # A D term has clade mean zero, so the mean-field lineage does not read it:
+  # its slots are cleared here and its coefficient enters only the attachment
+  # tilt below (the same slot then carries the mean-field ED rate when ED is
+  # active, since the average lineage's ED is E-hat).
+  tilt_d <- if (use_d) pars_full[4L] else 0
+  if (use_d) { pars8[4L] <- 0; pars8[8L] <- 0; mb_prop[3L] <- 0L }
+  # With a D term the attachment is exact rather than tilted: each candidate
+  # parent's weight is the model's own speciation rate at that instant, from
+  # its pendant age E_s, the clade mean M over every lineage alive and N.  An
+  # ED term, when present, still enters by its pendant-age proxy, centred on
+  # the pool.  Under the linear link a parent whose rate is truncated to zero
+  # gets weight zero, which is what the model gives a split there.
+  attach_fn <- if (use_d && attach == "rate") {
+    b0 <- pars_full[1L]; bN <- pars_full[2L]; bM <- pars_full[3L]; bD <- pars_full[4L]
+    bE <- if (use_ed) pars_full[9L] else 0
+    function(E_pool, E_all, N) {
+      M <- mean(E_all)
+      eta <- b0 + bN * N + bM * M + bD * (E_pool - M) + bE * (E_pool - mean(E_pool))
+      w <- if (link == 1L) exp(eta) else pmax(eta, 0)
+      if (!any(is.finite(w) & w > 0)) rep(1, length(w)) else w
+    }
+  } else NULL
   if (use_ed && !ed_centred) {
     pars8[4L] <- pars_full[9L]
     pars8[8L] <- pars_full[10L]
@@ -1450,7 +1493,8 @@
                             max_missing, rho = rho,
                             track_parents = use_top, first_aug_id = n_obs,
                             step_max = step_max, obs_pid = obs_pid,
-                            beta_ed = if (use_ed && attach == "rate") pars_full[9L] else 0)
+                            beta_ed = if (attach == "rate") tilt_d + (if (use_ed) pars_full[9L] else 0) else 0,
+                            attach_fn = attach_fn)
     if (aug$reason == "survivor")    { n_rej_surv <- n_rej_surv + 1L; next }
     if (aug$reason == "max_missing") { n_rej_mm   <- n_rej_mm   + 1L; next }
 

@@ -113,9 +113,10 @@ test_that("the gate takes ED on the linear and exponential links only", {
   expect_false(emphasis:::.bdi_supported(mb, 2L))
   expect_match(emphasis:::.bdi_unsupported_reason(mb, 2L), "gaussian")
   expect_null(emphasis:::.bdi_unsupported_reason(mb, 0L))
-  # a D-dependent model is still out: its mean field is not one the iteration
-  # carries
-  expect_false(emphasis:::.bdi_supported(emphasis:::.resolve_model("nd"), 0L))
+  # a D-dependent model is admitted on the same two links: its mean field is
+  # zero (D is centred) and its coefficient enters the attachment tilt
+  expect_true(emphasis:::.bdi_supported(emphasis:::.resolve_model("nd"), 0L))
+  expect_false(emphasis:::.bdi_supported(emphasis:::.resolve_model("nd"), 2L))
 })
 
 test_that("the mean-field PD the ED proposal reads is Faith's PD", {
