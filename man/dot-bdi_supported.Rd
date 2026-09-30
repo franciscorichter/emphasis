@@ -21,14 +21,18 @@ aggregate Gillespie of \code{.bdi_augment_one} moves \code{n_alive} lineages
 with one pair of rates.  That is what an N-only model gives it.
 }
 \details{
-A D-dependent model (\code{model_bin[3] == 1}) does not: its rate depends on
-each lineage's own pendant age \code{E_s}, so the survival probability is a
-functional of the lineage's own history and no single \code{p(t)} exists.
-The construction this file is built on does not extend there, and
-D-dependent models stay on the thinning proposal.  The M covariate
-(\code{model_bin[2]}) is a clade-level mean and is not in scope here either:
-the sampler's own mean-field state would have to be closed on \code{P} as
-well as \code{N}, which is written but not gated.
+A lineage-level model (D, \code{model_bin[3] != 0}, or ED,
+\code{model_bin[4] != 0}) gives each lineage its own rate, so no single
+\code{p(t)} is the model's.  The sampler then conditions on the rate of the
+clade's average lineage instead: an ED of \code{P-hat/N-hat}, which the
+mean-field iteration solves for, and a D of zero, since D is centred.  The
+proposal is exact for that surrogate model and the importance weights carry
+each lineage's departure from the average; the attachment of a birth is
+tilted by the parent's pendant age, where D and ED read the tree.  This is
+available on the linear and exponential links.  The M covariate
+(\code{model_bin[2]}) is not in scope: the sampler's own mean-field state
+would have to be closed on \code{P} as well as \code{N}, which is written
+but not gated.
 
 Under the \code{gaussian} link the rate is
 \code{beta_0 * exp(-(beta_N*N - 1)^2 / 2)}, still a function of \code{N}

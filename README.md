@@ -156,10 +156,12 @@ Two proposals $q$ are available, selected with `simulate_tree(method = )` for co
 
 | Sampler | Where | Scope | Property |
 | ------- | ----- | ----- | -------- |
-| `"bdi"` (default) | `R/bdi.R` | N-only models (`"cr"`, `"dd"`) on the linear and exponential links, `"cr"` also on the gaussian link, $\mathrm{ED}$ models on the linear and exponential links, at any $\rho \in (0,1]$ | Draws from the exact conditional distribution under constant rates (ESS = sample size, zero IS variance); under diversity dependence and under $\mathrm{ED}$ it is a mean-field proposal built on a self-consistent backward–forward iteration, and the weights carry the approximation |
+| `"bdi"` (default) | `R/bdi.R` | N-only models (`"cr"`, `"dd"`) on the linear and exponential links, `"cr"` also on the gaussian link, $D$ and $\mathrm{ED}$ models on the linear and exponential links, at any $\rho \in (0,1]$ | Draws from the exact conditional distribution under constant rates (ESS = sample size, zero IS variance); under diversity dependence and under $D$ or $\mathrm{ED}$ it is a mean-field proposal built on a self-consistent backward–forward iteration, and the weights carry the approximation |
 | `"thinning"` (`sampling = "dynamic_fresh"`) | `src/augment_tree.cpp` | Every model and link | Poisson-thinning proposal, C++ with TBB parallelism |
 
 `.bdi_supported(model_bin, link, rho)` gates both entry points, and `.bdi_unsupported_reason()` supplies the phrase the fallback message carries. Three things are routed to thinning.
+
+**A $D$ model under the conditional proposal.** The average lineage has $D = 0$, because $D$ is centred, so the mean field is the `dd` one and $\beta_D$ enters only the attachment of hidden births — which for $D$ models is exact: each candidate parent is weighted by the model's own speciation rate at that instant, from its pendant age, the mean pendant age over every lineage alive and $N$, with pendant ages restarting at every split of the lineage, hidden or observed; under the linear link a parent whose rate is truncated to zero gets weight zero, as the model gives a split there. `tests/testthat/test-bdi-d.R` checks that $E_q[f/q]$ is the marginal likelihood of a 3-tip $D$ model. Measured at the generating value on 12 `nd` trees at 100 tips (turnover 0.10, 600 draws), the effective sample is 2–439 against 1.3–15 for the thinning proposal, higher on 11 of 12 and by 10–100× at effects 0 and ±0.15 of $\lambda$; a draw set costs 3–14 s against about 1 s. Both proposals lose draws to one event under the linear link — an observed split by an old lineage has rate zero unless a hidden split preceded it; thinning rejects such draws, the conditional proposal drops them — and the exponential link has no such truncation. The fits themselves are measured in E19b of the paper repository.
 
 **Supported is not the same as better.** The gate admits `ed` at every $\rho$, and it runs there, but below $\rho \approx 0.8$ the thinning proposal leaves the larger effective sample — 2.6× at $\rho = 0.6$ — so on an `ed` model at incomplete sampling the default is not the choice to make. `dd` and `ned` do not cross: the conditional proposal leads at every $\rho$ tested.
 
@@ -183,7 +185,7 @@ A note on reading the ED effect: it is quoted as a fraction of the speciation ra
 average lineage, not as a bare coefficient, because fair-proportion ED carries units of time
 and a fixed coefficient means a different effect at every clade size.
 
-A model with a $D$ or $M$ term. A mean-field proposal needs a clade-level trajectory for its covariate, and the iteration carries $\hat N$ and $\hat P$ but not the mean pendant age a $D$- or $M$-model would close on. ($\mathrm{ED}$ is admitted because its clade mean *is* $\hat P / \hat N$ — see above. That the resulting proposal is not exact costs nothing but weight variance: exactness is not what importance sampling requires.)
+A model with an $M$ term. A mean-field proposal needs a clade-level trajectory for its covariate, and the iteration carries $\hat N$ and $\hat P$ but not the mean pendant age an $M$-model would close on. ($\mathrm{ED}$ is admitted because its clade mean *is* $\hat P / \hat N$, and $D$ because its clade mean is zero — see above. That the resulting proposal is not exact costs nothing but weight variance: exactness is not what importance sampling requires.)
 
 `"dd"` on the gaussian link. There $\lambda(N) = \beta_0 e^{-(\beta_N N - 1)^2/2}$ is a function of $N$ alone, but it is not monotone: it peaks at $N = 1/\beta_N$ and falls after it, and the mean-field Picard iteration does not contract past the peak. Measured on a 20-tip tree over a $4\times 8\times 4$ grid in $(\beta_0, \beta_N, \rho)$ with a 200-sweep budget, it failed to reach tolerance in 36 of 128 cells with the residual running to 104 — divergence, not slow convergence — and the failing cells are interleaved with converging ones rather than forming a region that could be excluded. The linear and exponential `"dd"` rates are monotone in $N$ and converged in every cell of that sweep, in at most 27 iterations at $\rho = 1$; below it they are slower, needing up to 134, which is what sets the sweep budget for incomplete sampling. That sweep was a 20-tip tree, and monotonicity does not buy contraction everywhere: on a 416-tip tree at $\beta_0 = 1.2$, $\beta_N = -0.001875$, $\gamma_0 = 0.4$ — where the rates are equal at the equilibrium the parameters imply, so the process is critical there — the linear iteration diverges, with a residual of 305 after 20 sweeps and 329 after 200. The proposal is then built on a mean field that has blown up and its effective sample falls to one. See audit finding H108.
 
@@ -395,8 +397,9 @@ See the [wiki](https://github.com/franciscorichter/emphasis/wiki) for the full d
 - Version 0.4; `main` is the working branch and is identical on the forge and on GitHub.
 - The `{N, D, ED}` covariate basis, survival-conditioned inference and the docs site are in.
   The BDI sampler is the default augmentation proposal within the scope stated above, which
-  includes the ED models through their clade mean; the thinning sampler also reads ED and is
-  the better proposal for `ed` below $\rho \approx 0.8$.
+  includes the ED models through their clade mean and the D models through their zero mean and
+  an exact attachment; the thinning sampler also reads ED and is the better proposal for `ed`
+  below $\rho \approx 0.8$.
 - The M-step sizes its first simplex from the box, a tenth of its width per coordinate. Left
   to NLopt's default, a start one ulp inside a bound gets a step of one ulp and the optimiser
   returns the start at every iteration (`tests/testthat/test-mstep-start.R`).
@@ -411,10 +414,10 @@ is accurate to around $10^{-12}$. It costs 2.2--2.5$\times$ the wall clock of th
 accuracy is what it buys, not speed.
 
 Two things it does not cover, both by measurement rather than omission. `"dd"` on the gaussian
-link is refused because the mean-field iteration diverges there (above). A `d` or `nd` model
-has no exact proposal and cannot have one: the BDI construction rests on a rate that is a
-function of the lineage count alone, while a `D`-model's rate depends on each lineage's own
-pendant age.
+link is refused because the mean-field iteration diverges there (above). No lineage-level
+model has an exact proposal: the BDI construction rests on one survival probability shared by
+every lineage alive, and a `D` or $\mathrm{ED}$ model gives each lineage its own rate, so for
+them the construction is a mean-field proposal and the weights carry the difference.
 
 `auto_bounds()` gives its $\lambda$ ceiling turnover headroom --- the net rate the tip count
 implies, divided by $1 - 0.95$ --- and probes the constant-net-rate ray, so a high-turnover

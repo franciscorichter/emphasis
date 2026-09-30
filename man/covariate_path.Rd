@@ -19,11 +19,11 @@ covariate_path(
 \code{augment_trees} returns them with parent ids, or a single
 \code{phylo} taken as fully observed.}
 
-\item{log_weights}{Optional log importance weights, one per tree; trees are
-resampled in proportion to them.}
+\item{log_weights}{Optional log importance weights, one per tree; without
+them every tree weighs the same.}
 
-\item{n_trees}{How many trees to use (resampled with replacement when
-\code{log_weights} is given, the first \code{n_trees} otherwise).}
+\item{n_trees}{How many trees to use: the \code{n_trees} of largest weight
+(the first \code{n_trees} without weights), renormalised.}
 
 \item{covariates}{Which covariates to offer the path; any of \code{"N"},
 \code{"D"}, \code{"ED"}, \code{"EDc"} (ED centred on the alive lineages).}
@@ -65,6 +65,8 @@ not take; on a constant-exposure problem the two agree
 which covariates the data ask for first; AIC and BIC along the path pick a
 point, with BIC's sample size the number of events.
 
-Importance weights are folded in by resampling the trees in proportion to
-them, so the frame is unweighted.
+Importance weights enter the likelihood as row weights, one per tree and
+normalised to sum to one, so the objective is the expected complete-data
+log-likelihood of one tree --- the M-step's Q function --- and the sample
+size behind BIC is the weighted mean number of events per tree.
 }

@@ -20,7 +20,8 @@
   first_aug_id = 0L,
   step_max = Inf,
   obs_pid = NULL,
-  beta_ed = 0
+  beta_ed = 0,
+  attach_fn = NULL
 )
 }
 \arguments{
