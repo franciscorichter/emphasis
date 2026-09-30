@@ -58,6 +58,13 @@ from branching times.}
     an earlier layout and is padded; \code{use_ED = 3} selects the
     centred covariate).
 }
+\code{model = "all"} fits the nested ladder \code{cr}, \code{dd},
+\code{nd}, \code{ned}, \code{nk} (the last two need a \code{phylo} and
+are left out on the gaussian link), each started from the estimate of the
+model it nests, with each model's box from \code{\link{auto_bounds}}
+unless \code{control$bounds} names one per model, and returns the fits
+with their \code{\link{compare_models}} table (an \code{emphasis_fits}
+object); \code{control$models} restricts the ladder.
 Default \code{"cr"} (constant rate). \code{"nd"} (\code{~ N + D}) is
 diversity and age-imbalance; \code{"ned"} (\code{~ N + ED}) diversity and
 evolutionary distinctiveness, which needs a \code{phylo}. \code{"nedc"}

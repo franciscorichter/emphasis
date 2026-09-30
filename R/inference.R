@@ -974,6 +974,13 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'       an earlier layout and is padded; \code{use_ED = 3} selects the
 #'       centred covariate).
 #'   }
+#'   \code{model = "all"} fits the nested ladder \code{cr}, \code{dd},
+#'   \code{nd}, \code{ned}, \code{nk} (the last two need a \code{phylo} and
+#'   are left out on the gaussian link), each started from the estimate of the
+#'   model it nests, with each model's box from \code{\link{auto_bounds}}
+#'   unless \code{control$bounds} names one per model, and returns the fits
+#'   with their \code{\link{compare_models}} table (an \code{emphasis_fits}
+#'   object); \code{control$models} restricts the ladder.
 #'   Default \code{"cr"} (constant rate). \code{"nd"} (\code{~ N + D}) is
 #'   diversity and age-imbalance; \code{"ned"} (\code{~ N + ED}) diversity and
 #'   evolutionary distinctiveness, which needs a \code{phylo}. \code{"nedc"}
@@ -1062,6 +1069,9 @@ estimate_rates <- function(tree,
                            link      = "linear",
                            cond      = NULL) {
   method    <- match.arg(method)
+
+  if (is.character(model) && length(model) == 1L && identical(tolower(model), "all"))
+    return(.fit_all(tree, method = method, control = control, link = link, cond = cond))
 
   model_bin <- .resolve_model(model)
   link_int  <- .resolve_link(link)
@@ -1234,7 +1244,138 @@ estimate_rates <- function(tree,
                  n_failed = n_failed,
                  cond = !is.null(cond), details = raw$details)
   class(result) <- "emphasis_fit"
+  .fit_notes(result, n_tips = length(brts) + 1L, link_int = link_int, emit = TRUE)
   result
+}
+
+# What the measurements say about a fit like this one, stated with the number
+# each note rests on (the paper repository's E-series).  Three notes:
+#   size      a lineage-level covariate on fewer than 50 tips, where nothing
+#             has been measured;
+#   starved   an effective sample below 10 at the last E-step, which the
+#             pre-registered rules exclude from every selection statement;
+#   turnover  mu/lambda at the intercepts above 0.5, a boundary of the regime
+#             the estimator was measured in.
+# The starved note is a warning, the other two are messages.  Returned
+# invisibly as a character vector so that a test can read them.
+#' @keywords internal
+.fit_notes <- function(fit, n_tips, link_int, emit = FALSE) {
+  notes <- character(0)
+  mb <- .pad_model_bin(fit$model)
+  lineage_level <- any(mb[3:5] != 0L)
+  if (lineage_level && is.finite(n_tips) && n_tips < 50L) {
+    notes <- c(notes, size = sprintf(paste0(
+      "%d tips: the smallest tree on which a lineage-level effect has been measured as ",
+      "selectable is 50 tips (an effect of 0.35 of the speciation rate, turnover 0.25); at 100 ",
+      "tips an effect of 0.35 is selected on 0.75 of trees and one of 0.15 on 0.50. Below 50 ",
+      "tips nothing is measured."), as.integer(n_tips)))
+  }
+  ess <- .fit_ess(fit)
+  if (is.finite(ess) && ess < 10) {
+    notes <- c(notes, starved = sprintf(paste0(
+      "the last E-step's effective sample is %.1f: the fit is sampler-limited and the ",
+      "precision of its estimate and of its log-likelihood is unquantified. The pre-registered ",
+      "rules exclude fits below 10 from every selection statement; more draws, the other ",
+      "proposal (control$sampling), or the exponential link may help."), ess))
+  }
+  p <- as.numeric(fit$pars); n_lam <- length(p) %/% 2L
+  if (length(p) >= 2L && all(is.finite(p[c(1L, n_lam + 1L)]))) {
+    lam0 <- if (link_int == 1L) exp(p[1L]) else p[1L]
+    mu0  <- if (link_int == 1L) exp(p[n_lam + 1L]) else p[n_lam + 1L]
+    turn <- if (is.finite(lam0) && lam0 > 0) mu0 / lam0 else NA_real_
+    if (is.finite(turn) && turn > 0.5) {
+      notes <- c(notes, turnover = sprintf(paste0(
+        "turnover at the intercepts is %.2f: above 0.5 is a boundary of the regime the ",
+        "estimator was measured in (at 100 tips and turnover 0.6 the thinning proposal's ",
+        "effective sample falls to 1 of 200 and the surrogate keeps 200 while giving up 0.14 ",
+        "of the estimate)."), turn))
+    }
+  }
+  if (emit) {
+    if (!is.na(notes["starved"])) warning(notes[["starved"]], call. = FALSE)
+    for (nm in intersect(c("size", "turnover"), names(notes))) message("Note: ", notes[[nm]])
+  }
+  invisible(notes)
+}
+
+# model = "all": the nested ladder of models, each fitted from the estimate
+# of the model it nests, and the fits ranked by compare_models().
+#
+#   cr -> dd -> {nd, ned, nk}
+#
+# The lineage-level models need the tree's topology (a phylo or a
+# simulate_tree() result) and are left out on a bare branching-time vector;
+# ned and nk are left out on the gaussian link.  Each model's box is
+# auto_bounds() on the tree unless control$bounds names one per model
+# (list(dd = list(lower_bound, upper_bound), ...)); control$models restricts
+# the ladder.  The nested start is what the README recommends: an ED fit
+# started from the dd estimate takes seconds where one started from a point at
+# 1.7 times the generating net rate does not finish.
+#' @keywords internal
+.fit_all <- function(tree, method, control, link, cond) {
+  link_int <- .resolve_link(link)
+  brts <- .extract_brts(tree)
+  has_top <- length(.pid(brts)) == length(brts) && length(brts) > 0L
+  ladder <- c("cr", "dd", "nd", "ned", "nk")
+  if (!has_top) {
+    message("Note: the tree carries no topology (a phylo is needed), so ned and nk are left out.")
+    ladder <- setdiff(ladder, c("ned", "nk"))
+  }
+  if (link_int == 2L) ladder <- setdiff(ladder, c("ned", "nk"))
+  if (!is.null(control$models)) {
+    keep <- vapply(control$models, function(m) .model_label(.resolve_model(m)), "")
+    ladder <- ladder[vapply(ladder, function(m) .model_label(.resolve_model(m)), "") %in% keep]
+    if (!length(ladder)) stop("control$models names no model of the ladder cr, dd, nd, ned, nk")
+  }
+  bounds <- control$bounds
+  ctrl0 <- control[setdiff(names(control), c("models", "bounds", "lower_bound", "upper_bound"))]
+  verbose <- isTRUE(control$verbose)
+  nested_of <- function(m) switch(m, cr = NA_character_, dd = "cr", nd = "dd", ned = "dd", nk = "dd")
+
+  fits <- list()
+  for (m in ladder) {
+    mb <- .resolve_model(m)
+    bx <- if (!is.null(bounds[[m]])) bounds[[m]] else
+      auto_bounds(tree, model = m, link = link, train_surv_gam = FALSE, verbose = FALSE,
+                  rho = if (is.null(control$rho)) 1 else control$rho)
+    lb <- as.numeric(bx$lower_bound); ub <- as.numeric(bx$upper_bound)
+    init <- NULL
+    nm <- nested_of(m)
+    if (!is.na(nm) && !is.null(fits[[nm]]) && all(is.finite(fits[[nm]]$pars))) {
+      init <- .contract_pars(.expand_pars(as.numeric(fits[[nm]]$pars), fits[[nm]]$model), mb)
+      span <- ub - lb
+      init <- pmin(pmax(init, lb + 1e-3 * span), ub - 1e-3 * span)
+    }
+    if (verbose) message(sprintf("[estimate_rates] model = %s%s", .model_label(mb),
+                                 if (is.null(init)) "" else sprintf(" (started from %s)", .model_label(.resolve_model(nm)))))
+    ctrl_m <- utils::modifyList(ctrl0, list(lower_bound = lb, upper_bound = ub))
+    fits[[m]] <- tryCatch(
+      estimate_rates(tree, method = method, model = m, init_pars = init, control = ctrl_m,
+                     link = link, cond = cond),
+      error = function(e) { warning(sprintf("model %s failed: %s", m, conditionMessage(e)), call. = FALSE); NULL })
+  }
+  done <- fits[!vapply(fits, is.null, TRUE)]
+  comparison <- if (length(done) >= 2L) do.call(compare_models, done) else NULL
+  if (all(c("nd", "ned") %in% names(done)))
+    message(paste0("Note: nd and ned both read the pendant edge; on 100-tip trees one path over N, D and ED ",
+                   "chooses the pair from a generator with only one of them (0.60 from nd, 0.45 from ned), ",
+                   "so an AIC margin between the two is a margin between two readings of the same edge."))
+  structure(list(fits = fits, comparison = comparison, ladder = ladder, method = method, link = link),
+            class = "emphasis_fits")
+}
+
+#' Print method for the fits of \code{estimate_rates(model = "all")}
+#'
+#' @param x An \code{emphasis_fits} object.
+#' @param ... Ignored.
+#' @export
+print.emphasis_fits <- function(x, ...) {
+  cat("emphasis fits (", x$method, ", link = ", x$link, "): ",
+      paste(x$ladder, collapse = " -> "), "\n\n", sep = "")
+  if (!is.null(x$comparison)) print(x$comparison) else cat("fewer than two models finished\n")
+  failed <- names(x$fits)[vapply(x$fits, is.null, TRUE)]
+  if (length(failed)) cat("\nfailed:", paste(failed, collapse = ", "), "\n")
+  invisible(x)
 }
 
 

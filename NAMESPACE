@@ -2,6 +2,7 @@
 
 S3method(print,cem_diagnostics)
 S3method(print,emphasis_fit)
+S3method(print,emphasis_fits)
 S3method(print,emphasis_pipeline)
 S3method(print,gam_diagnostics)
 S3method(print,mcem_diagnostics)
