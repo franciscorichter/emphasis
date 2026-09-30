@@ -4,18 +4,22 @@
 # and every helper pads it.
 
 test_that("model shortcuts resolve to the correct covariate slots", {
-  expect_equal(emphasis:::.resolve_model("cr"),  c(0L, 0L, 0L, 0L))
-  expect_equal(emphasis:::.resolve_model("dd"),  c(1L, 0L, 0L, 0L))
-  expect_equal(emphasis:::.resolve_model("d"),   c(0L, 0L, 1L, 0L))  # age-imbalance D
-  expect_equal(emphasis:::.resolve_model("nd"),  c(1L, 0L, 1L, 0L))  # N + D
-  expect_equal(emphasis:::.resolve_model("ed"),  c(0L, 0L, 0L, 1L))  # evolutionary distinctiveness
-  expect_equal(emphasis:::.resolve_model("ned"), c(1L, 0L, 0L, 1L))  # N + ED
+  expect_equal(emphasis:::.resolve_model("cr"),  c(0L, 0L, 0L, 0L, 0L))
+  expect_equal(emphasis:::.resolve_model("dd"),  c(1L, 0L, 0L, 0L, 0L))
+  expect_equal(emphasis:::.resolve_model("d"),   c(0L, 0L, 1L, 0L, 0L))  # age-imbalance D
+  expect_equal(emphasis:::.resolve_model("nd"),  c(1L, 0L, 1L, 0L, 0L))  # N + D
+  expect_equal(emphasis:::.resolve_model("ed"),  c(0L, 0L, 0L, 1L, 0L))  # evolutionary distinctiveness
+  expect_equal(emphasis:::.resolve_model("ned"), c(1L, 0L, 0L, 1L, 0L))  # N + ED
+  expect_equal(emphasis:::.resolve_model("k"),   c(0L, 0L, 0L, 0L, 1L))  # ancestral splits
+  expect_equal(emphasis:::.resolve_model("nk"),  c(1L, 0L, 0L, 0L, 1L))  # N + K
 })
 
-test_that("a length-3 model vector is the pre-ED layout and is padded", {
-  expect_equal(emphasis:::.resolve_model(c(1L, 0L, 1L)), c(1L, 0L, 1L, 0L))
-  expect_equal(emphasis:::.resolve_model(c(1L, 0L, 0L, 1L)), c(1L, 0L, 0L, 1L))
+test_that("a shorter model vector is an earlier layout and is padded", {
+  expect_equal(emphasis:::.resolve_model(c(1L, 0L, 1L)), c(1L, 0L, 1L, 0L, 0L))
+  expect_equal(emphasis:::.resolve_model(c(1L, 0L, 0L, 1L)), c(1L, 0L, 0L, 1L, 0L))
+  expect_equal(emphasis:::.resolve_model(c(1L, 0L, 0L, 0L, 1L)), c(1L, 0L, 0L, 0L, 1L))
   expect_error(emphasis:::.resolve_model(c(1L, 0L)))
+  expect_error(emphasis:::.resolve_model(c(1L, 0L, 0L, 0L, 2L)))
 })
 
 test_that("legacy shortcuts ep/rd remain aliases for d", {
@@ -24,22 +28,24 @@ test_that("legacy shortcuts ep/rd remain aliases for d", {
 })
 
 test_that("model formulas parse N, D and ED (and the legacy EP alias)", {
-  expect_equal(emphasis:::.resolve_model(~ N),      c(1L, 0L, 0L, 0L))
-  expect_equal(emphasis:::.resolve_model(~ N + D),  c(1L, 0L, 1L, 0L))
-  expect_equal(emphasis:::.resolve_model(~ D),      c(0L, 0L, 1L, 0L))
-  expect_equal(emphasis:::.resolve_model(~ N + EP), c(1L, 0L, 1L, 0L))  # legacy alias
-  expect_equal(emphasis:::.resolve_model(~ ED),     c(0L, 0L, 0L, 1L))
-  expect_equal(emphasis:::.resolve_model(~ N + ED), c(1L, 0L, 0L, 1L))
+  expect_equal(emphasis:::.resolve_model(~ N),      c(1L, 0L, 0L, 0L, 0L))
+  expect_equal(emphasis:::.resolve_model(~ N + D),  c(1L, 0L, 1L, 0L, 0L))
+  expect_equal(emphasis:::.resolve_model(~ D),      c(0L, 0L, 1L, 0L, 0L))
+  expect_equal(emphasis:::.resolve_model(~ N + EP), c(1L, 0L, 1L, 0L, 0L))  # legacy alias
+  expect_equal(emphasis:::.resolve_model(~ ED),     c(0L, 0L, 0L, 1L, 0L))
+  expect_equal(emphasis:::.resolve_model(~ N + ED), c(1L, 0L, 0L, 1L, 0L))
+  expect_equal(emphasis:::.resolve_model(~ N + K),  c(1L, 0L, 0L, 0L, 1L))
 })
 
-test_that("the ED coefficients are appended to the full vector, so 8 means ED absent", {
+test_that("the ED and K coefficients are appended to the full vector, so 8 means both absent", {
   mb <- c(1L, 0L, 0L, 1L)
   compact <- c(0.5, 0.02, -0.1, 0.1, -0.01, 0.03)   # beta_0, beta_N, beta_ED, gamma_0, gamma_N, gamma_ED
   full <- emphasis:::.expand_pars(compact, mb)
-  expect_length(full, 10L)
+  expect_length(full, 12L)
   expect_equal(full[c(1, 2, 5, 6)], c(0.5, 0.02, 0.1, -0.01))
   expect_equal(full[c(3, 4, 7, 8)], c(0, 0, 0, 0))        # M and D inactive
   expect_equal(full[c(9, 10)], c(-0.1, 0.03))              # ED appended
+  expect_equal(full[c(11, 12)], c(0, 0))                   # K inactive
   expect_equal(emphasis:::.contract_pars(full, mb), compact)
   expect_equal(emphasis:::.par_names(mb),
                c("beta_0", "beta_N", "beta_ED", "gamma_0", "gamma_N", "gamma_ED"))

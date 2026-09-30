@@ -464,7 +464,7 @@ namespace emphasis {
       // as it stands.  The forest changes only when a lineage is inserted, so
       // it is rebuilt after an insertion and reused across the segments in
       // between; the per-segment pass over it is O(N).
-      const bool ed_mode = model.ed_proposal();
+      const bool ed_mode = model.lineage_proposal();
       Model::forest_t forest;
       bool forest_dirty = true;
       std::vector<char> alive_scratch;

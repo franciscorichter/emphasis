@@ -695,16 +695,18 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   mu_int_idx <- n_lam_pars + 1L
 
   for (k in seq_along(active)) {
-    cov_type <- active[k]  # 1=N, 2=M, 3=D
+    cov_type <- active[k]  # 1=N, 2=M, 3=D, 4=ED, 5=K
     coeff_idx    <- 1L + k           # position in lambda block
     mu_coeff_idx <- mu_int_idx + k   # position in mu block
 
     X_obs <- switch(cov_type,
       n_tips,                                  # N
       mean_pendant,                            # M = P/N (mean pendant age)
-      mean_pendant                             # D scale ~ pendant-age spread
+      mean_pendant,                            # D scale ~ pendant-age spread
+      mean_pendant,                            # ED: its pendant edge is most of it
+      2 * log(n_tips)                          # K: the mean depth of a Yule tree with n tips
     )
-    cov_name <- switch(cov_type, "N", "M", "D")
+    cov_name <- switch(cov_type, "N", "M", "D", "ED", "K")
 
     result[[length(result) + 1L]] <- list(
       intercept_idx    = 1L,
@@ -892,8 +894,8 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 #' @param pars_mat Numeric matrix whose rows are compact parameter vectors
 #'   (same layout as \code{pars} in \code{\link{estimate_rates}}).
 #' @param model Model specification: \code{"cr"}, \code{"dd"}, \code{"d"},
-#'   \code{"nd"}, \code{"ed"}, \code{"ned"}, or a binary integer vector
-#'   (length 3 or 4).
+#'   \code{"nd"}, \code{"ed"}, \code{"ned"}, \code{"k"}, \code{"nk"}, or a
+#'   binary integer vector (length 3 to 5).
 #' @param sample_size Number of augmented trees per grid point (default 200).
 #' @param link \code{"linear"}, \code{"exponential"}, or \code{"gaussian"}.
 #' @param max_missing Maximum missing lineages per augmentation (default 1e4).

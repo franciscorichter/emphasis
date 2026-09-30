@@ -117,10 +117,12 @@ shortcuts or a formula:
   \code{"ned"} \tab N + ED\cr
   \code{"edc"} \tab centred ED (ED minus its mean over the lineages alive)\cr
   \code{"nedc"} \tab N + centred ED\cr
+  \code{"k"}   \tab ancestral splits (K: the speciation events on the path from the crown)\cr
+  \code{"nk"}  \tab N + K\cr
 }
-Formulas \code{~ N}, \code{~ N + D}, \code{~ N + ED} and \code{~ N + EDc} are also accepted
-(\code{ep} is a legacy alias for \code{d}).  An \code{ED} model needs the
-tree's topology (a \code{phylo}, not a branching-time vector) and is not
+Formulas \code{~ N}, \code{~ N + D}, \code{~ N + ED}, \code{~ N + EDc} and \code{~ N + K}
+are also accepted (\code{ep} is a legacy alias for \code{d}).  An \code{ED} or \code{K}
+model needs the tree's topology (a \code{phylo}, not a branching-time vector) and is not
 available under the gaussian link.
 }
 

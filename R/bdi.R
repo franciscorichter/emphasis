@@ -314,7 +314,10 @@
   # rather than silently routed elsewhere.
   rho_ok    <- is.numeric(rho) && length(rho) == 1L && is.finite(rho) &&
     rho > 0 && rho <= 1 + 1e-12
-  if (!rho_ok || !(length(model_bin) %in% c(3L, 4L))) return(FALSE)
+  if (!rho_ok || !(length(model_bin) %in% c(3L, 4L, 5L))) return(FALSE)
+  # K: the mean field does not carry the ancestral-split count, so K models
+  # run on the thinning proposal (which reads K per lineage).
+  if (length(model_bin) >= 5L && model_bin[5L] != 0L) return(FALSE)
   model_bin <- .pad_model_bin(model_bin)
   # No M covariate: it would close the mean-field state on the clade-mean
   # pendant age, which the iteration does not carry.  ED and D are admitted on
@@ -343,9 +346,12 @@
   if (!(is.numeric(rho) && length(rho) == 1L && is.finite(rho) &&
         rho > 0 && rho <= 1 + 1e-12))
     return(sprintf("rho = %s (outside (0, 1])", format(rho)))
-  if (!(length(model_bin) %in% c(3L, 4L)))
-    return("a model vector that is not length 3 or 4")
+  if (!(length(model_bin) %in% c(3L, 4L, 5L)))
+    return("a model vector that is not length 3, 4 or 5")
   model_bin <- .pad_model_bin(model_bin)
+  if (model_bin[5L] != 0L)
+    return(paste0("a K-dependent model: the sampler's mean field does not carry ",
+                  "the ancestral-split count; the thinning proposal reads K per lineage"))
   if ((model_bin[3L] != 0L || model_bin[4L] != 0L) && !(link %in% c(0L, 1L)))
     return(paste0("a lineage-level (D or ED) model on the gaussian link: the ",
                   "mean-field rate the proposal is built on is not available there"))
@@ -1368,8 +1374,8 @@
   attach <- match.arg(attach)
   brts  <- .extract_brts(tree)
   mb4   <- .pad_model_bin(model_bin)
-  # Accept compact, 8-element (no ED) or 10-element (with ED) pars
-  pars_full <- if (length(pars) %in% c(8L, 10L)) pars else .expand_pars(pars, mb4)
+  # Accept compact, 8-element (no ED/K), 10-element (with ED) or 12-element pars
+  pars_full <- if (length(pars) %in% c(8L, 10L, 12L)) pars else .expand_pars(pars, mb4)
   use_ed    <- mb4[4L] != 0L
   if (use_ed && length(pars_full) < 10L)
     stop(".augment_tree_bdi: an ED model needs the 10-element parameter vector",

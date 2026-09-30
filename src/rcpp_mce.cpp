@@ -105,8 +105,8 @@ List rcpp_mce(const std::vector<double>& brts,
   emphasis::rng::set_seed(emphasis::resolve_seed(seed));
   const std::vector<double> pts(parent_tip_start.begin(), parent_tip_start.end());
   const std::vector<int> pid(parent_id.begin(), parent_id.end());
-  if (pars.size() != 8 && pars.size() != emphasis::n_params) {
-    throw std::invalid_argument("augment_trees: pars must have length 8 or 10 (got " +
+  if (pars.size() != 8 && pars.size() != 10 && pars.size() != emphasis::n_params) {
+    throw std::invalid_argument("augment_trees: pars must have length 8, 10 or 12 (got " +
       std::to_string(pars.size()) + ")");
   }
   const std::vector<double> pars10 = emphasis::pad_params(pars);
@@ -124,9 +124,9 @@ List rcpp_mce(const std::vector<double>& brts,
   }
   // ED is a function of the ancestry, so the observed lineages must be named:
   // refused here, once, rather than in every augmentation attempt.
-  if (model_bin.size() > 3 && model_bin[3] != 0 && (pid.empty() || pts.empty())) {
+  if (((model_bin.size() > 3 && model_bin[3] != 0) || (model_bin.size() > 4 && model_bin[4] != 0)) && (pid.empty() || pts.empty())) {
     throw std::invalid_argument(
-      "augment_trees: the ED covariate needs the tree's topology: pass a phylo object "
+      "augment_trees: the ED and K covariates need the tree's topology: pass a phylo object "
       "(or a simulate_tree() result), not a bare branching-time vector.");
   }
   // Bounds are only needed for M-step (nlopt); E-step does not use them.

@@ -31,17 +31,17 @@ Rcpp::List simulate_div_tree_cpp(Rcpp::NumericVector  pars,
                                   int                  link = 0,
                                   int                  seed = 0) {
   const uint64_t rseed = emphasis::resolve_seed(seed);
-  // 8 or 10 parameters, 3 or 4 model flags: the ED slots are appended and
-  // default to absent (model.hpp).
-  if (pars.size() != 8 && pars.size() != 10) {
-    Rcpp::stop("simulate_div_tree_cpp: pars must have length 8 or 10 (got %d)", (int) pars.size());
+  // 8, 10 or 12 parameters, 3 to 5 model flags: the ED and K slots are
+  // appended and default to absent (model.hpp).
+  if (pars.size() != 8 && pars.size() != 10 && pars.size() != 12) {
+    Rcpp::stop("simulate_div_tree_cpp: pars must have length 8, 10 or 12 (got %d)", (int) pars.size());
   }
-  if (model.size() != 3 && model.size() != 4) {
-    Rcpp::stop("simulate_div_tree_cpp: model must have length 3 or 4 (got %d)", (int) model.size());
+  if (model.size() < 3 || model.size() > 5) {
+    Rcpp::stop("simulate_div_tree_cpp: model must have length 3, 4 or 5 (got %d)", (int) model.size());
   }
-  std::array<double, 10> p{};
+  std::array<double, 12> p{};
   for (int i = 0; i < pars.size(); ++i) p[static_cast<size_t>(i)] = pars[i];
-  std::array<int, 4> m{};
+  std::array<int, 5> m{};
   for (int i = 0; i < model.size(); ++i) m[static_cast<size_t>(i)] = model[i];
 
   sim_tree::general_div sim(max_t, p, m, static_cast<size_t>(max_N), link, rseed);

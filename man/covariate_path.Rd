@@ -26,7 +26,8 @@ them every tree weighs the same.}
 (the first \code{n_trees} without weights), renormalised.}
 
 \item{covariates}{Which covariates to offer the path; any of \code{"N"},
-\code{"D"}, \code{"ED"}, \code{"EDc"} (ED centred on the alive lineages).}
+\code{"D"}, \code{"ED"}, \code{"EDc"} (ED centred on the alive lineages),
+\code{"K"} (the number of speciation events on the path from the crown).}
 
 \item{rate}{\code{"speciation"}, \code{"extinction"} or both.}
 

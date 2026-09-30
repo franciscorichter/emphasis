@@ -69,7 +69,8 @@ lineage_table <- function(tree) {
 #' @param n_trees How many trees to use: the \code{n_trees} of largest weight
 #'   (the first \code{n_trees} without weights), renormalised.
 #' @param covariates Which covariates to offer the path; any of \code{"N"},
-#'   \code{"D"}, \code{"ED"}, \code{"EDc"} (ED centred on the alive lineages).
+#'   \code{"D"}, \code{"ED"}, \code{"EDc"} (ED centred on the alive lineages),
+#'   \code{"K"} (the number of speciation events on the path from the crown).
 #' @param rate \code{"speciation"}, \code{"extinction"} or both.
 #' @param criterion \code{"BIC"} or \code{"AIC"} along the path.
 #' @param n_gamma Number of points on the path.
@@ -85,7 +86,7 @@ covariate_path <- function(trees, log_weights = NULL, n_trees = 40L,
                            criterion = c("BIC", "AIC"), n_gamma = 60L) {
   criterion <- match.arg(criterion)
   rate <- match.arg(rate, several.ok = TRUE)
-  covariates <- match.arg(covariates, c("N", "D", "ED", "EDc"), several.ok = TRUE)
+  covariates <- match.arg(covariates, c("N", "D", "ED", "EDc", "K"), several.ok = TRUE)
   if (inherits(trees, "phylo")) trees <- list(.observed_frame(trees))
   if (!is.list(trees) || !length(trees)) stop("'trees' must be a non-empty list of augmented trees")
   if (!is.null(log_weights)) {
@@ -101,7 +102,7 @@ covariate_path <- function(trees, log_weights = NULL, n_trees = 40L,
     f <- .segment_rows(lineage_table_cpp(trees[[pick[k]]])); f$w <- w[k]; f })
   frame <- do.call(rbind, parts)
   ess <- 1 / sum(w^2)
-  X <- cbind(N = frame$N, D = frame$D, ED = frame$ED, EDc = frame$EDc)[, covariates, drop = FALSE]
+  X <- cbind(N = frame$N, D = frame$D, ED = frame$ED, EDc = frame$EDc, K = frame$K)[, covariates, drop = FALSE]
   out <- list()
   for (r in rate) {
     y <- if (r == "speciation") frame$y_spec else frame$y_ext
@@ -132,6 +133,7 @@ covariate_path <- function(trees, log_weights = NULL, n_trees = 40L,
              D = (tm - tab$ts) - tab$M,
              ED = ED,
              EDc = ED - stats::ave(ED, tab$seg, FUN = mean),
+             K = tab$K,
              dt = tab$t1 - tab$t0,
              y_spec = as.integer(tab$event == 1L),
              y_ext = as.integer(tab$event == 2L))

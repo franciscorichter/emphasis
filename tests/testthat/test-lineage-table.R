@@ -5,17 +5,18 @@
 # C++ likelihood, and the likelihood's ED path against the table's D starts.
 
 .logf_from_table <- function(tab, df, p10) {
-  # p10: beta_0 beta_N beta_M beta_D gamma_0 gamma_N gamma_M gamma_D beta_ED gamma_ED
-  b <- p10[c(1, 2, 4, 9)]; g <- p10[c(5, 6, 8, 10)]
+  # p10: beta_0 beta_N beta_M beta_D gamma_0 gamma_N gamma_M gamma_D beta_ED gamma_ED [beta_K gamma_K]
+  p10 <- c(p10, rep(0, 12 - length(p10)))
+  b <- p10[c(1, 2, 4, 9, 11)]; g <- p10[c(5, 6, 8, 10, 12)]
   # per row: eta(u) = a + s u on [t0, t1] with
-  #   a = b0 + bN N + bD(-ts - M) + bED(ed0 - t0),  s = bD + bED
+  #   a = b0 + bN N + bD(-ts - M) + bED(ed0 - t0) + bK K,  s = bD + bED
   int_exp <- function(a, s, t0, t1) if (abs(s) < 1e-12) exp(a) * (t1 - t0) else
                                       exp(a) * (exp(s * t1) - exp(s * t0)) / s
-  a_l <- b[1] + b[2] * tab$N + b[3] * (-tab$ts - tab$M) + b[4] * (tab$ed0 - tab$t0)
-  a_m <- g[1] + g[2] * tab$N + g[3] * (-tab$ts - tab$M) + g[4] * (tab$ed0 - tab$t0)
+  a_l <- b[1] + b[2] * tab$N + b[3] * (-tab$ts - tab$M) + b[4] * (tab$ed0 - tab$t0) + b[5] * tab$K
+  a_m <- g[1] + g[2] * tab$N + g[3] * (-tab$ts - tab$M) + g[4] * (tab$ed0 - tab$t0) + g[5] * tab$K
   inte <- sum(int_exp(a_l, b[3] + b[4], tab$t0, tab$t1)) + sum(int_exp(a_m, g[3] + g[4], tab$t0, tab$t1))
   ev <- tab[tab$event != 0L, ]
-  eta_ev <- function(cf) cf[1] + cf[2] * ev$N + cf[3] * ((ev$t1 - ev$ts) - ev$M) + cf[4] * (ev$ed0 + ev$t1 - ev$t0)
+  eta_ev <- function(cf) cf[1] + cf[2] * ev$N + cf[3] * ((ev$t1 - ev$ts) - ev$M) + cf[4] * (ev$ed0 + ev$t1 - ev$t0) + cf[5] * ev$K
   events <- sum(ifelse(ev$event == 1L, eta_ev(b), eta_ev(g)))
   events - inte
 }
@@ -35,6 +36,17 @@ test_that("the lineage table reproduces the full model's log-likelihood under th
   ref <- vapply(aug$trees, function(df) .logf_from_table(lineage_table(df), df, p10), 0)
   expect_true(all(is.finite(got)))
   expect_equal(got, ref, tolerance = 1e-8)
+  # with K in the model as well (12 slots), the same identity holds
+  p12 <- c(p10, 0.08, -0.01)
+  mb5 <- c(1L, 0L, 1L, 1L, 1L)
+  aug5 <- emphasis:::augment_trees(as.numeric(brts), p12, 12L, 20000L, 300L, 1e6, 1L,
+                                   model = mb5, link = 1L, rho = 1,
+                                   parent_tip_start = emphasis:::.pts(brts), seed = 6L,
+                                   parent_id = emphasis:::.pid(brts))
+  skip_if(length(aug5$trees) == 0L, "augmentation drew no tree")
+  got5 <- emphasis:::eval_logf(p12, aug5$trees, model = mb5, link = 1L, rho = 1)$logf
+  ref5 <- vapply(aug5$trees, function(df) .logf_from_table(lineage_table(df), df, p12), 0)
+  expect_equal(got5, ref5, tolerance = 1e-8)
   # the table's alive count is the node's n on every segment
   tab <- lineage_table(aug$trees[[1L]])
   n_seg <- tapply(tab$lineage, tab$seg, length)

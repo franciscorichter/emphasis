@@ -113,7 +113,7 @@ Rcpp::List eval_logf_cpp(const std::vector<double>& pars,
 // [[Rcpp::export(name = "lineage_table_cpp")]]
 Rcpp::DataFrame lineage_table_cpp(const Rcpp::DataFrame& tree) {
   emphasis::param_t lb8(8, -1e6), ub8(8, 1e6);
-  std::vector<int> mb{1, 0, 1, 1};
+  std::vector<int> mb{1, 0, 1, 1, 1};
   auto mdl = emphasis::Model(lb8, ub8, mb, 0, 1.0);
   auto local_tree = loglik::pack(tree);
   auto r = mdl.lineage_table(local_tree);
@@ -121,7 +121,7 @@ Rcpp::DataFrame lineage_table_cpp(const Rcpp::DataFrame& tree) {
     Rcpp::Named("seg") = r.seg, Rcpp::Named("lineage") = r.lin, Rcpp::Named("id") = r.id,
     Rcpp::Named("event") = r.ev, Rcpp::Named("t0") = r.t0, Rcpp::Named("t1") = r.t1,
     Rcpp::Named("N") = r.N, Rcpp::Named("M") = r.M, Rcpp::Named("ts") = r.ts,
-    Rcpp::Named("ed0") = r.ed0);
+    Rcpp::Named("ed0") = r.ed0, Rcpp::Named("K") = r.K);
 }
 
 //' The pendant PD and thinning rate the sampler sees at arbitrary times

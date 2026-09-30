@@ -49,21 +49,25 @@ from branching times.}
 
 \item{model}{Model specification. Accepts:
 \itemize{
-  \item a formula such as \code{~ N}, \code{~ N + D} or \code{~ N + ED},
+  \item a formula such as \code{~ N}, \code{~ N + D}, \code{~ N + ED} or \code{~ N + K},
   \item a string shortcut (\code{"cr"}, \code{"dd"}, \code{"d"},
-    \code{"nd"}, \code{"ed"}, \code{"ned"}, \code{"edc"}, \code{"nedc"}), or
-  \item an integer vector \code{c(use_N, use_M, use_D, use_ED)}
-    (\code{use_M} is internal only and should be 0; a length-3 vector is
-    the pre-ED layout and is padded; \code{use_ED = 3} selects the
+    \code{"nd"}, \code{"ed"}, \code{"ned"}, \code{"edc"}, \code{"nedc"},
+    \code{"k"}, \code{"nk"}), or
+  \item an integer vector \code{c(use_N, use_M, use_D, use_ED, use_K)}
+    (\code{use_M} is internal only and should be 0; a shorter vector is
+    an earlier layout and is padded; \code{use_ED = 3} selects the
     centred covariate).
 }
 Default \code{"cr"} (constant rate). \code{"nd"} (\code{~ N + D}) is
 diversity and age-imbalance; \code{"ned"} (\code{~ N + ED}) diversity and
-evolutionary distinctiveness, which needs a \code{phylo} and uses the
-thinning sampler. \code{"nedc"} (\code{~ N + EDc}) reads ED minus its
-mean over the lineages alive at the same time, a covariate with clade
-mean zero, so that \code{beta_ED} carries only the within-clade contrast
-and none of the clade-level level that \code{N} tracks.}
+evolutionary distinctiveness, which needs a \code{phylo}. \code{"nedc"}
+(\code{~ N + EDc}) reads ED minus its mean over the lineages alive at the
+same time, a covariate with clade mean zero, so that \code{beta_ED}
+carries only the within-clade contrast and none of the clade-level level
+that \code{N} tracks. \code{"nk"} (\code{~ N + K}) is diversity and the
+number of speciation events on the path from the crown to the lineage,
+hidden splits counted; it needs a \code{phylo} and runs on the thinning
+sampler.}
 
 \item{init_pars}{Starting parameter vector. Required for \code{"mcem"};
 ignored for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the

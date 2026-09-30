@@ -20,8 +20,8 @@
 #' @param tree A \code{phylo} object, branching-time vector, or
 #'   \code{\link{simulate_tree}} result.
 #' @param model Model specification: \code{"cr"}, \code{"dd"}, \code{"d"},
-#'   \code{"nd"}, \code{"ed"}, \code{"ned"}, a formula (e.g. \code{~ N + D},
-#'   \code{~ N + ED}), or a binary vector.
+#'   \code{"nd"}, \code{"ed"}, \code{"ned"}, \code{"k"}, \code{"nk"}, a formula
+#'   (e.g. \code{~ N + D}, \code{~ N + ED}, \code{~ N + K}), or a binary vector.
 #' @param link \code{"linear"} (default), \code{"exponential"}, or \code{"gaussian"}.
 #' @param stages Character vector of stages to run.  Default
 #'   \code{c("bounds", "gam", "cem", "mcem")}.  Remove stages to skip them,

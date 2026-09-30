@@ -96,10 +96,10 @@ List rcpp_mcm(List e_step,
 {
   // The internal parameter layout has 10 slots (the last two the ED
   // coefficients); an 8-element vector means ED absent and is padded.
-  const bool ok_len = (init_pars.size() == 8 || init_pars.size() == emphasis::n_params) &&
+  const bool ok_len = (init_pars.size() == 8 || init_pars.size() == 10 || init_pars.size() == emphasis::n_params) &&
                       init_pars.size() == lower_bound.size() && init_pars.size() == upper_bound.size();
   if (!ok_len) {
-    throw std::invalid_argument("m_cpp: init_pars, lower_bound and upper_bound must have length 8 or 10, equal (got " +
+    throw std::invalid_argument("m_cpp: init_pars, lower_bound and upper_bound must have length 8, 10 or 12, equal (got " +
       std::to_string(init_pars.size()) + ", " + std::to_string(lower_bound.size()) + ", " +
       std::to_string(upper_bound.size()) + ")");
   }

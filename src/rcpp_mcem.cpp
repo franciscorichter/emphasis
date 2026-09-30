@@ -94,10 +94,10 @@ List rcpp_mcem(const std::vector<double>& brts,
   const std::vector<double> pts(parent_tip_start.begin(), parent_tip_start.end());
   const std::vector<int> pid(parent_id.begin(), parent_id.end());
   // 8 slots means ED absent; the internal layout is 10 (model.hpp).
-  const bool ok_len = (init_pars.size() == 8 || init_pars.size() == emphasis::n_params) &&
+  const bool ok_len = (init_pars.size() == 8 || init_pars.size() == 10 || init_pars.size() == emphasis::n_params) &&
                       init_pars.size() == lower_bound.size() && init_pars.size() == upper_bound.size();
   if (!ok_len) {
-    throw std::invalid_argument("em_cpp: init_pars, lower_bound and upper_bound must have length 8 or 10, equal (got " +
+    throw std::invalid_argument("em_cpp: init_pars, lower_bound and upper_bound must have length 8, 10 or 12, equal (got " +
       std::to_string(init_pars.size()) + ", " + std::to_string(lower_bound.size()) + ", " +
       std::to_string(upper_bound.size()) + ")");
   }
@@ -116,9 +116,9 @@ List rcpp_mcem(const std::vector<double>& brts,
       "Pass parent_tip_start; without it log q is not the density the sampler "
       "draws from.");
   }
-  if (model_bin.size() > 3 && model_bin[3] != 0 && (pid.empty() || pts.empty())) {
+  if (((model_bin.size() > 3 && model_bin[3] != 0) || (model_bin.size() > 4 && model_bin[4] != 0)) && (pid.empty() || pts.empty())) {
     throw std::invalid_argument(
-      "em_cpp: the ED covariate needs the tree's topology: pass a phylo object "
+      "em_cpp: the ED and K covariates need the tree's topology: pass a phylo object "
       "(or a simulate_tree() result), not a bare branching-time vector.");
   }
   auto mdl = emphasis::Model(lower10, upper10, model_bin, link, rho);

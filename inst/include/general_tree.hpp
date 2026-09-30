@@ -78,9 +78,10 @@ struct gbranch {
   int   parent_label;
   int   label;
   float end_date;   // -1 if still alive
+  int   k;          // ancestral splits: speciation events on the path from the crown
 
-  gbranch(float bd, float ts, int pl, int lab, float ext)
-    : start_date(bd), tip_start(ts), parent_label(pl), label(lab), end_date(ext) {}
+  gbranch(float bd, float ts, int pl, int lab, float ext, int kk = 0)
+    : start_date(bd), tip_start(ts), parent_label(pl), label(lab), end_date(ext), k(kk) {}
 };
 
 enum breaks { none, finished, extinction, maxN_exceeded };
@@ -91,9 +92,10 @@ struct general_div {
   float  t;
   size_t max_N, N;
   // {beta_0, beta_N, beta_M, beta_D, gamma_0, gamma_N, gamma_M, gamma_D,
-  //  beta_ED, gamma_ED}: the ED coefficients are appended, as in model.hpp.
-  std::array<double, 10> pars;
-  std::array<int, 4>     model;  // {use_N, use_M, use_D, use_ED}
+  //  beta_ED, gamma_ED, beta_K, gamma_K}: the ED and K coefficients are
+  //  appended, as in model.hpp.
+  std::array<double, 12> pars;
+  std::array<int, 5>     model;  // {use_N, use_M, use_D, use_ED, use_K}
   int    link;                   // 0 = linear, 1 = exponential, 2 = gaussian
 
   std::vector<gbranch> ltable;
@@ -101,8 +103,8 @@ struct general_div {
   rnd_t  rndgen;
 
   general_div(double total_time,
-              const std::array<double, 10>& p,
-              const std::array<int, 4>&     m,
+              const std::array<double, 12>& p,
+              const std::array<int, 5>&     m,
               size_t maxN,
               int link_type,
               uint64_t seed)
@@ -164,26 +166,30 @@ struct general_div {
 
   // Per-lineage speciation rate; EDval is the lineage's evolutionary
   // distinctiveness (0 when the ED covariate is inactive)
-  double compute_lambda(double Nval, double Pval, double Eval, double EDval = 0.0) const {
+  double compute_lambda(double Nval, double Pval, double Eval, double EDval = 0.0,
+                        double Kval = 0.0) const {
     const double M = (Nval > 0.0) ? Pval / Nval : 0.0;
     const double D = Eval - M;
     if (link == 2) {
       double eta_cov = pars[1] * Nval + pars[2] * M + pars[3] * D;
       return gaussian_rate(pars[0], eta_cov);
     }
-    double eta = pars[0] + pars[1] * Nval + pars[2] * M + pars[3] * D + pars[8] * EDval;
+    double eta = pars[0] + pars[1] * Nval + pars[2] * M + pars[3] * D + pars[8] * EDval
+               + pars[10] * Kval;
     return apply_link(eta);
   }
 
   // Per-lineage extinction rate
-  double compute_mu(double Nval, double Pval, double Eval, double EDval = 0.0) const {
+  double compute_mu(double Nval, double Pval, double Eval, double EDval = 0.0,
+                    double Kval = 0.0) const {
     const double M = (Nval > 0.0) ? Pval / Nval : 0.0;
     const double D = Eval - M;
     if (link == 2) {
       double eta_cov = pars[5] * Nval + pars[6] * M + pars[7] * D;
       return gaussian_rate(pars[4], eta_cov);
     }
-    double eta = pars[4] + pars[5] * Nval + pars[6] * M + pars[7] * D + pars[9] * EDval;
+    double eta = pars[4] + pars[5] * Nval + pars[6] * M + pars[7] * D + pars[9] * EDval
+               + pars[11] * Kval;
     return apply_link(eta);
   }
 
@@ -219,8 +225,11 @@ struct general_div {
     // changes at every event in its clade and cannot be maintained
     // incrementally.
     const bool use_ed      = (model[3] != 0);
-    const bool per_lineage = (model[2] == 1) || use_ed;
-    const bool ep_exp = (model[2] == 1 && !use_ed && link == 1);
+    const bool use_k       = (model[4] != 0);
+    // K is per lineage like D and ED, and K alone takes the same per-lineage
+    // loop the linear-link D takes.
+    const bool per_lineage = (model[2] == 1) || use_ed || use_k;
+    const bool ep_exp = (model[2] == 1 && !use_ed && !use_k && link == 1);
     double sum_exp_bE = ep_exp ? 2.0 * std::exp(-pars[3] * 0.0) : 0.0;  // 2 lineages at ts=0
     double sum_exp_gE = ep_exp ? 2.0 * std::exp(-pars[7] * 0.0) : 0.0;
 
@@ -242,14 +251,14 @@ struct general_div {
         const double mu  = compute_mu   (Nval, Pval, 0.0);
         total_rate = Nval * (lam + mu);
       } else if (use_ed) {
-        // ED (with or without D): O(N) per-lineage loop over the alive rows,
-        // each with its own pendant age and its own ED at the current time.
+        // ED (with or without D and K): O(N) per-lineage loop over the alive
+        // rows, each with its own pendant age and its own ED at the current time.
         const std::vector<double> edv = ed_now(static_cast<double>(t));
         for (size_t i = 0; i < ltable.size(); ++i) {
           const auto& br = ltable[i];
           if (br.end_date != -1.f) continue;
           const double E = static_cast<double>(t) - static_cast<double>(br.tip_start);
-          total_rate += compute_lambda(Nval, Pval, E, edv[i]) + compute_mu(Nval, Pval, E, edv[i]);
+          total_rate += compute_lambda(Nval, Pval, E, edv[i], br.k) + compute_mu(Nval, Pval, E, edv[i], br.k);
         }
       } else if (ep_exp) {
         // EP + exponential link, orthogonal basis {N, M=P/N, D=E-M}: O(1) via
@@ -262,11 +271,12 @@ struct general_div {
         total_rate = std::exp(pars[0] + pars[1]*Nval + (pars[2]-pars[3])*M + pars[3]*td) * sum_exp_bE
                    + std::exp(pars[4] + pars[5]*Nval + (pars[6]-pars[7])*M + pars[7]*td) * sum_exp_gE;
       } else {
-        // EP + linear link: O(N) per-lineage loop (max(0,·) clipping prevents factoring)
+        // D under the linear link, or K: O(N) per-lineage loop (max(0,·)
+        // clipping, or the per-lineage integer, prevents factoring)
         for (const auto& br : ltable) {
           if (br.end_date != -1.f) continue;
           const double E = static_cast<double>(t) - static_cast<double>(br.tip_start);
-          total_rate += compute_lambda(Nval, Pval, E) + compute_mu(Nval, Pval, E);
+          total_rate += compute_lambda(Nval, Pval, E, 0.0, br.k) + compute_mu(Nval, Pval, E, 0.0, br.k);
         }
       }
 
@@ -303,8 +313,8 @@ struct general_div {
         for (size_t i = 0; i < ltable.size(); ++i) {
           if (ltable[i].end_date != -1.f) continue;
           const double E   = static_cast<double>(t) - static_cast<double>(ltable[i].tip_start);
-          const double lam = compute_lambda(Nval, Pval2, E, edv[i]);
-          const double mu  = compute_mu   (Nval, Pval2, E, edv[i]);
+          const double lam = compute_lambda(Nval, Pval2, E, edv[i], ltable[i].k);
+          const double mu  = compute_mu   (Nval, Pval2, E, edv[i], ltable[i].k);
           alive_idx.push_back(i);
           lam_vec.push_back(lam);
           mu_vec.push_back(mu);
@@ -340,7 +350,9 @@ struct general_div {
         int new_id = tree_id++;
         if (ltable[focal].label < 0) { new_id = -new_id; N2++; } else { N1++; }
 
-        ltable.push_back(gbranch(t, t, ltable[focal].label, new_id, -1.f));
+        // both daughters carry one more ancestral split
+        ltable[focal].k += 1;
+        ltable.push_back(gbranch(t, t, ltable[focal].label, new_id, -1.f, ltable[focal].k));
       } else {
         // Extinction
         const double dead_ts = static_cast<double>(ltable[focal].tip_start);

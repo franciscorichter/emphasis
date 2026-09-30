@@ -18,8 +18,8 @@ emphasis_pipeline(
 \code{\link{simulate_tree}} result.}
 
 \item{model}{Model specification: \code{"cr"}, \code{"dd"}, \code{"d"},
-\code{"nd"}, \code{"ed"}, \code{"ned"}, a formula (e.g. \code{~ N + D},
-\code{~ N + ED}), or a binary vector.}
+\code{"nd"}, \code{"ed"}, \code{"ned"}, \code{"k"}, \code{"nk"}, a formula
+(e.g. \code{~ N + D}, \code{~ N + ED}, \code{~ N + K}), or a binary vector.}
 
 \item{link}{\code{"linear"} (default), \code{"exponential"}, or \code{"gaussian"}.}
 

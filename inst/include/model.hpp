@@ -51,18 +51,23 @@ namespace emphasis {
   using tree_t = std::vector<node_t>;                   // tree, sorted by note_t::brts
 
   // The parameter layout.  The first eight slots are the {N, M, D} basis the
-  // package has always carried; the ED coefficients are appended, so that an
-  // 8-element vector is exactly "ED absent" and every index in the code that
-  // predates ED still means what it did.  model_bin has one flag per
-  // covariate, {use_N, use_M, use_D, use_ED}; a 3-element model_bin is padded.
-  constexpr std::size_t n_covariates = 4;
-  constexpr std::size_t n_params     = 10;   // 2 intercepts + 2 * n_covariates
+  // package has always carried; the ED coefficients are appended, then the K
+  // coefficients, so that an 8-element vector is exactly "ED and K absent"
+  // and every index in the code that predates them still means what it did.
+  // model_bin has one flag per covariate, {use_N, use_M, use_D, use_ED,
+  // use_K}; a shorter model_bin is padded.
+  constexpr std::size_t n_covariates = 5;
+  constexpr std::size_t n_params     = 12;   // 2 intercepts + 2 * n_covariates
   constexpr std::size_t slot_beta_ed  = 8;
   constexpr std::size_t slot_gamma_ed = 9;
+  constexpr std::size_t slot_beta_k   = 10;
+  constexpr std::size_t slot_gamma_k  = 11;
 
-  // The ED coefficients of a parameter vector that may still be 8 long.
+  // The ED and K coefficients of a parameter vector that may be shorter.
   inline double beta_ed(const param_t& p)  { return p.size() > slot_beta_ed  ? p[slot_beta_ed]  : 0.0; }
   inline double gamma_ed(const param_t& p) { return p.size() > slot_gamma_ed ? p[slot_gamma_ed] : 0.0; }
+  inline double beta_k(const param_t& p)   { return p.size() > slot_beta_k   ? p[slot_beta_k]   : 0.0; }
+  inline double gamma_k(const param_t& p)  { return p.size() > slot_gamma_k  ? p[slot_gamma_k]  : 0.0; }
 
   // A vector in the full layout, whatever length the caller passed.
   inline param_t pad_params(const param_t& p) {
@@ -236,15 +241,15 @@ namespace emphasis {
         model_bin_(pad_model_bin(model_bin)),
         link_(static_cast<LinkType>(link)), rho_(rho)
     {
-      if (model_bin_.size() != n_covariates) model_bin_ = {0, 0, 0, 0};
-      // ED has no closed-form segment integral under the gaussian link (the
-      // per-lineage argument is affine in t, but the rate is not the
+      if (model_bin_.size() != n_covariates) model_bin_ = std::vector<int>(n_covariates, 0);
+      // ED and K have no closed-form segment integral under the gaussian link
+      // (the per-lineage argument is affine in t, but the rate is not the
       // exponential of it), and the exact proposal excludes gaussian dd
       // already; the combination is refused rather than approximated.
-      if (model_bin_[3] && link_ == LinkType::gaussian) {
+      if ((model_bin_[3] || model_bin_[4]) && link_ == LinkType::gaussian) {
         throw std::invalid_argument(
-          "the ED covariate is not available under the gaussian link; use the "
-          "linear or the exponential link");
+          "the ED and K covariates are not available under the gaussian link; "
+          "use the linear or the exponential link");
       }
       // Substituting 1 here made an out-of-range rho return the complete-
       // sampling likelihood with no signal; eval_logf, augment_trees and
@@ -281,6 +286,13 @@ namespace emphasis {
     int nparams() const { return static_cast<int>(n_params); }
     const std::vector<int>& model_bin() const { return model_bin_; }
     bool uses_ed() const { return model_bin_[3] != 0; }
+    // K, the number of speciation events on the path from the crown to the
+    // lineage: constant between events, one more on both daughters at a
+    // split, hidden splits counted.  Per lineage like ED, so a K model takes
+    // the per-lineage likelihood and the per-lineage (ED-aware) proposal.
+    bool uses_k() const { return model_bin_[4] != 0; }
+    bool lineage_proposal() const { return ed_proposal() || uses_k(); }
+    bool lineage_loglik() const { return uses_ed() || uses_k(); }
     // With the covariate active, model_bin[3] also selects the proposal the
     // thinning sampler draws from: 1 the ED-aware proposal (ed_proposal_seg_t
     // below), 2 the mean-field one (nh_rate), kept so that the two can be run
@@ -376,11 +388,13 @@ namespace emphasis {
     }
 
     // Per-lineage speciation rate:
-    //   eta = beta_0 + beta_N*N + beta_M*M + beta_D*D + beta_ED*ED
+    //   eta = beta_0 + beta_N*N + beta_M*M + beta_D*D + beta_ED*ED + beta_K*K
     // `ed` is the focal lineage's evolutionary distinctiveness at the event
-    // (ed_covariate.hpp), 0 when the ED covariate is inactive; the ED term is
-    // then absent and this is the D-aware rate the package always had.
-    double speciation_rate_ep(const param_t& pars, const node_t& node, double ed = 0.0) const {
+    // (ed_covariate.hpp) and `kk` its ancestral-split count, 0 when the
+    // covariate is inactive; the terms are then absent and this is the
+    // D-aware rate the package always had.
+    double speciation_rate_ep(const param_t& pars, const node_t& node, double ed = 0.0,
+                              double kk = 0.0) const {
       const double M = m_cov(node);
       const double D = e_s(node) - M;
       if (link_ == LinkType::gaussian) {
@@ -388,12 +402,13 @@ namespace emphasis {
         return gaussian_rate(pars[0], eta_cov);
       }
       return apply_link(pars[0] + pars[1] * node.n + pars[2] * M + pars[3] * D
-                        + beta_ed(pars) * ed);
+                        + beta_ed(pars) * ed + beta_k(pars) * kk);
     }
 
     // Per-lineage extinction rate (exact D for extinction nodes, mean-field
-    // D = 0 otherwise; ED as for speciation).
-    double extinction_rate_ep(const param_t& pars, const node_t& node, double ed = 0.0) const {
+    // D = 0 otherwise; ED and K as for speciation).
+    double extinction_rate_ep(const param_t& pars, const node_t& node, double ed = 0.0,
+                              double kk = 0.0) const {
       const double M = m_cov(node);
       const double D = e_s(node) - M;
       if (link_ == LinkType::gaussian) {
@@ -401,7 +416,7 @@ namespace emphasis {
         return gaussian_rate(pars[4], eta_cov);
       }
       return apply_link(pars[4] + pars[5] * node.n + pars[6] * M + pars[7] * D
-                        + gamma_ed(pars) * ed);
+                        + gamma_ed(pars) * ed + gamma_k(pars) * kk);
     }
 
     // -----------------------------------------------------------------------
@@ -420,6 +435,8 @@ namespace emphasis {
       std::vector<double> death;
       std::vector<int>    node_lineage;   // per node: lineage index of the lineage it names (-1 for the present marker)
       std::vector<int>    lineage_node;   // per lineage: the node it was born at (-1 for a crown lineage)
+      std::vector<int>    kbase;          // per lineage: its K at birth (the parent's K just after the split)
+      std::vector<std::vector<double>> splits;   // per lineage: the births of its children, sorted
       std::unordered_map<int, int> idx;   // lineage id -> index
       ed::forest_index    ix;             // birth order and children, built once per tree
       bool complete = true;
@@ -432,12 +449,24 @@ namespace emphasis {
     static forest_t build_forest(const tree_t& tree) {
       forest_t f;
       const double inf = std::numeric_limits<double>::infinity();
+      std::vector<int> nchild;            // per lineage: its splits so far, in node order
       auto add = [&](int id, int parent_idx, double birth, double death, int node_i) {
         const int k = static_cast<int>(f.parent.size());
         f.parent.push_back(parent_idx);
         f.birth.push_back(birth);
         f.death.push_back(death);
         f.lineage_node.push_back(node_i);
+        // Children are added in birth order, so the parent's split count at
+        // this birth is its K on the daughter: K restarts nothing, it counts.
+        if (parent_idx >= 0) {
+          const std::size_t p = static_cast<std::size_t>(parent_idx);
+          f.kbase.push_back(f.kbase[p] + (++nchild[p]));
+          f.splits[p].push_back(birth);          // nodes come in time order, so this stays sorted
+        } else {
+          f.kbase.push_back(0);
+        }
+        nchild.push_back(0);
+        f.splits.emplace_back();
         if (id != no_parent) f.idx[id] = k;
         return k;
       };
@@ -463,24 +492,28 @@ namespace emphasis {
       return f;
     }
 
-    // Each lineage's split times, from the forest: the births of its children.
-    // A lineage's pendant start at time t is its last split at or before t,
-    // or its birth -- the rule the forward sweep applies to node.pd and the
-    // event terms read through focal_tip_start.
-    static std::vector<std::vector<double>> lineage_splits(const forest_t& f) {
-      std::vector<std::vector<double>> out(f.parent.size());
-      for (std::size_t c = 0; c < f.parent.size(); ++c) {
-        const int p = f.parent[c];
-        if (p >= 0) out[static_cast<std::size_t>(p)].push_back(f.birth[c]);
-      }
-      for (auto& v : out) std::sort(v.begin(), v.end());
-      return out;
+    // Each lineage's split times: the births of its children, kept on the
+    // forest (forest_t::splits).  A lineage's pendant start at time t is its
+    // last split at or before t, or its birth -- the rule the forward sweep
+    // applies to node.pd and the event terms read through focal_tip_start.
+    static const std::vector<std::vector<double>>& lineage_splits(const forest_t& f) {
+      return f.splits;
     }
     static double pendant_start(const std::vector<std::vector<double>>& splits,
                                 const forest_t& f, std::size_t k, double t) {
       const auto& v = splits[k];
       auto it = std::upper_bound(v.begin(), v.end(), t);
       return (it == v.begin()) ? f.birth[k] : *(it - 1);
+    }
+    // K of lineage k at time t: its K at birth plus its own splits at or
+    // before t.  On the segment (t0, t1] it is the value at t0, which is also
+    // the value the event at t1 is charged with (a split at t1 is not yet on
+    // the path).
+    static double lineage_k(const std::vector<std::vector<double>>& splits,
+                            const forest_t& f, std::size_t k, double t) {
+      const auto& v = splits[k];
+      auto it = std::upper_bound(v.begin(), v.end(), t);
+      return static_cast<double>(f.kbase[k] + static_cast<int>(it - v.begin()));
     }
 
     // One row per lineage alive on each segment of an augmented tree: the
@@ -491,6 +524,7 @@ namespace emphasis {
     struct lineage_rows_t {
       std::vector<int>    seg, lin, id, ev;      // ev: 0 none, 1 speciates at t1, 2 dies at t1
       std::vector<double> t0, t1, N, M, ts, ed0; // ts: pendant start; ed0: ED at t0 (slope one after)
+      std::vector<double> K;                     // ancestral splits on the segment
     };
     lineage_rows_t lineage_table(const tree_t& tree) const {
       forest_t forest = build_forest(tree);
@@ -499,7 +533,7 @@ namespace emphasis {
           "the lineage table needs the tree's topology: pass a phylo object, not a "
           "bare branching-time vector");
       }
-      const auto splits = lineage_splits(forest);
+      const auto& splits = forest.splits;
       lineage_rows_t out;
       std::vector<char> alive;
       ed::result_t edr;
@@ -527,6 +561,7 @@ namespace emphasis {
             out.N.push_back(N); out.M.push_back(M);
             out.ts.push_back(pendant_start(splits, forest, k, t0));
             out.ed0.push_back(edr.c[k] + (t0 - edr.ts[k]));
+            out.K.push_back(lineage_k(splits, forest, k, t0));
           }
         }
         prev = t1;
@@ -843,11 +878,13 @@ namespace emphasis {
 
     // The proposal's linear predictors: the D-free arguments of
     // speciation_rate / extinction_rate with the ED term added.
-    double proposal_eta_lambda(const param_t& pars, double N, double M, double ed) const {
-      return pars[0] + pars[1] * N + pars[2] * M + beta_ed(pars) * ed;
+    double proposal_eta_lambda(const param_t& pars, double N, double M, double ed,
+                               double kk = 0.0) const {
+      return pars[0] + pars[1] * N + pars[2] * M + beta_ed(pars) * ed + beta_k(pars) * kk;
     }
-    double proposal_eta_mu(const param_t& pars, double N, double M, double ed) const {
-      return pars[4] + pars[5] * N + pars[6] * M + gamma_ed(pars) * ed;
+    double proposal_eta_mu(const param_t& pars, double N, double M, double ed,
+                           double kk = 0.0) const {
+      return pars[4] + pars[5] * N + pars[6] * M + gamma_ed(pars) * ed + gamma_k(pars) * kk;
     }
 
     // The proposal on the segment (t0, t1] that `node` governs, from the
@@ -863,6 +900,7 @@ namespace emphasis {
       const double M = (N > 0.0) ? pendant_pd(node, t0) / N : 0.0;
       seg.t0 = t0; seg.t1 = t1; seg.T = tree.back().brts; seg.rho = rho_; seg.link = link_;
       const bool centred = ed_centred();
+      const bool with_k = uses_k();
       seg.b = centred ? 0.0 : beta_ed(pars);
       seg.clear();
       double cED = 0.0;
@@ -872,22 +910,27 @@ namespace emphasis {
           if (alive[k]) { s += edr.c[k] - edr.ts[k]; ++m; }
         cED = m ? s / m : 0.0;
       }
-      double ed_sum = 0.0;
+      // K per alive lineage: its count at birth plus its own splits at or
+      // before t0, so the forest's split lists are needed only with K active.
+      const auto& splits = forest.splits;
+      double ed_sum = 0.0, k_sum = 0.0;
       for (std::size_t k = 0; k < alive.size(); ++k) {
         if (!alive[k]) continue;
         const double ed0 = centred ? (edr.c[k] - edr.ts[k]) - cED
                                    : edr.c[k] + (t0 - edr.ts[k]);
-        ed_sum += ed0;
+        const double kk = with_k ? lineage_k(splits, forest, k, t0) : 0.0;
+        ed_sum += ed0; k_sum += kk;
         const int ni = forest.lineage_node[k];
         const bool observed = (ni < 0) || is_tip(tree[static_cast<std::size_t>(ni)]);
         seg.id.push_back(ni < 0 ? (k == 0 ? crown_id_a : crown_id_b)
                                 : tree[static_cast<std::size_t>(ni)].id);
-        seg.eta.push_back(proposal_eta_lambda(pars, N, M, ed0));
+        seg.eta.push_back(proposal_eta_lambda(pars, N, M, ed0, kk));
         seg.w.push_back(observed ? 2 : 1);
       }
       const double n_al = static_cast<double>(seg.eta.size());
       const double ed_bar = (n_al > 0.0) ? ed_sum / n_al : 0.0;
-      seg.mu_bar = std::max(apply_link(proposal_eta_mu(pars, N, M, ed_bar)), 1e-10);
+      const double k_bar  = (n_al > 0.0) ? k_sum / n_al : 0.0;
+      seg.mu_bar = std::max(apply_link(proposal_eta_mu(pars, N, M, ed_bar, k_bar)), 1e-10);
       seg.finish();
     }
 
@@ -919,7 +962,7 @@ namespace emphasis {
     // single exponential in t, whose integral is the closed form below for
     // every link.
     double sampling_prob(const param_t& pars, const tree_t& tree) const {
-      if (ed_proposal()) return sampling_prob_ed(pars, tree);
+      if (lineage_proposal()) return sampling_prob_ed(pars, tree);
       double inte = 0;
       double logg = 0;
       double prev_brts = 0;
@@ -1035,11 +1078,14 @@ namespace emphasis {
       std::vector<int>    seg_begin;   // size n_nodes + 1: offsets into the flat arrays
       std::vector<double> kED;         // c_s - ts_s per alive lineage per segment
       std::vector<double> tsD;         // the D branches' tip start per alive lineage per segment
+      std::vector<double> kK;          // K per alive lineage per segment (constant on it)
       std::vector<double> focal;       // per node: ED of the event's lineage at the event time
+      std::vector<double> focalK;      // per node: K of the event's lineage
       // Per segment, the sums and ranges of the per-lineage constants, for
       // the closed form the linear link has when no lineage's rate is
       // clipped on the segment (see loglik_ed).
       std::vector<double> sum_kED, sum_tsD, min_kED, max_kED, min_tsD, max_tsD;
+      std::vector<double> sum_kK, min_kK, max_kK;
       // For the ED-aware proposal's density: per alive lineage per segment
       // its labelled attachments (2 observed, 1 augmented), and per augmented
       // birth node the flat index of its parent's entry in the segment that
@@ -1047,7 +1093,8 @@ namespace emphasis {
       std::vector<char>   w;
       std::vector<int>    par_entry;
       std::size_t bytes() const {
-        return sizeof(double) * (kED.size() + tsD.size() + focal.size() + 6 * sum_kED.size())
+        return sizeof(double) * (kED.size() + tsD.size() + kK.size() + focal.size() + focalK.size()
+                                 + 9 * sum_kED.size())
              + sizeof(int) * (seg_begin.size() + par_entry.size()) + w.size();
       }
     };
@@ -1063,16 +1110,17 @@ namespace emphasis {
       ed::result_t edr;
       const std::size_t n_nodes = tree.size();
       tab.seg_begin.assign(n_nodes + 1, 0);
-      tab.kED.clear(); tab.tsD.clear();
-      tab.focal.assign(n_nodes, 0.0);
+      tab.kED.clear(); tab.tsD.clear(); tab.kK.clear();
+      tab.focal.assign(n_nodes, 0.0); tab.focalK.assign(n_nodes, 0.0);
       const double inf = std::numeric_limits<double>::infinity();
-      tab.sum_kED.assign(n_nodes, 0.0); tab.sum_tsD.assign(n_nodes, 0.0);
+      tab.sum_kED.assign(n_nodes, 0.0); tab.sum_tsD.assign(n_nodes, 0.0); tab.sum_kK.assign(n_nodes, 0.0);
       tab.min_kED.assign(n_nodes, inf);  tab.max_kED.assign(n_nodes, -inf);
       tab.min_tsD.assign(n_nodes, inf);  tab.max_tsD.assign(n_nodes, -inf);
+      tab.min_kK.assign(n_nodes, inf);   tab.max_kK.assign(n_nodes, -inf);
       tab.w.clear();
       tab.par_entry.assign(n_nodes, -1);
       std::vector<int> entry_of(forest.parent.size(), -1);   // lineage -> its entry on this segment
-      const auto splits = lineage_splits(forest);
+      const auto& splits = forest.splits;
       double prev_brts = 0.0;
       for (std::size_t i = 0; i < n_nodes; ++i) {
         const auto& node = tree[i];
@@ -1084,14 +1132,17 @@ namespace emphasis {
           const double kv = edr.c[k] - edr.ts[k];
           // the D start restarts at the lineage's last split, as node.pd does
           const double tv = pendant_start(splits, forest, k, prev_brts);
+          const double kk = lineage_k(splits, forest, k, prev_brts);
           const bool observed = (ni < 0) || is_tip(tree[static_cast<std::size_t>(ni)]);
           entry_of[k] = static_cast<int>(tab.kED.size());
           tab.w.push_back(observed ? 2 : 1);
           tab.kED.push_back(kv);
           tab.tsD.push_back(tv);
-          tab.sum_kED[i] += kv; tab.sum_tsD[i] += tv;
+          tab.kK.push_back(kk);
+          tab.sum_kED[i] += kv; tab.sum_tsD[i] += tv; tab.sum_kK[i] += kk;
           tab.min_kED[i] = std::min(tab.min_kED[i], kv); tab.max_kED[i] = std::max(tab.max_kED[i], kv);
           tab.min_tsD[i] = std::min(tab.min_tsD[i], tv); tab.max_tsD[i] = std::max(tab.max_tsD[i], tv);
+          tab.min_kK[i]  = std::min(tab.min_kK[i], kk);  tab.max_kK[i]  = std::max(tab.max_kK[i], kk);
         }
         tab.seg_begin[i + 1] = static_cast<int>(tab.kED.size());
         // ED of the lineage whose event this is, at the event time: the
@@ -1103,12 +1154,14 @@ namespace emphasis {
         const int k = is_extinction(node) ? forest.node_lineage[i] : forest.lookup(node.parent_id);
         if (k >= 0 && alive[static_cast<std::size_t>(k)]) {
           tab.focal[i] = edr.c[static_cast<std::size_t>(k)] + (t - edr.ts[static_cast<std::size_t>(k)]);
+          tab.focalK[i] = lineage_k(splits, forest, static_cast<std::size_t>(k), prev_brts);
           if (is_missing(node) || is_unsampled(node)) tab.par_entry[i] = entry_of[static_cast<std::size_t>(k)];
         } else {
-          double s = 0.0; int m = 0;
+          double s = 0.0, sk = 0.0; int m = 0;
           for (std::size_t j = 0; j < alive.size(); ++j)
-            if (alive[j]) { s += edr.c[j] + (t - edr.ts[j]); ++m; }
+            if (alive[j]) { s += edr.c[j] + (t - edr.ts[j]); sk += lineage_k(splits, forest, j, prev_brts); ++m; }
           tab.focal[i] = m ? s / m : 0.0;
+          tab.focalK[i] = m ? sk / m : 0.0;
         }
         prev_brts = node.brts;
       }
@@ -1160,6 +1213,7 @@ namespace emphasis {
 
     double loglik_ed(const param_t& pars, const tree_t& tree) const {
       const double bED = beta_ed(pars), gED = gamma_ed(pars);
+      const double bK = beta_k(pars), gK = gamma_k(pars);
       const bool centred = ed_centred();
       const std::shared_ptr<const ed_table_t> tab = ed_table(tree);
 
@@ -1194,27 +1248,29 @@ namespace emphasis {
           // sum_s int max(0, A_s + b u) du = (sum_s A_s) dt + n b (t2^2 - t1^2)/2,
           // O(1) from the segment's sums; the per-lineage loop is the
           // fallback wherever clipping may occur.
-          auto min_A = [&](double base, double bD, double bE) {
+          auto min_A = [&](double base, double bD, double bE, double bk) {
             return base
               + (bD >= 0.0 ? -bD * tab->max_tsD[i] : -bD * tab->min_tsD[i])
-              + (bE >= 0.0 ?  bE * (tab->min_kED[i] - cED) :  bE * (tab->max_kED[i] - cED));
+              + (bE >= 0.0 ?  bE * (tab->min_kED[i] - cED) :  bE * (tab->max_kED[i] - cED))
+              + (bk >= 0.0 ?  bk * tab->min_kK[i] : bk * tab->max_kK[i]);
           };
-          auto sum_A = [&](double base, double bD, double bE) {
-            return n_al * base - bD * tab->sum_tsD[i] + bE * (tab->sum_kED[i] - n_al * cED);
+          auto sum_A = [&](double base, double bD, double bE, double bk) {
+            return n_al * base - bD * tab->sum_tsD[i] + bE * (tab->sum_kED[i] - n_al * cED)
+                 + bk * tab->sum_kK[i];
           };
-          auto unclipped = [&](double base, double bD, double bE, double b) {
-            const double a = min_A(base, bD, bE);
+          auto unclipped = [&](double base, double bD, double bE, double bk, double b) {
+            const double a = min_A(base, bD, bE, bk);
             return n_al > 0.0 && a + b * prev_brts > 0.0 && a + b * node.brts > 0.0;
           };
           const double t1 = prev_brts, t2 = node.brts;
           bool done_lam = false, done_mu = false;
           if (link_ == LinkType::linear) {
-            if (unclipped(base_lam, pars[3], bED, b_lam)) {
-              seg += sum_A(base_lam, pars[3], bED) * (t2 - t1) + n_al * b_lam * 0.5 * (t2 * t2 - t1 * t1);
+            if (unclipped(base_lam, pars[3], bED, bK, b_lam)) {
+              seg += sum_A(base_lam, pars[3], bED, bK) * (t2 - t1) + n_al * b_lam * 0.5 * (t2 * t2 - t1 * t1);
               done_lam = true;
             }
-            if (unclipped(base_mu, pars[7], gED, b_mu)) {
-              seg += sum_A(base_mu, pars[7], gED) * (t2 - t1) + n_al * b_mu * 0.5 * (t2 * t2 - t1 * t1);
+            if (unclipped(base_mu, pars[7], gED, gK, b_mu)) {
+              seg += sum_A(base_mu, pars[7], gED, gK) * (t2 - t1) + n_al * b_mu * 0.5 * (t2 * t2 - t1 * t1);
               done_mu = true;
             }
           }
@@ -1222,8 +1278,9 @@ namespace emphasis {
             for (int p = p0; p < p1; ++p) {
               const double kED = tab->kED[static_cast<std::size_t>(p)] - cED;
               const double tsD = tab->tsD[static_cast<std::size_t>(p)];
-              const double A_lam = base_lam - pars[3] * tsD + bED * kED;
-              const double A_mu  = base_mu  - pars[7] * tsD + gED * kED;
+              const double kK  = tab->kK[static_cast<std::size_t>(p)];
+              const double A_lam = base_lam - pars[3] * tsD + bED * kED + bK * kK;
+              const double A_mu  = base_mu  - pars[7] * tsD + gED * kED + gK * kK;
               if (link_ == LinkType::exponential) {
                 seg += exp_integral(A_lam, b_lam, t1, t2) + exp_integral(A_mu, b_mu, t1, t2);
               } else {
@@ -1238,12 +1295,13 @@ namespace emphasis {
         // The event lineage's ED at the event; centred, its constant minus
         // the segment mean (focal = k + t, and the mean at t is cED + t).
         const double fED = centred ? tab->focal[i] - (cED + node.brts) : tab->focal[i];
+        const double fK  = tab->focalK[i];
         if (is_extinction(node)) {
-          const double mu = extinction_rate_ep(pars, node, fED);
+          const double mu = extinction_rate_ep(pars, node, fED, fK);
           log_mu_sum += std::log(std::max(mu, 1e-300));
         }
         else if (i != last) {
-          log_lambda += speciation_rate_ep(pars, node, fED);
+          log_lambda += speciation_rate_ep(pars, node, fED, fK);
         }
         prev_brts = node.brts;
       }
@@ -1281,12 +1339,13 @@ namespace emphasis {
         const double ed0 = centred ? tab.kED[static_cast<std::size_t>(p)] - cED
                                    : tab.kED[static_cast<std::size_t>(p)] + t0;
         ed_sum += ed0;
-        seg.eta.push_back(proposal_eta_lambda(pars, N, M, ed0));
+        seg.eta.push_back(proposal_eta_lambda(pars, N, M, ed0, tab.kK[static_cast<std::size_t>(p)]));
         seg.w.push_back(tab.w[static_cast<std::size_t>(p)]);
       }
       const double n_al = static_cast<double>(p1 - p0);
       const double ed_bar = (n_al > 0.0) ? ed_sum / n_al : 0.0;
-      seg.mu_bar = std::max(apply_link(proposal_eta_mu(pars, N, M, ed_bar)), 1e-10);
+      const double k_bar  = (n_al > 0.0) ? tab.sum_kK[i] / n_al : 0.0;
+      seg.mu_bar = std::max(apply_link(proposal_eta_mu(pars, N, M, ed_bar, k_bar)), 1e-10);
       seg.finish();
     }
 
@@ -1321,7 +1380,7 @@ namespace emphasis {
     }
 
     double loglik(const param_t& pars, const tree_t& tree) const {
-      if (uses_ed()) return loglik_ed(pars, tree);
+      if (lineage_loglik()) return loglik_ed(pars, tree);
       const bool ep_exp = model_bin_[2] && (link_ == LinkType::exponential);
       const bool ep_gauss = model_bin_[2] && (link_ == LinkType::gaussian);
       const bool ep_linear = model_bin_[2] && (link_ == LinkType::linear);

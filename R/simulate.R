@@ -23,10 +23,12 @@
 #'   \code{"ned"} \tab N + ED\cr
 #'   \code{"edc"} \tab centred ED (ED minus its mean over the lineages alive)\cr
 #'   \code{"nedc"} \tab N + centred ED\cr
+#'   \code{"k"}   \tab ancestral splits (K: the speciation events on the path from the crown)\cr
+#'   \code{"nk"}  \tab N + K\cr
 #' }
-#' Formulas \code{~ N}, \code{~ N + D}, \code{~ N + ED} and \code{~ N + EDc} are also accepted
-#' (\code{ep} is a legacy alias for \code{d}).  An \code{ED} model needs the
-#' tree's topology (a \code{phylo}, not a branching-time vector) and is not
+#' Formulas \code{~ N}, \code{~ N + D}, \code{~ N + ED}, \code{~ N + EDc} and \code{~ N + K}
+#' are also accepted (\code{ep} is a legacy alias for \code{d}).  An \code{ED} or \code{K}
+#' model needs the tree's topology (a \code{phylo}, not a branching-time vector) and is not
 #' available under the gaussian link.
 #'
 #' @section Parameter vector:
@@ -311,15 +313,18 @@ simulate_tree <- function(tree        = NULL,
   #   M (slot 2) is retained only as the internal centering reference for D and
   #   is not user-selectable.
   # Shortcuts: "dd" -> N, "d" -> D, "nd" -> N + D, "ed" -> ED, "ned" -> N + ED,
-  # "edc" -> EDc, "nedc" -> N + EDc.  Slot 4 takes the value 3 for the centred
-  # covariate EDc = ED - mean ED over the lineages alive at t (model.hpp,
-  # Model::ed_centred); 1 is the raw fair proportion.  "ep"/"rd" are legacy D
-  # aliases.  A length-3 vector is the pre-ED layout and is padded.
-  shortcuts <- list(cr = c(0L, 0L, 0L, 0L), dd = c(1L, 0L, 0L, 0L),
-                    d  = c(0L, 0L, 1L, 0L), nd = c(1L, 0L, 1L, 0L),
-                    ed = c(0L, 0L, 0L, 1L), ned = c(1L, 0L, 0L, 1L),
-                    edc = c(0L, 0L, 0L, 3L), nedc = c(1L, 0L, 0L, 3L),
-                    rd = c(0L, 0L, 1L, 0L), ep = c(0L, 0L, 1L, 0L))
+  # "edc" -> EDc, "nedc" -> N + EDc, "k" -> K, "nk" -> N + K.  Slot 4 takes
+  # the value 3 for the centred covariate EDc = ED - mean ED over the lineages
+  # alive at t (model.hpp, Model::ed_centred); 1 is the raw fair proportion.
+  # Slot 5 is K, the number of speciation events on the path from the crown
+  # to the lineage (Model::uses_k).  "ep"/"rd" are legacy D aliases.  A
+  # shorter vector is an earlier layout and is padded.
+  shortcuts <- list(cr = c(0L, 0L, 0L, 0L, 0L), dd = c(1L, 0L, 0L, 0L, 0L),
+                    d  = c(0L, 0L, 1L, 0L, 0L), nd = c(1L, 0L, 1L, 0L, 0L),
+                    ed = c(0L, 0L, 0L, 1L, 0L), ned = c(1L, 0L, 0L, 1L, 0L),
+                    edc = c(0L, 0L, 0L, 3L, 0L), nedc = c(1L, 0L, 0L, 3L, 0L),
+                    k = c(0L, 0L, 0L, 0L, 1L), nk = c(1L, 0L, 0L, 0L, 1L),
+                    rd = c(0L, 0L, 1L, 0L, 0L), ep = c(0L, 0L, 1L, 0L, 0L))
   if (is.character(model)) {
     return(shortcuts[[match.arg(model, names(shortcuts))]])
   }
@@ -327,13 +332,14 @@ simulate_tree <- function(tree        = NULL,
     return(.parse_model_formula(model))
   }
   model <- as.integer(model)
-  ok <- length(model) %in% c(3L, 4L) && all(model[1:3] %in% 0:1) &&
-    (length(model) == 3L || model[4L] %in% c(0L, 1L, 3L))
+  ok <- length(model) %in% c(3L, 4L, 5L) && all(model[1:3] %in% 0:1) &&
+    (length(model) == 3L || model[4L] %in% c(0L, 1L, 3L)) &&
+    (length(model) < 5L || model[5L] %in% 0:1)
   if (!ok) {
-    stop(paste0("'model' must be a formula (e.g. ~ N + D, ~ N + ED, ~ N + EDc), a string ",
-                "(\"cr\", \"dd\", \"d\", \"nd\", \"ed\", \"ned\", \"edc\", \"nedc\"), ",
-                "or a binary integer vector of length 3 or 4 (slot 4 may also be 3, ",
-                "the centred ED covariate)."))
+    stop(paste0("'model' must be a formula (e.g. ~ N + D, ~ N + ED, ~ N + EDc, ~ N + K), a string ",
+                "(\"cr\", \"dd\", \"d\", \"nd\", \"ed\", \"ned\", \"edc\", \"nedc\", \"k\", \"nk\"), ",
+                "or a binary integer vector of length 3 to 5 (slot 4 may also be 3, ",
+                "the centred ED covariate; slot 5 is K)."))
   }
   .pad_model_bin(model)
 }
@@ -355,33 +361,34 @@ simulate_tree <- function(tree        = NULL,
   model_bin
 }
 
-# The canonical 4-slot model vector from a 3- or 4-slot one.
+# The canonical 5-slot model vector from a 3-, 4- or 5-slot one.
 #' @keywords internal
 .pad_model_bin <- function(model_bin) {
   model_bin <- as.integer(model_bin)
-  if (length(model_bin) == 3L) model_bin <- c(model_bin, 0L)
+  if (length(model_bin) < .n_slots) model_bin <- c(model_bin, integer(.n_slots - length(model_bin)))
   model_bin
 }
 
 # Number of covariate slots in the canonical layout, and the full parameter
 # vector's length: c(beta_0, beta_N, beta_M, beta_D, gamma_0, gamma_N,
-# gamma_M, gamma_D, beta_ED, gamma_ED).  The ED coefficients are appended so
-# that an 8-element vector is exactly "ED absent".
-.n_slots <- 4L
-.n_full  <- 10L
+# gamma_M, gamma_D, beta_ED, gamma_ED, beta_K, gamma_K).  The ED and K
+# coefficients are appended so that an 8-element vector is exactly "ED and K
+# absent".
+.n_slots <- 5L
+.n_full  <- 12L
 
 #' @keywords internal
 .parse_model_formula <- function(formula) {
   terms <- attr(stats::terms(formula), "term.labels")
-  # User covariates N, D (slot 3) and ED (slot 4); legacy aliases EP/E for D.
-  # M (slot 2) is internal only and not user-selectable.
-  known <- c(N = 1L, D = 3L, EP = 3L, E = 3L, ED = 4L, EDC = 4L)
+  # User covariates N, D (slot 3), ED (slot 4) and K (slot 5); legacy aliases
+  # EP/E for D.  M (slot 2) is internal only and not user-selectable.
+  known <- c(N = 1L, D = 3L, EP = 3L, E = 3L, ED = 4L, EDC = 4L, K = 5L)
   terms_upper <- toupper(terms)
-  model_bin <- c(0L, 0L, 0L, 0L)
+  model_bin <- integer(.n_slots)
   for (tm in terms_upper) {
     idx <- known[tm]
     if (is.na(idx)) {
-      stop(sprintf("Unknown covariate '%s' in model formula. Use N, D, ED and/or EDc.", tm))
+      stop(sprintf("Unknown covariate '%s' in model formula. Use N, D, ED, EDc and/or K.", tm))
     }
     model_bin[idx] <- if (tm == "EDC") 3L else 1L
   }
@@ -389,15 +396,16 @@ simulate_tree <- function(tree        = NULL,
 }
 
 # Where each covariate slot's coefficient sits in the full vector: beta at
-# 2, 3, 4 for N, M, D and 9 for ED; gamma at 6, 7, 8 and 10.  The intercepts
-# are 1 and 5.
-.slot_beta  <- c(2L, 3L, 4L, 9L)
-.slot_gamma <- c(6L, 7L, 8L, 10L)
+# 2, 3, 4 for N, M, D, 9 for ED and 11 for K; gamma at 6, 7, 8, 10 and 12.
+# The intercepts are 1 and 5.
+.slot_beta  <- c(2L, 3L, 4L, 9L, 11L)
+.slot_gamma <- c(6L, 7L, 8L, 10L, 12L)
 
 # Expand compact pars to the full vector for C++.
 # Layout: c(beta_0, beta_N, beta_M, beta_D, gamma_0, gamma_N, gamma_M, gamma_D,
-#           beta_ED, gamma_ED).  With ED inactive the result is the first 8
-# slots, the layout every pre-ED caller expects; with ED active all 10.
+#           beta_ED, gamma_ED, beta_K, gamma_K).  With ED and K inactive the
+# result is the first 8 slots, the layout every pre-ED caller expects; with
+# either active all 12.
 #' @keywords internal
 .expand_pars <- function(pars, model_bin) {
   model_bin  <- .pad_model_bin(model_bin)
@@ -412,7 +420,7 @@ simulate_tree <- function(tree        = NULL,
     full[.slot_beta[active]]  <- pars[2L:n_lam]
     full[.slot_gamma[active]] <- pars[(n_lam + 2L):length(pars)]
   }
-  if (model_bin[4L] != 0L) full else full[1:8]
+  if (model_bin[4L] != 0L || model_bin[5L] != 0L) full else full[1:8]
 }
 
 #' @keywords internal
@@ -422,12 +430,14 @@ simulate_tree <- function(tree        = NULL,
                  if (model_bin[1]) "beta_N",
                  if (model_bin[2]) "beta_M",
                  if (model_bin[3]) "beta_D",
-                 if (model_bin[4]) "beta_ED"), collapse = ", ")
+                 if (model_bin[4]) "beta_ED",
+                 if (model_bin[5]) "beta_K"), collapse = ", ")
   mu  <- paste(c("gamma_0",
                  if (model_bin[1]) "gamma_N",
                  if (model_bin[2]) "gamma_M",
                  if (model_bin[3]) "gamma_D",
-                 if (model_bin[4]) "gamma_ED"), collapse = ", ")
+                 if (model_bin[4]) "gamma_ED",
+                 if (model_bin[5]) "gamma_K"), collapse = ", ")
   sprintf("model = c(%s) requires %d parameters: c(%s, %s)",
           paste(model_bin, collapse = ", "), expected_n, lam, mu)
 }
