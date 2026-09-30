@@ -362,6 +362,16 @@ data.frame(
 )
 ```
 
+**One path over all the covariates.** `covariate_path()` traces the differential-geometric
+LARS path (Augugliaro, Mineo & Wit 2013) over $N$, $D$ and $\mathrm{ED}$ on the segment-level
+Poisson form of the log-linear point process --- `lineage_table()` is that form, one row per
+lineage and segment --- with the hidden lineages entering with their importance weights, and
+picks a point on it by BIC or AIC, for the speciation and the extinction rate separately. It
+reports the order in which the covariates enter and the chosen set. On trees whose hidden
+lineages are drawn at the generating value it finds the null on 0.90 and $N$ on 0.85 of trees,
+the extinction path admits nothing spurious, and it admits the wrong one of $D$ and
+$\mathrm{ED}$ on 60--80% of trees when either is present: the two share the pendant edge.
+
 ## Function reference
 
 | Function | Purpose |
