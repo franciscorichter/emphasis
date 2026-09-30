@@ -1213,6 +1213,13 @@ estimate_rates <- function(tree,
       !("sampling" %in% names(control))) {
     ctrl$sampling <- "dynamic_fresh"
   }
+  # The surrogate's gate, applied here so that the fit records the sampler
+  # that ran (.run_mcem applies it too, for callers that skip this function).
+  if (method == "mcem" && identical(ctrl$sampling, "bdi") && !.bdi_supported(model_bin, link_int, ctrl$rho)) {
+    message("sampling = \"bdi\" is not available for ", .bdi_unsupported_reason(model_bin, link_int, ctrl$rho),
+            "; using the thinning sampler (\"dynamic_fresh\") instead.")
+    ctrl$sampling <- "dynamic_fresh"
+  }
 
   raw <- switch(method,
     mcem = .run_mcem(brts, ip8, lb8, ub8, ctrl, model = model_bin, link = link_int,
