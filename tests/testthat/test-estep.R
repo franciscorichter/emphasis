@@ -139,14 +139,15 @@ test_that("a sample size below 1 is an error, not a read past the sample", {
   # max_element / fhat tail then reads an empty weight vector: the pre-guard
   # build segfaults here, so the call runs in its own process.
   skip_on_cran()
-  skip_if_not_installed("pkgload")
-  pkg <- normalizePath(test_path("..", ".."), mustWork = TRUE)
+  # The child loads the installed package from this session's library path
+  # (under R CMD check that is the check library), not the source tree.
   script <- tempfile(fileext = ".R")
   on.exit(unlink(script), add = TRUE)
   writeLines(c(
-    sprintf('pkgload::load_all(%s, quiet = TRUE)', shQuote(pkg)),
+    sprintf('.libPaths(%s)', paste(deparse(.libPaths()), collapse = "")),
+    'suppressPackageStartupMessages(library(emphasis))',
     'res <- tryCatch({',
-    '  augment_trees(c(4, 2.5, 1.2, 0.6), c(0.5, 0, 0, 0, 0.1, 0, 0, 0),',
+    '  emphasis:::augment_trees(c(4, 2.5, 1.2, 0.6), c(0.5, 0, 0, 0, 0.1, 0, 0, 0),',
     '                0L, 20L, 10000L, 1e6, 1L, c(0L, 0L, 0L), 0L, 1)',
     '  "returned"',
     '}, error = function(e) "error")',

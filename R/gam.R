@@ -822,6 +822,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 # We multiply lam_hi by 5x for covariate models to avoid excluding the
 # true parameter region.
 .wide_bounds <- function(model_bin, link_int, max_t, n_tips) {
+  model_bin <- .pad_model_bin(model_bin)
   active <- which(model_bin != 0L)
   T <- max(max_t, 0.1)
   N <- max(n_tips, 2)
@@ -846,23 +847,34 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   if (length(active) > 0L) lam_hi <- lam_hi * 5
 
   lam_lo <- max(0.1 * r_hat, 1e-4)
-  cov_hi <- max(0.3, 3 * abs(r_hat))
+  # A slope's cap is set at the scale its covariate takes on the observed
+  # tree, so that the term can move the rate by a fixed amount there: N runs
+  # to the tip count, M, D and ED to the order of the crown age, K to the
+  # depth of a Yule tree with N tips.  Under the exponential link the amount
+  # is 3 on the log-rate (a factor e^3 at the observed scale); under the
+  # others it is 3 |r_hat| on the rate, floored at 0.3.  One width for every
+  # covariate, the old rule, put the N slope at 0.6 per lineage on the
+  # exponential link, e^60 at 100 lineages, and an M-step that stepped there
+  # left the E-step with no augmentation that completes (E23, 2026-10-01).
+  scale  <- c(N = N, M = T / 2, D = T / 2, ED = T / 2, K = 2 * log(N))
+  amount <- if (link_int == 1L) 3 else max(0.3, 3 * abs(r_hat))
+  cov_hi <- amount / pmax(scale[active], 1e-6)
 
   if (link_int == 1L) {
     # Exponential link: log-scale
-    lb_lam <- c(log(lam_lo), rep(-cov_hi, length(active)))
-    ub_lam <- c(log(lam_hi), rep(cov_hi, length(active)))
-    lb_mu  <- c(log(lam_lo) - 3, rep(-cov_hi, length(active)))
-    ub_mu  <- c(log(lam_hi), rep(cov_hi, length(active)))
+    lb_lam <- c(log(lam_lo), -cov_hi)
+    ub_lam <- c(log(lam_hi), cov_hi)
+    lb_mu  <- c(log(lam_lo) - 3, -cov_hi)
+    ub_mu  <- c(log(lam_hi), cov_hi)
   } else {
     # Linear and gaussian links: the intercept is a rate, so the box is on the
     # natural scale and non-negative.  The gaussian intercept is the peak of
     # beta_0 * exp(-(eta_cov - 1)^2 / 2), which at eta_cov = 0 is beta_0*e^(-1/2),
     # so each rate bound is carried to the intercept by .rate_intercept().
-    lb_lam <- c(.rate_intercept(lam_lo, link_int), rep(-cov_hi, length(active)))
-    ub_lam <- c(.rate_intercept(lam_hi, link_int), rep(cov_hi, length(active)))
-    lb_mu  <- c(0.0, rep(-cov_hi, length(active)))
-    ub_mu  <- c(.rate_intercept(lam_hi * 0.9, link_int), rep(cov_hi, length(active)))
+    lb_lam <- c(.rate_intercept(lam_lo, link_int), -cov_hi)
+    ub_lam <- c(.rate_intercept(lam_hi, link_int), cov_hi)
+    lb_mu  <- c(0.0, -cov_hi)
+    ub_mu  <- c(.rate_intercept(lam_hi * 0.9, link_int), cov_hi)
   }
 
   list(lb = c(lb_lam, lb_mu), ub = c(ub_lam, ub_mu))
