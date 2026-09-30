@@ -18,6 +18,7 @@ Imports: Rcpp,
          progress,
          DDD
 Suggests: ggplot2,
+          TreeSim,
           dglars,
           patchwork,
           mgcv,

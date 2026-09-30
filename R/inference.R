@@ -1437,37 +1437,6 @@ print.emphasis_fit <- function(x, ...) {
 }
 
 
-#' Compare fitted emphasis models via AIC
-#'
-#' Given two or more \code{\link{estimate_rates}} results, returns a summary
-#' table sorted by AIC. The model with the lowest AIC is preferred.
-#'
-#' When all fits carry a \code{loglik_var} (bootstrap variance, available
-#' when \code{control$num_trees > 1}), pairwise Gaussian tests of equal AIC
-#' are appended.  For each pair \eqn{(i, j)},
-#' \deqn{T_{ij} = \widehat{\rm AIC}_i - \widehat{\rm AIC}_j, \qquad
-#'   \mathrm{Var}(T_{ij}) = 4[\mathrm{Var}(\hat\ell_i) +
-#'   \mathrm{Var}(\hat\ell_j)]}
-#' and \eqn{p = 2\Phi(-|T_{ij}|/\sqrt{\mathrm{Var}(T_{ij})})} under
-#' the null of equal AIC.
-#'
-#' @param ... Two or more \code{emphasis_fit} objects (results of
-#'   \code{\link{estimate_rates}}). Optionally named; unnamed fits are
-#'   auto-labelled from their model specification.
-#' @return A data frame with columns \code{model}, \code{n_pars},
-#'   \code{loglik}, \code{AIC}, \code{delta_AIC}, and \code{AICw}.
-#'   If bootstrap variances are present, an additional \code{loglik_se}
-#'   column is included and pairwise p-values are printed as a message.
-#' @examples
-#' \dontrun{
-#' fit_cr <- estimate_rates(tree, model = "cr",
-#'   lower_bound = c(0, 0), upper_bound = c(2, 1))
-#' fit_dd <- estimate_rates(tree, model = "dd",
-#'   lower_bound = c(0, -0.1, 0, -0.01),
-#'   upper_bound = c(2, 0.01, 0.5, 0.01))
-#' compare_models(CR = fit_cr, DD = fit_dd)
-#' }
-#' @keywords internal
 #' The effective sample size behind a fit's log-likelihood
 #'
 #' Wherever the fit recorded it: the MCEM drivers leave it in

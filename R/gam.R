@@ -110,6 +110,8 @@ predict_survival <- function(gam_fit, newpars) {
 #' @param num_threads Parallel threads for batch simulation (default 1).
 #' @param verbose Print progress (default \code{TRUE}).
 #' @param rho Sampling fraction (0, 1]. Default \code{1} (complete sampling).
+#' @param surv_tries Simulations per candidate when judging whether a parameter
+#'   vector produces surviving clades of a usable size (default 20).
 #'   Passed through to IS feasibility diagnostics.
 #' @return A list with components:
 #'   \describe{

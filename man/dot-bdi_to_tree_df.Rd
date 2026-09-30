@@ -22,7 +22,7 @@ Columns: brts, n, t_ext, pd, tip_start, id, parent_id}
 The parent recorded for a lineage born at \code{t} is the last observed
 branching at or before \code{t}.  A lineage born before the first observed
 branching has none, and \code{max(0L, ...)} makes it observed node 0, which
-is not yet born then; \code{\link{.aug_to_Ltable}} refuses that attachment
+is not yet born then; \code{.aug_to_Ltable} refuses that attachment
 rather than building a \code{tas} with a negative edge.  See the
 \code{.augment_tree_bdi} documentation for what that costs and what fixing
 it would take.

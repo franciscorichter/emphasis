@@ -235,6 +235,7 @@ test_that("the feasibility test judges survivors, not survival (H74)", {
   # Containment is improved, not guaranteed: at high turnover the MLE is itself
   # unstable and can sit well outside any box built from the observed tree's
   # own rate scale.  The mechanism is what is pinned here.
+  skip_if_not_installed("TreeSim")
   set.seed(4)
   phy  <- TreeSim::sim.bd.taxa(n = 30, numbsim = 1, lambda = 1, mu = 0.9,
                                complete = FALSE)[[1]]

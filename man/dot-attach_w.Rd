@@ -2,7 +2,7 @@
 % Please edit documentation in R/bdi.R
 \name{.attach_w}
 \alias{.attach_w}
-\title{Draw one augmented tree via the BDI process.}
+\title{Attachment weights: each lineage's own rate, around the aggregate}
 \usage{
 .attach_w(cov, lam, beta)
 }
@@ -11,114 +11,23 @@
 
 \item{lam}{The aggregate rate the mean field supplies.}
 
-\item{beta}{The covariate\'s coefficient.}
+\item{beta}{The covariate's coefficient.}
 }
 \value{
-List with \code{$reason}: \code{"accepted"} (then also
-  \code{$species}, \code{$unsampled}, \code{$n_alive_at_tp}, \code{$logg}),
-  \code{"max_missing"} (more than \code{max_missing} missing lineages
-  drawn) or \code{"survivor"} (a missing lineage still alive at tp; only
-  reachable at \code{rho = 1}, where such a tree has f = 0).
-
 A positive weight per lineage, averaging \code{lam}.
 }
 \description{
-Under CR: uses exact time-change method with analytical cumulative hazard.
-  The event times are drawn from the correct inhomogeneous BDI process,
-  giving zero-variance IS weights (logf - logg = constant).
-Under DD: uses approximate Gillespie with piecewise-constant rates.
-  IS weights have nonzero variance (importance sampling, not exact).
+The proposal's aggregate rate already carries the clade mean of the
+covariate, so a lineage's own rate is that aggregate plus its own
+departure from the mean, \code{lam + beta * (c_s - mean(c))} -- not
+\code{lam + beta * c_s}, which shifts every lineage instead of spreading
+them and leaves the mean in twice.
 }
 \details{
-At \code{rho < 1} a missing lineage still alive at tp is not a rejection but
-an \emph{unsampled extant} lineage: the conditioning event is "leaves no
-sampled descendant", and at the present that is satisfied by being alive and
-unsampled, an event of probability \code{1 - rho}.  Those lineages are
-returned in \code{$unsampled} (birth times) and written with the \code{5e10}
-sentinel by \code{\link{.bdi_to_tree_df}}, so \code{N(t)} counts them.
+Weights are floored away from zero rather than at it.  A lineage the
+model gives a positive rate must stay reachable, or the proposal no
+longer covers the target and the estimate is biased rather than merely
+noisy.  The floor is a thousandth of the aggregate, which costs a
+bounded amount of weight variance and keeps the support.
 }
-\keyword{(c_s}
-\keyword{*}
-\keyword{+}
-\keyword{-}
-\keyword{--}
-\keyword{A}
-\keyword{Attachment}
-\keyword{The}
-\keyword{Weights}
-\keyword{\code{lam}
-\keyword{a}
-\keyword{aggregate}
-\keyword{aggregate,}
-\keyword{already}
-\keyword{amount}
-\keyword{and}
-\keyword{are}
-\keyword{around}
-\keyword{at}
-\keyword{away}
-\keyword{beta}
-\keyword{biased}
-\keyword{bounded}
-\keyword{c_s},}
-\keyword{carries}
-\keyword{clade}
-\keyword{costs}
-\keyword{covariate,}
-\keyword{covers}
-\keyword{departure}
-\keyword{each}
-\keyword{estimate}
-\keyword{every}
-\keyword{floor}
-\keyword{floored}
-\keyword{from}
-\keyword{gives}
-\keyword{in}
-\keyword{instead}
 \keyword{internal}
-\keyword{is}
-\keyword{it.}
-\keyword{its}
-\keyword{keeps}
-\keyword{leaves}
-\keyword{lineage}
-\keyword{lineage\'s}
-\keyword{longer}
-\keyword{mean}
-\keyword{mean(c))}}
-\keyword{mean,}
-\keyword{merely}
-\keyword{model}
-\keyword{must}
-\keyword{no}
-\keyword{noisy.}
-\keyword{not}
-\keyword{of}
-\keyword{or}
-\keyword{own}
-\keyword{plus}
-\keyword{positive}
-\keyword{proposal}
-\keyword{proposal\'s}
-\keyword{rate}
-\keyword{rate,}
-\keyword{rather}
-\keyword{reachable,}
-\keyword{shifts}
-\keyword{so}
-\keyword{spreading}
-\keyword{stay}
-\keyword{support.}
-\keyword{target}
-\keyword{than}
-\keyword{that}
-\keyword{the}
-\keyword{them}
-\keyword{thousandth}
-\keyword{twice.}
-\keyword{variance}
-\keyword{weight}
-\keyword{weights:}
-\keyword{which}
-\keyword{zero}

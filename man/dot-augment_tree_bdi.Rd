@@ -74,7 +74,7 @@ negative length wherever it happened.  On seven trees measured here, the
 parent build turned all 200 draws into a \code{phylo} and 5 to 200 of them
 had a negative edge, the shortest \code{-7.15}.
 
-\code{\link{.aug_to_Ltable}} now refuses an attachment older than its
+\code{.aug_to_Ltable} now refuses an attachment older than its
 recorded parent and returns \code{NULL}, so those draws produce no tree at
 all.  The failure is loud where it used to be silent, and the throughput is
 the price: on the same seven trees, \code{simulate_tree(method = "bdi")}

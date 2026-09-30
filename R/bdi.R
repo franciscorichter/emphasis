@@ -798,31 +798,10 @@
 #  BDI Gillespie augmentation (one tree)                                       #
 # --------------------------------------------------------------------------- #
 
-#' Draw one augmented tree via the BDI process.
+#' Attachment weights: each lineage's own rate, around the aggregate
 #'
-#' Under CR: uses exact time-change method with analytical cumulative hazard.
-#'   The event times are drawn from the correct inhomogeneous BDI process,
-#'   giving zero-variance IS weights (logf - logg = constant).
-#' Under DD: uses approximate Gillespie with piecewise-constant rates.
-#'   IS weights have nonzero variance (importance sampling, not exact).
-#'
-#' At \code{rho < 1} a missing lineage still alive at tp is not a rejection but
-#' an \emph{unsampled extant} lineage: the conditioning event is "leaves no
-#' sampled descendant", and at the present that is satisfied by being alive and
-#' unsampled, an event of probability \code{1 - rho}.  Those lineages are
-#' returned in \code{$unsampled} (birth times) and written with the \code{5e10}
-#' sentinel by \code{\link{.bdi_to_tree_df}}, so \code{N(t)} counts them.
-#'
-#' @return List with \code{$reason}: \code{"accepted"} (then also
-#'   \code{$species}, \code{$unsampled}, \code{$n_alive_at_tp}, \code{$logg}),
-#'   \code{"max_missing"} (more than \code{max_missing} missing lineages
-#'   drawn) or \code{"survivor"} (a missing lineage still alive at tp; only
-#'   reachable at \code{rho = 1}, where such a tree has f = 0).
-#' @keywords internal
-#' Attachment weights: each lineage\'s own rate, around the aggregate
-#'
-#' The proposal\'s aggregate rate already carries the clade mean of the
-#' covariate, so a lineage\'s own rate is that aggregate plus its own
+#' The proposal's aggregate rate already carries the clade mean of the
+#' covariate, so a lineage's own rate is that aggregate plus its own
 #' departure from the mean, \code{lam + beta * (c_s - mean(c))} -- not
 #' \code{lam + beta * c_s}, which shifts every lineage instead of spreading
 #' them and leaves the mean in twice.
@@ -835,7 +814,7 @@
 #'
 #' @param cov Per-lineage covariate values (here the pendant age).
 #' @param lam The aggregate rate the mean field supplies.
-#' @param beta The covariate\'s coefficient.
+#' @param beta The covariate's coefficient.
 #' @return A positive weight per lineage, averaging \code{lam}.
 #' @keywords internal
 .attach_w <- function(cov, lam, beta) {
@@ -1151,7 +1130,7 @@
 #' The parent recorded for a lineage born at \code{t} is the last observed
 #' branching at or before \code{t}.  A lineage born before the first observed
 #' branching has none, and \code{max(0L, ...)} makes it observed node 0, which
-#' is not yet born then; \code{\link{.aug_to_Ltable}} refuses that attachment
+#' is not yet born then; \code{.aug_to_Ltable} refuses that attachment
 #' rather than building a \code{tas} with a negative edge.  See the
 #' \code{.augment_tree_bdi} documentation for what that costs and what fixing
 #' it would take.
@@ -1339,7 +1318,7 @@
 #' parent build turned all 200 draws into a \code{phylo} and 5 to 200 of them
 #' had a negative edge, the shortest \code{-7.15}.
 #'
-#' \code{\link{.aug_to_Ltable}} now refuses an attachment older than its
+#' \code{.aug_to_Ltable} now refuses an attachment older than its
 #' recorded parent and returns \code{NULL}, so those draws produce no tree at
 #' all.  The failure is loud where it used to be silent, and the throughput is
 #' the price: on the same seven trees, \code{simulate_tree(method = "bdi")}
