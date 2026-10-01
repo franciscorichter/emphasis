@@ -138,14 +138,18 @@
       <div class="grp">Model</div>
       <a href="#model">The model</a>
       <a href="#covariates">Covariates</a>
+      <a href="#models">Models</a>
       <a href="#links">Link functions</a>
       <div class="grp">Inference</div>
       <a href="#likelihood">The likelihood</a>
       <a href="#is">Importance sampling</a>
+      <a href="#proposals">The two proposals</a>
       <a href="#mcem">Monte Carlo EM</a>
-      <a href="#conditioning">Survival &amp; sampling</a>
+      <a href="#sampling">Incomplete sampling</a>
+      <div class="grp">Model choice</div>
+      <a href="#routes">Three routes</a>
+      <a href="#measured">What is measured</a>
       <div class="grp">Using it</div>
-      <a href="#methods">Estimation methods</a>
       <a href="#simulation">Simulation</a>
       <a href="#usage">Usage</a>
       <a href="#reference">Function reference</a>
@@ -160,7 +164,7 @@
     <header class="hero" id="overview">
       <p class="eyebrow">R package · phylogenetic diversification</p>
       <h1>Inference of diversification with endogenous drivers</h1>
-      <p class="dek">Monte Carlo conditional-likelihood inference for birth–death models whose speciation and extinction rates depend on covariates the diversification process generates itself.</p>
+      <p class="dek">Monte Carlo likelihood inference for birth–death models whose speciation and extinction rates depend on covariates the diversification process generates itself: how many lineages there are, how old each one is, how distinct it is, and how many splits its ancestry carries.</p>
       <div class="cta">
         <a class="primary" href="#install">Install</a>
         <a class="ghost" href="https://github.com/franciscorichter/emphasis">GitHub</a>
@@ -168,109 +172,118 @@
       </div>
     </header>
 
-    <p class="lead">Given a dated phylogeny of the <em>surviving</em> species of a clade, <code>emphasis</code> estimates the speciation and extinction rates that generated it — and lets those rates depend on the state of the clade itself: how many lineages there are, and how isolated each lineage is relative to its contemporaries.</p>
-    <p>A reconstructed molecular phylogeny records only the lineages that survive to the present. The lineages that went extinct are exactly what carries the information about the extinction rate, so the likelihood of the observed tree is an integral over all possible histories of unobserved lineages. <code>emphasis</code> evaluates and maximizes that likelihood by <strong>data-augmentation importance sampling embedded in a Monte Carlo EM</strong>.</p>
+    <p class="lead">Given a dated phylogeny of the <em>surviving</em> species of a clade, <code>emphasis</code> estimates the speciation and extinction rates that generated it, and lets those rates depend on the state of the clade itself and on the position of each lineage within it.</p>
+    <p>A reconstructed phylogeny records only the lineages that survive to the present. The lineages that went extinct carry the information about the extinction rate, and under a lineage-level covariate they also change the covariate of their living relatives, so the likelihood of the observed tree is an integral over every history of hidden lineages consistent with it. <code>emphasis</code> evaluates that integral by <strong>data augmentation with importance sampling</strong>, maximises it by <strong>Monte Carlo EM</strong>, and chooses among covariates either by comparing fitted models or along one <strong>dgLARS path</strong> over all of them.</p>
 
     <figure>
       <div class="fig">
-        <svg viewBox="0 0 640 300" role="img" aria-label="Data augmentation: observed tree plus latent extinct lineages">
-          <!-- present line -->
+        <svg viewBox="0 0 640 300" role="img" aria-label="Data augmentation: observed tree plus hidden extinct lineages">
           <line class="d-present" x1="582" y1="34" x2="582" y2="276"/>
           <text class="d-t-sm" x="582" y="292" text-anchor="middle">present (T)</text>
           <text class="d-t-sm" x="40" y="292" text-anchor="middle">crown (0)</text>
-          <!-- extant (observed) tree -->
           <path class="d-extant" d="M40,160 H92 M92,96 V226 M92,96 H232 M232,66 V142 M232,66 H582 M232,142 H582 M92,226 H180 M180,192 V266 M180,192 H582 M180,266 H582"/>
-          <!-- extant tips -->
           <circle class="d-tip" cx="582" cy="66" r="4"/><circle class="d-tip" cx="582" cy="142" r="4"/>
           <circle class="d-tip" cx="582" cy="192" r="4"/><circle class="d-tip" cx="582" cy="266" r="4"/>
-          <!-- latent extinct lineages -->
           <path class="d-extinct" d="M166,96 V122 M166,122 H300"/>
           <path class="d-extinct" d="M360,266 V236 M360,236 H490"/>
           <path class="d-extinct" d="M300,142 V116 M300,116 H408"/>
-          <!-- extinction crosses -->
           <path class="d-x" d="M295,117 l10,10 M305,117 l-10,10"/>
           <path class="d-x" d="M485,231 l10,10 M495,231 l-10,10"/>
           <path class="d-x" d="M403,111 l10,10 M413,111 l-10,10"/>
-          <!-- legend -->
           <line class="d-extant" x1="360" y1="24" x2="386" y2="24"/>
           <text class="d-t" x="392" y="28">observed (extant)</text>
           <line class="d-extinct" x1="500" y1="24" x2="526" y2="24"/>
-          <text class="d-t" x="532" y="28">latent (extinct)</text>
+          <text class="d-t" x="532" y="28">hidden (extinct)</text>
         </svg>
       </div>
-      <figcaption><b>Data augmentation.</b> Importance sampling completes the observed tree (solid) with stochastically drawn extinct lineages (dashed) that terminate before the present. Averaging over many such completions estimates the marginal likelihood.</figcaption>
+      <figcaption><b>Data augmentation.</b> A proposal completes the observed tree (solid) with hidden lineages (dashed) that die before the present. Each completion is weighted by the model's density over the proposal's, and the weighted average over many completions estimates the likelihood of the observed tree. The hidden part is not a number but a tree, and its size varies from draw to draw.</figcaption>
     </figure>
 
     <section id="install">
       <div class="sec-head"><span class="num">§</span><h2>Install</h2></div>
       <pre><code><span class="n">devtools</span>::<span class="n">install_github</span>(<span class="st">"franciscorichter/emphasis"</span>)</code></pre>
-      <p><strong>Depends</strong> on <code>Rcpp</code>, <code>RcppParallel</code>, <code>nloptr</code>, <code>ape</code>, and <code>DDD</code>; the survival-GAM and diagnostics use <code>mgcv</code> and the tidyverse plotting stack. Performance-critical evaluation is in C++ with TBB parallelism.</p>
+      <p><strong>Imports</strong> <code>Rcpp</code>, <code>RcppParallel</code>, <code>nloptr</code>, <code>ape</code>, <code>progress</code> and <code>DDD</code>. The likelihood, the simulator and the thinning proposal are C++ with TBB parallelism. Suggested: <code>TreeSim</code> for the bound finder's tests, <code>dglars</code> as the reference the selection path is checked against, <code>ggplot2</code> and <code>patchwork</code> for the diagnostic plots, <code>mgcv</code> for the optional survival surface. Checked on Linux, macOS and Windows by <a href="https://github.com/franciscorichter/emphasis/actions" style="color:var(--accent)">R CMD check</a> at every push.</p>
     </section>
 
     <section id="model">
       <div class="sec-head"><span class="num">§</span><h2>The model</h2></div>
-      <p>Time runs forward from the crown (age \(0\)) to the present (age \(T\)). At any moment the clade is a set of living lineages, each carrying an instantaneous speciation rate \(\lambda_s(t)\) and extinction rate \(\mu_s(t)\) built from a linear predictor over covariates, passed through a link:</p>
-      <div class="eq">\[ \eta_\lambda = \beta_0 + \beta_N N + \beta_D D, \qquad \eta_\mu = \gamma_0 + \gamma_N N + \gamma_D D. \]</div>
+      <p>Time runs forward from the crown (age \(0\)) to the present (age \(T\)). A clade starts with two lineages. Every lineage \(s\) alive at \(t\) speciates at rate \(\lambda_s(t)\) and goes extinct at rate \(\mu_s(t)\), each a linear predictor over covariates passed through a link \(g\):</p>
+      <div class="eq">\[ \lambda_s(t) = g\big(\beta_0 + \beta_N N(t) + \beta_D D_s(t) + \beta_{ED}\,\mathrm{ED}_s(t) + \beta_K K_s(t)\big), \]</div>
+      <p>with the same form and coefficients \(\gamma\) for \(\mu_s(t)\). A speciation replaces \(s\) by two lineages, one of which keeps \(s\)'s identity; an extinction removes \(s\). The covariates are read on the <em>complete</em> tree at \(t\), hidden lineages included, which is what makes them endogenous: the process writes the covariates it then reads.</p>
     </section>
 
     <section id="covariates">
-      <h3>Covariates — an orthogonal basis</h3>
-      <p>Let \(t_s\) be when lineage \(s\) last speciated and \(I_s(t) = t - t_s\) its <strong>isolation time</strong>. Their clade total is the pendant phylogenetic diversity \(P = \sum_s I_s\). Because \(P = N\bar I\) — richness times mean isolation — using \(P\) directly makes it collinear with richness, so it is split into a global mean and a local deviation:</p>
-      <div class="eq">\[ M(t) = \frac{P(t)}{N(t)} = \bar I(t), \qquad D_s(t) = I_s(t) - M(t), \qquad \sum_s D_s(t) = 0. \]</div>
+      <h3>Covariates</h3>
+      <p>Let \(\tau_s\) be the time lineage \(s\) was born or last split and \(E_s(t) = t - \tau_s\) its <strong>pendant age</strong>, the length of its current terminal edge. With \(N\) lineages alive their pendant ages sum to the pendant phylogenetic diversity \(P = \sum_s E_s\) and average \(M = P/N\).</p>
+      <div class="tw"><table>
+        <thead><tr><th>Symbol</th><th>Name</th><th>Definition at time \(t\)</th><th>Reads</th></tr></thead>
+        <tbody>
+          <tr><td>\(N(t)\)</td><td>diversity</td><td>the number of lineages alive</td><td>the branching times</td></tr>
+          <tr><td>\(D_s(t)\)</td><td>centred pendant age</td><td>\(E_s(t) - M(t)\); sums to zero over the lineages alive</td><td>the topology: older or younger than its contemporaries</td></tr>
+          <tr><td>\(\mathrm{ED}_s(t)\)</td><td>evolutionary distinctiveness</td><td>fair proportion \(\sum_{b \succeq s} \ell_b / n_b\) over the branches from the crown to \(s\), each branch's length divided by the lineages alive below it; sums over the clade to Faith's phylogenetic diversity</td><td>the whole ancestry, weighted by how much of it \(s\) shares</td></tr>
+          <tr><td>\(\mathrm{ED}^c_s(t)\)</td><td>centred distinctiveness</td><td>\(\mathrm{ED}_s - \overline{\mathrm{ED}}\), the within-clade contrast alone</td><td>as \(\mathrm{ED}\), with the clade-level part removed</td></tr>
+          <tr><td>\(K_s(t)\)</td><td>ancestral splits</td><td>the number of speciation events on the path from the crown to \(s\); one more on both daughters at a split, hidden splits counted</td><td>whether a speciation-rich ancestry speciates more</td></tr>
+        </tbody>
+      </table></div>
 
       <figure>
         <div class="fig">
-          <svg viewBox="0 0 640 250" role="img" aria-label="Decomposition of isolation times into mean M and deviations D">
-            <!-- baseline origin -->
+          <svg viewBox="0 0 640 250" role="img" aria-label="Decomposition of pendant ages into the mean M and the deviations D">
             <line class="d-axis" x1="182" y1="30" x2="182" y2="222"/>
-            <text class="d-t-sm" x="182" y="238" text-anchor="middle">birth</text>
-            <!-- mean line M -->
+            <text class="d-t-sm" x="182" y="238" text-anchor="middle">birth or last split</text>
             <line class="d-mean" x1="344" y1="24" x2="344" y2="222"/>
             <text class="d-t-box" x="344" y="18" text-anchor="middle">M</text>
-            <text class="d-t-sm" x="344" y="238" text-anchor="middle">mean age</text>
-            <!-- bars: I1..I5 (start x=182, 60 px/unit) -->
+            <text class="d-t-sm" x="344" y="238" text-anchor="middle">mean pendant age</text>
             <rect class="d-bar" x="182" y="40"  width="120" height="20" rx="3"/>
             <rect class="d-bar-pos" x="182" y="78"  width="210" height="20" rx="3"/>
             <rect class="d-bar" x="182" y="116" width="72"  height="20" rx="3"/>
             <rect class="d-bar-pos" x="182" y="154" width="240" height="20" rx="3"/>
             <rect class="d-bar-pos" x="182" y="192" width="168" height="20" rx="3"/>
-            <!-- lineage labels -->
-            <text class="d-t" x="172" y="55"  text-anchor="end">I₁</text>
-            <text class="d-t" x="172" y="93"  text-anchor="end">I₂</text>
-            <text class="d-t" x="172" y="131" text-anchor="end">I₃</text>
-            <text class="d-t" x="172" y="169" text-anchor="end">I₄</text>
-            <text class="d-t" x="172" y="207" text-anchor="end">I₅</text>
-            <!-- deviation markers D = bar end - mean -->
+            <text class="d-t" x="172" y="55"  text-anchor="end">E₁</text>
+            <text class="d-t" x="172" y="93"  text-anchor="end">E₂</text>
+            <text class="d-t" x="172" y="131" text-anchor="end">E₃</text>
+            <text class="d-t" x="172" y="169" text-anchor="end">E₄</text>
+            <text class="d-t" x="172" y="207" text-anchor="end">E₅</text>
             <text class="d-t-sm" x="304"  y="36"  text-anchor="middle">D₁&lt;0</text>
             <text class="d-t-acc" x="394" y="74" text-anchor="middle">D₂&gt;0</text>
             <text class="d-t-acc" x="424" y="150" text-anchor="middle">D₄&gt;0</text>
-            <!-- N label -->
             <text class="d-t-box" x="70" y="20">N = 5 lineages</text>
           </svg>
         </div>
-        <figcaption><b>The \(\{N, D\}\) basis.</b> Each bar is a lineage's isolation time \(I_s\). \(N\) counts the lineages; \(M\) (dashed line) is their mean, used only to centre \(D_s = I_s - M\) — each lineage's signed departure from that mean. Since \(\sum_s D_s = 0\), the age-imbalance axis \(D\) is orthogonal to the diversity \(N\).</figcaption>
+        <figcaption><b>Pendant age and its centring.</b> Each bar is a lineage's pendant age \(E_s\). \(N\) counts the lineages; \(M\) (dashed) is their mean, used only to centre \(D_s = E_s - M\). Since \(\sum_s D_s = 0\) at every instant, \(D\) carries no clade-level signal and is orthogonal to \(N\). \(\mathrm{ED}_s\) adds the shared ancestry above the pendant edge; \(K_s\) counts the splits along it.</figcaption>
       </figure>
 
-      <p>Because \(\sum_s D_s = 0\) at every instant, \(D\) is orthogonal to the diversity \(N\): the two covariates measure distinct effects — <em>how many</em> lineages there are (\(N\)), and whether a lineage is older or younger than its contemporaries (\(D\)). \(N\) reads the branching times; \(D\) reads the topology. A model activates a subset, given as a shortcut or a formula:</p>
+      <div class="note"><span class="k">What the basis spans</span>
+        <p>Measured over 6,433 lineages on 30 complete diversity-dependent clades: a lineage's pendant age is its nearest-neighbour distance (rank correlation 0.97), its time since the crown is the mirror of \(\mathrm{ED}\) (−0.87), and \(D\) and \(\mathrm{ED}\) share the pendant edge (0.54). Two candidate axes were not spanned by \(\{N, D, \mathrm{ED}\}\): the part of \(\mathrm{ED}\) above the pendant edge, and the ancestral-split count \(K\), whose correlation with each of the three is at most 0.29 in magnitude. \(K\) is now a covariate. Under constant rates \(K\) among the lineages alive at \(t\) is Poisson with mean \(2\lambda t\), so on one clade a \(K\) effect and a rate rising with time are not told apart by \(K\) alone.</p>
+      </div>
+    </section>
+
+    <section id="models">
+      <h3>Models</h3>
+      <p>A model activates a subset of the covariates, named by a shortcut or a formula. Every model carries the same covariates in \(\lambda\) and in \(\mu\), with separate coefficients.</p>
       <div class="tw"><table>
-        <thead><tr><th>Shortcut</th><th>Active</th><th>Parameters</th><th>Hypothesis</th></tr></thead>
+        <thead><tr><th>Shortcut</th><th>Formula</th><th>Parameters</th><th>Hypothesis</th></tr></thead>
         <tbody>
-          <tr><td><code>"cr"</code></td><td>none</td><td>\((\beta_0, \gamma_0)\)</td><td>constant rates (null)</td></tr>
-          <tr><td><code>"dd"</code></td><td>\(N\)</td><td>\((\beta_0, \beta_N, \gamma_0, \gamma_N)\)</td><td>diversity dependence</td></tr>
-          <tr><td><code>"d"</code></td><td>\(D\)</td><td>\((\beta_0, \beta_D, \gamma_0, \gamma_D)\)</td><td>age-dependent speciation</td></tr>
-          <tr><td><code>"nd"</code></td><td>\(N + D\)</td><td>\((\beta_0, \beta_N, \beta_D, \gamma_0, \gamma_N, \gamma_D)\)</td><td>both (recommended)</td></tr>
+          <tr><td><code>"cr"</code></td><td><code>~ 1</code></td><td>\((\beta_0, \gamma_0)\)</td><td>constant rates, the null</td></tr>
+          <tr><td><code>"dd"</code></td><td><code>~ N</code></td><td>\((\beta_0, \beta_N, \gamma_0, \gamma_N)\)</td><td>diversity dependence</td></tr>
+          <tr><td><code>"d"</code></td><td><code>~ D</code></td><td>\((\beta_0, \beta_D, \gamma_0, \gamma_D)\)</td><td>age-dependent speciation</td></tr>
+          <tr><td><code>"nd"</code></td><td><code>~ N + D</code></td><td>6</td><td>age dependence over and above diversity</td></tr>
+          <tr><td><code>"ed"</code></td><td><code>~ ED</code></td><td>\((\beta_0, \beta_{ED}, \gamma_0, \gamma_{ED})\)</td><td>distinctiveness-dependent diversification</td></tr>
+          <tr><td><code>"ned"</code></td><td><code>~ N + ED</code></td><td>6</td><td>distinctiveness over and above diversity</td></tr>
+          <tr><td><code>"edc"</code>, <code>"nedc"</code></td><td><code>~ EDc</code>, <code>~ N + EDc</code></td><td>4, 6</td><td>the same on the centred covariate</td></tr>
+          <tr><td><code>"k"</code></td><td><code>~ K</code></td><td>\((\beta_0, \beta_K, \gamma_0, \gamma_K)\)</td><td>inherited diversification: a speciation-rich ancestry speciates more, or less</td></tr>
+          <tr><td><code>"nk"</code></td><td><code>~ N + K</code></td><td>6</td><td>the same over and above diversity</td></tr>
         </tbody>
       </table></div>
-      <p>The recommended model is <code>~ N + D</code> (6 parameters); <code>ep</code> is a legacy alias for <code>d</code>. See <a href="D.html" style="color:var(--accent)">the biological meaning of D</a> for what \(\beta_D\) tests (age-dependent speciation).</p>
+      <p>The parameter vector lists the \(\beta\) coefficients of the active covariates in the order above, then the \(\gamma\) coefficients: \((\beta_0, \beta_N, \beta_D, \gamma_0, \gamma_N, \gamma_D)\) for <code>"nd"</code>, \((\beta_0, \beta_N, \beta_K, \gamma_0, \gamma_N, \gamma_K)\) for <code>"nk"</code>. <code>"ep"</code> is an older name for <code>"d"</code>. The models with \(D\), \(\mathrm{ED}\) or \(K\) need the tree's topology (a <code>phylo</code>, not a vector of branching times), because the covariate is read per lineage. See <a href="D.html" style="color:var(--accent)">the biological meaning of D</a> for what \(\beta_D\) tests.</p>
     </section>
 
     <section id="links">
       <h3>Link functions</h3>
-      <p>The covariate predictor \(\eta_{\text{cov}}\) is mapped to a non-negative rate, selected with <code>link = "linear" | "exponential" | "gaussian"</code>:</p>
+      <p>The predictor is mapped to a non-negative rate by <code>link = "linear" | "exponential" | "gaussian"</code>:</p>
       <figure>
         <div class="fig">
           <svg viewBox="0 0 640 200" role="img" aria-label="The three link functions">
-            <!-- Panel 1: Linear -->
             <g transform="translate(20,26)">
               <line class="d-axis" x1="0" y1="110" x2="160" y2="110"/>
               <line class="d-axis" x1="0" y1="8" x2="0" y2="110"/>
@@ -279,7 +292,6 @@
               <text class="d-t-box" x="0" y="-8">Linear</text>
               <text class="d-t-sm" x="64" y="124" text-anchor="middle">η = 0</text>
             </g>
-            <!-- Panel 2: Exponential -->
             <g transform="translate(240,26)">
               <line class="d-axis" x1="0" y1="110" x2="160" y2="110"/>
               <line class="d-axis" x1="0" y1="8" x2="0" y2="110"/>
@@ -287,7 +299,6 @@
               <polyline class="d-curve" points="0,101.4 4.8,101.3 9.6,101.1 14.4,101.0 19.2,100.8 24.0,100.7 28.8,100.4 33.6,100.2 38.4,99.9 43.2,99.6 48.0,99.2 52.8,98.7 57.6,98.2 62.4,97.5 67.2,96.8 72.0,96.0 76.8,95.0 81.6,93.9 86.4,92.6 91.2,91.1 96.0,89.3 100.8,87.2 105.6,84.8 110.4,82.0 115.2,78.8 120.0,75.1 124.8,70.7 129.6,65.6 134.4,59.8 139.2,52.9 144.0,45.0 148.8,35.8 153.6,25.0 158.4,12.6"/>
               <text class="d-t-box" x="0" y="-8">Exponential</text>
             </g>
-            <!-- Panel 3: Gaussian -->
             <g transform="translate(460,26)">
               <line class="d-axis" x1="0" y1="110" x2="160" y2="110"/>
               <line class="d-axis" x1="0" y1="8" x2="0" y2="110"/>
@@ -299,133 +310,215 @@
             </g>
           </svg>
         </div>
-        <figcaption><b>Link functions</b>, rate vs. the covariate predictor \(\eta_{\text{cov}}\). Linear clips at zero, exponential is log-linear, and the Gaussian (quadratic-exponential) is bell-shaped with a peak at \(\eta_{\text{cov}} = 1\) — an intermediate optimum.</figcaption>
+        <figcaption><b>Link functions</b>, rate against the covariate predictor \(\eta_{\text{cov}}\). Linear is the identity truncated at zero, exponential is log-linear, and the Gaussian is bell-shaped with its peak at \(\eta_{\text{cov}} = 1\).</figcaption>
       </figure>
       <div class="tw"><table>
-        <thead><tr><th>Link</th><th>Rate</th><th>Behaviour</th></tr></thead>
+        <thead><tr><th>Link</th><th>Rate</th><th>Where it applies</th></tr></thead>
         <tbody>
-          <tr><td><b>Linear</b></td><td>\(\max(0,\ \beta_0 + \eta_{\text{cov}})\)</td><td>clipped at zero; can be exactly zero</td></tr>
-          <tr><td><b>Exponential</b></td><td>\(\exp(\beta_0 + \eta_{\text{cov}})\)</td><td>strictly positive; log-linear</td></tr>
-          <tr><td><b>Gaussian</b></td><td>\(\beta_0 \cdot \exp\!\big(-(\eta_{\text{cov}} - 1)^2 / 2\big)\)</td><td>bounded, bell-shaped</td></tr>
+          <tr><td><b>Linear</b></td><td>\(\max(0,\ \beta_0 + \eta_{\text{cov}})\)</td><td>every model; a lineage whose rate is truncated to zero cannot split, so an observed split by such a lineage gives a draw density zero unless a hidden split preceded it</td></tr>
+          <tr><td><b>Exponential</b></td><td>\(\exp(\beta_0 + \eta_{\text{cov}})\)</td><td>every model; the only link on which the selection path is defined, since the point process is then log-linear</td></tr>
+          <tr><td><b>Gaussian</b></td><td>\(\beta_0 \, \exp\!\big(-(\eta_{\text{cov}} - 1)^2 / 2\big)\)</td><td><code>cr</code>, <code>dd</code>, <code>d</code>, <code>nd</code>; not offered with \(\mathrm{ED}\) or \(K\)</td></tr>
         </tbody>
       </table></div>
     </section>
 
     <section id="likelihood">
       <div class="sec-head"><span class="num">§</span><h2>The likelihood</h2></div>
-      <p>Write the observed reconstructed tree as \(y_{\text{obs}}\) and the latent extinct and unsampled lineages as \(z\). The complete configuration has a closed-form density \(f_\theta(y_{\text{obs}}, z)\); only \(y_{\text{obs}}\) is observed, so the likelihood is the intractable marginal</p>
-      <div class="eq">\[ L_\theta(y_{\text{obs}}) = \int f_\theta(y_{\text{obs}}, z)\, dz. \]</div>
-      <p>For a single augmented tree — a piecewise-homogeneous birth–death realization — the complete-data log-density is a log-rate for every event that happened, minus the integrated total hazard:</p>
-      <div class="eq">\[ \log f_\theta = \sum_{\text{spec}} \log \lambda(t_b) + \sum_{\text{ext}} \log \mu(t_e) - \int_0^T N(t)\big[\lambda(t) + \mu(t)\big]\, dt \;+\; S_\rho, \]</div>
-      <p>where \(S_\rho\) is the incomplete-sampling correction (below). When the deviation covariate \(D\) is active each lineage has its own rate; because \(D = (t - t_s) - M\) is constant within each inter-event segment, the hazard integral is still evaluated in closed form under the exponential and Gaussian links.</p>
+      <p>Write \(y\) for the observed tree and \(z\) for everything the observation removed: the hidden lineages with their birth times, attachments and death times, and the alive lineages that were not sampled. The pair \((y, z)\) is the complete tree, whose density has a closed form, and the likelihood of the data is the marginal</p>
+      <div class="eq">\[ L(\theta) = \int f(y, z \mid \theta)\, dz, \]</div>
+      <p>the sum over every hidden history consistent with the tree in hand. Under constant rates the integral collapses to Nee, May and Harvey's product of closed-form terms, and under diversity dependence to a system of differential equations in the number of lineages alive (the <code>DDD</code> package). A lineage-level covariate needs more than a count: a hidden lineage lowers the \(\mathrm{ED}\) of its living relatives while it lives, a hidden split raises its descendants' \(K\) and restarts its parent's pendant age, and no finite family of equations carries that state. The integral is evaluated by Monte Carlo.</p>
+      <p>For one complete tree the log-density is that of a marked point process: a log-rate for every event, read on the lineage it belongs to, minus the compensator, the integrated total rate of everything that could have happened and did not, plus the sampling terms:</p>
+      <div class="eq">\[ \log f(y, z \mid \theta) = \sum_{\text{spec}} \log \lambda_{s_i}(t_i) + \sum_{\text{ext}} \log \mu_{s_i}(t_i) - \int_0^T \sum_{s \in A(t)} \big(\lambda_s(t) + \mu_s(t)\big)\, dt + n_{\text{obs}} \log\rho + n_{\text{uns}} \log(1 - \rho). \]</div>
+      <p>Between two consecutive events the alive set \(A(t)\) does not change, so the compensator is a sum over segments. On a segment \(N\) and every \(K_s\) are fixed, \(M\) is held at its value at the segment's end, and \(D_s\) and \(\mathrm{ED}_s\) grow at unit rate, so each lineage's predictor is a line in \(t\) whose integral has a closed form under both links. <code>lineage_table()</code> exposes these numbers as a data frame with one row per lineage and segment; rebuilding the log-likelihood from that table reproduces the C++ value to \(10^{-8}\), and the same table is the design matrix of the selection path.</p>
     </section>
 
     <section id="is">
       <h3>Importance sampling</h3>
-      <p>The marginal is estimated by drawing latent histories from a tractable proposal and reweighting:</p>
-      <div class="eq">\[ L_\theta \approx \frac{1}{S}\sum_{i=1}^{S} w_i, \qquad w_i = \frac{f_\theta(y_{\text{obs}}, z_i)}{q_\theta(z_i \mid y_{\text{obs}})}, \qquad z_i \sim q_\theta. \]</div>
-      <p>The proposal augments the observed tree by <strong>Poisson thinning</strong>, at the intensity of speciations whose offspring do not survive as a sampled tip:</p>
-      <div class="eq">\[ \nu(t) = N(t)\,\lambda(t)\,\bigl(1 - \rho\, e^{-\mu(t)(T - t)}\bigr). \]</div>
+      <p>Draw \(z_1, \dots, z_K\) from a proposal \(q(z \mid y, \theta')\) whose support contains every \(z\) the model can produce, and weight each draw:</p>
+      <div class="eq">\[ w_k = \frac{f(y, z_k \mid \theta)}{q(z_k \mid y, \theta')}, \qquad \hat L(\theta) = \frac{1}{K} \sum_k w_k, \qquad \mathrm{ESS} = \frac{(\sum_k w_k)^2}{\sum_k w_k^2}. \]</div>
+      <p>\(\hat L\) is unbiased whatever the proposal; its variance is what the proposal decides, and the effective sample size \(\mathrm{ESS}\) is the number of equally weighted draws that would give the same variance. Every E-step reports it.</p>
+      <div class="note"><span class="k">The reported log-likelihood is biased down</span>
+        <p>A fit reports \(\hat\ell = \log \hat L\), the log of a Monte Carlo mean, and by Jensen's inequality \(\mathbb{E}\,\hat\ell \le \log L\). The amount grows as the weights spread; a second-order expansion gives \(\text{gap} = \tfrac12\,(1/\mathrm{ESS} - 1/K)\), which every fit records. AIC inherits it doubled, and it does not cancel between models: the model that is harder to sample is penalised for being harder to sample. A draw with \(\mathrm{ESS} < K/10\) is flagged as heavy, and its gap is treated as unquantified rather than as the number returned. The M-step is not affected: its objective averages \(\log f\) directly.</p>
+      </div>
+    </section>
+
+    <section id="proposals">
+      <h3>The two proposals</h3>
+      <p>Both proposals insert hidden births into the observed tree at an intensity of the form \(N(t)\,\bar\lambda(t) \times \Pr\{\text{a lineage born at } t \text{ leaves no sampled descendant}\}\), draw each inserted lineage's lifetime, and attach it to a parent among the lineages alive. They differ in what they put in the two factors.</p>
+      <p><strong>Thinning</strong> (<code>sampling = "dynamic_fresh"</code>) works in forward time at the model's own segment rates and draws births as an inhomogeneous Poisson process with intensity</p>
+      <div class="eq">\[ nh(t) = N(t)\,\lambda_{\text{seg}}\,\big(1 - \rho\, e^{-\mu_{\text{seg}}(T - t)}\big), \]</div>
+      <p>the last factor being the probability that a lineage born at \(t\), with an exponential lifetime, is dead by \(T\) or alive and unsampled. For a model with \(\mathrm{ED}\) or \(K\) it reads the per-lineage rates instead and attaches each birth in proportion to the parent's rate. It is available for every model and link.</p>
+      <p><strong>The surrogate process</strong> (<code>sampling = "bdi"</code>) starts from the exact conditional distribution of the hidden part under lineage-independent rates: with \(p(t)\) the probability that a lineage alive at \(t\) leaves a sampled descendant, solving \(p' = \lambda p^2 - (\lambda - \mu)\,p\) backward from \(p(T) = \rho\), the hidden lineages form a birth–death process with immigration in which the observed lineages emit hidden births at rate \(2k\lambda(1 - p)\) and each hidden lineage splits at \(\lambda(1 - p)\) and dies at \(\mu / (1 - p)\). Under constant rates this is the model's own conditional and the weights are equal. Under diversity dependence and the lineage-level models the rates are replaced by those of the clade's average lineage on a deterministic trajectory \(\hat N(t)\), \(\hat P(t)\), the fixed point of a backward–forward iteration with under-relaxation; the weights carry the difference. The attachment of a hidden birth does not have to be mean-field: for a \(D\) model each candidate parent is weighted by the model's own rate at that instant, and for an \(\mathrm{ED}\) model by a pendant-age proxy of its distinctiveness.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Model</th><th>Surrogate proposal</th><th>Default</th></tr></thead>
+        <tbody>
+          <tr><td><code>cr</code></td><td>exact on every link, \(\mathrm{ESS} = K\)</td><td>surrogate</td></tr>
+          <tr><td><code>dd</code></td><td>mean field on the linear and exponential links; the effective sample <em>grows</em> with the tree, 42 to 169 of 200 draws from 25 to 400 tips. Refused on the gaussian link, where the rate is not monotone in \(N\) and the iteration does not contract past its peak</td><td>surrogate</td></tr>
+          <tr><td><code>d</code>, <code>nd</code></td><td>mean field with exact attachment, linear and exponential links. On 12 trees at 100 tips it leaves an effective sample of 2–439 against 1.3–15 for thinning; in fits it lifts 3–6 to 13–33 in four cells of five, with recovery of \(\beta_D\) at 0.43–1.06 of its value and selection at 0.90 for an effect of −0.35 but 0.20 for −0.15</td><td>thinning; the surrogate on request</td></tr>
+          <tr><td><code>ed</code>, <code>ned</code>, <code>edc</code>, <code>nedc</code></td><td>mean field through the clade mean of fair proportion, linear and exponential links; 41 times the effective sample of thinning on <code>ned</code> trees at complete sampling, and ahead at every \(\rho\) down to 0.2. On <code>ed</code> it trails thinning below \(\rho \approx 0.8\)</td><td>surrogate</td></tr>
+          <tr><td><code>k</code>, <code>nk</code></td><td>refused: the mean field carries no count of ancestral splits</td><td>thinning</td></tr>
+        </tbody>
+      </table></div>
+      <p>The gate is applied before a fit runs, with a message naming the reason, and the fit records the sampler that ran. Supported is not the same as better, and the table says where the measured ranking turns.</p>
     </section>
 
     <section id="mcem">
       <h3>Monte Carlo EM</h3>
-      <p>To maximize the likelihood, <code>emphasis</code> runs EM on the latent lineages. The objective is the expected complete-data log-likelihood,</p>
-      <div class="eq">\[ Q(\theta \mid \theta') = \mathbb{E}_{z \mid y_{\text{obs}}, \theta'}\!\big[\log f_\theta(y_{\text{obs}}, z)\big] \approx \sum_i \tilde w_i \,\log f_\theta(y_{\text{obs}}, z_i), \]</div>
+      <p>At iterate \(\theta^{(m)}\) the E-step draws \(z_1, \dots, z_K\) from the proposal, computes the weights, normalises them to \(\bar w_k\), and the M-step maximises the weighted complete-data log-likelihood over a box \(B\):</p>
+      <div class="eq">\[ \theta^{(m+1)} = \arg\max_{\theta \in B}\ \sum_k \bar w_k \log f(y, z_k \mid \theta). \]</div>
+      <p>The draws are the same at every \(\theta\) the M-step tries, so the per-lineage tables are built once per E-step and cached. The maximisation uses Rowan's Subplex through NLopt, with the first simplex sized at a tenth of the box in every coordinate. The box comes from the observed tree alone, by <code>auto_bounds()</code>: a centre at the net rate the tip count and crown age imply, then a bisection along each axis toward the point where forward simulation stops producing clades within a tenth and ten times the observed size, each slope axis scaled by its covariate's size on the tree.</p>
       <ul>
-        <li><strong>E-step</strong> — augment the observed tree many times in parallel, keeping augmentations with finite positive weight.</li>
-        <li><strong>M-step</strong> — maximize the weighted complete-data log-likelihood over \(\theta\), optionally penalized by the survival term.</li>
+        <li><strong>Two stopping rules.</strong> <code>rel_change</code> stops once the relative step, in units that do not depend on the tree's time scale, falls below \(10^{-2}\) on three consecutive iterations. <code>mc_error</code> measures the step against its own Monte Carlo standard error from five batches of the draws; a step inside the noise raises the number of draws by half, and the run stops only once the draws reach their cap and the step has stayed inside the noise for three iterations, returning the mean of the last three iterates. Both are subject to an iteration cap and a clock, and a fit reports which of the four ended it.</li>
+        <li><strong>The last E-step.</strong> After the loop one more E-step runs at the returned point, so that the reported log-likelihood, effective sample and gap describe the estimate rather than the iterate before it.</li>
+        <li><strong>Notes a fit carries.</strong> A lineage-level covariate on fewer than 50 tips, the smallest tree on which such an effect has been measured as selectable; an effective sample below 10 at the last E-step, which the pre-registered rules exclude from every selection statement; and turnover above 0.5 at the intercepts, the boundary of the measured regime. Each note states the number it rests on.</li>
       </ul>
-      <p>Iterate until the parameter change falls below tolerance. The importance weights also yield \(\hat f\), a log-mean-exp estimate of the observed-data log-likelihood, which drives model comparison.</p>
+      <p>At the fixed point the iterates fluctuate around the maximiser with the Monte Carlo error of one E-step, measured at 1–7% of the rates over the last 100 of 400 iterations and halving per fourfold draws. No convergence rule tighter than that floor can fire, and the draws must grow with the tree: 200 fixed draws drift the estimates up by 8–13% at 400–800 tips, where draws grown to the Monte Carlo error do not.</p>
     </section>
 
-    <section id="conditioning">
-      <h3>Conditioning on survival &amp; incomplete sampling</h3>
-      <p>A reconstructed tree exists only because the crown lineages left surviving, sampled descendants, so the likelihood is conditioned on that event:</p>
-      <div class="eq">\[ \ell_{\text{cond}}(\theta) = \ell(\theta) - \log P_\theta(\text{survival}). \]</div>
-      <p>The survival probability has no closed form under endogenous rates; it is estimated by forward simulation and emulated with a binomial GAM for fast evaluation. When only a fraction \(\rho\) of living species is sampled, set <code>rho</code>: the augmentation then also inserts unsampled extant lineages, and the likelihood gains a binomial sampling factor</p>
-      <div class="eq">\[ S_\rho = n_{\text{obs}} \log \rho + n_{\text{unsamp}} \log(1 - \rho). \]</div>
-      <p>With <code>rho = 1</code> the tree is completely sampled and \(S_\rho = 0\).</p>
+    <section id="sampling">
+      <h3>Incomplete sampling and conditioning</h3>
+      <p>When the phylogeny holds a fraction \(\rho\) of the living species, set <code>rho</code> in the control list or in <code>simulate_tree()</code>. Both proposals then insert unsampled extant lineages as well as extinct ones, the likelihood gains the binomial factor \(n_{\text{obs}} \log \rho + n_{\text{uns}} \log(1 - \rho)\), and \(\rho\) enters the surrogate's survival equation only through its terminal condition \(p(T) = \rho\). With <code>rho = 1</code> the tree is completely sampled.</p>
+      <p>The likelihood is not conditioned on the clade's survival by default. The conditioned form \(\ell_{\text{cond}} = \ell - \log P_\theta(\text{survival})\) is available by passing <code>cond</code>, a survival surface that <code>auto_bounds()</code> trains by forward simulation over the box when <code>train_surv_gam = TRUE</code>.</p>
     </section>
 
-    <section id="methods">
-      <div class="sec-head"><span class="num">§</span><h2>Estimation methods</h2></div>
-      <p>The same likelihood machinery is driven by three optimizers, chained in one pipeline that seeds each stage from the last.</p>
+    <section id="routes">
+      <div class="sec-head"><span class="num">§</span><h2>Three routes to a model</h2></div>
       <figure>
         <div class="fig">
-          <svg viewBox="0 0 640 132" role="img" aria-label="The four-stage estimation pipeline">
+          <svg viewBox="0 0 640 262" role="img" aria-label="One Monte Carlo EM iteration and the routes that leave it">
             <defs><marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" class="d-flow"/></marker></defs>
-            <g>
-              <rect class="d-box" x="8"   y="34" width="128" height="48" rx="9"/>
-              <rect class="d-box" x="176" y="34" width="128" height="48" rx="9"/>
-              <rect class="d-box" x="344" y="34" width="128" height="48" rx="9"/>
-              <rect class="d-box" x="512" y="34" width="120" height="48" rx="9"/>
-              <text class="d-t-mono" x="72"  y="55" text-anchor="middle">auto_bounds</text>
-              <text class="d-t-mono" x="240" y="55" text-anchor="middle">GAM</text>
-              <text class="d-t-mono" x="408" y="55" text-anchor="middle">CEM</text>
-              <text class="d-t-mono" x="572" y="55" text-anchor="middle">MCEM</text>
-              <text class="d-t-sm" x="72"  y="72" text-anchor="middle">bounds</text>
-              <text class="d-t-sm" x="240" y="72" text-anchor="middle">surface</text>
-              <text class="d-t-sm" x="408" y="72" text-anchor="middle">global search</text>
-              <text class="d-t-sm" x="572" y="72" text-anchor="middle">refinement</text>
-              <line class="d-flow" x1="138" y1="58" x2="172" y2="58" marker-end="url(#ah)"/>
-              <line class="d-flow" x1="306" y1="58" x2="340" y2="58" marker-end="url(#ah)"/>
-              <line class="d-flow" x1="474" y1="58" x2="508" y2="58" marker-end="url(#ah)"/>
-              <text class="d-t-sm" x="320" y="20" text-anchor="middle">each stage seeds the next</text>
-              <text class="d-t-acc" x="320" y="104" text-anchor="middle">the best result across stages is returned</text>
-            </g>
+            <rect x="4" y="30" width="632" height="76" rx="10" fill="none" stroke="var(--line-2)" stroke-width="1.3" stroke-dasharray="5 4"/>
+            <text class="d-t-sm" x="10" y="121">one Monte Carlo EM iteration</text>
+            <!-- row -->
+            <rect class="d-box" x="12"  y="44" width="84"  height="48" rx="9"/>
+            <rect class="d-box" x="124" y="44" width="124" height="48" rx="9"/>
+            <rect class="d-box" x="276" y="44" width="110" height="48" rx="9"/>
+            <rect class="d-box" x="414" y="44" width="96"  height="48" rx="9"/>
+            <rect class="d-box" x="538" y="44" width="90"  height="48" rx="9"/>
+            <text class="d-t-box" x="54"  y="65" text-anchor="middle">tree y, ρ</text>
+            <text class="d-t-sm"  x="54"  y="81" text-anchor="middle">observed</text>
+            <text class="d-t-box" x="186" y="65" text-anchor="middle">proposal q</text>
+            <text class="d-t-sm"  x="186" y="81" text-anchor="middle">thinning | surrogate</text>
+            <text class="d-t-box" x="331" y="65" text-anchor="middle">draws z₁ … z_K</text>
+            <text class="d-t-sm"  x="331" y="81" text-anchor="middle">per-lineage tables</text>
+            <text class="d-t-box" x="462" y="65" text-anchor="middle">weights f/q</text>
+            <text class="d-t-sm"  x="462" y="81" text-anchor="middle">ESS, gap</text>
+            <text class="d-t-box" x="583" y="65" text-anchor="middle">M-step</text>
+            <text class="d-t-sm"  x="583" y="81" text-anchor="middle">argmax over B</text>
+            <line class="d-flow" x1="98"  y1="68" x2="120" y2="68" marker-end="url(#ah)"/>
+            <line class="d-flow" x1="250" y1="68" x2="272" y2="68" marker-end="url(#ah)"/>
+            <line class="d-flow" x1="388" y1="68" x2="410" y2="68" marker-end="url(#ah)"/>
+            <line class="d-flow" x1="512" y1="68" x2="534" y2="68" marker-end="url(#ah)"/>
+            <!-- loop above -->
+            <path class="d-flow" d="M583,44 V16 H186 V40" marker-end="url(#ah)"/>
+            <text class="d-t-sm" x="384" y="12" text-anchor="middle">the next iterate, while the stop rule is not met</text>
+            <!-- products -->
+            <rect class="d-box" x="236" y="150" width="190" height="46" rx="9"/>
+            <text class="d-t-mono" x="331" y="170" text-anchor="middle">covariate_path()</text>
+            <text class="d-t-sm"  x="331" y="186" text-anchor="middle">dgLARS on the tables; BIC or AIC selects</text>
+            <rect class="d-box" x="500" y="150" width="128" height="46" rx="9"/>
+            <text class="d-t-box" x="564" y="170" text-anchor="middle">fit</text>
+            <text class="d-t-sm"  x="564" y="186" text-anchor="middle">θ̂, ℓ̂, ESS, gap, notes</text>
+            <rect class="d-box" x="300" y="218" width="328" height="38" rx="9"/>
+            <text class="d-t-mono" x="464" y="235" text-anchor="middle">compare_models()</text>
+            <text class="d-t-sm"  x="464" y="249" text-anchor="middle">one fit per model, or model = "all": AIC, swing, ranking at risk</text>
+            <!-- flows -->
+            <line class="d-flow" x1="331" y1="92"  x2="331" y2="146" marker-end="url(#ah)"/>
+            <text class="d-t-sm" x="338" y="128">no M-step needed, at any θ</text>
+            <line class="d-flow" x1="583" y1="92"  x2="583" y2="146" marker-end="url(#ah)"/>
+            <text class="d-t-sm" x="590" y="128">stop rule met</text>
+            <line class="d-flow" x1="564" y1="196" x2="564" y2="214" marker-end="url(#ah)"/>
           </svg>
         </div>
-        <figcaption><b>The pipeline.</b> <code>emphasis_pipeline()</code> runs bound detection, a GAM surface, cross-entropy global search, and Monte Carlo EM refinement in sequence.</figcaption>
+        <figcaption><b>Where the routes leave the iteration.</b> The dashed frame is one Monte Carlo EM iteration. The path leaves from the draws, so it needs no M-step and runs at any \(\theta\); the comparison of fits leaves from the fit, one per model, whether the models are named one by one or as the ladder.</figcaption>
       </figure>
       <div class="tw"><table>
-        <thead><tr><th>Method</th><th>Idea</th><th>Role</th></tr></thead>
+        <thead><tr><th>Route</th><th>Call</th><th>What it answers</th></tr></thead>
         <tbody>
-          <tr><td><b>GAM</b></td><td>evaluate \(\hat f\) on a Latin-hypercube grid, fit a smooth surface, optimize it</td><td>fast exploration</td></tr>
-          <tr><td><b>CEM</b></td><td>cross-entropy: evolve a particle population, keep the elite fraction, anneal</td><td>global search</td></tr>
-          <tr><td><b>MCEM</b></td><td>Monte Carlo EM to the maximum-likelihood estimate</td><td>local refinement</td></tr>
-          <tr><td><b>Pipeline</b></td><td><code>auto_bounds → GAM → CEM → MCEM</code></td><td>recommended workflow</td></tr>
+          <tr><td><b>One model</b></td><td><code>estimate_rates(tree, model = "nd", ...)</code></td><td>the maximum-likelihood estimate of a named model, with its log-likelihood, effective sample, gap and notes</td></tr>
+          <tr><td><b>The ladder</b></td><td><code>estimate_rates(tree, model = "all", ...)</code></td><td>fits <code>cr</code>, <code>dd</code>, <code>nd</code>, <code>ned</code>, <code>nk</code>, each started from the estimate of the model it nests and boxed by <code>auto_bounds()</code>, and returns them with their <code>compare_models()</code> table; <code>control$models</code> restricts the set</td></tr>
+          <tr><td><b>The path</b></td><td><code>covariate_path(tree, covariates = c("N", "D", "ED", "K"))</code></td><td>the order in which the covariates enter one dgLARS path over all of them, and the set a criterion picks, for \(\lambda\) and \(\mu\) separately; estimation and selection at once, on the exponential link</td></tr>
         </tbody>
       </table></div>
+      <p><strong>Comparing fits.</strong> \(\mathrm{AIC} = 2k - 2\hat\ell\) sits above the truth by twice each fit's gap, and the amounts do not cancel. For every model behind the leader <code>compare_models()</code> computes the swing by which correcting both gaps would close the AIC difference, and flags the ranking as not safe where the swing reaches the difference, or where the trailing fit's draw is heavy. Starting a fit from its nested estimate is what keeps the first E-step's augmented clade near the size the data imply: from the middle of a wide box an \(\mathrm{ED}\) fit can augment a 54-tip tree to thousands of nodes and run out of time, and from the <code>dd</code> estimate the same fit takes seconds.</p>
+      <p><strong>The path.</strong> Under the exponential link the complete-data log-likelihood is a log-linear point process on the per-lineage table: one row per lineage and segment, the segment's length as exposure, a count of one when that lineage's own event ends it, and each draw's rows entering with its normalised weight. The differential-geometric LARS of Augugliaro, Mineo and Wit (2013) traces the curve on which the Rao score statistics of the active covariates stay equal, from the null fit where the first covariate enters down to the full fit; a covariate enters when its score reaches the common level, and BIC or AIC picks a point on the curve. On a fully observed tree the path is exact; on augmented trees its resolution is the augmentation's effective sample. It is checked against the <code>dglars</code> package where that package applies.</p>
+    </section>
+
+    <section id="measured">
+      <h3>What is measured, and where</h3>
+      <p>Every statement of accuracy and cost comes from a pre-registered simulation experiment in the companion papers, with the experiment named. The numbers below are the ones a user needs to read a fit. Each selection rate is a floor, because a fit stopped on its budget carries a worse AIC than it would reach.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Question</th><th>Measured</th></tr></thead>
+        <tbody>
+          <tr><td>Does the estimator reach the exact maximum-likelihood estimate where one exists?</td><td>For <code>cr</code> and <code>dd</code>, against <code>DDD</code>, on 30 cells times two proposals and in a size study to 800 tips. The draws must grow with the tree.</td></tr>
+          <tr><td>How small a tree carries a lineage-level effect?</td><td>Selectable by AIC from 50 tips at an effect of 0.35 of the speciation rate and turnover 0.25. At 100 tips an effect of 0.35 is selected on 0.75 of trees and one of 0.15 on 0.50. Below 50 tips, above turnover 0.5, and for \(K\), nothing is measured yet.</td></tr>
+          <tr><td>What does the path choose when the hidden lineages are drawn at the generating value?</td><td>At 50, 100, 200 and 400 tips: the null on <code>cr</code> trees 0.85, 0.90, 1.00, 1.00; exactly \(N\) on <code>dd</code> trees 0.40, 0.55, 0.70, 0.65, with \(N\) in the set on 0.85–1.00 at every size; exactly \(\{N, \mathrm{ED}\}\) on <code>ned</code> trees 0.30, 0.20, 0.05, 0.00, on an effective sample of 5 above 50 tips. Where \(D\) or \(\mathrm{ED}\) generated the tree the path admits both, since the two share the pendant edge, and above 100 tips it prefers \(D\). A path costs a median 1–3 min per tree at 50–100 tips, 14–19 min at 200 and 51–78 min at 400.</td></tr>
+          <tr><td>Is \(K\) admitted where it is absent, and recovered where it is present?</td><td>On the path, never on 20 <code>cr</code>, 20 <code>dd</code> and 20 <code>nd</code> trees, once on 20 <code>ned</code> trees; on <code>nk</code> trees it is in the chosen set on 0.70, at 0.97 of its value, with \(\mathrm{ED}\) in the set on every one, since a speciation-rich ancestry is a low fair proportion. By fitting, on 100 <code>nk</code> trees at 100 tips, \(\beta_K\) is recovered at 0.83–0.95 of its value with the right sign on 0.80–1.00, and no false positive at zero; AIC chooses <code>nk</code> over <code>dd</code> on 0.60 of trees at an effect of +0.35 and on 0.15 or fewer elsewhere, on fits that ended on their 30-minute clock on 93 of 100 trees.</td></tr>
+          <tr><td>What does an iteration cost?</td><td>One <code>ned</code> iteration with a strong \(\mathrm{ED}\) effect costs 77 s at 100 tips and 5.1 h at 400 from a start far from the estimate; the difference is the starting point, which is why the ladder starts each model from the one it nests.</td></tr>
+        </tbody>
+      </table></div>
+      <p>The ladder itself, <code>model = "all"</code> on trees from each of its five models at 100 and 200 tips, is being measured now; this page is updated when that result is in.</p>
     </section>
 
     <section id="simulation">
       <div class="sec-head"><span class="num">§</span><h2>Simulation</h2></div>
-      <p><code>simulate_tree()</code> generates trees by direct (Gillespie) forward simulation, starting from the crown and tracking the two crown clades so that loss of either is recorded as tree-wide extinction. It returns the reconstructed tree (<code>tes</code>), the full tree with extinct lineages (<code>tas</code>), and a <code>status</code> of <code>"done"</code>, <code>"extinct"</code>, or <code>"too_large"</code>.</p>
+      <p><code>simulate_tree()</code> runs the forward process by Gillespie simulation from the crown, carrying every lineage's pendant age, distinctiveness and split count, for every model and link. It returns the reconstructed tree (<code>tes</code>), the complete tree with its extinct lineages (<code>tas</code>) and a <code>status</code> of <code>"done"</code>, <code>"extinct"</code> or <code>"too_large"</code>. Given an observed tree it draws from either proposal instead, returning the augmented trees with their \(\log q\).</p>
       <pre><code><span class="n">sim</span> <span class="op">&lt;-</span> <span class="kw">simulate_tree</span>(
-  pars  <span class="op">=</span> <span class="kw">c</span>(<span class="n">0.8</span>, <span class="n">0.02</span>, <span class="n">0.1</span>, <span class="n">0</span>),   <span class="cm"># beta_0, beta_N, gamma_0, gamma_N</span>
+  pars  <span class="op">=</span> <span class="kw">c</span>(<span class="n">0.8</span>, <span class="op">-</span><span class="n">0.02</span>, <span class="n">0.15</span>, <span class="n">0.1</span>, <span class="n">0</span>, <span class="n">0</span>),   <span class="cm"># beta_0, beta_N, beta_D, gamma_0, gamma_N, gamma_D</span>
   max_t <span class="op">=</span> <span class="n">10</span>,
-  model <span class="op">=</span> <span class="st">"dd"</span>,
-  link  <span class="op">=</span> <span class="st">"gaussian"</span>              <span class="cm"># or "linear", "exponential"</span>
+  model <span class="op">=</span> <span class="st">"nd"</span>,
+  link  <span class="op">=</span> <span class="st">"linear"</span>                         <span class="cm"># or "exponential", "gaussian"</span>
 )
-<span class="n">sim</span><span class="op">$</span><span class="n">status</span>      <span class="cm"># "done", "extinct", or "too_large"</span>
-<span class="kw">plot</span>(<span class="n">sim</span><span class="op">$</span><span class="n">tes</span>)   <span class="cm"># reconstructed (extant-only) tree</span></code></pre>
-      <p>The <a href="simulator.html" style="color:var(--accent)">simulator page</a> runs the same forward simulation in the browser: every model and link above, the sampling fraction, and the complete, reconstructed and sampled trees drawn as the clade grows.</p>
+<span class="n">sim</span><span class="op">$</span><span class="n">status</span>
+<span class="kw">plot</span>(<span class="n">sim</span><span class="op">$</span><span class="n">tes</span>)                               <span class="cm"># the reconstructed tree</span>
+
+<span class="cm"># draw hidden lineages for an observed tree, from either proposal</span>
+<span class="n">aug</span> <span class="op">&lt;-</span> <span class="kw">simulate_tree</span>(<span class="n">sim</span><span class="op">$</span><span class="n">tes</span>, pars <span class="op">=</span> <span class="kw">c</span>(<span class="n">0.8</span>, <span class="op">-</span><span class="n">0.02</span>, <span class="n">0.15</span>, <span class="n">0.1</span>, <span class="n">0</span>, <span class="n">0</span>), model <span class="op">=</span> <span class="st">"nd"</span>,
+                     n_trees <span class="op">=</span> <span class="n">50</span>, method <span class="op">=</span> <span class="st">"bdi"</span>)      <span class="cm"># or method = "thinning"</span>
+<span class="kw">length</span>(<span class="n">aug</span><span class="op">$</span><span class="n">trees</span>); <span class="n">aug</span><span class="op">$</span><span class="n">log_q</span></code></pre>
+      <p>The <a href="simulator.html" style="color:var(--accent)">simulator page</a> runs the same forward process in the browser, for every model and link and any sampling fraction, drawing the complete, reconstructed and sampled trees as the clade grows.</p>
     </section>
 
     <section id="usage">
       <div class="sec-head"><span class="num">§</span><h2>Usage</h2></div>
-      <h3>Full pipeline (recommended)</h3>
+      <p>The three routes on one simulated tree. The exponential link is used because the path is defined on it; the ladder and single fits run on any link.</p>
       <pre><code><span class="kw">library</span>(<span class="n">emphasis</span>); <span class="kw">library</span>(<span class="n">ape</span>)
-<span class="kw">data</span>(<span class="n">bird.orders</span>)
 
-<span class="cm"># One call: bounds, GAM, CEM, MCEM</span>
-<span class="n">fit</span> <span class="op">&lt;-</span> <span class="kw">emphasis_pipeline</span>(<span class="n">bird.orders</span>, model <span class="op">=</span> <span class="st">"dd"</span>, link <span class="op">=</span> <span class="st">"gaussian"</span>)
-<span class="n">fit</span><span class="op">$</span><span class="n">pars</span>; <span class="n">fit</span><span class="op">$</span><span class="n">loglik</span>; <span class="n">fit</span><span class="op">$</span><span class="n">AIC</span></code></pre>
+<span class="cm"># a clade under diversity dependence: lambda = exp(b0 + bN N), mu = exp(g0)</span>
+<span class="n">sim</span> <span class="op">&lt;-</span> <span class="kw">simulate_tree</span>(pars <span class="op">=</span> <span class="kw">c</span>(<span class="kw">log</span>(<span class="n">0.6</span>), <span class="op">-</span><span class="n">0.01</span>, <span class="kw">log</span>(<span class="n">0.05</span>), <span class="n">0</span>), max_t <span class="op">=</span> <span class="n">12</span>,
+                     model <span class="op">=</span> <span class="st">"dd"</span>, link <span class="op">=</span> <span class="st">"exponential"</span>)
+<span class="n">phy</span> <span class="op">&lt;-</span> <span class="n">sim</span><span class="op">$</span><span class="n">tes</span>
 
-      <h3>Simulate, then recover</h3>
-      <pre><code><span class="n">sim</span> <span class="op">&lt;-</span> <span class="kw">simulate_tree</span>(pars <span class="op">=</span> <span class="kw">c</span>(<span class="n">0.9</span>, <span class="op">-</span><span class="n">0.01</span>, <span class="n">0.1</span>, <span class="n">0</span>), max_t <span class="op">=</span> <span class="n">10</span>,
-                     model <span class="op">=</span> <span class="st">"dd"</span>, link <span class="op">=</span> <span class="st">"linear"</span>)
+<span class="cm"># 1. one model</span>
+<span class="n">box</span> <span class="op">&lt;-</span> <span class="kw">auto_bounds</span>(<span class="n">phy</span>, model <span class="op">=</span> <span class="st">"dd"</span>, link <span class="op">=</span> <span class="st">"exponential"</span>, train_surv_gam <span class="op">=</span> <span class="n">FALSE</span>)
+<span class="n">fit</span> <span class="op">&lt;-</span> <span class="kw">estimate_rates</span>(<span class="n">phy</span>, model <span class="op">=</span> <span class="st">"dd"</span>, link <span class="op">=</span> <span class="st">"exponential"</span>,
+                      control <span class="op">=</span> <span class="kw">list</span>(lower_bound <span class="op">=</span> <span class="n">box</span><span class="op">$</span><span class="n">lower_bound</span>,
+                                     upper_bound <span class="op">=</span> <span class="n">box</span><span class="op">$</span><span class="n">upper_bound</span>,
+                                     sample_size <span class="op">=</span> <span class="n">200</span>))
+<span class="n">fit</span>                        <span class="cm"># estimates, log-likelihood, effective sample, gap, stop reason, notes</span>
 
-<span class="n">fit</span> <span class="op">&lt;-</span> <span class="kw">estimate_rates</span>(<span class="n">sim</span><span class="op">$</span><span class="n">tes</span>, method <span class="op">=</span> <span class="st">"mcem"</span>, model <span class="op">=</span> <span class="st">"dd"</span>, link <span class="op">=</span> <span class="st">"linear"</span>,
-                      init_pars <span class="op">=</span> <span class="kw">c</span>(<span class="n">0.6</span>, <span class="op">-</span><span class="n">0.005</span>, <span class="n">0.15</span>, <span class="n">0</span>),
-                      control <span class="op">=</span> <span class="kw">list</span>(lower_bound <span class="op">=</span> <span class="kw">c</span>(<span class="n">1e-3</span>, <span class="op">-</span><span class="n">0.05</span>, <span class="n">1e-3</span>, <span class="op">-</span><span class="n">0.05</span>),
-                                     upper_bound <span class="op">=</span> <span class="kw">c</span>(<span class="n">3</span>, <span class="n">0.01</span>, <span class="n">3</span>, <span class="n">0.01</span>),
-                                     sample_size <span class="op">=</span> <span class="n">100</span>, max_iter <span class="op">=</span> <span class="n">25</span>))</code></pre>
+<span class="cm"># 2. the ladder: cr, dd, nd, ned, nk from nested starts, ranked by AIC</span>
+<span class="n">fits</span> <span class="op">&lt;-</span> <span class="kw">estimate_rates</span>(<span class="n">phy</span>, model <span class="op">=</span> <span class="st">"all"</span>, link <span class="op">=</span> <span class="st">"exponential"</span>,
+                       control <span class="op">=</span> <span class="kw">list</span>(sample_size <span class="op">=</span> <span class="n">200</span>))
+<span class="n">fits</span><span class="op">$</span><span class="n">comparison</span>            <span class="cm"># AIC, ESS, gap, swing; attr "ranking_at_risk"</span>
+<span class="n">fits</span><span class="op">$</span><span class="n">fits</span><span class="op">$</span><span class="n">nd</span><span class="op">$</span><span class="n">pars</span>
 
-      <h3>Compare covariate hypotheses</h3>
-      <pre><code><span class="n">models</span> <span class="op">&lt;-</span> <span class="kw">c</span>(<span class="st">"cr"</span>, <span class="st">"dd"</span>, <span class="st">"d"</span>, <span class="st">"nd"</span>)   <span class="cm"># null, diversity, age-imbalance, both</span>
-<span class="kw">select_diversification_model</span>(<span class="n">bird.orders</span>, link <span class="op">=</span> <span class="st">"gaussian"</span>)</code></pre>
+<span class="cm"># 3. the path: which covariates the data ask for first</span>
+<span class="n">cp</span> <span class="op">&lt;-</span> <span class="kw">covariate_path</span>(<span class="n">phy</span>, covariates <span class="op">=</span> <span class="kw">c</span>(<span class="st">"N"</span>, <span class="st">"D"</span>, <span class="st">"ED"</span>, <span class="st">"K"</span>), criterion <span class="op">=</span> <span class="st">"BIC"</span>)
+<span class="n">cp</span><span class="op">$</span><span class="n">speciation</span><span class="op">$</span><span class="n">entry_order</span>; <span class="n">cp</span><span class="op">$</span><span class="n">speciation</span><span class="op">$</span><span class="n">active</span>
+
+<span class="cm"># the numbers the likelihood is built on</span>
+<span class="kw">head</span>(<span class="kw">lineage_table</span>(<span class="n">phy</span>))</code></pre>
+      <p>Called on a <code>phylo</code>, <code>covariate_path()</code> treats the tree as fully observed: the speciation path is exact and the extinction path, with no event to read, is returned empty. The augmented route, with the hidden lineages entering at their importance weights, runs on the draws of an E-step and is what the experiments measure.</p>
+      <h3>Choosing the proposal</h3>
+      <pre><code><span class="cm"># the surrogate on a D model (default is thinning there), or thinning anywhere</span>
+<span class="kw">estimate_rates</span>(<span class="n">phy</span>, model <span class="op">=</span> <span class="st">"nd"</span>, link <span class="op">=</span> <span class="st">"exponential"</span>,
+               control <span class="op">=</span> <span class="kw">list</span>(sampling <span class="op">=</span> <span class="st">"bdi"</span>, sample_size <span class="op">=</span> <span class="n">200</span>,
+                              lower_bound <span class="op">=</span> <span class="n">lb</span>, upper_bound <span class="op">=</span> <span class="n">ub</span>))
+<span class="kw">estimate_rates</span>(<span class="n">phy</span>, model <span class="op">=</span> <span class="st">"dd"</span>, control <span class="op">=</span> <span class="kw">list</span>(sampling <span class="op">=</span> <span class="st">"dynamic_fresh"</span>, <span class="n">...</span>))
+
+<span class="cm"># incomplete sampling: a fifth of the living species are missing</span>
+<span class="kw">estimate_rates</span>(<span class="n">phy</span>, model <span class="op">=</span> <span class="st">"dd"</span>, control <span class="op">=</span> <span class="kw">list</span>(rho <span class="op">=</span> <span class="n">0.8</span>, <span class="n">...</span>))</code></pre>
     </section>
 
     <section id="reference">
@@ -433,15 +526,16 @@
       <div class="tw"><table>
         <thead><tr><th>Function</th><th>Purpose</th></tr></thead>
         <tbody>
-          <tr><td><code>simulate_tree()</code></td><td>Forward simulation — single, batch, or conditional augmentation</td></tr>
-          <tr><td><code>estimate_rates()</code></td><td>Rate estimation via <code>method = "mcem" | "cem" | "gam"</code></td></tr>
-          <tr><td><code>emphasis_pipeline()</code></td><td>Full four-stage workflow, returns the best result across stages</td></tr>
-          <tr><td><code>auto_bounds()</code></td><td>Automatic parameter-bound detection + survival GAM</td></tr>
-          <tr><td><code>train_GAM()</code>, <code>predict_survival()</code></td><td>Fit / query the survival-probability GAM</td></tr>
-          <tr><td><code>compare_models()</code>, <code>select_diversification_model()</code></td><td>AIC-based comparison and selection</td></tr>
-          <tr><td><code>diagnose_mcem()</code>, <code>diagnose_cem()</code>, <code>diagnose_gam()</code></td><td>Diagnostic summaries and plots</td></tr>
+          <tr><td><code>simulate_tree()</code></td><td>Forward simulation under every model and link; given a tree, hidden lineages from either proposal (<code>method = "bdi"</code> / <code>"thinning"</code>)</td></tr>
+          <tr><td><code>estimate_rates()</code></td><td>Monte Carlo EM for one model, or the nested ladder with <code>model = "all"</code>; the proposal, draws, stopping rule and relaxation in <code>control</code>; the trace of every iteration in <code>details$mcem</code></td></tr>
+          <tr><td><code>compare_models()</code></td><td>AIC table over fits with effective sample, gap, swing and the ranking-at-risk flag</td></tr>
+          <tr><td><code>covariate_path()</code></td><td>The dgLARS path over the covariates, for speciation and extinction; entry order and the set BIC or AIC chooses</td></tr>
+          <tr><td><code>lineage_table()</code></td><td>One row per lineage and segment: the covariates and the event mark the likelihood reads</td></tr>
+          <tr><td><code>auto_bounds()</code></td><td>The parameter box from the observed tree, and the optional survival surface</td></tr>
+          <tr><td><code>diagnose_mcem()</code></td><td>The trace of a fit: iterates, log-likelihood, effective sample, weights</td></tr>
         </tbody>
       </table></div>
+      <p>Also exported, from earlier versions: <code>emphasis_pipeline()</code>, <code>train_GAM()</code>, <code>predict_survival()</code>, <code>diagnose_cem()</code> and <code>diagnose_gam()</code>, with <code>estimate_rates(method = "cem" | "gam")</code>. They are a likelihood surface fitted on a grid and a cross-entropy search, not part of the method described on this page, and nothing above depends on them.</p>
     </section>
 
     <div class="foot">

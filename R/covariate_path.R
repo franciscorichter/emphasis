@@ -78,7 +78,10 @@ lineage_table <- function(tree) {
 #'   row per \eqn{\gamma}: the coefficients, the log-likelihood, the active
 #'   set size, AIC and BIC), the entry order of the covariates (the
 #'   \eqn{\gamma} at which each enters), the coefficients and active set at
-#'   the criterion's optimum, and the frame's size.
+#'   the criterion's optimum, and the frame's size.  A rate with no event in
+#'   the trees (the extinction rate of a fully observed tree) gets an empty
+#'   path: \code{path} is \code{NULL}, \code{active} and \code{entry_order}
+#'   are empty and \code{n_events} is 0.
 #' @export
 covariate_path <- function(trees, log_weights = NULL, n_trees = 40L,
                            covariates = c("N", "D", "ED"),
@@ -106,6 +109,17 @@ covariate_path <- function(trees, log_weights = NULL, n_trees = 40L,
   out <- list()
   for (r in rate) {
     y <- if (r == "speciation") frame$y_spec else frame$y_ext
+    if (sum(frame$w * y) <= 0) {
+      # No event of this kind in the trees: a fully observed tree has no
+      # extinction, so its extinction path has no null fit to start from.
+      # The path is then empty rather than an error.
+      out[[r]] <- list(path = NULL, entry_gamma = stats::setNames(rep(NA_real_, length(covariates)), covariates),
+                       entry_order = character(0), step = NA_integer_, criterion = criterion,
+                       coef = stats::setNames(rep(NA_real_, length(covariates) + 1L), c("(Intercept)", covariates)),
+                       active = character(0),
+                       n_rows = nrow(frame), n_events = 0, n_trees = length(pick), ess = ess)
+      next
+    }
     path <- .dglars_pp(X, y, frame$dt, frame$w, n_gamma = n_gamma)
     crit <- if (criterion == "BIC") path$BIC else path$AIC
     best <- which.min(crit)

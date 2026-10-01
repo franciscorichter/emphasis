@@ -84,6 +84,14 @@ test_that("the covariate path runs on a fully observed tree and returns an entry
   phy <- ape::rphylo(30L, 0.6, 0)
   cp <- covariate_path(phy, rate = "speciation")
   expect_named(cp, "speciation")
+  # both rates asked for: the extinction path of a fully observed tree has no
+  # event, so it is returned empty rather than as an error
+  both <- covariate_path(phy, covariates = c("N", "D", "ED", "K"))
+  expect_named(both, c("speciation", "extinction"))
+  expect_null(both$extinction$path)
+  expect_identical(both$extinction$active, character(0))
+  expect_equal(both$extinction$n_events, 0)
+  expect_true(length(both$speciation$entry_order) >= 1L)
   s <- cp$speciation
   expect_equal(s$n_events, sum(lineage_table(phy)$event == 1L))
   expect_true(all(s$entry_order %in% c("N", "D", "ED")))

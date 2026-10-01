@@ -26,7 +26,7 @@ In the development checkout `origin` carries two push URLs, so `git push origin 
 
 ## Build and test
 
-Toolchain: R ≥ 3.5, a C++ compiler, and the packages in `DESCRIPTION` (`Rcpp`, `RcppParallel` for TBB parallelism, `nloptr`, `BH` headers, `ape`, `DDD`, `progress`; `mgcv` for the GAM stage).
+Toolchain: R ≥ 3.5, a C++ compiler, and the packages in `DESCRIPTION` (`Rcpp`, `RcppParallel` for TBB parallelism, `nloptr`, `BH` headers, `ape`, `DDD`, `progress`; `mgcv` for the optional survival surface).
 
 ```r
 devtools::load_all()    # compiles src/ and loads the package
@@ -55,7 +55,7 @@ R/
   bdi.R           exact BDI augmentation sampler + .mcem_bdi() (see "Augmentation samplers")
   de.R            cross-entropy method (CEM) and importance-sampling utilities
   gam.R           auto_bounds(), train_GAM(), predict_survival(), likelihood-surface GAM
-  pipeline.R      emphasis_pipeline(): bounds → GAM → CEM → MCEM
+  pipeline.R      emphasis_pipeline(): the earlier bounds → GAM → CEM → MCEM chain, kept for compatibility
   diagnostics.R   diagnose_mcem/cem/gam + print methods
 src/
   augment_tree.cpp  data augmentation: insert extinct / unsampled lineages (thinning proposal)
@@ -74,7 +74,7 @@ dev/              audit and validation-study working tree; excluded from the pac
   simulator/      the check that the simulator page draws from the distribution simulate_tree() does
 ```
 
-Exported functions: `simulate_tree`, `estimate_rates`, `emphasis_pipeline`, `auto_bounds`, `train_GAM`, `predict_survival`, `diagnose_mcem`, `diagnose_cem`, `diagnose_gam`.
+Exported functions: `simulate_tree`, `estimate_rates`, `compare_models`, `covariate_path`, `lineage_table`, `auto_bounds`, `diagnose_mcem`; and, from earlier versions, `emphasis_pipeline`, `train_GAM`, `predict_survival`, `diagnose_cem`, `diagnose_gam`.
 
 ## Data
 
@@ -222,24 +222,13 @@ at an ESS of 1.5–12 of 200, the same range the thinning proposal gives `"dd"` 
 (1.1–7.3). What is left there is the thinning construction's limit under heavy turnover, not
 the covariate.
 
-### Estimation pipeline
+### Estimation
 
-The package provides a multi-stage pipeline that combines three complementary methods:
+The estimator is Monte Carlo EM. At each iteration the E-step draws hidden lineages from the proposal, weights them, and the M-step maximises the weighted complete-data log-likelihood over a box with Rowan's Subplex (NLopt), the first simplex sized at a tenth of the box in every coordinate; the per-lineage tables are built once per E-step and cached across the values the M-step tries. The box comes from the observed tree alone, by `auto_bounds()`: a centre at the net rate the tip count and crown age imply, a bisection along each axis toward the point where forward simulation stops producing clades within a tenth and ten times the observed size, each slope axis scaled by its covariate's size on the tree (`.wide_bounds`), and a second pass that tightens the box where the augmentation fails at its corners.
 
-```
-auto_bounds --> GAM surface --> CEM global search --> MCEM refinement
-  (Stage 1)     (Stage 2)       (Stage 3)            (Stage 4)
-```
+Two stopping rules: `rel_change` (default) stops once the relative step, in units independent of the tree's time scale, falls below 1e-2 on three consecutive iterations; `mc_error` measures the step against its own Monte Carlo standard error from five batches, grows the draws by half whenever a step is inside the noise, and stops once the draws reach their cap and the step has stayed inside the noise for three iterations, returning the mean of the last three iterates. Both are subject to `max_iter` and `max_time`, and a fit reports which of the four ended it. After the loop one more E-step runs at the returned point, so that the reported log-likelihood, effective sample and gap describe the estimate.
 
-**Stage 1 -- Automatic bound detection.** Starting from a safe center point, bisection search expands outward along each parameter axis to find where forward simulation transitions from feasible to infeasible. A second bisection pass tightens bounds where IS augmentation fails. A survival-probability GAM is trained over the detected region for conditioning.
-
-**Stage 2 -- GAM-based MLE.** The IS log-likelihood is evaluated on a Latin Hypercube grid spanning the bounds. A smooth GAM surface is fitted and optimized via L-BFGS-B. Fast, one-shot, no initial values needed.
-
-**Stage 3 -- Cross-entropy method (CEM).** A population of parameter vectors evolves over iterations: evaluate each via IS, keep the best fraction (elite set), update the sampling distribution. Global stochastic search, complementary to the GAM grid.
-
-**Stage 4 -- Monte Carlo EM (MCEM).** Starting from the best parameters found in Stages 2-3, alternates E-step (augment tree via IS) and M-step (maximize expected complete-data log-likelihood). Local refinement for precise estimates. Includes adaptive recovery: if the E-step fails, doubles augmentation attempts and perturbs toward the center of bounds.
-
-The best result across stages is returned. If MCEM fails, the exploratory result serves as fallback.
+`estimate_rates(method = "cem" | "gam")`, `emphasis_pipeline()`, `train_GAM()` and `predict_survival()` are earlier estimators (a cross-entropy search, a likelihood surface fitted on a grid) still exported; nothing above depends on them and they are not measured in the paper.
 
 ### Conditioning on survival
 
@@ -249,81 +238,57 @@ $$
 \ell_{\text{cond}}(\theta) = \ell(\theta) - \log P_\theta(\text{survival})
 $$
 
-The survival probability $P_\theta$ is estimated by forward simulation and emulated with a binomial GAM, enabling fast evaluation at any $\theta$.
+The likelihood is not conditioned by default (`cond = NULL`). The survival probability $P_\theta$ is estimated by forward simulation over the box and emulated with a binomial GAM when `auto_bounds(train_surv_gam = TRUE)`; pass the result as `cond`.
 
 ### Incomplete taxon sampling
 
 When the phylogeny samples only a fraction $\rho$ of the living species, set `rho` in the control list (or `simulate_tree(rho = ...)`). The augmentation then inserts both extinct lineages and unsampled extant lineages, and the likelihood gains the binomial sampling factor $n_{\text{obs}}\log\rho + n_{\text{unsamp}}\log(1-\rho)$. With `rho = 1` (default) the tree is completely sampled.
 
-Both proposals implement this, and the choice of sampler does not depend on $\rho$. In the BDI proposal $p(t)$ becomes the probability of leaving a *sampled* descendant, which solves the same ODE with the terminal condition $p(t_p) = \rho$ and has the closed form $\rho d / (dE + \rho\lambda(1-E))$ under constant rates; a missing lineage still alive at the present is then not a rejection but an unsampled extant tip, emitted with the `5e10` sentinel so that $N(t)$ counts it. At $\rho = 1$ the extinction hazard diverges at $t_p$ and no such lineage can survive, which is the complete-sampling case unchanged. `emphasis_pipeline()` inherits a top-level `control$rho` into every stage, a nested per-stage value still wins, and the value actually used is recorded in the fit. A `rho` outside (0, 1] is an error, in R and in the compiled code alike.
+Both proposals implement this, and the choice of sampler does not depend on $\rho$. In the BDI proposal $p(t)$ becomes the probability of leaving a *sampled* descendant, which solves the same ODE with the terminal condition $p(t_p) = \rho$ and has the closed form $\rho d / (dE + \rho\lambda(1-E))$ under constant rates; a missing lineage still alive at the present is then not a rejection but an unsampled extant tip, emitted with the `5e10` sentinel so that $N(t)$ counts it. At $\rho = 1$ the extinction hazard diverges at $t_p$ and no such lineage can survive, which is the complete-sampling case unchanged. The value of `rho` actually used is recorded in the fit. A `rho` outside (0, 1] is an error, in R and in the compiled code alike.
 
 ## Usage
 
-### Full pipeline (recommended)
+### The three routes
 
 ```r
-library(emphasis)
-library(ape)
-data(bird.orders)
+library(emphasis); library(ape)
 
-# One function does everything: bounds, GAM, CEM, MCEM
-result <- emphasis_pipeline(
-  bird.orders,
-  model = "dd",
-  link  = "gaussian"   # quadratic exponential link
-)
-result
-#> emphasis pipeline (model = N)
-#> ==================================================
-#>
-#> Stage log:
-#>   *bounds      ok  loglik=       ---  AIC=       ---   22.3s
-#>    gam         ok  loglik=    -52.18  AIC=    112.36   45.1s
-#>    mcem        ok  loglik=    -49.85  AIC=    107.70   38.2s
-#>
-#> Best stage: mcem
-#> Parameters:
-#>   beta_0  beta_N gamma_0 gamma_N
-#>   0.1205 -0.0052  0.0001  0.0000
+# a clade under diversity dependence: lambda = exp(b0 + bN N), mu = exp(g0)
+sim <- simulate_tree(pars = c(log(0.6), -0.01, log(0.05), 0), max_t = 12,
+                     model = "dd", link = "exponential")
+phy <- sim$tes
+
+# 1. one model
+box <- auto_bounds(phy, model = "dd", link = "exponential", train_surv_gam = FALSE)
+fit <- estimate_rates(phy, model = "dd", link = "exponential",
+                      control = list(lower_bound = box$lower_bound,
+                                     upper_bound = box$upper_bound,
+                                     sample_size = 200))
+fit                        # estimates, log-likelihood, effective sample, gap, stop reason, notes
+
+# 2. the ladder: cr, dd, nd, ned, nk from nested starts, ranked by AIC
+fits <- estimate_rates(phy, model = "all", link = "exponential",
+                       control = list(sample_size = 200))
+fits$comparison            # AIC, ESS, gap, swing; attr "ranking_at_risk"
+fits$fits$nd$pars
+
+# 3. the path: which covariates the data ask for first (exponential link only)
+cp <- covariate_path(phy, covariates = c("N", "D", "ED", "K"), criterion = "BIC")
+cp$speciation$entry_order; cp$speciation$active
+
+# the numbers the likelihood is built on
+head(lineage_table(phy))
+
+# the surrogate on a D model (default is thinning there), thinning anywhere,
+# and incomplete sampling
+estimate_rates(phy, model = "nd", link = "exponential",
+               control = list(sampling = "bdi", sample_size = 200,
+                              lower_bound = lb, upper_bound = ub))
+estimate_rates(phy, model = "dd", control = list(sampling = "dynamic_fresh", ...))
+estimate_rates(phy, model = "dd", control = list(rho = 0.8, ...))
 ```
 
-### Individual methods
-
-```r
-# Detect bounds automatically
-ab <- auto_bounds(bird.orders, model = "dd", link = "gaussian")
-
-# GAM-based MLE (fast, exploratory)
-fit_gam <- estimate_rates(
-  bird.orders, method = "gam", model = "dd", link = "gaussian",
-  cond = ab$survival_gam,
-  control = list(lower_bound = ab$lower_bound,
-                 upper_bound = ab$upper_bound,
-                 n_grid = 200, sample_size = 1)
-)
-
-# MCEM refinement (precise, from GAM init)
-fit_mcem <- estimate_rates(
-  bird.orders, method = "mcem", model = "dd", link = "gaussian",
-  init_pars = fit_gam$pars,
-  cond = ab$survival_gam,
-  control = list(lower_bound = ab$lower_bound,
-                 upper_bound = ab$upper_bound,
-                 sample_size = 1, max_iter = 200)
-)
-
-fit_mcem$pars
-fit_mcem$loglik
-fit_mcem$AIC
-
-# MCEM with the thinning proposal instead of the BDI default
-fit_thin <- estimate_rates(
-  bird.orders, method = "mcem", model = "dd",
-  control = list(lower_bound = ab$lower_bound,
-                 upper_bound = ab$upper_bound,
-                 sampling = "dynamic_fresh")
-)
-```
+Called on a `phylo`, `covariate_path()` treats the tree as fully observed (the extinction path, with no event to read, is returned empty); the augmented route, with the hidden lineages entering at their importance weights, runs on the draws of an E-step (`augment_trees`, internal) and is what the experiments measure.
 
 ### Simulation
 
@@ -360,20 +325,10 @@ length(aug$trees); aug$log_q
 ### Model comparison
 
 ```r
-# Fit multiple models, compare by AIC
-models <- c("cr", "dd", "d")
-fits <- lapply(models, function(m) {
-  emphasis_pipeline(bird.orders, model = m, link = "gaussian",
-                    stages = c("bounds", "gam"))
-})
-names(fits) <- models
-
-# AIC table
-data.frame(
-  model  = models,
-  loglik = sapply(fits, `[[`, "loglik"),
-  AIC    = sapply(fits, `[[`, "AIC")
-)
+# fits named one by one, compared with the Monte Carlo guard
+fit_cr <- estimate_rates(phy, model = "cr", link = "exponential", control = ctrl_cr)
+fit_dd <- estimate_rates(phy, model = "dd", link = "exponential", control = ctrl_dd)
+compare_models(cr = fit_cr, dd = fit_dd)   # AIC, ESS, gap, swing, ranking_at_risk
 ```
 
 **One path over all the covariates.** `covariate_path()` traces the differential-geometric
@@ -391,15 +346,16 @@ right one, or $D$ alone from a generator with both (0.80): the two share the pen
 
 | Function | Purpose |
 | -------- | ------- |
-| `simulate_tree()` | Forward simulation of a tree (single, batch, or conditional augmentation via `method = "bdi"` / `"thinning"`) |
-| `estimate_rates()` | Rate estimation via `method = "mcem"`, `"cem"`, or `"gam"` |
-| `emphasis_pipeline()` | Full four-stage workflow (bounds → GAM → CEM → MCEM) |
-| `auto_bounds()` | Automatic parameter-bound detection + survival GAM |
-| `train_GAM()`, `predict_survival()` | Fit / query the survival-probability GAM |
-| `diagnose_mcem()`, `diagnose_cem()`, `diagnose_gam()` | Diagnostic summaries and plots |
-| `compare_models()`, `select_diversification_model()` | AIC-based model comparison and selection |
+| `simulate_tree()` | Forward simulation under every model and link; given a tree, hidden lineages from either proposal (`method = "bdi"` / `"thinning"`) |
+| `estimate_rates()` | Monte Carlo EM for one model, or the nested ladder with `model = "all"`; the trace of every iteration in `details$mcem` |
+| `compare_models()` | AIC table over fits with effective sample, gap, swing and the ranking-at-risk flag |
+| `covariate_path()` | The dgLARS path over the covariates, for speciation and extinction; entry order and the set BIC or AIC chooses |
+| `lineage_table()` | One row per lineage and segment: the covariates and the event mark the likelihood reads |
+| `auto_bounds()` | The parameter box from the observed tree, and the optional survival surface |
+| `diagnose_mcem()` | The trace of a fit: iterates, log-likelihood, effective sample, weights |
+| `emphasis_pipeline()`, `train_GAM()`, `predict_survival()`, `diagnose_cem()`, `diagnose_gam()` | Earlier estimators, exported for compatibility |
 
-See the [wiki](https://github.com/franciscorichter/emphasis/wiki) for the full derivation of the model and inference machinery, method details, and worked examples.
+The docs site at <https://franciscorichter.github.io/emphasis/> (`index.html`, `D.html`, `simulator.html` in this repository) carries the derivation, the two proposals, the three routes and what is measured.
 
 ## Status
 

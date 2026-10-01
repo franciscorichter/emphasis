@@ -40,7 +40,10 @@ A list with one element per rate: the path (a data frame with one
   row per \eqn{\gamma}: the coefficients, the log-likelihood, the active
   set size, AIC and BIC), the entry order of the covariates (the
   \eqn{\gamma} at which each enters), the coefficients and active set at
-  the criterion's optimum, and the frame's size.
+  the criterion's optimum, and the frame's size.  A rate with no event in
+  the trees (the extinction rate of a fully observed tree) gets an empty
+  path: \code{path} is \code{NULL}, \code{active} and \code{entry_order}
+  are empty and \code{n_events} is 0.
 }
 \description{
 Instead of comparing nested models one pair at a time, this traces the
