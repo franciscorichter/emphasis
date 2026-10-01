@@ -9,7 +9,7 @@
 #' @param model Integer vector of length 3: \code{c(use_N, use_P, use_E)} (each 0 or 1).
 #' @param max_t Crown age (forward simulation end time).
 #' @param max_N Maximum number of lineages before simulation is declared too large.
-#' @param max_tries Maximum retries after extinction or overflow.
+#' @param max_tries Maximum retries after extinction; an overflow is not retried.
 #' @param link Link function: 0 = linear (max(0,...)), 1 = exponential.
 #' @param seed Positive integer seeding the simulator. \code{0} (the default)
 #'   draws one from R's generator, so \code{set.seed()} reaches the simulator

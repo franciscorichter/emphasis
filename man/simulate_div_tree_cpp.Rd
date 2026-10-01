@@ -25,7 +25,7 @@ Inactive parameters (those not selected by \code{model}) should be set to 0.}
 
 \item{max_N}{Maximum number of lineages before simulation is declared too large.}
 
-\item{max_tries}{Maximum retries after extinction or overflow.}
+\item{max_tries}{Maximum retries after extinction; an overflow is not retried.}
 
 \item{link}{Link function: 0 = linear (max(0,...)), 1 = exponential.}
 

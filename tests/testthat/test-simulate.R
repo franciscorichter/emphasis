@@ -84,7 +84,7 @@ test_that("simulate_tree cr model returns valid output", {
   result <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr")
 
   expect_type(result, "list")
-  expect_named(result, c("tes", "tas", "L", "status", "survival_prob"))
+  expect_named(result, c("tes", "tas", "L", "status", "survival_prob", "attempts"))
   expect_true(result$status %in% c("done", "extinct", "too_large"))
   if (result$status == "done") {
     # Ltable in DDD format: birth time, parent, id, death time (-1 = extant)
@@ -172,4 +172,20 @@ test_that("forward cr simulation matches the birth-death moments", {
 
   # every surviving draw carries at least the two crown lineages
   expect_true(all(kept >= 2L))
+})
+
+test_that("an overflowing clade is not retried, an extinct one is", {
+  set.seed(5)
+  # lambda far above what max_lin allows: the first draw overflows and the
+  # retry budget is not spent on it
+  big <- simulate_tree(pars = c(5, 0.0), max_t = 10, model = "cr", link = "linear",
+                       max_lin = 20L, max_tries = 20L)
+  expect_identical(big$status, "too_large")
+  expect_identical(big$attempts, 1L)
+  # extinction dominates: retries happen, within the budget
+  set.seed(6)
+  dead <- simulate_tree(pars = c(0.05, 2.0), max_t = 10, model = "cr", link = "linear",
+                        max_lin = 1000L, max_tries = 3L)
+  expect_true(dead$attempts >= 1L && dead$attempts <= 4L)
+  if (dead$status == "extinct") expect_identical(dead$attempts, 4L)
 })

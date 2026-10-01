@@ -61,6 +61,8 @@
 #'     \code{"too_large"}.}
 #'   \item{\code{survival_prob}}{Empirical survival probability: \code{1 /
 #'     n_attempts} when the simulation succeeded, \code{0} otherwise.}
+#'   \item{\code{attempts}}{Number of forward simulations run, counting the
+#'     retries after extinction; 1 when the first draw completed or overflowed.}
 #' }
 #'
 #' @section Output -- forward simulation (batch, matrix \code{pars}):
@@ -101,8 +103,10 @@
 #'   Default \code{"cr"}.
 #' @param max_lin Maximum lineages before declaring the tree too large.
 #'   Default \code{1e6}.
-#' @param max_tries Maximum additional attempts after extinction or overflow
-#'   (forward simulation only). Retries are tracked at the R level to
+#' @param max_tries Maximum additional attempts after extinction (forward
+#'   simulation only). A clade that overflows \code{max_lin} is not retried:
+#'   the overflow is a property of the parameters, not of the draw, and every
+#'   retry would run to the cap again. Retries are tracked at the R level to
 #'   compute \code{survival_prob}. Default \code{1}.
 #' @param useDDD Convert L-table to \code{phylo} via \pkg{DDD}.
 #'   Default \code{TRUE}.
@@ -242,13 +246,18 @@ simulate_tree <- function(tree        = NULL,
   max_lin_i   <- as.integer(max_lin)
   max_tries_i <- as.integer(max_tries)
 
-  # Retry loop at R level to count attempts -> survival_prob
+  # Retry loop at R level to count attempts -> survival_prob.  Only an
+  # extinct clade is retried: an overflow of max_lin is a property of the
+  # parameters, not of the draw, and before this every retry ran to the cap
+  # again, so a feasibility test at an exploding corner of the box paid for
+  # twenty-one cap-sized simulations per row (auto_bounds on an nd model took
+  # hours on some 100-tip trees, E23).
   n_attempts <- 0L
-  raw        <- list(status = "extinct")
-  while (raw$status != "done" && n_attempts <= max_tries_i) {
+  repeat {
     raw        <- simulate_div_tree_cpp(pars8, model_bin, max_t, max_lin_i, 0L,
                                         link_int, seed = .draw_seed())
     n_attempts <- n_attempts + 1L
+    if (raw$status != "extinct" || n_attempts > max_tries_i) break
   }
 
   survival_prob <- if (raw$status == "done") 1.0 / n_attempts else 0.0
@@ -278,7 +287,8 @@ simulate_tree <- function(tree        = NULL,
        tas           = tas,
        L             = L,
        status        = raw$status,
-       survival_prob = survival_prob)
+       survival_prob = survival_prob,
+       attempts      = n_attempts)
 }
 
 

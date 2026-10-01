@@ -42,8 +42,10 @@ Default \code{"cr"}.}
 \item{max_lin}{Maximum lineages before declaring the tree too large.
 Default \code{1e6}.}
 
-\item{max_tries}{Maximum additional attempts after extinction or overflow
-(forward simulation only). Retries are tracked at the R level to
+\item{max_tries}{Maximum additional attempts after extinction (forward
+simulation only). A clade that overflows \code{max_lin} is not retried:
+the overflow is a property of the parameters, not of the draw, and every
+retry would run to the cap again. Retries are tracked at the R level to
 compute \code{survival_prob}. Default \code{1}.}
 
 \item{useDDD}{Convert L-table to \code{phylo} via \pkg{DDD}.
@@ -161,6 +163,8 @@ the first \code{n_trees} augmentations to finish.
     \code{"too_large"}.}
   \item{\code{survival_prob}}{Empirical survival probability: \code{1 /
     n_attempts} when the simulation succeeded, \code{0} otherwise.}
+  \item{\code{attempts}}{Number of forward simulations run, counting the
+    retries after extinction; 1 when the first draw completed or overflowed.}
 }
 }
 
