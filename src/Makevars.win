@@ -1,3 +1,18 @@
 PKG_CXXFLAGS = -I../inst/include -I. 
 PKG_CXXFLAGS += -DRCPP_PARALLEL_USE_TBB=1
 PKG_LIBS += $(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe" -e "RcppParallel::RcppParallelLibs()")
+
+# Every object depends on the package's headers.  R's make rules know only
+# that foo.o comes from foo.cpp, so a header edit recompiled nothing but the
+# .cpp files that changed with it, and an in-place install could link objects
+# built against two versions of the Model class (studio, 2026-09-18 to
+# 2026-10-01: E_step.o, mcem.o and rcpp_ed.o predated the ED-aware proposal;
+# the K build crashed in it).  Listing the headers makes a header edit rebuild
+# everything.
+HEADERS = ../inst/include/augment_tree.hpp ../inst/include/ed_covariate.hpp \
+  ../inst/include/emphasis.hpp ../inst/include/general_tree.hpp \
+  ../inst/include/model.hpp ../inst/include/model_helpers.hpp \
+  ../inst/include/precision_weights.hpp ../inst/include/sbplx.hpp \
+  ../inst/include/state_guard.hpp rinit.h unpack.h
+all: $(SHLIB)
+$(OBJECTS): $(HEADERS)
