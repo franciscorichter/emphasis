@@ -189,3 +189,20 @@ test_that("an overflowing clade is not retried, an extinct one is", {
   expect_true(dead$attempts >= 1L && dead$attempts <= 4L)
   if (dead$status == "extinct") expect_identical(dead$attempts, 4L)
 })
+
+test_that("a clade that churns under max_lin stops at ten times max_lin lineages in all", {
+  # speciation and extinction balance near 100 alive lineages, both near 3:
+  # the clade stays well under max_lin = 200 alive while thousands are born and die
+  gN <- log(10) / 100   # extinction rises from 0.3 to 3 at 100 lineages, where it meets speciation
+  set.seed(7)
+  t0 <- proc.time()[["elapsed"]]
+  s <- simulate_tree(pars = c(log(3), 0, log(0.3), gN), max_t = 60, model = "dd", link = "exponential",
+                     max_lin = 200L, max_tries = 50L)
+  expect_lt(proc.time()[["elapsed"]] - t0, 30)
+  expect_identical(s$status, "too_large")
+  # an ordinary clade is untouched by the table cap
+  set.seed(8)
+  s2 <- simulate_tree(pars = c(log(0.4), log(0.04)), max_t = 10, model = "cr", link = "exponential",
+                      max_lin = 1000L, max_tries = 20L)
+  expect_identical(s2$status, "done")
+})

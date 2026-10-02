@@ -39,7 +39,10 @@ produces one forward simulation.}
 \item{model}{Model specification (string, formula, or binary vector).
 Default \code{"cr"}.}
 
-\item{max_lin}{Maximum lineages before declaring the tree too large.
+\item{max_lin}{Maximum lineages alive before declaring the tree too large;
+a clade that has had ten times as many lineages in all, alive and dead,
+is too large as well, which bounds the cost of a simulation that churns
+(high speciation and extinction over a long crown) under the cap.
 Default \code{1e6}.}
 
 \item{max_tries}{Maximum additional attempts after extinction (forward

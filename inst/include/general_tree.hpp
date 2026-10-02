@@ -233,9 +233,17 @@ struct general_div {
     double sum_exp_bE = ep_exp ? 2.0 * std::exp(-pars[3] * 0.0) : 0.0;  // 2 lineages at ts=0
     double sum_exp_gE = ep_exp ? 2.0 * std::exp(-pars[7] * 0.0) : 0.0;
 
+    // The L-table keeps every lineage ever born, and the per-lineage rates and
+    // ED read all of it at every event, so a clade that churns -- high
+    // speciation and extinction over a long crown -- makes each event slower
+    // than the last while N stays under max_N.  On a 30 Ma crown a corner of
+    // auto_bounds()'s box ran one simulation for hours this way.  So the table
+    // is capped too: ten times max_N lineages ever born is "too large" like N.
+    const size_t max_rows = (max_N > std::numeric_limits<size_t>::max() / 10) ? max_N : 10 * max_N;
+
     while (true) {
       N = N1 + N2;
-      if (N >= max_N) { break_type = maxN_exceeded; break; }
+      if (N >= max_N || ltable.size() >= max_rows) { break_type = maxN_exceeded; break; }
 
       const double Nval = static_cast<double>(N);
       const double Pval = Nval * static_cast<double>(t) - sum_tip_start;
