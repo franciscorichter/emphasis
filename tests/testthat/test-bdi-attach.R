@@ -65,13 +65,17 @@ test_that("the two attachment rules estimate the same log-likelihood", {
   brts <- emphasis:::.extract_brts(phy)
   pn <- emphasis:::.expand_pars(cp, mb)
   N <- 3000L
-  est <- vapply(c("uniform", "rate"), function(a) {
+  aug <- lapply(c("uniform", "rate"), function(a) {
     set.seed(8)
     emphasis:::.augment_tree_bdi(brts, pn, model_bin = mb[1:4], sample_size = N,
-                                 link = 0L, rho = 1, attach = a)$fhat
-  }, 0)
+                                 link = 0L, rho = 1, attach = a)
+  })
+  est <- vapply(aug, `[[`, 0, "fhat")
+  ess <- vapply(aug, function(a) emphasis:::.ess_from_lw(a$weights), 0)
   skip_if(!all(is.finite(est)), "an estimate is not finite")
-  expect_lt(abs(est[["rate"]] - est[["uniform"]]), 0.5)
+  # two importance-sampling estimates of one integral, each with a Monte Carlo
+  # standard error of about 1/sqrt(ESS): within four of their joint error
+  expect_lt(abs(est[2L] - est[1L]), 4 * sqrt(1 / ess[1L] + 1 / ess[2L]))
 })
 
 test_that("rate attachment still attaches every birth to a living lineage", {

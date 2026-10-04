@@ -167,7 +167,7 @@ test_that("on an ED tree the two proposals estimate the same log-likelihood", {
   # heavier and the tolerance is wider than on a dd tree -- but the two
   # estimate the same integral
   expect_lt(abs(b$fhat - f_thin), 1.5)
-  # and it is the cheaper of the two here
-  expect_gt(emphasis:::.ess_from_lw(b$weights),
-            emphasis:::.ess_from_lw(t$logf - t$logg))
+  # Which proposal keeps the larger effective sample depends on the tree: the
+  # surrogate leads on most ned trees at the generating values (E7) and not on
+  # every one, so that is measured there and not asserted here.
 })

@@ -252,6 +252,7 @@ struct general_div {
       // Compute total event rate
       // ------------------------------------------------------------------
       double total_rate = 0.0;
+      double ed_next = -1.0;   // set by the raw-ED branch, which draws its own waiting time
 
       if (!per_lineage) {
         // No E-dependence: all lineages share the same per-lineage rates — O(1)
@@ -267,6 +268,65 @@ struct general_div {
           if (br.end_date != -1.f) continue;
           const double E = static_cast<double>(t) - static_cast<double>(br.tip_start);
           total_rate += compute_lambda(Nval, Pval, E, edv[i], br.k) + compute_mu(Nval, Pval, E, edv[i], br.k);
+        }
+        // Raw ED grows at unit slope between events, so the hazard is not
+        // constant until the next event: under the exponential link every
+        // lineage's speciation rate carries the factor exp(beta_ED * dt).  The
+        // waiting time is drawn by thinning (Ogata): propose from a bound on
+        // the hazard over a horizon, accept with the ratio of the hazard at
+        // the proposed time to the bound.  With the coefficients at or below
+        // zero the hazard falls, so the bound is the current total and the
+        // horizon is the rest of the crown age; with a positive coefficient
+        // the horizon is the time over which the hazard can grow by half.
+        // Holding the rate fixed instead (the code before this) put events
+        // early by the rate's change over one waiting time.  The centred
+        // covariate is constant between events and keeps the plain draw.
+        if (model[3] < 3) {
+          const double base = static_cast<double>(t);
+          const double bpos = std::max(pars[8], 0.0), gpos = std::max(pars[9], 0.0);
+          auto sums_at = [&](double dt, double& L, double& M) {
+            const double tt = base + dt;
+            const double Pv = Nval * tt - sum_tip_start;
+            L = 0.0; M = 0.0;
+            for (size_t i = 0; i < ltable.size(); ++i) {
+              const auto& br = ltable[i];
+              if (br.end_date != -1.f) continue;
+              const double E = tt - static_cast<double>(br.tip_start);
+              L += compute_lambda(Nval, Pv, E, edv[i] + dt, br.k);
+              M += compute_mu   (Nval, Pv, E, edv[i] + dt, br.k);
+            }
+          };
+          double off = 0.0; double found = -1.0;
+          for (int guard = 0; guard < 1000000; ++guard) {
+            const double remain = max_t - (base + off);
+            if (remain <= 0.0) break;
+            double L0, M0; sums_at(off, L0, M0);
+            double h = remain;
+            if (link == 1) {
+              const double hp = std::max(bpos, gpos);
+              if (hp > 0.0) h = std::min(h, std::log(1.5) / hp);
+            } else if (link == 0) {
+              const double g = Nval * (bpos + gpos);
+              if (g > 0.0) h = std::min(h, std::max(0.5 * (L0 + M0), 1.0) / g);
+            }
+            double bound;
+            if (link == 2) {
+              bound = Nval * (std::max(pars[0], 0.0) + std::max(pars[4], 0.0));
+            } else {
+              double Lh = L0, Mh = M0;
+              if (bpos > 0.0 || gpos > 0.0) sums_at(off + h, Lh, Mh);
+              bound = (bpos > 0.0 ? Lh : L0) + (gpos > 0.0 ? Mh : M0);
+            }
+            if (bound <= 0.0) { if (h >= remain) break; off += h; continue; }
+            const double dt = rndgen.expon(bound);
+            if (dt > h) { off += h; continue; }
+            const double cand = off + dt;
+            if (base + cand >= max_t) break;
+            double Lc, Mc; sums_at(cand, Lc, Mc);
+            if (rndgen.uniform() * bound <= Lc + Mc) { found = cand; break; }
+            off = cand;
+          }
+          ed_next = (found >= 0.0) ? base + found : max_t;
         }
       } else if (ep_exp) {
         // EP + exponential link, orthogonal basis {N, M=P/N, D=E-M}: O(1) via
@@ -288,7 +348,8 @@ struct general_div {
         }
       }
 
-      const double next_time = static_cast<double>(t) + rndgen.expon(total_rate);
+      const double next_time = (ed_next >= 0.0) ? ed_next
+                             : static_cast<double>(t) + rndgen.expon(total_rate);
 
       if (next_time >= max_t) {
         t = static_cast<float>(max_t);

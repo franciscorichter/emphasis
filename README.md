@@ -151,9 +151,11 @@ The **EM objective** is an expectation of a log, $Q(\theta)=E[\log f(y,z\mid\the
 
 The **log-likelihood** is not. $\hat\ell=\log\big(\tfrac1N\sum_i w_i\big)$ is a log of a mean, so by Jensen's inequality $E[\hat\ell]\le\log p(y\mid\theta)$ — biased down, never up, by an amount that grows as the effective sample falls. `AIC` inherits it doubled, and it does **not** cancel between models: the model that is harder to sample is penalised for being harder to sample.
 
-Every fit therefore records `details$final_IS$ESS` and `$gap`, and `compare_models()` reports both and **warns when a ranking is not safe against them** — when the handicap of a lower-ESS model reaches the AIC gap it is losing by, or when its draw is heavy enough that the handicap cannot be quantified at all. `print()` on a fit shows the effective sample and, when it matters, how far below the truth the estimate sits.
+Every fit therefore records `details$final_IS$ESS` and `$gap`, and `compare_models()` reports both and **warns when a ranking is not safe against them** — when the handicap of a lower-ESS model reaches the AIC gap it is losing by, or when its draw is heavy enough that the handicap cannot be quantified at all. It also warns when the model it chooses rests on fewer than 10 effective draws. `print()` on a fit shows the effective sample and, when it matters, how far below the truth the estimate sits.
 
-**Three routes to a model.** `estimate_rates()` fits one named model. `estimate_rates(model = "all")` fits the nested ladder `cr`, `dd`, `nd`, `ned`, `nk` (the last two need a `phylo` and are left out on the gaussian link), each started from the estimate of the model it nests and boxed by `auto_bounds()` unless `control$bounds` names a box per model, and returns the fits with their `compare_models()` table; `control$models` restricts the ladder. `covariate_path()` selects and estimates at once, along one dgLARS path over every covariate. The two-step route and the path answer different questions and neither is the other's reference: the path is measured apart from MCEM's convergence, at the generating parameters, and the ladder carries every fit's own sampler noise.
+**The chosen model is not the lowest AIC.** Among nested models the richer one has the lower AIC whenever its two extra parameters raise the log-likelihood by more than 2, and under the null that happens on about 13% of trees (the likelihood-ratio statistic is $\chi^2_2$); with three richer models offered beside the null it happens more often. Measured on 20 trees a cell from a diversity-dependent generator at 50 to 200 tips, a lineage-level model had the minimum AIC on 2 to 7 of 20 and led by more than 2 AIC on 0 to 2 of 20 (E27). `compare_models()` therefore reports `chosen`: the model with the fewest parameters among those within `margin = 2` AIC of the minimum, with `within_margin` marking the rows that qualify. The full ranking is kept so that the margin can be read.
+
+**Three routes to a model.** `estimate_rates()` fits one named model. `estimate_rates(model = "all")` fits the nested ladder `cr`, `dd`, `nd`, `ned`, `nk` (the last two need a `phylo` and are left out on the gaussian link), each started from the estimate of the model it nests and boxed by `auto_bounds()` unless `control$bounds` names a box per model, and returns the fits with their `compare_models()` table and its `chosen` model; `control$models` restricts the ladder. `covariate_path()` selects and estimates at once, along one dgLARS path over every covariate. The two-step route and the path answer different questions and neither is the other's reference: the path is measured apart from MCEM's convergence, at the generating parameters, and the ladder carries every fit's own sampler noise.
 
 **What a fit tells you about its own footing.** Every `mcem` fit ends with the notes the measurements support, each stating the number it rests on: a lineage-level covariate on fewer than 50 tips (the smallest tree on which such an effect has been measured as selectable, at an effect of 0.35 of the speciation rate and turnover 0.25; at 100 tips an effect of 0.35 is selected on 0.75 of trees and one of 0.15 on 0.50); an effective sample below 10 at the last E-step (a warning: the pre-registered rules exclude such fits from every selection statement); and turnover above 0.5 at the intercepts (a boundary of the measured regime). `model = "all"` adds one more when both `nd` and `ned` are in the ladder: the two read the same pendant edge, and at 100 tips one path over N, D and ED chooses the pair from a generator with only one of them. Below 50 tips, above turnover 0.5, and for K, nothing is measured yet.
 
@@ -269,7 +271,8 @@ fit                        # estimates, log-likelihood, effective sample, gap, s
 # 2. the ladder: cr, dd, nd, ned, nk from nested starts, ranked by AIC
 fits <- estimate_rates(phy, model = "all", link = "exponential",
                        control = list(sample_size = 200))
-fits$comparison            # AIC, ESS, gap, swing; attr "ranking_at_risk"
+fits$comparison            # AIC, ESS, gap, swing, within_margin; attrs "chosen", "ranking_at_risk"
+fits$chosen                # the fewest parameters within 2 AIC of the minimum
 fits$fits$nd$pars
 
 # 3. the path: which covariates the data ask for first (exponential link only)
@@ -328,7 +331,7 @@ length(aug$trees); aug$log_q
 # fits named one by one, compared with the Monte Carlo guard
 fit_cr <- estimate_rates(phy, model = "cr", link = "exponential", control = ctrl_cr)
 fit_dd <- estimate_rates(phy, model = "dd", link = "exponential", control = ctrl_dd)
-compare_models(cr = fit_cr, dd = fit_dd)   # AIC, ESS, gap, swing, ranking_at_risk
+compare_models(cr = fit_cr, dd = fit_dd)   # AIC, ESS, gap, swing, within_margin; attr "chosen"
 ```
 
 **One path over all the covariates.** `covariate_path()` traces the differential-geometric
@@ -348,7 +351,7 @@ right one, or $D$ alone from a generator with both (0.80): the two share the pen
 | -------- | ------- |
 | `simulate_tree()` | Forward simulation under every model and link; given a tree, hidden lineages from either proposal (`method = "bdi"` / `"thinning"`) |
 | `estimate_rates()` | Monte Carlo EM for one model, or the nested ladder with `model = "all"`; the trace of every iteration in `details$mcem` |
-| `compare_models()` | AIC table over fits with effective sample, gap, swing and the ranking-at-risk flag |
+| `compare_models()` | AIC table over fits with effective sample, gap, swing and the ranking-at-risk flag; `chosen` is the fewest parameters within 2 AIC of the minimum |
 | `covariate_path()` | The dgLARS path over the covariates, for speciation and extinction; entry order and the set BIC or AIC chooses |
 | `lineage_table()` | One row per lineage and segment: the covariates and the event mark the likelihood reads |
 | `auto_bounds()` | The parameter box from the observed tree, and the optional survival surface |

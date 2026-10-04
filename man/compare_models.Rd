@@ -4,18 +4,23 @@
 \alias{compare_models}
 \title{Compare fitted models by AIC, carrying the Monte Carlo handicap}
 \usage{
-compare_models(...)
+compare_models(..., margin = 2)
 }
 \arguments{
 \item{...}{Two or more \code{emphasis_fit} objects. Names become the row
 labels; unnamed arguments are labelled from the fitted model.}
+
+\item{margin}{AIC units within which two models are not told apart.
+Default 2.}
 }
 \value{
 A \code{model_selection} data frame, one row per fit, with columns
   \code{model}, \code{n_pars}, \code{loglik}, \code{AIC}, \code{loglik_se},
   \code{ESS}, \code{loglik_gap}, \code{gap_heavy}, \code{delta_AIC},
-  \code{AICw} and \code{AIC_swing}, ordered by AIC, with a
-  \code{ranking_at_risk} attribute.
+  \code{AICw}, \code{AIC_swing} and \code{within_margin}, ordered by AIC,
+  with attributes \code{chosen} (the most parsimonious model within
+  \code{margin} of the minimum), \code{chosen_starved} (whether that
+  model's effective sample is below 10) and \code{ranking_at_risk}.
 }
 \description{
 Ranks two or more fits from \code{\link{estimate_rates}} by AIC. Each fit's
@@ -46,6 +51,26 @@ effective draws --- measured: a winner with an effective sample of 6.5 of 300
 --- and be named by nothing here, because its \emph{expected} position is
 safe while its realised one is noisy. \code{loglik_se} and \code{ESS} are
 the columns for that, and they are in the table to be read.
+
+The row with the lowest AIC is not the model the table chooses. Among
+nested models the richer one has the lower AIC whenever its two extra
+parameters raise the log-likelihood by more than 2, which they do on a
+share of trees generated without them: with two extra parameters the
+likelihood-ratio statistic is chi-squared on two degrees of freedom under
+the null, so the richer model takes the minimum on about 13\% of null
+trees, and with three richer models offered beside the null, on more.
+Measured, on 20 trees a cell from a diversity-dependent generator at 50 to
+200 tips: a lineage-level model had the minimum AIC on 2 to 7 of 20, and
+led by more than 2 AIC on 0 to 2 of 20 (E27). The \code{chosen} attribute
+is therefore the model with the fewest parameters among those within
+\code{margin} AIC units of the minimum, and \code{within_margin} marks
+those rows; the full ranking is kept so that the margin can be read.
+
+A warning names the chosen model when its own effective sample is below
+10 draws: its log-likelihood is then an estimate from a handful of
+histories and the margin it rests on is noise as much as evidence. The
+\code{ranking_at_risk} attribute covers the bias of unequal precision;
+this covers its variance.
 }
 \seealso{
 \code{\link{estimate_rates}}

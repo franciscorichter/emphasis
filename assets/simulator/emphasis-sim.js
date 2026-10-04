@@ -163,15 +163,59 @@
       if (N >= maxLin) { status = 'too_large'; break; }
       const P = N * t - sumTs;
 
-      let total = 0;
+      let total = 0, next;
       if (!perLineage) {
         total = N * (R.lambda(N, P, 0, 0) + R.mu(N, P, 0, 0));
+        next = t + rng.expon(total);
+      } else if (useEd && !centred) {
+        // Raw ED grows at unit slope between events, so the hazard is not
+        // constant until the next event.  As in general_div: the waiting time
+        // is drawn by thinning against a bound on the hazard over a horizon,
+        // the hazard at a candidate time read from the ED values at t shifted
+        // by the elapsed time.
+        const edv = edNow(rows, t, ws).slice();
+        const base = t, bpos = Math.max(p[8], 0), gpos = Math.max(p[9], 0);
+        const sumsAt = dt => {
+          const tt = base + dt, Pv = N * tt - sumTs;
+          let L = 0, M = 0;
+          for (const i of alive) {
+            const E = tt - rows[i].tipStart, ED = edv[i] + dt;
+            L += R.lambda(N, Pv, E, ED); M += R.mu(N, Pv, E, ED);
+          }
+          return [L, M];
+        };
+        let off = 0, found = -1;
+        for (let guard = 0; guard < 1000000; guard++) {
+          const remain = maxT - (base + off);
+          if (remain <= 0) break;
+          const [L0, M0] = sumsAt(off);
+          let h = remain;
+          if (link === 1) { const hp = Math.max(bpos, gpos); if (hp > 0) h = Math.min(h, Math.log(1.5) / hp); }
+          else if (link === 0) { const g = N * (bpos + gpos); if (g > 0) h = Math.min(h, Math.max(0.5 * (L0 + M0), 1) / g); }
+          let bound;
+          if (link === 2) bound = N * (Math.max(p[0], 0) + Math.max(p[4], 0));
+          else {
+            let Lh = L0, Mh = M0;
+            if (bpos > 0 || gpos > 0) [Lh, Mh] = sumsAt(off + h);
+            bound = (bpos > 0 ? Lh : L0) + (gpos > 0 ? Mh : M0);
+          }
+          if (bound <= 0) { if (h >= remain) break; off += h; continue; }
+          const dt = rng.expon(bound);
+          if (dt > h) { off += h; continue; }
+          const cand = off + dt;
+          if (base + cand >= maxT) break;
+          const [Lc, Mc] = sumsAt(cand);
+          if (rng.uniform() * bound <= Lc + Mc) { found = cand; break; }
+          off = cand;
+        }
+        total = sumsAt(0)[0] + sumsAt(0)[1];
+        next = found >= 0 ? base + found : maxT;
       } else {
         const [lv, mv] = lineageRates(N, P);
         for (let k = 0; k < lv.length; k++) total += lv[k] + mv[k];
+        next = t + rng.expon(total);
       }
 
-      const next = t + rng.expon(total);
       if (next >= maxT) { t = maxT; status = 'done'; break; }
       t = next;
       const P2 = N * t - sumTs;

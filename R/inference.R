@@ -979,8 +979,10 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'   are left out on the gaussian link), each started from the estimate of the
 #'   model it nests, with each model's box from \code{\link{auto_bounds}}
 #'   unless \code{control$bounds} names one per model, and returns the fits
-#'   with their \code{\link{compare_models}} table (an \code{emphasis_fits}
-#'   object); \code{control$models} restricts the ladder.
+#'   with their \code{\link{compare_models}} table and its \code{chosen}
+#'   model, the fewest parameters within 2 AIC of the minimum (an
+#'   \code{emphasis_fits} object); \code{control$models} restricts the
+#'   ladder.
 #'   Default \code{"cr"} (constant rate). \code{"nd"} (\code{~ N + D}) is
 #'   diversity and age-imbalance; \code{"ned"} (\code{~ N + ED}) diversity and
 #'   evolutionary distinctiveness, which needs a \code{phylo}. \code{"nedc"}
@@ -1379,7 +1381,9 @@ estimate_rates <- function(tree,
     message(paste0("Note: nd and ned both read the pendant edge; on 100-tip trees one path over N, D and ED ",
                    "chooses the pair from a generator with only one of them (0.60 from nd, 0.45 from ned), ",
                    "so an AIC margin between the two is a margin between two readings of the same edge."))
-  structure(list(fits = fits, comparison = comparison, ladder = ladder, method = method, link = link),
+  structure(list(fits = fits, comparison = comparison,
+                 chosen = if (is.null(comparison)) NA_character_ else attr(comparison, "chosen"),
+                 ladder = ladder, method = method, link = link),
             class = "emphasis_fits")
 }
 
@@ -1391,7 +1395,11 @@ estimate_rates <- function(tree,
 print.emphasis_fits <- function(x, ...) {
   cat("emphasis fits (", x$method, ", link = ", x$link, "): ",
       paste(x$ladder, collapse = " -> "), "\n\n", sep = "")
-  if (!is.null(x$comparison)) print(x$comparison) else cat("fewer than two models finished\n")
+  if (!is.null(x$comparison)) {
+    print(x$comparison)
+    cat(sprintf("\nchosen: %s (the fewest parameters within %g AIC of the minimum)\n",
+                x$chosen, attr(x$comparison, "margin")))
+  } else cat("fewer than two models finished\n")
   failed <- names(x$fits)[vapply(x$fits, is.null, TRUE)]
   if (length(failed)) cat("\nfailed:", paste(failed, collapse = ", "), "\n")
   invisible(x)
@@ -1515,21 +1523,47 @@ print.emphasis_fit <- function(x, ...) {
 #' safe while its realised one is noisy. \code{loglik_se} and \code{ESS} are
 #' the columns for that, and they are in the table to be read.
 #'
+#' The row with the lowest AIC is not the model the table chooses. Among
+#' nested models the richer one has the lower AIC whenever its two extra
+#' parameters raise the log-likelihood by more than 2, which they do on a
+#' share of trees generated without them: with two extra parameters the
+#' likelihood-ratio statistic is chi-squared on two degrees of freedom under
+#' the null, so the richer model takes the minimum on about 13\% of null
+#' trees, and with three richer models offered beside the null, on more.
+#' Measured, on 20 trees a cell from a diversity-dependent generator at 50 to
+#' 200 tips: a lineage-level model had the minimum AIC on 2 to 7 of 20, and
+#' led by more than 2 AIC on 0 to 2 of 20 (E27). The \code{chosen} attribute
+#' is therefore the model with the fewest parameters among those within
+#' \code{margin} AIC units of the minimum, and \code{within_margin} marks
+#' those rows; the full ranking is kept so that the margin can be read.
+#'
+#' A warning names the chosen model when its own effective sample is below
+#' 10 draws: its log-likelihood is then an estimate from a handful of
+#' histories and the margin it rests on is noise as much as evidence. The
+#' \code{ranking_at_risk} attribute covers the bias of unequal precision;
+#' this covers its variance.
+#'
 #' @param ... Two or more \code{emphasis_fit} objects. Names become the row
 #'   labels; unnamed arguments are labelled from the fitted model.
+#' @param margin AIC units within which two models are not told apart.
+#'   Default 2.
 #'
 #' @return A \code{model_selection} data frame, one row per fit, with columns
 #'   \code{model}, \code{n_pars}, \code{loglik}, \code{AIC}, \code{loglik_se},
 #'   \code{ESS}, \code{loglik_gap}, \code{gap_heavy}, \code{delta_AIC},
-#'   \code{AICw} and \code{AIC_swing}, ordered by AIC, with a
-#'   \code{ranking_at_risk} attribute.
+#'   \code{AICw}, \code{AIC_swing} and \code{within_margin}, ordered by AIC,
+#'   with attributes \code{chosen} (the most parsimonious model within
+#'   \code{margin} of the minimum), \code{chosen_starved} (whether that
+#'   model's effective sample is below 10) and \code{ranking_at_risk}.
 #'
 #' @seealso \code{\link{estimate_rates}}
 #' @export
-compare_models <- function(...) {
+compare_models <- function(..., margin = 2) {
   fits <- list(...)
   if (length(fits) < 2L)
     stop("compare_models() requires at least two fitted models.")
+  if (!is.numeric(margin) || length(margin) != 1L || !is.finite(margin) || margin < 0)
+    stop("'margin' must be a single non-negative number.")
 
   nms <- names(fits)
   if (is.null(nms)) nms <- rep("", length(fits))
@@ -1601,6 +1635,23 @@ compare_models <- function(...) {
     }
   }
   attr(tab, "ranking_at_risk") <- at_risk
+
+  # The choice: the fewest parameters among the models within `margin` of the
+  # minimum AIC.  Ties on n_pars go to the lower AIC, which is the row order.
+  tab$within_margin <- is.finite(tab$delta_AIC) & tab$delta_AIC <= margin
+  cand <- which(tab$within_margin)
+  chosen_row <- cand[which.min(tab$n_pars[cand])]
+  chosen <- tab$model[chosen_row]
+  attr(tab, "chosen") <- chosen
+  attr(tab, "margin") <- margin
+  starved <- "ESS" %in% names(tab) && is.finite(tab$ESS[chosen_row]) && tab$ESS[chosen_row] < 10
+  attr(tab, "chosen_starved") <- starved
+  if (starved)
+    warning(sprintf(paste0(
+      "compare_models(): the chosen model \"%s\" rests on an effective sample of %.1f draws. ",
+      "Its log-likelihood, and so the margin it is chosen on, is estimated from a handful of ",
+      "histories. Raise num_trees or change the proposal (control$sampling) and compare again."),
+      chosen, tab$ESS[chosen_row]), call. = FALSE)
 
   # Pairwise AIC Gaussian test when all fits have bootstrap variance
   if (all(!is.na(vars)) && length(fits) >= 2L) {
