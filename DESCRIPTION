@@ -8,7 +8,7 @@ Authors@R: c(person("Francisco","Richter", email = "richtf@usi.ch", role = c("au
 Author: Francisco Richter [aut, cre], Thijs Janzen [ctb], Hanno Hildenbrandt [ctb]
 Maintainer: Francisco Richter <richtf@usi.ch>
 Description: Set of statistical tools for the study of diversification of species and ecological drivers of macro-evolution.
-License: file LICENSE
+License: MIT + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 3.5.0)
 Imports: Rcpp,

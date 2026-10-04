@@ -25,3 +25,6 @@
 ^D\.html$
 ^simulator\.html$
 ^dev$
+^scratch$
+^Rplots\.pdf$
+^LICENSE\.md$
