@@ -1,7 +1,8 @@
 # emphasis
 
-[![R-CMD-check](https://github.com/franciscorichter/emphasis/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/franciscorichter/emphasis/actions/workflows/R-CMD-check.yaml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![R-CMD-check](https://github.com/franciscorichter/emphasis/actions/workflows/main.yml/badge.svg)](https://github.com/franciscorichter/emphasis/actions/workflows/main.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE.md)
+[![Docs](https://img.shields.io/badge/docs-franciscorichter.com%2Femphasis-informational)](https://franciscorichter.com/emphasis/)
 
 Monte Carlo conditional-likelihood inference for endogenous-covariate diversification models on phylogenetic trees. R package, version 0.4, not on CRAN.
 
@@ -41,7 +42,7 @@ R CMD build .           # source tarball
 
 CI runs `R CMD check` on every push through `.github/workflows/main.yml` (r-lib/actions, OS × R matrix).
 
-The suite runs 23 files with no unconditional `skip()`, and exercises the compiled code rather than only the R layer. Several files are Monte Carlo gates — the importance sampler's unbiasedness against a brute-force marginal likelihood, the pendant-age covariates against values derived from the edge list — so a full run takes a few minutes.
+The suite runs 38 files with no unconditional `skip()`, and exercises the compiled code rather than only the R layer. Several files are Monte Carlo gates — the importance sampler's unbiasedness against a brute-force marginal likelihood, the pendant-age covariates against values derived from the edge list — so a full run takes a few minutes.
 
 ## Layout
 
