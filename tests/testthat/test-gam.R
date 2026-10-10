@@ -143,3 +143,14 @@ test_that("predict_survival carries a function and a nnet object as it carries a
   expect_length(p, 2L); expect_true(all(p >= 0 & p <= 1))
   expect_equal(p, as.numeric(predict(nn, newdata = nd, type = "raw")))
 })
+
+test_that("estimate_rates(cond = ) accepts a function as the survival emulator", {
+  set.seed(3)
+  sim <- simulate_tree(c(log(0.5), log(0.05)), max_t = 6, model = "cr", link = "exponential")
+  f <- function(d) stats::plogis(2 + 0 * d$beta_0)
+  fit <- estimate_rates(sim, method = "mcem", model = "cr", link = "exponential", cond = f,
+                        control = list(sample_size = 20L, max_iter = 3L, lower_bound = c(log(0.05), log(1e-3)),
+                                       upper_bound = c(log(3), log(1)), verbose = FALSE))
+  expect_true(isTRUE(fit$cond))
+  expect_true(is.finite(fit$loglik))
+})

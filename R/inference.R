@@ -1014,8 +1014,10 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #' @param link Link function for rate computation: \code{"linear"} (default)
 #'   uses \code{max(0, eta)}; \code{"exponential"} uses \code{exp(eta)};
 #'   \code{"gaussian"} uses \code{beta_0 * exp(-(eta_cov - 1)^2 / 2)}.
-#' @param cond A GAM object from \code{\link{train_GAM}} for conditioning on
-#'   survival, or \code{NULL} (default, no conditioning). When provided, the
+#' @param cond A survival emulator for conditioning on survival: a GAM from
+#'   \code{\link{train_GAM}}, a \code{nnet} object, or a function of the parameter
+#'   data frame (see \code{\link{predict_survival}}); \code{NULL} (default) for no
+#'   conditioning. When provided, the
 #'   log-likelihood is conditioned: \eqn{\ell_{\rm cond} = \ell -
 #'   \log\hat{P}_{\rm tree}(\theta)}.
 #' @return A list with class \code{"emphasis_fit"} containing:
@@ -1104,8 +1106,8 @@ estimate_rates <- function(tree,
   # Build conditioning function from survival GAM
   cond_fun <- NULL
   if (!is.null(cond)) {
-    if (!inherits(cond, "gam"))
-      stop("'cond' must be a GAM object from train_GAM() or NULL.")
+    if (!(inherits(cond, "gam") || inherits(cond, "nnet") || is.function(cond)))
+      stop("'cond' must be a survival emulator (a GAM from train_GAM(), a nnet object, or a function of the parameter data frame) or NULL.")
     cond_fun <- .build_cond_fun(cond, model_bin)
   }
 
