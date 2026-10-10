@@ -68,11 +68,14 @@ train_GAM <- function(simulations, pars_mat, model = "cr",
 }
 
 
-#' Predict survival probability from a trained GAM
+#' Predict survival probability from a trained emulator
 #'
-#' Convenience wrapper around \code{predict.gam(..., type = "response")}.
+#' The emulator \code{estimate_rates(cond = )} conditions through.  A \code{gam} from
+#' \code{\link{train_GAM}} is the default; a \code{nnet} object, or a function that takes
+#' the parameter data frame and returns probabilities, is carried the same way.
 #'
-#' @param gam_fit A \code{gam} object returned by \code{\link{train_GAM}}.
+#' @param gam_fit A \code{gam} object returned by \code{\link{train_GAM}}, a \code{nnet}
+#'   object trained on the same columns, or a function of a parameter data frame.
 #' @param newpars Numeric matrix or data frame of parameter values to predict
 #'   at.  Column names must match those used in \code{train_GAM}.
 #' @return Numeric vector of predicted survival probabilities.
