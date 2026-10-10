@@ -129,3 +129,17 @@ test_that("diagnose_gam runs without error on a GAM fit", {
   out <- capture.output(print(d))
   expect_true(any(grepl("GAM-based MLE", out)))
 })
+
+test_that("predict_survival carries a function and a nnet object as it carries a GAM", {
+  nd <- data.frame(beta_0 = c(-1, -0.5), gamma_0 = c(-3, -2))
+  f <- function(d) stats::plogis(d$beta_0 - d$gamma_0 - 2)
+  expect_equal(predict_survival(f, nd), as.numeric(f(nd)))
+  skip_if_not_installed("nnet")
+  set.seed(1)
+  X <- data.frame(beta_0 = runif(200, -2, 0), gamma_0 = runif(200, -4, -1))
+  y <- as.integer(runif(200) < stats::plogis(X$beta_0 - X$gamma_0 - 2))
+  nn <- nnet::nnet(X, y, size = 3, decay = 1e-2, maxit = 200, entropy = TRUE, trace = FALSE)
+  p <- predict_survival(nn, nd)
+  expect_length(p, 2L); expect_true(all(p >= 0 & p <= 1))
+  expect_equal(p, as.numeric(predict(nn, newdata = nd, type = "raw")))
+})
