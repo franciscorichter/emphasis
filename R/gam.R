@@ -78,7 +78,13 @@ train_GAM <- function(simulations, pars_mat, model = "cr",
 #' @return Numeric vector of predicted survival probabilities.
 #' @export
 predict_survival <- function(gam_fit, newpars) {
-  stats::predict(gam_fit, newdata = as.data.frame(newpars), type = "response")
+  nd <- as.data.frame(newpars)
+  # The emulator is a GAM by default; a nnet object or a function of the parameter
+  # data frame (one row a point, columns named as the parameters) is carried the same
+  # way, so that estimate_rates(cond = ) can condition through either.
+  if (is.function(gam_fit)) return(as.numeric(gam_fit(nd)))
+  if (inherits(gam_fit, "nnet")) return(as.numeric(stats::predict(gam_fit, newdata = nd, type = "raw")))
+  as.numeric(stats::predict(gam_fit, newdata = nd, type = "response"))
 }
 
 
