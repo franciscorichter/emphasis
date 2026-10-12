@@ -154,3 +154,13 @@ test_that("estimate_rates(cond = ) accepts a function as the survival emulator",
   expect_true(isTRUE(fit$cond))
   expect_true(is.finite(fit$loglik))
 })
+
+test_that("train_GAM counts a clade that passed the lineage cap as survived", {
+  skip_if_not_installed("mgcv")
+  set.seed(5)
+  pm <- cbind(beta_0 = runif(120, -2, 0), gamma_0 = runif(120, -4, -1))
+  st <- rep(c("done", "too_large", "extinct"), 40)
+  sims <- lapply(st, function(x) list(status = x))
+  g <- suppressMessages(utils::capture.output(fit <- train_GAM(sims, pm, model = "cr")))
+  expect_equal(mean(fit$y), 2 / 3)
+})

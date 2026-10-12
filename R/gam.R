@@ -2,8 +2,12 @@
 #'
 #' Fits a binomial GAM to estimate P(survival | parameters) from forward
 #' simulations run with \code{max_tries = 0}.  Each simulation row has a
-#' binary outcome: 1 if \code{status == "done"}, 0 if \code{status ==
-#' "extinct"} or \code{"too_large"}.
+#' binary outcome: 1 if both crown lineages reached the present (\code{status}
+#' \code{"done"}) or the clade passed the lineage cap (\code{"too_large"}),
+#' 0 if it went extinct.  A clade stopped at the cap has survived so far, and
+#' the conditional likelihood divides by the probability of survival; counting
+#' it as extinct teaches the GAM a survival near zero wherever clades grow
+#' fast, which then rewards the fit for moving there (E36c of the paper).
 #'
 #' @param simulations List of \code{simulate_tree()} outputs (one per row of
 #'   \code{pars_mat}), produced with \code{max_tries = 0}.
@@ -34,7 +38,7 @@
 train_GAM <- function(simulations, pars_mat, model = "cr",
                       spline_type = c("univariate", "bivariate")) {
   spline_type <- match.arg(spline_type)
-  survived <- sapply(simulations, function(s) as.integer(s$status == "done"))
+  survived <- sapply(simulations, function(s) as.integer(s$status %in% c("done", "too_large")))
 
   pars_df <- as.data.frame(pars_mat)
   if (is.null(colnames(pars_mat)) || any(colnames(pars_mat) == "")) {
@@ -443,7 +447,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   surv_gam <- NULL
   if (train_surv_gam) {
     if (verbose) cat("  training survival GAM...\n")
-    n_gam   <- 500L
+    n_gam   <- 2000L   # the size at which the survival GAM meets E36c's accuracy limit
     gam_mat <- .lhs_sample(n_gam, lb, ub)
     colnames(gam_mat) <- pnames
 

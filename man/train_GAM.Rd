@@ -35,8 +35,12 @@ A \code{gam} object (binomial family) representing
 \description{
 Fits a binomial GAM to estimate P(survival | parameters) from forward
 simulations run with \code{max_tries = 0}.  Each simulation row has a
-binary outcome: 1 if \code{status == "done"}, 0 if \code{status ==
-"extinct"} or \code{"too_large"}.
+binary outcome: 1 if both crown lineages reached the present (\code{status}
+\code{"done"}) or the clade passed the lineage cap (\code{"too_large"}),
+0 if it went extinct.  A clade stopped at the cap has survived so far, and
+the conditional likelihood divides by the probability of survival; counting
+it as extinct teaches the GAM a survival near zero wherever clades grow
+fast, which then rewards the fit for moving there (E36c of the paper).
 }
 \examples{
 \dontrun{

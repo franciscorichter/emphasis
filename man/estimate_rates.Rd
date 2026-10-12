@@ -102,8 +102,10 @@ Key entries:
 uses \code{max(0, eta)}; \code{"exponential"} uses \code{exp(eta)};
 \code{"gaussian"} uses \code{beta_0 * exp(-(eta_cov - 1)^2 / 2)}.}
 
-\item{cond}{A GAM object from \code{\link{train_GAM}} for conditioning on
-survival, or \code{NULL} (default, no conditioning). When provided, the
+\item{cond}{A survival emulator for conditioning on survival: a GAM from
+\code{\link{train_GAM}}, a \code{nnet} object, or a function of the parameter
+data frame (see \code{\link{predict_survival}}); \code{NULL} (default) for no
+conditioning. When provided, the
 log-likelihood is conditioned: \eqn{\ell_{\rm cond} = \ell -
 \log\hat{P}_{\rm tree}(\theta)}.}
 }

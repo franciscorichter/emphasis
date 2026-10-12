@@ -2,12 +2,13 @@
 % Please edit documentation in R/gam.R
 \name{predict_survival}
 \alias{predict_survival}
-\title{Predict survival probability from a trained GAM}
+\title{Predict survival probability from a trained emulator}
 \usage{
 predict_survival(gam_fit, newpars)
 }
 \arguments{
-\item{gam_fit}{A \code{gam} object returned by \code{\link{train_GAM}}.}
+\item{gam_fit}{A \code{gam} object returned by \code{\link{train_GAM}}, a \code{nnet}
+object trained on the same columns, or a function of a parameter data frame.}
 
 \item{newpars}{Numeric matrix or data frame of parameter values to predict
 at.  Column names must match those used in \code{train_GAM}.}
@@ -16,5 +17,7 @@ at.  Column names must match those used in \code{train_GAM}.}
 Numeric vector of predicted survival probabilities.
 }
 \description{
-Convenience wrapper around \code{predict.gam(..., type = "response")}.
+The emulator \code{estimate_rates(cond = )} conditions through.  A \code{gam} from
+\code{\link{train_GAM}} is the default; a \code{nnet} object, or a function that takes
+the parameter data frame and returns probabilities, is carried the same way.
 }
