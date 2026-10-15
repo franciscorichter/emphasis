@@ -2,9 +2,10 @@
 #'
 #' One row per lineage alive on each segment between consecutive events of an
 #' augmented tree: the segment's bounds, the covariates the rates read there
-#' (\code{N}, the clade mean pendant age \code{M}, the lineage's pendant start
-#' \code{ts} so that \code{D = (t - ts) - M}, and its \code{ED} at the segment
-#' start, growing at slope one within it), and whether the lineage's own event
+#' (\code{N}, the clade mean pendant age \code{M} at the segment's end
+#' \code{t1}, the lineage's pendant start \code{ts}, so that
+#' \code{D = (t1 - ts) - M}, constant on the segment, and its \code{ED} at the
+#' segment start, growing at slope one within it), and whether the lineage's own event
 #' ends the segment (\code{event}: 0 none, 1 speciation, 2 extinction).  These
 #' are the numbers the likelihood is built on; \code{\link{covariate_path}}
 #' runs a selection path over them.
@@ -40,7 +41,9 @@ lineage_table <- function(tree) {
 #' on the same augmented trees an M-step maximises over.  Under the
 #' exponential link the complete-data log-likelihood is a log-linear point
 #' process: one row per lineage and segment between consecutive events, with
-#' the rate at the segment's midpoint, the segment's length as exposure, and
+#' \code{N}, \code{D} and \code{K} at their values on the segment (each is
+#' constant between events), \code{ED} at the segment's midpoint, the
+#' segment's length as exposure, and
 #' a count of one when that lineage's own event ends the segment.  The
 #' speciation and extinction halves separate, so each rate gets its own path.
 #'
@@ -137,14 +140,16 @@ covariate_path <- function(trees, log_weights = NULL, n_trees = 40L,
 }
 
 # The Poisson rows of one tree from its lineage table: one per lineage and
-# segment, covariates at the segment's midpoint, its length, and the counts of
-# the lineage's own events at its end.
+# segment, N, D and K at their constant values on the segment (D = E - M read
+# at t1, the value the likelihood and the simulator hold between events), ED
+# at the segment's midpoint, its length, and the counts of the lineage's own
+# events at its end.
 .segment_rows <- function(tab) {
   if (!nrow(tab)) return(NULL)
   tm <- (tab$t0 + tab$t1) / 2
   ED <- tab$ed0 + (tm - tab$t0)
   data.frame(N = tab$N,
-             D = (tm - tab$ts) - tab$M,
+             D = (tab$t1 - tab$ts) - tab$M,
              ED = ED,
              EDc = ED - stats::ave(ED, tab$seg, FUN = mean),
              K = tab$K,

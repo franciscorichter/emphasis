@@ -8,13 +8,15 @@
   # p10: beta_0 beta_N beta_M beta_D gamma_0 gamma_N gamma_M gamma_D beta_ED gamma_ED [beta_K gamma_K]
   p10 <- c(p10, rep(0, 12 - length(p10)))
   b <- p10[c(1, 2, 4, 9, 11)]; g <- p10[c(5, 6, 8, 10, 12)]
-  # per row: eta(u) = a + s u on [t0, t1] with
-  #   a = b0 + bN N + bD(-ts - M) + bED(ed0 - t0) + bK K,  s = bD + bED
+  # per row: eta(u) = a + s u on [t0, t1] with D = (t1 - ts) - M constant on
+  # the segment and ED growing at slope one:
+  #   a = b0 + bN N + bD((t1 - ts) - M) + bED(ed0 - t0) + bK K,  s = bED
   int_exp <- function(a, s, t0, t1) if (abs(s) < 1e-12) exp(a) * (t1 - t0) else
                                       exp(a) * (exp(s * t1) - exp(s * t0)) / s
-  a_l <- b[1] + b[2] * tab$N + b[3] * (-tab$ts - tab$M) + b[4] * (tab$ed0 - tab$t0) + b[5] * tab$K
-  a_m <- g[1] + g[2] * tab$N + g[3] * (-tab$ts - tab$M) + g[4] * (tab$ed0 - tab$t0) + g[5] * tab$K
-  inte <- sum(int_exp(a_l, b[3] + b[4], tab$t0, tab$t1)) + sum(int_exp(a_m, g[3] + g[4], tab$t0, tab$t1))
+  Dc  <- (tab$t1 - tab$ts) - tab$M
+  a_l <- b[1] + b[2] * tab$N + b[3] * Dc + b[4] * (tab$ed0 - tab$t0) + b[5] * tab$K
+  a_m <- g[1] + g[2] * tab$N + g[3] * Dc + g[4] * (tab$ed0 - tab$t0) + g[5] * tab$K
+  inte <- sum(int_exp(a_l, b[4], tab$t0, tab$t1)) + sum(int_exp(a_m, g[4], tab$t0, tab$t1))
   ev <- tab[tab$event != 0L, ]
   eta_ev <- function(cf) cf[1] + cf[2] * ev$N + cf[3] * ((ev$t1 - ev$ts) - ev$M) + cf[4] * (ev$ed0 + ev$t1 - ev$t0) + cf[5] * ev$K
   events <- sum(ifelse(ev$event == 1L, eta_ev(b), eta_ev(g)))

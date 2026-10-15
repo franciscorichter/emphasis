@@ -465,10 +465,11 @@ test_that("E_q[f/q] is the brute-force marginal likelihood on a 3-tip tree", {
   expect_lt(abs(ele - l0 - l1) / sle, 5,
             label = "|IS - (L0 + L1)| / se over the draws with at most one")
   # the truncation, measured rather than assumed: the draws left out carry
-  # 0.31 of the weight at this theta (three runs of 60,000 draws: 0.307,
-  # 0.309, 0.308), so the check that they are a stated fraction has a margin
+  # 0.38 of the weight at this theta under the constant-D likelihood (runs of
+  # 60,000 draws: 0.381, 0.377), so the check that they are a stated fraction
+  # has a margin
   expect_gt(w2 / (totle + w2), 0)       # there are some
-  expect_lt(w2 / (totle + w2), 0.35)    # and they are a stated fraction
+  expect_lt(w2 / (totle + w2), 0.42)    # and they are a stated fraction
 })
 
 
@@ -656,8 +657,10 @@ test_that("E_q[f/q] is the brute-force marginal likelihood on a 4-tip tree", {
     expect_lt(abs(e1 - l1) / s1, 5, label = paste("|IS - L1| / se,", cfg$name))
     expect_lt(abs(e1 - l1) / l1, 0.05, label = paste("|IS - L1| / L1,", cfg$name))
     # the truncation, measured rather than assumed: the draws left out
+    # (0.35 to 0.48 of the weight over the three configurations under the
+    # constant-D likelihood)
     expect_gt(w2 / (totle + w2), 0)
-    expect_lt(w2 / (totle + w2), 0.45)
+    expect_lt(w2 / (totle + w2), 0.53)
   }
 })
 
@@ -774,8 +777,10 @@ test_that("E_q[f/q] is the brute-force marginal likelihood with no topology", {
     expect_lt(abs(e1 - l1) / l1, 0.05, label = paste("|IS - L1| / L1,", cfg$name))
     expect_lt(abs(ele - l0 - l1) / sle, 5,
               label = paste("|IS - (L0 + L1)| / se,", cfg$name))
+    # the draws left out: 0.55 (d linear) and 0.42 (nd exp) of the weight
+    # under the constant-D likelihood
     expect_gt(w2 / (totle + w2), 0)
-    expect_lt(w2 / (totle + w2), 0.45)
+    expect_lt(w2 / (totle + w2), 0.60)
   }
 })
 

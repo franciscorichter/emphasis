@@ -52,7 +52,9 @@ all the covariates a rate can read --- \code{N}, \code{D} and \code{ED} ---
 on the same augmented trees an M-step maximises over.  Under the
 exponential link the complete-data log-likelihood is a log-linear point
 process: one row per lineage and segment between consecutive events, with
-the rate at the segment's midpoint, the segment's length as exposure, and
+\code{N}, \code{D} and \code{K} at their values on the segment (each is
+constant between events), \code{ED} at the segment's midpoint, the
+segment's length as exposure, and
 a count of one when that lineage's own event ends the segment.  The
 speciation and extinction halves separate, so each rate gets its own path.
 }

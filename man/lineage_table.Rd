@@ -19,9 +19,10 @@ A data frame with columns \code{seg}, \code{lineage}, \code{id},
 \description{
 One row per lineage alive on each segment between consecutive events of an
 augmented tree: the segment's bounds, the covariates the rates read there
-(\code{N}, the clade mean pendant age \code{M}, the lineage's pendant start
-\code{ts} so that \code{D = (t - ts) - M}, and its \code{ED} at the segment
-start, growing at slope one within it), and whether the lineage's own event
+(\code{N}, the clade mean pendant age \code{M} at the segment's end
+\code{t1}, the lineage's pendant start \code{ts}, so that
+\code{D = (t1 - ts) - M}, constant on the segment, and its \code{ED} at the
+segment start, growing at slope one within it), and whether the lineage's own event
 ends the segment (\code{event}: 0 none, 1 speciation, 2 extinction).  These
 are the numbers the likelihood is built on; \code{\link{covariate_path}}
 runs a selection path over them.

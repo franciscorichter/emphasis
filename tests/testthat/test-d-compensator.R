@@ -3,11 +3,12 @@
 #
 # Two things are held here:
 #
-#   * Model::loglik's ep_linear branch integrates its own model.  Under the
-#     linear link the per-lineage rate on a segment is max(0, c_s + b*t), a line
-#     clipped at zero, and the compensator is the sum of those areas — not
-#     dt * n * (rate at the segment's end node), which is what every link but
-#     exponential and gaussian used to get.
+#   * Model::loglik's ep_linear branch integrates its own model.  Between
+#     events every pendant age E_s(u) and their mean M(u) grow at unit rate, so
+#     D_s = E_s - M is constant on a segment and the per-lineage rate is the
+#     constant max(0, c_s), clipped at zero lineage by lineage: the compensator
+#     is dt * sum_s max(0, c_s), not dt * n * (the rate of the event's
+#     lineage), and not the integral of a D that grows within the segment.
 #
 #   * Model::nh_rate reads P off the node that governs the candidate's segment,
 #     P(t) = node.pd + node.n * (t - node.brts), so the density the sampler draws
@@ -31,8 +32,8 @@ T_TIP <- 10e10; T_EXT <- 0
 
 # Numerical integral of max(0, c + b*t) over [t1, t2].  The integrand is a line
 # with one kink; integrate() is called on each side of it, where the integrand
-# is smooth.  Independent of the closed form under test, which does the case
-# split algebraically.
+# is smooth.  With b = 0 (the D model, whose rates are constant on a segment)
+# it is max(0, c) * (t2 - t1).
 .int_relu_num <- function(cs, b, t1, t2) {
   vapply(cs, function(c0) {
     if (b == 0) return(max(0, c0) * (t2 - t1))
@@ -48,15 +49,18 @@ T_TIP <- 10e10; T_EXT <- 0
   }, 0)
 }
 
-# The whole segment in one adaptive call, told nothing about the kinks: a second
-# opinion on the splitting above.
+# The whole segment in one adaptive call over the instantaneous covariates: at
+# every u, E_s(u) = u - ts_s and M(u) = mean_s E_s(u) over the alive multiset,
+# D_s(u) = E_s(u) - M(u).  M is read at the segment's end, as the event terms
+# read it, and D from its definition at u, so this is a second opinion on the
+# constant-D reference above that is not told D is constant.
 .int_segment_blind <- function(p, df, i) {
   prev <- if (i == 1L) 0 else df$brts[i - 1L]
   if (df$brts[i] <= prev) return(0)
   M  <- if (df$n[i] > 0) df$pd[i] / df$n[i] else 0
   ts <- .alive_ts(df, i)
   tot <- function(t) vapply(t, function(u) {
-    D <- (u - ts) - M
+    D <- (u - ts) - mean(u - ts)
     sum(pmax(0, p[1] + p[2] * df$n[i] + p[3] * M + p[4] * D)) +
     sum(pmax(0, p[5] + p[6] * df$n[i] + p[7] * M + p[8] * D))
   }, 0)
@@ -66,7 +70,8 @@ T_TIP <- 10e10; T_EXT <- 0
 
 # log f for a D model under the linear link: the event terms exactly as
 # speciation_rate_ep / extinction_rate_ep compute them, and a compensator that
-# is integrated numerically rather than in closed form.
+# holds every lineage's D_s = (t2 - ts_s) - M at its constant value on the
+# segment (t2 the segment's end, M = pd / n there).
 .logf_ref <- function(p, df) {
   n <- nrow(df)
   M <- ifelse(df$n > 0, df$pd / df$n, 0)
@@ -87,10 +92,11 @@ T_TIP <- 10e10; T_EXT <- 0
     prev <- if (i == 1L) 0 else df$brts[i - 1L]
     if (df$brts[i] <= prev) next
     ts <- .alive_ts(df, i)
-    A_l <- p[1] + p[2] * df$n[i] + (p[3] - p[4]) * M[i] - p[4] * ts
-    A_m <- p[5] + p[6] * df$n[i] + (p[7] - p[8]) * M[i] - p[8] * ts
-    inte <- inte + sum(.int_relu_num(A_l, p[4], prev, df$brts[i])) +
-                   sum(.int_relu_num(A_m, p[8], prev, df$brts[i]))
+    Ds  <- (df$brts[i] - ts) - M[i]
+    A_l <- p[1] + p[2] * df$n[i] + p[3] * M[i] + p[4] * Ds
+    A_m <- p[5] + p[6] * df$n[i] + p[7] * M[i] + p[8] * Ds
+    inte <- inte + sum(.int_relu_num(A_l, 0, prev, df$brts[i])) +
+                   sum(.int_relu_num(A_m, 0, prev, df$brts[i]))
   }
   ev - inte
 }
@@ -152,9 +158,11 @@ T_TIP <- 10e10; T_EXT <- 0
     parent_id       = c(-1L, -1L, -1L,   -1L,   -1L,   -1L))
 }
 
-# theta grids.  A and D put the kink inside a segment with b > 0, B and C with
-# b < 0, E leaves every rate positive throughout (no clipping) and F adds an N
-# term.  All six keep every event rate strictly positive, so log f is finite.
+# theta grids.  A and D have positive D coefficients, B and C negative ones;
+# on these trees D clips a lineage below the clade mean to zero and B one above
+# it (both checked below), E leaves every rate positive throughout (no
+# clipping) and F adds an N term.  All six keep every event
+# rate strictly positive, so log f is finite.
 .thetas <- list(
   c(1.0,  0,     0, 0.50, 0.35,  0,     0, 0.20),
   c(1.0,  0,     0, -0.50, 0.35, 0,     0, -0.20),
@@ -170,7 +178,7 @@ T_TIP <- 10e10; T_EXT <- 0
 }
 
 
-test_that("the ep_linear compensator is the exact integral of its own rate", {
+test_that("the ep_linear compensator is dt times the sum of the constant per-lineage rates", {
   skip_on_cran()
   worst <- 0
   for (df in list(.hand_tree(), .hand_tree2())) {
@@ -189,8 +197,8 @@ test_that("the ep_linear compensator is the exact integral of its own rate", {
 
 test_that("clipping really bites on these trees, in both directions", {
   skip_on_cran()
-  # A theta only tests the kink if some lineage's rate changes sign inside a
-  # segment.  Check that directly, so the test above cannot pass vacuously.
+  # A theta only tests the clipping if some lineage's rate is truncated to zero
+  # on a segment.  Check that directly, so the test above cannot pass vacuously.
   crossings <- function(df, p) {
     n <- nrow(df); k <- 0
     for (i in seq_len(n)) {
@@ -198,32 +206,29 @@ test_that("clipping really bites on these trees, in both directions", {
       if (df$brts[i] <= prev) next
       M  <- df$pd[i] / df$n[i]
       ts <- .alive_ts(df, i)
+      Ds <- (df$brts[i] - ts) - M
       for (sl in list(c(1, 2, 3, 4), c(5, 6, 7, 8))) {
-        A <- p[sl[1]] + p[sl[2]] * df$n[i] + (p[sl[3]] - p[sl[4]]) * M - p[sl[4]] * ts
-        b <- p[sl[4]]
-        if (b != 0) {
-          root <- -A / b
-          k <- k + sum(root > prev & root < df$brts[i])
-        }
+        A <- p[sl[1]] + p[sl[2]] * df$n[i] + p[sl[3]] * M + p[sl[4]] * Ds
+        k <- k + sum(A < 0)
       }
     }
     k
   }
   up   <- sum(vapply(list(.hand_tree(), .hand_tree2()),
-                     function(d) crossings(d, .thetas[[1L]]), 0))
+                     function(d) crossings(d, .thetas[[4L]]), 0))
   down <- sum(vapply(list(.hand_tree(), .hand_tree2()),
                      function(d) crossings(d, .thetas[[2L]]), 0))
   none <- sum(vapply(list(.hand_tree(), .hand_tree2()),
                      function(d) crossings(d, .thetas[[5L]]), 0))
-  expect_gt(up, 0)       # b > 0, the rate rises through zero
-  expect_gt(down, 0)     # b < 0, it falls through zero
+  expect_gt(up, 0)       # beta_D > 0, a lineage below the clade mean is clipped
+  expect_gt(down, 0)     # beta_D < 0, one above it is
   expect_identical(none, 0)   # and the unclipped case is covered too
 })
 
 
-test_that("the kink split agrees with blind adaptive quadrature", {
+test_that("the constant-D compensator agrees with quadrature over the instantaneous D", {
   skip_on_cran()
-  # Same compensator, integrated without being told where the kinks are.
+  # Same compensator, integrated over D_s(u) = E_s(u) - M(u) at every u.
   for (df in list(.hand_tree(), .hand_tree2())) {
     for (p in .thetas) {
       blind <- sum(vapply(seq_len(nrow(df)), function(i) .int_segment_blind(p, df, i), 0))
@@ -233,11 +238,12 @@ test_that("the kink split agrees with blind adaptive quadrature", {
         prev <- if (i == 1L) 0 else df$brts[i - 1L]
         if (df$brts[i] <= prev) next
         ts <- .alive_ts(df, i)
+        Ds <- (df$brts[i] - ts) - M[i]
         split <- split +
-          sum(.int_relu_num(p[1] + p[2] * df$n[i] + (p[3] - p[4]) * M[i] - p[4] * ts,
-                            p[4], prev, df$brts[i])) +
-          sum(.int_relu_num(p[5] + p[6] * df$n[i] + (p[7] - p[8]) * M[i] - p[8] * ts,
-                            p[8], prev, df$brts[i]))
+          sum(.int_relu_num(p[1] + p[2] * df$n[i] + p[3] * M[i] + p[4] * Ds,
+                            0, prev, df$brts[i])) +
+          sum(.int_relu_num(p[5] + p[6] * df$n[i] + p[7] * M[i] + p[8] * Ds,
+                            0, prev, df$brts[i]))
       }
       expect_lt(abs(split - blind), 1e-6 * max(1, abs(blind)))
     }

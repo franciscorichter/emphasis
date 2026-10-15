@@ -1054,16 +1054,20 @@ namespace emphasis {
     // its ED at the event time, and the compensator sums over the alive
     // lineages an integral whose argument is affine in t.  Per segment one
     // pass over the lineage forest (ed_covariate.hpp) gives every alive
-    // lineage the constant c_s of ED_s(u) = c_s + (u - ts_s); with D's
-    // convention (N and M at the segment's values, D = (t - ts_s) - M) the
+    // lineage the constant c_s of ED_s(u) = c_s + (u - ts_s).  D is constant
+    // on the segment, as in loglik and in the simulator: between events every
+    // pendant age and their mean M grow at unit rate, so
+    // D_s = E_s(t2) - M(t2) = (t2 - ts^D_s) - M, with N and M the values the
+    // node at t2 carries (the event term at t2 reads the same D).  The
     // per-lineage argument is
     //
-    //   eta_s(u) = [beta_0 + beta_N N + (beta_M - beta_D) M - beta_D ts^D_s
-    //               + beta_ED (c_s - ts_s)] + (beta_D + beta_ED) u
+    //   eta_s(u) = [beta_0 + beta_N N + (beta_M - beta_D) M + beta_D t2
+    //               - beta_D ts^D_s + beta_ED (c_s - ts_s)] + beta_ED u
     //
-    // where ts^D_s is the tip start the D branches read (the birth node's) and
-    // ts_s the lineage's most recent split, so that with beta_ED = 0 the two
-    // agree with the linear and exponential branches of loglik term by term.
+    // where ts^D_s is the pendant start the D terms read (the lineage's last
+    // split, or its birth) and ts_s the start segment_ed reports for ED, so
+    // that with beta_ED = 0 the two agree with the linear and exponential
+    // branches of loglik term by term.
     // The linear link integrates the clipped line (relu_integral), the
     // exponential link the exponential of it (exp_integral); the gaussian link
     // is refused at construction.
@@ -1237,10 +1241,14 @@ namespace emphasis {
         if (dt > 0.0) {
           const double N_seg = node.n;
           const double M_seg = (N_seg > 0.0) ? node.pd / N_seg : 0.0;
-          const double base_lam = pars[0] + pars[1] * N_seg + (pars[2] - pars[3]) * M_seg;
-          const double base_mu  = pars[4] + pars[5] * N_seg + (pars[6] - pars[7]) * M_seg;
-          const double b_lam = pars[3] + (centred ? 0.0 : bED);
-          const double b_mu  = pars[7] + (centred ? 0.0 : gED);
+          // D_s = (t2 - tsD_s) - M is constant on the segment: its t2 goes into
+          // the base, and only a raw ED term carries a slope in u.
+          const double base_lam = pars[0] + pars[1] * N_seg + (pars[2] - pars[3]) * M_seg
+                                + pars[3] * node.brts;
+          const double base_mu  = pars[4] + pars[5] * N_seg + (pars[6] - pars[7]) * M_seg
+                                + pars[7] * node.brts;
+          const double b_lam = centred ? 0.0 : bED;
+          const double b_mu  = centred ? 0.0 : gED;
           double seg = 0.0;
           // Linear link, no clipping: every lineage's argument A_s + b u is
           // positive at both ends of the segment (a line is monotone, so at
@@ -1407,70 +1415,47 @@ namespace emphasis {
         const auto& node = tree[i];
         const double dt = node.brts - prev_brts;
 
-        if (ep_exp && dt > 0.0) {
-          // Orthogonal basis {N, M=P/N, D=E-M}. D is constant within the
-          // segment, so eta = beta_0 + beta_N*N + beta_M*M + beta_D*(E - M)
-          //  = [beta_0 + beta_N*N + (beta_M - beta_D)*M] + beta_D*(t - ts_s).
-          // The bracketed constant is A_lam; the running sums over exp(-beta_D*ts)
-          // are unchanged (beta_D = pars[3], same slot).
-          double N_seg = node.n;
-          double M_seg = (N_seg > 0.0) ? node.pd / N_seg : 0.0;
-          double A_lam = pars[0] + pars[1]*N_seg + (pars[2] - pars[3])*M_seg;
-          double A_mu  = pars[4] + pars[5]*N_seg + (pars[6] - pars[7])*M_seg;
-          double sum_exp_bE = 0.0, sum_exp_gE = 0.0;   // Σ_s exp(-β_D ts_s), Σ_s exp(-γ_D ts_s)
-          for (const double ts : alive) {
-            sum_exp_bE += std::exp(-pars[3] * ts);
-            sum_exp_gE += std::exp(-pars[7] * ts);
-          }
-          inte += sum_exp_bE * exp_integral(A_lam, pars[3], prev_brts, node.brts)
-                + sum_exp_gE * exp_integral(A_mu,  pars[7], prev_brts, node.brts);
-        } else if (ep_gauss && dt > 0.0) {
-          // EP + Gaussian: exact per-lineage integral over the segment via erf.
-          // Orthogonal basis {N, M=P/N, D=E-M}; N and M are held constant per
-          // segment (M at the node value), and only D = (t - ts_s) - M carries an
-          // explicit time dependence.  For each lineage s alive throughout the
-          // segment (born at tip_start ts_s), the covariate argument is
-          //   eta_cov = beta_N*N + beta_M*M + beta_D*((t - ts_s) - M)
-          //           = [beta_N*N + (beta_M - beta_D)*M - beta_D*ts_s] + beta_D*t
-          // so A_lam,s = beta_N*N + (beta_M - beta_D)*M - beta_D*ts_s and b = beta_D.
-          // The Gaussian rate does not factor into a running sum (unlike the
-          // exponential link), so this is an O(alive) inner loop per segment.
-          const double N_seg  = node.n;
-          const double M_seg  = (N_seg > 0.0) ? node.pd / N_seg : 0.0;
-          const double base_lam = pars[1] * N_seg + (pars[2] - pars[3]) * M_seg;
-          const double base_mu  = pars[5] * N_seg + (pars[6] - pars[7]) * M_seg;
-          for (const double ts : alive) {
-            const double A_lam = base_lam - pars[3] * ts;
-            const double A_mu  = base_mu  - pars[7] * ts;
-            inte += gauss_integral(pars[0], A_lam, pars[3], prev_brts, node.brts);
-            inte += gauss_integral(pars[4], A_mu,  pars[7], prev_brts, node.brts);
-          }
-        } else if (ep_linear && dt > 0.0) {
-          // EP + linear: exact per-lineage integral over the segment.
-          //
-          // Same decomposition as the exponential and gaussian branches.  N and
-          // M are the segment's values; only D = (t - ts_s) - M carries time
-          // within the segment, so for a lineage born at ts_s
-          //   eta_s(t) = beta_0 + beta_N*N + beta_M*M + beta_D*((t - ts_s) - M)
-          //            = [beta_0 + beta_N*N + (beta_M - beta_D)*M - beta_D*ts_s]
-          //              + beta_D*t
-          // and the linear link makes the rate max(0, eta_s(t)): a line clipped
-          // at zero, whose kink falls inside the segment whenever the rate
-          // crosses zero there.  relu_integral does that case split exactly.
-          //
-          // The alive set is the multiset above: node.n lineages, which is what
-          // makes the branch collapse onto dt*n*(lambda+mu) when beta_D and
-          // gamma_D are zero.
+        if ((ep_exp || ep_gauss || ep_linear) && dt > 0.0) {
+          // Orthogonal basis {N, M=P/N, D=E-M}.  Between events every alive
+          // lineage's pendant age E_s(u) = u - ts_s and their mean M(u) grow at
+          // unit rate, so each D_s(u) = E_s(u) - M(u) = tsbar - ts_s is constant
+          // on the segment (tsbar the mean pendant start of the alive set).  It
+          // is read at the segment's end, D_s = (t2 - ts_s) - M, with N and
+          // M = node.pd / node.n the values the node at t2 carries; that is
+          // also the D the event term at t2 reads (speciation_rate_ep) and the
+          // value the forward simulator holds between events
+          // (inst/include/general_tree.hpp).  Every rate is then constant on
+          // the segment and the compensator is dt times the sum of the alive
+          // lineages' rates, under every link.  The alive set is the multiset
+          // above: node.n lineages, which is what makes the branch collapse
+          // onto dt*n*(lambda+mu) when beta_D and gamma_D are zero.
           const double N_seg = node.n;
           const double M_seg = (N_seg > 0.0) ? node.pd / N_seg : 0.0;
-          const double base_lam = pars[0] + pars[1] * N_seg + (pars[2] - pars[3]) * M_seg;
-          const double base_mu  = pars[4] + pars[5] * N_seg + (pars[6] - pars[7]) * M_seg;
           double seg = 0.0;
-          for (const double ts : alive) {
-            seg += relu_integral(base_lam - pars[3] * ts, pars[3], prev_brts, node.brts);
-            seg += relu_integral(base_mu  - pars[7] * ts, pars[7], prev_brts, node.brts);
+          if (ep_exp) {
+            // Sum_s exp(A + beta_D ((t2 - ts_s) - M))
+            //   = exp(A + beta_D (t2 - M)) * Sum_s exp(-beta_D ts_s)
+            const double A_lam = pars[0] + pars[1]*N_seg + pars[2]*M_seg + pars[3]*(node.brts - M_seg);
+            const double A_mu  = pars[4] + pars[5]*N_seg + pars[6]*M_seg + pars[7]*(node.brts - M_seg);
+            double sum_exp_bE = 0.0, sum_exp_gE = 0.0;   // Sum_s exp(-beta_D ts_s), Sum_s exp(-gamma_D ts_s)
+            for (const double ts : alive) {
+              sum_exp_bE += std::exp(-pars[3] * ts);
+              sum_exp_gE += std::exp(-pars[7] * ts);
+            }
+            seg = std::exp(A_lam) * sum_exp_bE + std::exp(A_mu) * sum_exp_gE;
+          } else {
+            for (const double ts : alive) {
+              const double D = (node.brts - ts) - M_seg;
+              if (ep_gauss) {
+                seg += gaussian_rate(pars[0], pars[1]*N_seg + pars[2]*M_seg + pars[3]*D);
+                seg += gaussian_rate(pars[4], pars[5]*N_seg + pars[6]*M_seg + pars[7]*D);
+              } else {
+                seg += std::max(0.0, pars[0] + pars[1]*N_seg + pars[2]*M_seg + pars[3]*D);
+                seg += std::max(0.0, pars[4] + pars[5]*N_seg + pars[6]*M_seg + pars[7]*D);
+              }
+            }
           }
-          inte += seg;
+          inte += dt * seg;
         } else {
           // Standard: piecewise constant rates
           const double lambda = model_bin_[2] ? speciation_rate_ep(pars, node)
