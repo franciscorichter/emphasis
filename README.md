@@ -99,7 +99,7 @@ Three link functions $f$ are available:
 
 The links are selected with `link = "linear"`, `"exponential"`, or `"gaussian"` (the quadratic-exponential form).
 
-The two covariates form an **orthogonal basis** — one for each dimension of a phylogeny, its *branching times* and its *topology*:
+Four lineage-level covariates are read on the complete tree, the first from its branching times and the others from its topology:
 
 | Symbol     | Name              | Definition                                                                |
 | ---------- | ----------------- | ------------------------------------------------------------------------- |
@@ -230,7 +230,7 @@ The estimator is Monte Carlo EM. At each iteration the E-step draws hidden linea
 
 Two stopping rules: `rel_change` (default) stops once the relative step, in units independent of the tree's time scale, falls below 1e-2 on three consecutive iterations; `mc_error` measures the step against its own Monte Carlo standard error from five batches, grows the draws by half whenever a step is inside the noise, and stops once the draws reach their cap and the step has stayed inside the noise for three iterations, returning the mean of the last three iterates. Both are subject to `max_iter` and `max_time`, and a fit reports which of the four ended it. After the loop one more E-step runs at the returned point, so that the reported log-likelihood, effective sample and gap describe the estimate.
 
-`estimate_rates(method = "cem" | "gam")`, `emphasis_pipeline()`, `train_GAM()` and `predict_survival()` are earlier estimators (a cross-entropy search, a likelihood surface fitted on a grid) still exported; nothing above depends on them and they are not measured in the paper.
+`estimate_rates(method = "cem" | "gam")` and `emphasis_pipeline()` are earlier estimators (a cross-entropy search, a likelihood surface fitted on a grid) still exported; nothing above depends on them. `train_GAM()` and `predict_survival()` are the survival emulator of the next section.
 
 ### Conditioning on survival
 
@@ -240,7 +240,9 @@ $$
 \ell_{\text{cond}}(\theta) = \ell(\theta) - \log P_\theta(\text{survival})
 $$
 
-The likelihood is not conditioned by default (`cond = NULL`). The survival probability $P_\theta$ is estimated by forward simulation over the box and emulated with a binomial GAM when `auto_bounds(train_surv_gam = TRUE)`; pass the result as `cond`.
+The likelihood is not conditioned by default (`cond = NULL`), and neither is the ladder. `cond` takes the survival probability in one of three forms: a binomial GAM from `train_GAM()`, which simulates 2000 clades at Latin-hypercube points of the box and counts a clade that reaches the lineage cap as surviving (`auto_bounds(train_surv_gam = TRUE)` returns one); a `nnet` object; or a function of the parameter data frame returning $P_\theta$, which is how an exact survival probability enters (for `cr` the closed form $p(0)^2$, for `dd` the master equation on the clade size; both are in the paper repository, `sim/survival-exact.R`, not in the package). $P_\theta$ does not depend on the observed tree, so one function per model, crown age and $\rho$ serves every fit of a cell.
+
+Measured, against the exact survival probability on `cr` and `dd`: the GAM at 2000 clades has a 90th-percentile error of 0.26-0.28 in $\log P_\theta$ over its box; its accuracy for the lineage-level models, and its variability between trainings, are being measured. On 200-tip trees at turnover 0.10 the survival probability at the estimates is 0.84-0.99, and conditioning moves the `cr` extinction rate from 0.016 to 0.027 and leaves a lineage-level model's extinction side where it was; on complete trees of 25-100 tips, MCEM conditioned through the exact `cr` function reaches the exact conditioned maximum within 0.05 nats on 90% of trees.
 
 ### Incomplete taxon sampling
 
@@ -363,7 +365,7 @@ The docs site at <https://franciscorichter.com/emphasis/> (`index.html`, `D.html
 ## Status
 
 - Version 0.4; `main` is the working branch and is identical on the forge and on GitHub.
-- The `{N, D, ED}` covariate basis, survival-conditioned inference and the docs site are in.
+- The `{N, D, ED, K}` covariate basis (raw and centred ED), survival-conditioned inference and the docs site are in.
   The BDI sampler is the default augmentation proposal within the scope stated above, which
   includes the ED models through their clade mean and the D models through their zero mean and
   an exact attachment; the thinning sampler also reads ED and is the better proposal for `ed`
@@ -414,30 +416,13 @@ Faith's PD; that the `ned` log-likelihood at $\beta_{ED} = \gamma_{ED} = 0$ equa
 log-likelihood on the same augmented trees to $10^{-10}$; that a negative $\beta_{ED}$ makes
 simulated clades smaller; and that an `ned` fit runs end to end.
 
-Recovery has been measured: refitting `ned` to trees simulated from it at $n \approx 100$
-returns $\beta_{ED}$ with a median of $-0.0169$ against a generating $-0.0224$, nothing pinned
-at a box bound, the right sign in 15 of 20 trees. Selection is the weaker half --- AIC prefers
-`dd` on those trees, because the two extra parameters cost 4 AIC units and an effect of
-$-0.15\lambda$ at that size does not pay for them. Where it becomes selectable is measured: at turnover
-0.10, AIC selects `ned` over `dd` on about 0.8 of trees at an effect of $-0.35\lambda$ and on
-almost none at $-0.15\lambda$, with 3% false positives at zero (paper E12). Given the
-iterations to get there, $\beta_{ED}$ comes back at 0.97 of its generating value at 100 tips.
-Getting there is the cost: at 600 draws one EM iteration of a `ned` fit takes under a minute
-at 100 tips and 40--60 minutes at 200--400, where the ED effect makes the augmented clade
-large and the ED tables are quadratic in it, so a four-hour fit completes a handful of
-iterations and has not moved far from its start.
+Recovery and selection are measured in the paper repository and recorded in its experiments wiki (below). At 100-200 tips on complete trees the ladder returns $\beta_{ED}$ at 0.91-0.97 of its generating value, AIC selects `ned` over `dd` on about 0.8 of trees at an effect of a third of the speciation rate per scale unit and on almost none at a seventh, with false positives at zero of 0 to 2 in 20, and raw $\mathrm{ED}$'s intercept and slope lie on a ridge on a single tree (the clade mean of $\mathrm{ED}$ grows with time) that the centred covariate removes. An `ned` iteration costs under a minute at 100 tips and 40-60 minutes at 200-400, where the augmented clade is large and the $\mathrm{ED}$ tables are quadratic in it.
 
 ### Open
 
 - The cross-entropy stage's particle budget does not scale with the box, which is where the
   precision on easy trees goes when the box is wide.
-- Convergence is declared on a parameter step that is not referred to the Monte Carlo noise of
-  the iterate it tests. A replacement is measured and **not** shipped; `dev/stopping-rule/FINDING.md`
-  has the numbers. The two deficit distributions cross: it trims the tail and degrades the
-  centre, at +26 % of draws. The useful result there is about the study rather than the rule ---
-  over the cells that fail the convergence criterion the rule in force has a median deficit of
-  $-0.002$ nats, so those fits are not landing far from the maximum, they are declining to say
-  that they converged.
+- The default stopping rule, `rel_change`, compares a parameter step with a fixed tolerance and not with the Monte Carlo noise of the iterate; `mc_error` ships as the alternative (`control$stop_rule`) and is not the default. Measured on simulated trees: where `rel_change` does not fire the fits sit a median 0.002 nats below the maximum, and `mc_error` stops within about 2% of a 400-iteration reference at the cost of more draws; on `dd` fits the `rel_change` tolerance of $10^{-2}$ is at or below the per-iterate noise of the extinction parameters at 200 draws, so such fits run to their cap.
 - `damping = "auto"` is the relaxation default and is not the best step available: over the
   diverging cells of a 384-cell sweep a fixed $\omega = 1/8$ converges 69 against 50 at 200
   sweeps and 107 against 77 at 1000, and `"auto"` converges none that no fixed step converges.
@@ -445,6 +430,8 @@ iterations and has not moved far from its start.
   of about 1 from 200 draws, so the step decides convergence and not usability.
 
 ### Validation
+
+Every measurement of the estimator on simulated and real trees is recorded, one page per experiment, in the experiments wiki of the paper repository (`forge:pancho/emphasis-paper`, https://whitebox.tailf2ef50.ts.net:3000/pancho/emphasis-paper/wiki). Two tests check the likelihood against its simulator with nothing hidden: `test-d-bookkeeping.R` and `test-ed-complete.R` compute the complete-data log-likelihood of simulated `d`/`nd` and `ed` trees independently in R and hold `eval_logf` to it.
 
 The technical report that draws on both lives in its own repository,
 `forge:pancho/emphasis-audit` (`~/System/Research/Diversity/emphasis-audit`), as a member of the
