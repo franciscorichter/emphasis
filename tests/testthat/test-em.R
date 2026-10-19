@@ -73,7 +73,7 @@ test_that("estimate_rates CR smoke test", {
   fit <- estimate_rates(brts12, method = "mcem", model = "cr",
     control = list(lower_bound = c(0, 0), upper_bound = c(2, 1),
                    sample_size = 20L, max_iter = 3L, tol = 0.5,
-                   num_threads = 1L))
+                   num_threads = 1L), link = "linear")
   expect_named(fit$pars, c("beta_0", "gamma_0"))
   expect_length(fit$pars, 2)
   expect_true(is.numeric(fit$loglik))
@@ -87,7 +87,7 @@ test_that("estimate_rates DD smoke test", {
     control = list(lower_bound = c(0.1, -0.1, 0, -0.01),
                    upper_bound = c(2, 0.01, 0.5, 0.01),
                    sample_size = 20L, max_iter = 3L, tol = 0.5,
-                   num_threads = 1L)))
+                   num_threads = 1L), link = "linear"))
   expect_named(fit$pars, c("beta_0", "beta_N", "gamma_0", "gamma_N"))
   expect_length(fit$pars, 4)
   expect_true(is.finite(fit$loglik))
@@ -100,7 +100,7 @@ test_that("estimate_rates D smoke test", {
     control = list(lower_bound = c(0.1, -0.5, 0,  -0.5),
                    upper_bound = c(2,    0.5, 0.5, 0.5),
                    sample_size = 20L, max_iter = 3L, tol = 0.5,
-                   num_threads = 1L)))
+                   num_threads = 1L), link = "linear"))
   expect_named(fit$pars, c("beta_0", "beta_D", "gamma_0", "gamma_D"))
   expect_true(is.numeric(fit$loglik))
   expect_equal(emphasis:::.model_label(fit$model), "D")

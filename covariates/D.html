@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D: the centred pendant age · emphasis</title>
+<meta name="description" content="In one line.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../covariates/index.html" aria-current="page">Covariates</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>D: the centred pendant age</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#the-question-in-the-literature">The question in the literature</a>
+</li>
+<li><a href="#what-the-package-computes">What the package computes</a>
+</li>
+<li><a href="#what-the-sign-of-a-coefficient-means">What the sign of a coefficient means</a>
+</li>
+<li><a href="#what-d-cannot-be-separated-from">What D cannot be separated from</a>
+</li>
+<li><a href="#what-simulation-says">What simulation says</a>
+</li>
+<li><a href="#what-real-phylogenies-say">What real phylogenies say</a>
+</li>
+<li><a href="#references">References</a>
+</li>
+</ol>
+</nav>
+<p><strong>In one line.</strong> <span class="math inline">\(D_s(t)\)</span> is how much longer lineage <span class="math inline">\(s\)</span> has gone without splitting than the average lineage alive with it, and its coefficient asks whether a lineage's rate depends on that age: age-dependent and protracted speciation, and on the extinction side Van Valen's law.</p>
+<p><span class="math inline">\(D\)</span> is a lineage-level covariate that sums to zero over the lineages alive, so it says which lineages split, never how fast the clade does. It is fitted alone in <code>d</code> and beside <a href="N.html">N</a> in <code>nd</code>. It reads the same pendant edge as <a href="ED.html">ED</a>, and the two are not apportioned on trees of the sizes measured; the <a href="index.html">covariates page</a> sets the four side by side.</p>
+<h2 id="the-question-in-the-literature">The question in the literature</h2>
+<p>Since Yule (1925) the default model of a diversifying clade has been memoryless: every lineage speciates at the same instantaneous rate whatever its age, and Nee et al. (1994) built the standard likelihood of a reconstructed tree on that assumption. Under it a lineage that split a million years ago and one that has not split for fifty million have the same rate. Kendall (1948) already treated a birth process with a variable generation time. Two families of reconstructed trees resist the memoryless model: most slow down toward the present (the negative <span class="math inline">\(\gamma\)</span> statistic of Pybus and Harvey 2000), and many hold long, unsplit terminal branches.</p>
+<p>The modern forms of an age effect are two, and they point in opposite directions. <em>Protracted speciation</em> says that a new lineage cannot speciate again until speciation itself has completed, a delay of the order of a million years in birds and mammals (Rosindell et al. 2010; Etienne and Rosindell 2012; Etienne et al. 2014; Lambert et al. 2015). It predicts a rate that rises with age over the first part of a lineage's life, and it reproduces the observed slowdowns because the youngest lineages of the tree have not finished becoming species. <em>Age-dependent speciation</em> in the sense of Hagen et al. (2015) is a rate that falls with lineage age, motivated by new lineages that colonise new regions or niches with little competition; fitted to thousands of TreeBASE trees, that model reproduced the imbalance of empirical trees, which the Yule model does not.</p>
+<p>On the extinction side the reference is Van Valen's law: the probability that a taxon goes extinct does not depend on its age, reviewed from populations to communities by Liow et al. (2011). Alexander et al. (2016) built the likelihood for gamma-distributed species lifetimes on a reconstructed tree and found age dependence in birds and in nightshades. Hagen et al. (2018) found in the fossil record of Carnivora that extinction is highest in young species and declines with age, while the same model on the dated phylogeny of extant Carnivora gave the opposite direction; Finnegan et al. (2008) found the fossil direction, risk highest in the youngest cohorts, in Phanerozoic marine genera.</p>
+<h2 id="what-the-package-computes">What the package computes</h2>
+<p>Let <span class="math inline">\(\tau_s(t)\)</span> be the pendant start of lineage <span class="math inline">\(s\)</span>: the time of its birth or of its latest split, whichever is later. The pendant age <span class="math inline">\(E_s(t) = t - \tau_s(t)\)</span> is the length of the lineage's current terminal edge, and <span class="math inline">\(M(t)\)</span> is its mean over the <span class="math inline">\(N(t)\)</span> lineages alive. Then</p>
+<p><span class="math display">\[
+D_s(t) = E_s(t) - M(t), \qquad \sum_{s \in A(t)} D_s(t) = 0 .
+\]</span></p>
+<p><span class="math inline">\(D\)</span> has units of time (million years on a tree dated in million years). Between two consecutive events every pendant age and their mean grow at unit rate, so on a segment <span class="math inline">\(D_s = \bar\tau - \tau_s\)</span>, the mean pendant start of the alive lineages minus the lineage's own, is constant. The package holds it constant: the simulator reads it so, and since commit <code>4e0b9dd</code> the likelihood reads the same value on the whole segment, charging the event that ends the segment with the <span class="math inline">\(D_s\)</span> the segment started with. <span class="math inline">\(D\)</span> therefore changes only at events, and at every event it changes for every lineage alive, since each split or death moves <span class="math inline">\(\bar\tau\)</span>: a lineage that splits restarts its pendant age, so both daughters start with <span class="math inline">\(E = 0\)</span> and <span class="math inline">\(D = -M\)</span>, and the others shift up.</p>
+<p>Three properties shape what <span class="math inline">\(D\)</span> reads.</p>
+<ul>
+<li><strong>It is read on the complete tree.</strong> The pendant start restarts at every split, observed or hidden. A lineage whose observed terminal branch is 20 million years long may have split 3 million years ago into itself and a daughter that died or was not sampled; on the complete tree its pendant age is 3. The model's <span class="math inline">\(E_s\)</span> at the present is therefore at most the observed terminal branch, and how far below depends on the extinction rate and the sampling fraction through the hidden lineages drawn.</li>
+<li><strong>It is centred.</strong> The clade mean <span class="math inline">\(M(t)\)</span> is the pendant phylogenetic diversity per lineage, a clade-level quantity that changes as the clade ages and as <span class="math inline">\(N\)</span> moves. Centring removes it, so a <span class="math inline">\(\beta_D\)</span> term does not change the clade's total speciation rate at any instant, only its distribution over lineages. A clade-wide age effect, such as a protracted delay that holds every lineage back equally early in a radiation, is absorbed by <span class="math inline">\(\beta_0\)</span> and <span class="math inline">\(\beta_N\)</span>.</li>
+<li><strong>It needs a topology only to locate splits.</strong> From a bare vector of branching times the package records every observed lineage as dating from the crown and reads <span class="math inline">\(D = 0\)</span> at every observed event; a <span class="math inline">\(D\)</span> fit needs a <code>phylo</code> object to mean anything.</li>
+</ul>
+<p>At the tips of a reconstructed tree <span class="math inline">\(E\)</span> is the terminal branch length. That is the quantity the DR tip-rate statistic inverts, weighting the terminal branch most (Jetz et al. 2012; Title and Rabosky 2019), and the first term of fair-proportion distinctiveness (Isaac et al. 2007). <span class="math inline">\(D\)</span> is not distinctiveness: <span class="math inline">\(\mathrm{ED}_s\)</span> adds to <span class="math inline">\(E_s\)</span> the lineage's shares of every branch above it, while <span class="math inline">\(D_s\)</span> reads the terminal edge alone and centres it. The two agree on a lineage alone on a long branch and disagree on a lineage with a short terminal edge that sits on a long, little-shared ancestral branch.</p>
+<h2 id="what-the-sign-of-a-coefficient-means">What the sign of a coefficient means</h2>
+<p><strong>Speciation.</strong> A positive <span class="math inline">\(\beta_D\)</span> says that the lineages that have gone longest without splitting are the most likely to split next: an age advantage, the protracted-speciation direction over the ages at which the delay acts, or opportunity accumulating with isolation. A negative <span class="math inline">\(\beta_D\)</span> says that recently split lineages split again sooner than their older contemporaries, the direction Hagen et al. (2015) fitted, in which diversification is concentrated in young radiations and old lineages are quiescent. Zero is the memoryless null.</p>
+<p><strong>Extinction.</strong> <span class="math inline">\(\gamma_D = 0\)</span> is Van Valen's law. A positive <span class="math inline">\(\gamma_D\)</span> is senescence of lineages; a negative one is the direction found in fossil Carnivora (Hagen et al. 2018) and in marine genera (Finnegan et al. 2008), extinction highest in the youngest lineages.</p>
+<p><strong>What else produces the same sign.</strong> A negative <span class="math inline">\(\beta_D\)</span> is also what a process with inherited rates produces without any effect of age: a lineage that split recently is one whose ancestry carries a high rate, and its next split comes soon for that reason. Age-dependent and heritable speciation are hard to separate on one tree; the <a href="K.html">K page</a> takes up the heritable reading. Protracted speciation is a two-stage process that a single slope in <span class="math inline">\(E\)</span> approximates, worst at the youngest ages, where the true rate is zero. And because the model's pendant age at the present is shortened by hidden splits, the fitted extinction rate and the sampling fraction act on <span class="math inline">\(D\)</span> through the augmentation: a model that draws more hidden splits draws shorter pendant ages.</p>
+<h2 id="what-d-cannot-be-separated-from">What D cannot be separated from</h2>
+<p><strong>ED, through the shared pendant edge.</strong> Within one tree at one time <span class="math inline">\(D\)</span> has the ranks of the pendant age, and <span class="math inline">\(\mathrm{ED}\)</span> starts from the same edge. <a href="../experiments/E39.html">E39</a> measured the Spearman correlation of each pair within a tree, over the lineages alive at half, three quarters and all of the crown age:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>pair</th>
+<th>simulated <code>dd</code> clades, complete (30)</th>
+<th>the same, reconstructed</th>
+<th>47 family trees</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="math inline">\(D\)</span> and ED</td>
+<td>0.57</td>
+<td>0.62</td>
+<td>0.74</td>
+</tr>
+<tr>
+<td><span class="math inline">\(D\)</span> and nearest-neighbour distance</td>
+<td>0.85</td>
+<td>0.88</td>
+<td>0.90</td>
+</tr>
+<tr>
+<td><span class="math inline">\(D\)</span> and <span class="math inline">\(K\)</span></td>
+<td><span class="math inline">\(-0.34\)</span></td>
+<td><span class="math inline">\(-0.35\)</span></td>
+<td><span class="math inline">\(-0.46\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The distance to a lineage's nearest living relative is twice its pendant age whenever its sister is alive, so a model on that distance, the lineage-scale relatedness of Qin et al. (2025), is close to a pendant-age model. On the covariate path at 100 tips a generator with both <span class="math inline">\(D\)</span> and <span class="math inline">\(\mathrm{ED}\)</span> effects returns <span class="math inline">\(D\)</span> alone on 0.80 of trees and both on 0.15 (<a href="../experiments/E20.html">E20</a>); on <code>ned</code> trees <span class="math inline">\(D\)</span> enters the path more often as trees grow, until at 400 tips it is the first covariate on 19 of 20 trees generated with no <span class="math inline">\(D\)</span> effect (<a href="../experiments/E22.html">E22</a>). At 200 tips the ladder chooses <code>nd</code> on 5 of 20 trees generated by <code>nd</code> and <code>ned</code> on 4, so the two readings of the edge divide the signal about evenly (<a href="../experiments/E31.html">E31</a>). A comparison of <code>nd</code> against <code>ned</code> on one clade is a comparison of two readings of the same edge; the question that would separate them, whether the ancestral share <span class="math inline">\(\mathrm{ED} - E\)</span> matters, is asked by a covariate the package does not offer.</p>
+<p><strong>Extinction on another covariate.</strong> Where the extinction rate rises with <span class="math inline">\(\mathrm{ED}\)</span>, the extinction path admits <span class="math inline">\(D\)</span> instead on 0.50 to 0.70 of trees (<a href="../experiments/E33.html">E33</a>).</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E19-nd-recovery.png" alt="The fitted pendant-age coefficient against its generating value, one nd fit per tree, on two proposals" loading="lazy">
+<figcaption><strong>Figure 1.</strong> <code>nd</code> at 100 tips, turnover 0.10: fitted <span class="math inline">\(\beta_D\)</span> against its generating value on the thinning proposal (left) and the surrogate (right). The sign is recovered at every effect of <span class="math inline">\(\pm 0.15\)</span> and stronger, the size is short. These fits used the likelihood before commit <code>4e0b9dd</code>, which let <span class="math inline">\(D\)</span> grow within a segment. From <a href="../experiments/E19.html">E19</a>.</figcaption>
+</figure>
+<h2 id="what-simulation-says">What simulation says</h2>
+<p><strong>On complete trees, the likelihood is now the simulator's.</strong> With every lineage kept, nothing is hidden, and maximising the complete-data likelihood tests the model alone. Under the likelihood before <code>4e0b9dd</code>, which held <span class="math inline">\(M\)</span> at its end-of-segment value so that <span class="math inline">\(D\)</span> grew within a segment, <code>d</code> returned <span class="math inline">\(\beta_D\)</span> at 0.70 and 1.46 of its value at <span class="math inline">\(\mp 0.35\)</span>; under the current one at 0.95 and 1.16, with the right sign on every tree, and <code>nd</code> at 1.01 and 0.80, with bootstrap intervals of the medians that contain 1 (<a href="../experiments/E44.html">E44</a>). The two conventions differ by 0.40 to 1.20 nats per complete tree.</p>
+<p><strong>On reconstructed trees, every result predates the change.</strong> The following were all fitted under the old likelihood, so their sizes are candidates for revision:</p>
+<ul>
+<li><code>nd</code> at 100 tips recovers the sign of <span class="math inline">\(\beta_D\)</span> at every effect of <span class="math inline">\(\pm 0.15\)</span> and stronger; the size at <span class="math inline">\(\mp 0.35\)</span> is 0.30 and 0.47 of its value on thinning and 0.43 and 0.63 on the surrogate, on fits cut at 30 minutes (Figure 1; <a href="../experiments/E19.html">E19</a>). With 300 iterations and a four-hour clock it is 0.67 at <span class="math inline">\(-0.35\)</span> and 0.80 at <span class="math inline">\(+0.35\)</span>, the second cell sampler-limited; 0 of 39 fits met the stopping rule, and <code>nd</code> beat <code>dd</code> on 19 of 19 trees at <span class="math inline">\(-0.35\)</span> (<a href="../experiments/E30.html">E30</a>). 700 further iterations moved <span class="math inline">\(\beta_D\)</span> by <span class="math inline">\(-0.04\)</span> to <span class="math inline">\(+0.03\)</span> of its value on three trees before the run was stopped (<a href="../experiments/E37.html">E37</a>).</li>
+<li>In the ladder at 100 tips <code>nd</code> is chosen on 0 of 10 of its own trees, <code>dd</code> on 7 (<a href="../experiments/E23.html">E23</a>); at 200 tips on 5 of 20, with <span class="math inline">\(\beta_D\)</span> at 0.68 of its value whether the fits ran a quarter of their iterations or all 300 (<a href="../experiments/E31.html">E31</a>).</li>
+<li><code>d</code> alone recovers <span class="math inline">\(\beta_D\)</span> at 1.01 at <span class="math inline">\(+0.35\)</span> and 0.67 at <span class="math inline">\(-0.35\)</span>, and on trees with no age effect beats <code>cr</code> on 0.15 of them, three times the ceiling, through an extinction slope on <span class="math inline">\(D\)</span> fitted at <span class="math inline">\(+0.36\)</span> per unit that the generator did not have (<a href="../experiments/E24.html">E24</a>). A <span class="math inline">\(\gamma_D\)</span> from a single clade is not to be read as Van Valen's law or its opposite.</li>
+<li>On the path, <span class="math inline">\(D\)</span> is falsely added on 0.20 to 0.35 of <code>dd</code> trees from 50 to 400 tips (<a href="../experiments/E20.html">E20</a>, <a href="../experiments/E22.html">E22</a>).</li>
+</ul>
+<p>The <span class="math inline">\(D\)</span> models are the ones the sampler handles worst: thinning is their default proposal, the surrogate gave the larger effective sample but failed its pre-set adoption rule (<a href="../experiments/E19.html">E19</a>), and most <code>nd</code> fits end with fewer than 10 effective draws or on their clock. <a href="../experiments/E44.html">E44</a> shows that part of the shortfall in size was the likelihood; how much remains is what the <code>d</code> and <code>nd</code> cells of the conditioned estimability study will measure (<a href="../estimability.html">Estimability</a>).</p>
+<h2 id="what-real-phylogenies-say">What real phylogenies say</h2>
+<p><strong>The 47 family trees.</strong> No family chooses <code>nd</code> by minimum AIC, and one does under the parsimonious rule (<a href="../experiments/E26.html">E26</a>, <a href="../experiments/E28.html">E28</a>). The pendant-age coefficient is negative in 19 of 25 <code>nd</code> fits that rest on at least 10 effective draws, with a median speciation factor of 0.86 per standard deviation of <span class="math inline">\(D\)</span>.</p>
+<p><strong>The 170 bird and mammal trees.</strong> <code>nd</code> is the parsimonious choice on 3 trees and readable on 1. Over all 59 readable <code>nd</code> fits the median factor is 0.92 per standard deviation, with 18 of 59 above 1: <span class="math inline">\(D\)</span> has no sign on these trees (<a href="../experiments/E40.html">E40</a>, <a href="../real-phylogenies.html">Real phylogenies</a>). 111 of the 170 <code>nd</code> fits are not read, because their final effective sample is below 10 or they ended on the four-hour clock (86 <code>nd</code> fits did); 3 of 170 met the stopping rule. On the 16 smallest trees, continued to 1,000 iterations and 2,400 draws, no <code>nd</code> fit met the stopping rule (<a href="../experiments/E41.html">E41</a>). The covariate path reads the pendant edge as one signal: it keeps <span class="math inline">\(D\)</span> and <span class="math inline">\(\mathrm{ED}\)</span> together on 144 of the 170 trees, <span class="math inline">\(D\)</span> without <span class="math inline">\(\mathrm{ED}\)</span> on none, and <span class="math inline">\(D\)</span> is the first covariate to enter on 49.</p>
+<p><strong>Not yet read.</strong> Every real-tree <code>nd</code> fit used the likelihood before <code>4e0b9dd</code>, which <a href="../experiments/E44.html">E44</a> showed biased <span class="math inline">\(\beta_D\)</span> on complete trees. The <code>nd</code> rung has not been refitted on the real trees under the current likelihood, and the <code>d</code> and <code>nd</code> cells of the estimability study (E46) have not run. Until then the statement that <span class="math inline">\(D\)</span> has no sign on real trees is a statement about the old likelihood, and no sign of <span class="math inline">\(\gamma_D\)</span>, the term that would speak to Van Valen's law, has been read on any tree.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Yule G.U. (1925). A mathematical theory of evolution, based on the conclusions of Dr. J. C. Willis, F.R.S. <em>Philosophical Transactions of the Royal Society B</em> 213, 21–87. <a href="https://doi.org/10.1098/rstb.1925.0002">doi:10.1098/rstb.1925.0002</a></li>
+<li>Kendall D.G. (1948). On the generalized "birth-and-death" process. <em>The Annals of Mathematical Statistics</em> 19, 1–15. <a href="https://doi.org/10.1214/aoms/1177730285">doi:10.1214/aoms/1177730285</a></li>
+<li>Nee S., May R.M. and Harvey P.H. (1994). The reconstructed evolutionary process. <em>Philosophical Transactions of the Royal Society of London B: Biological Sciences</em> 344, 305–311. <a href="https://doi.org/10.1098/rstb.1994.0068">doi:10.1098/rstb.1994.0068</a></li>
+<li>Pybus O.G. and Harvey P.H. (2000). Testing macro-evolutionary models using incomplete molecular phylogenies. <em>Proceedings of the Royal Society of London B: Biological Sciences</em> 267, 2267–2272. <a href="https://doi.org/10.1098/rspb.2000.1278">doi:10.1098/rspb.2000.1278</a></li>
+<li>Rosindell J., Cornell S.J., Hubbell S.P. and Etienne R.S. (2010). Protracted speciation revitalizes the neutral theory of biodiversity. <em>Ecology Letters</em> 13, 716–727. <a href="https://doi.org/10.1111/j.1461-0248.2010.01463.x">doi:10.1111/j.1461-0248.2010.01463.x</a></li>
+<li>Etienne R.S. and Rosindell J. (2012). Prolonging the past counteracts the pull of the present: protracted speciation can explain observed slowdowns in diversification. <em>Systematic Biology</em> 61, 204–213. <a href="https://doi.org/10.1093/sysbio/syr091">doi:10.1093/sysbio/syr091</a></li>
+<li>Etienne R.S., Morlon H. and Lambert A. (2014). Estimating the duration of speciation from phylogenies. <em>Evolution</em> 68, 2430–2440. <a href="https://doi.org/10.1111/evo.12433">doi:10.1111/evo.12433</a></li>
+<li>Lambert A., Morlon H. and Etienne R.S. (2015). The reconstructed tree in the lineage-based model of protracted speciation. <em>Journal of Mathematical Biology</em> 70, 367–397. <a href="https://doi.org/10.1007/s00285-014-0767-x">doi:10.1007/s00285-014-0767-x</a></li>
+<li>Hagen O., Hartmann K., Steel M. and Stadler T. (2015). Age-dependent speciation can explain the shape of empirical phylogenies. <em>Systematic Biology</em> 64, 432–440. <a href="https://doi.org/10.1093/sysbio/syv001">doi:10.1093/sysbio/syv001</a></li>
+<li>Liow L.H., Van Valen L. and Stenseth N.C. (2011). Red Queen: from populations to taxa and communities. <em>Trends in Ecology &amp; Evolution</em> 26, 349–358. <a href="https://doi.org/10.1016/j.tree.2011.03.016">doi:10.1016/j.tree.2011.03.016</a></li>
+<li>Alexander H.K., Lambert A. and Stadler T. (2016). Quantifying age-dependent extinction from species phylogenies. <em>Systematic Biology</em> 65, 35–50. <a href="https://doi.org/10.1093/sysbio/syv065">doi:10.1093/sysbio/syv065</a></li>
+<li>Hagen O. et al. (2018). Estimating age-dependent extinction: contrasting evidence from fossils and phylogenies. <em>Systematic Biology</em> 67, 458–474. <a href="https://doi.org/10.1093/sysbio/syx082">doi:10.1093/sysbio/syx082</a></li>
+<li>Finnegan S., Payne J.L. and Wang S.C. (2008). The Red Queen revisited: reevaluating the age selectivity of Phanerozoic marine genus extinctions. <em>Paleobiology</em> 34, 318–341. <a href="https://doi.org/10.1666/07008.1">doi:10.1666/07008.1</a></li>
+<li>Jetz W. et al. (2012). The global diversity of birds in space and time. <em>Nature</em> 491, 444–448. <a href="https://doi.org/10.1038/nature11631">doi:10.1038/nature11631</a></li>
+<li>Title P.O. and Rabosky D.L. (2019). Tip rates, phylogenies and diversification: what are we estimating, and how good are the estimates? <em>Methods in Ecology and Evolution</em> 10, 821–834. <a href="https://doi.org/10.1111/2041-210X.13153">doi:10.1111/2041-210X.13153</a></li>
+<li>Isaac N.J.B. et al. (2007). Mammals on the EDGE: conservation priorities based on threat and phylogeny. <em>PLoS ONE</em> 2, e296. <a href="https://doi.org/10.1371/journal.pone.0000296">doi:10.1371/journal.pone.0000296</a></li>
+<li>Qin T., Valente L. and Etienne R.S. (2025). Impact of evolutionary relatedness on species diversification and tree shape. <em>Journal of Theoretical Biology</em> 598, 111992. <a href="https://doi.org/10.1016/j.jtbi.2024.111992">doi:10.1016/j.jtbi.2024.111992</a></li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 1.0.0. Francisco Richter, Università della Svizzera italiana.</p>
+</footer>
+</body>
+</html>

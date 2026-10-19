@@ -15,18 +15,18 @@ test_that("simulate_tree errors on invalid pars", {
 
 test_that("simulate_tree errors on invalid max_t", {
   expect_error(
-    simulate_tree(pars = c(0.5, 0.1), max_t = -1),
+    simulate_tree(pars = c(0.5, 0.1), max_t = -1, link = "linear"),
     "positive number"
   )
   expect_error(
-    simulate_tree(pars = c(0.5, 0.1), max_t = 0),
+    simulate_tree(pars = c(0.5, 0.1), max_t = 0, link = "linear"),
     "positive number"
   )
 })
 
 test_that("simulate_tree errors on invalid max_lin", {
   expect_error(
-    simulate_tree(pars = c(0.5, 0.1), max_t = 5, max_lin = 0),
+    simulate_tree(pars = c(0.5, 0.1), max_t = 5, max_lin = 0, link = "linear"),
     "positive number"
   )
 })
@@ -35,21 +35,21 @@ test_that("simulate_tree accepts max_tries = 0 (no retries)", {
   set.seed(1)
   # max_tries = 0 is valid: extinct runs are not retried (used for GAM training)
   result <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, max_tries = 0,
-                          useDDD = FALSE)
+                          useDDD = FALSE, link = "linear")
   expect_true(result$status %in% c("done", "extinct", "too_large"))
 })
 
 test_that("simulate_tree errors on wrong pars length for model", {
   # "dd" = c(1,0,0) needs 4 pars, supplying 2 should error
   expect_error(
-    simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "dd"),
+    simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "dd", link = "linear"),
     "requires 4 parameters"
   )
 })
 
 test_that("simulate_tree errors on negative max_t", {
   expect_error(
-    simulate_tree(pars = c(0.5, 0.1), max_t = -1),
+    simulate_tree(pars = c(0.5, 0.1), max_t = -1, link = "linear"),
     "positive number"
   )
 })
@@ -81,7 +81,7 @@ test_that(".expand_pars errors on wrong length", {
 # replicates, never a fixed value.
 
 test_that("simulate_tree cr model returns valid output", {
-  result <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr")
+  result <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr", link = "linear")
 
   expect_type(result, "list")
   expect_named(result, c("tes", "tas", "L", "status", "survival_prob", "attempts"))
@@ -102,7 +102,7 @@ test_that("simulate_tree cr model returns valid output", {
 test_that("simulate_tree dd model returns valid output", {
   result <- simulate_tree(
     pars = c(0.8, -0.02, 0.2, -0.01),
-    max_t = 5, model = "dd"
+    max_t = 5, model = "dd", link = "linear"
   )
 
   expect_type(result, "list")
@@ -116,7 +116,7 @@ test_that("simulate_tree dd model returns valid output", {
 })
 
 test_that("simulate_tree returns survival_prob", {
-  result <- simulate_tree(pars = c(0.8, 0.1), max_t = 5, model = "cr")
+  result <- simulate_tree(pars = c(0.8, 0.1), max_t = 5, model = "cr", link = "linear")
   expect_true(is.numeric(result$survival_prob))
   expect_true(result$survival_prob >= 0 && result$survival_prob <= 1)
   # survival_prob is 1/attempts on success and 0 on failure; max_tries = 1
@@ -152,7 +152,7 @@ test_that("forward cr simulation matches the birth-death moments", {
 
   n_extant <- vapply(seq_len(reps), function(i) {
     x <- simulate_tree(pars = c(lambda, mu), max_t = tt, model = "cr",
-                       max_tries = 0, useDDD = FALSE)
+                       max_tries = 0, useDDD = FALSE, link = "linear")
     if (is.null(x$L)) 0L else sum(x$L[, 4] == -1)
   }, integer(1))
 

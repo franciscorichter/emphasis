@@ -8,6 +8,7 @@ Inputs
     site/style.css              the one stylesheet (copied to assets/site.css)
     site/src/index.md           -> index.html
     site/src/usage.md           -> usage.html
+    site/src/covariates/*.md    -> covariates/*.html (the biological meaning of N, D, ED and K)
     site/reference/*.html       Rd fragments (site/reference.R, run on whitebox) -> reference.html
                                 ordered by site/reference/index.json when it exists
     <wiki>/What-we-know.md      -> established.html
@@ -18,6 +19,7 @@ Inputs
     <wiki>/Home.md              -> experiments/index.html (the table of experiments, grouped as Home groups it)
     <wiki>/E<n>.md, S.md        -> experiments/<name>.html
     <wiki>/images/*.png         -> assets/wiki/
+    (written by the build)      -> D.html, a redirect to covariates/D.html for old links
 
 Markdown is converted by pandoc (-f gfm+tex_math_dollars -t html5 --mathjax); the maths is
 rendered in the browser by the local MathJax (assets/mathjax/tex-svg.js). Wiki links
@@ -47,6 +49,7 @@ GITHUB = "https://github.com/franciscorichter/emphasis"
 
 NAV = [
     ("Overview", "index.html"),
+    ("Covariates", "covariates/index.html"),
     ("Usage", "usage.html"),
     ("Reference", "reference.html"),
     ("What is established", "established.html"),
@@ -55,7 +58,6 @@ NAV = [
     ("Experiments", "experiments/index.html"),
     ("Glossary", "glossary.html"),
     ("Simulator", "simulator.html"),
-    ("D", "D.html"),
     ("GitHub", GITHUB),
 ]
 
@@ -72,7 +74,10 @@ WIKI_PAGES = {
 EXPERIMENT_RE = re.compile(r"^(E\d+|S)$")
 
 # Sections of the site that are kept as they are and only linked.
-KEPT = ["D.html", "simulator.html"]
+KEPT = ["simulator.html"]
+
+# Pages that moved: old path -> new path. Each old path gets a page that redirects.
+REDIRECTS = {"D.html": "covariates/D.html"}
 
 # Anchors the kept pages link to, kept stable whatever the heading's own id becomes:
 # page -> {anchor: regex matched against the heading id it should land on}.
@@ -290,7 +295,8 @@ class Site:
             if target.startswith("http"):
                 items.append('<li><a href="%s" rel="external">%s</a></li>' % (target, label))
                 continue
-            active = page == target or (target == "experiments/index.html" and page.startswith("experiments/"))
+            active = page == target or any(
+                target == sec + "/index.html" and page.startswith(sec + "/") for sec in ("experiments", "covariates"))
             cur = ' aria-current="page"' if active else ""
             items.append('<li><a href="%s%s"%s>%s</a></li>' % (pre, target, cur, label))
         return "\n".join(items)
@@ -403,6 +409,21 @@ class Site:
                 parts.append('<section class="ref">\n%s\n%s\n</section>' % (head, frag))
         self.render(page, "Reference", "\n".join(parts), "The functions of the emphasis package.",
                     numbered_allowed=False, run_in_toc=True)
+
+    def redirect_page(self, page, target):
+        """A minimal page at an old path that sends the reader to the page that replaced it."""
+        href = html.escape(rel(target, page))
+        out = (
+            '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
+            '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+            '<title>Moved · emphasis</title>\n'
+            '<meta http-equiv="refresh" content="0; url=%s">\n'
+            '<link rel="canonical" href="%s">\n</head>\n<body>\n'
+            '<p>This page is now at <a href="%s">%s</a>.</p>\n</body>\n</html>\n'
+            % (href, href, href, href)
+        )
+        write(self.root / page, out)
+        self.pages.append(page)
 
     def experiments_index(self):
         home = self.wiki / "Home.md"
@@ -517,6 +538,14 @@ def main():
     site.markdown_page(SITE / "src" / "usage.md", "usage.html", "Usage",
                        "Worked examples with the emphasis package and their output.")
     site.reference_page()
+
+    # The covariate pages: the overview of the four first, then one page each.
+    cov_dir = SITE / "src" / "covariates"
+    cov_titles = {"index": "Covariates", "N": "N", "D": "D", "ED": "ED", "K": "K"}
+    for p in sorted(cov_dir.glob("*.md"), key=lambda p: (p.stem != "index", ["N", "D", "ED", "K"].index(p.stem) if p.stem in cov_titles and p.stem != "index" else 9, p.stem)):
+        site.markdown_page(p, "covariates/" + p.stem + ".html", cov_titles.get(p.stem, p.stem))
+    for old, new in REDIRECTS.items():
+        site.redirect_page(old, new)
 
     # Wiki overview pages.
     for name, page in WIKI_PAGES.items():

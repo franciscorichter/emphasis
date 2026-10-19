@@ -76,7 +76,7 @@ test_that("the ED-aware envelope dominates the intensity, for either sign of bet
 test_that("both proposals estimate the same marginal likelihood; the ED-aware one with the larger ESS", {
   set.seed(23)
   truth <- c(0.6, -0.004, -0.06, 0.2, 0.0, 0.0)
-  s <- simulate_tree(pars = truth, max_t = 8, model = "ned", max_lin = 3000L, num_threads = 1L)
+  s <- simulate_tree(pars = truth, max_t = 8, model = "ned", max_lin = 3000L, num_threads = 1L, link = "linear")
   expect_equal(s$status, "done")
   brts <- emphasis:::.extract_brts(s$tes)
   n <- 400L
@@ -97,7 +97,7 @@ test_that("both proposals estimate the same marginal likelihood; the ED-aware on
   # a stronger effect with turnover: the mean-field weights collapse, the
   # ED-aware ones do not
   truth2 <- c(0.9, -0.006, -0.2, 0.45, 0.0, 0.0)
-  s2 <- simulate_tree(pars = truth2, max_t = 8, model = "ned", max_lin = 3000L, num_threads = 1L)
+  s2 <- simulate_tree(pars = truth2, max_t = 8, model = "ned", max_lin = 3000L, num_threads = 1L, link = "linear")
   if (identical(s2$status, "done") && length(s2$tes$tip.label) >= 8L) {
     b2 <- emphasis:::.extract_brts(s2$tes)
     e2 <- aug_with(b2, truth2, mb_ed, n = 200L, seed = 7L, max_missing = 20000L)
@@ -120,7 +120,7 @@ test_that("estimate_rates runs an ED model under either proposal", {
                                          sample_size = 20L, max_iter = 2L, num_threads = 1L,
                                          lower_bound = c(0.01, -0.2, -1, 0.0, -0.2, -1),
                                          upper_bound = c(3, 0.2, 1, 2, 0.2, 1),
-                                         verbose = FALSE))
+                                         verbose = FALSE), link = "linear")
     expect_s3_class(fit, "emphasis_fit")
     expect_length(fit$pars, 6L)
     expect_true(is.finite(fit$loglik))
@@ -130,6 +130,6 @@ test_that("estimate_rates runs an ED model under either proposal", {
                               control = list(sampling = "dynamic_fresh", proposal = "uniform",
                                              sample_size = 5L, max_iter = 1L, num_threads = 1L,
                                              lower_bound = c(0.01, -0.2, -1, 0.0, -0.2, -1),
-                                             upper_bound = c(3, 0.2, 1, 2, 0.2, 1))),
+                                             upper_bound = c(3, 0.2, 1, 2, 0.2, 1)), link = "linear"),
                "proposal")
 })

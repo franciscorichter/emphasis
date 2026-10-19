@@ -58,7 +58,7 @@ test_that("the two attachment rules estimate the same log-likelihood", {
   for (i in 1:120) {
     set.seed(i)
     x <- simulate_tree(pars = cp, max_t = 15, model = "ned", rho = 1,
-                       max_lin = 20000L, num_threads = 1L)
+                       max_lin = 20000L, num_threads = 1L, link = "linear")
     if (identical(x$status, "done") && length(x$tes$tip.label) >= 20) { phy <- x$tes; break }
   }
   skip_if(is.null(phy), "no ED tree")
@@ -86,7 +86,7 @@ test_that("rate attachment still attaches every birth to a living lineage", {
   for (i in 1:120) {
     set.seed(i)
     x <- simulate_tree(pars = cp, max_t = 15, model = "ned", rho = 1,
-                       max_lin = 20000L, num_threads = 1L)
+                       max_lin = 20000L, num_threads = 1L, link = "linear")
     if (identical(x$status, "done") && length(x$tes$tip.label) >= 20) { phy <- x$tes; break }
   }
   skip_if(is.null(phy), "no ED tree")

@@ -23,11 +23,12 @@ the parameter data frame and returns probabilities, is carried the same way.
 }
 \examples{
 set.seed(1)
-pars_mat <- cbind(beta_0  = runif(100, 0.3, 1.2),
-                  gamma_0 = runif(100, 0.05, 0.5))
+# Exponential link (the default): the intercepts are log rates
+pars_mat <- cbind(beta_0  = log(runif(100, 0.3, 1.2)),
+                  gamma_0 = log(runif(100, 0.05, 0.5)))
 sims <- simulate_tree(pars = pars_mat, max_t = 4, model = "cr",
                       max_tries = 0)
 gam_fit <- train_GAM(sims$simulations, pars_mat, model = "cr")
-predict_survival(gam_fit, data.frame(beta_0  = c(0.5, 1.0),
-                                     gamma_0 = c(0.1, 0.3)))
+predict_survival(gam_fit, data.frame(beta_0  = log(c(0.5, 1.0)),
+                                     gamma_0 = log(c(0.1, 0.3))))
 }

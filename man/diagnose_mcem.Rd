@@ -68,12 +68,12 @@ Importance-sampling diagnostics from the final EM iteration:
 
 \examples{
 set.seed(1)
-tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr  <- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy <- tr$tes
 fit <- estimate_rates(phy, method = "mcem", model = "cr",
-  control = list(lower_bound = c(0, 0), upper_bound = c(2, 1),
+  control = list(lower_bound = c(-3, -5), upper_bound = c(1, 0),
                  max_iter = 10, num_trees = 50))
-diagnose_mcem(fit, lower_bound = c(0, 0), upper_bound = c(2, 1))
+diagnose_mcem(fit, lower_bound = c(-3, -5), upper_bound = c(1, 0))
 }
 \seealso{
 \code{\link{diagnose_cem}}, \code{\link{estimate_rates}}

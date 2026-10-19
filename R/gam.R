@@ -28,12 +28,13 @@
 #' @seealso \code{\link{simulate_tree}}, \code{\link{predict_survival}}
 #' @examples
 #' set.seed(1)
-#' pars_mat <- cbind(beta_0  = runif(100, 0.3, 1.2),
-#'                   gamma_0 = runif(100, 0.05, 0.5))
+#' # Exponential link (the default): the intercepts are log rates
+#' pars_mat <- cbind(beta_0  = log(runif(100, 0.3, 1.2)),
+#'                   gamma_0 = log(runif(100, 0.05, 0.5)))
 #' sims <- simulate_tree(pars = pars_mat, max_t = 4, model = "cr",
 #'                       max_tries = 0)
 #' gam_uni <- train_GAM(sims$simulations, pars_mat, model = "cr")
-#' predict_survival(gam_uni, data.frame(beta_0 = 0.8, gamma_0 = 0.2))
+#' predict_survival(gam_uni, data.frame(beta_0 = log(0.8), gamma_0 = log(0.2)))
 #' @export
 train_GAM <- function(simulations, pars_mat, model = "cr",
                       spline_type = c("univariate", "bivariate"),
@@ -87,13 +88,14 @@ train_GAM <- function(simulations, pars_mat, model = "cr",
 #' @return Numeric vector of predicted survival probabilities.
 #' @examples
 #' set.seed(1)
-#' pars_mat <- cbind(beta_0  = runif(100, 0.3, 1.2),
-#'                   gamma_0 = runif(100, 0.05, 0.5))
+#' # Exponential link (the default): the intercepts are log rates
+#' pars_mat <- cbind(beta_0  = log(runif(100, 0.3, 1.2)),
+#'                   gamma_0 = log(runif(100, 0.05, 0.5)))
 #' sims <- simulate_tree(pars = pars_mat, max_t = 4, model = "cr",
 #'                       max_tries = 0)
 #' gam_fit <- train_GAM(sims$simulations, pars_mat, model = "cr")
-#' predict_survival(gam_fit, data.frame(beta_0  = c(0.5, 1.0),
-#'                                      gamma_0 = c(0.1, 0.3)))
+#' predict_survival(gam_fit, data.frame(beta_0  = log(c(0.5, 1.0)),
+#'                                      gamma_0 = log(c(0.1, 0.3))))
 #' @export
 predict_survival <- function(gam_fit, newpars) {
   nd <- as.data.frame(newpars)
@@ -121,7 +123,16 @@ predict_survival <- function(gam_fit, newpars) {
 #' @param tree A \code{phylo} object or anything accepted by
 #'   \code{\link{estimate_rates}}.
 #' @param model Model specification: \code{"cr"}, \code{"dd"}, etc.
-#' @param link \code{"linear"}, \code{"exponential"}, or \code{"gaussian"}.
+#' @param link Link function: \code{"exponential"} (default),
+#'   \code{rate = exp(eta)}, under which the intercepts \code{beta_0} and
+#'   \code{gamma_0} are log rates; \code{"linear"},
+#'   \code{rate = max(0, eta)}, under which the parameters are rates and a
+#'   covariate can drive a rate to zero, where it is clipped;
+#'   \code{"gaussian"}, \code{beta_0 * exp(-(eta_cov - 1)^2 / 2)}, is
+#'   experimental: it has been used only in a convergence study of the
+#'   surrogate proposal's fixed-point iteration, never in an estimation
+#'   experiment; it is not available for ED or K models, and every model
+#'   with a covariate is fitted on it with the thinning proposal.
 #' @param n_test Number of replicate simulations per candidate point
 #'   to assess feasibility (default 5).
 #' @param bisect_steps Number of bisection steps per axis direction
@@ -146,7 +157,7 @@ predict_survival <- function(gam_fit, newpars) {
 #'   }
 #' @examples
 #' set.seed(1)
-#' tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+#' tr  <- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 #' phy <- tr$tes
 #' # A coarse search without the survival GAM
 #' ab <- auto_bounds(phy, model = "cr", n_test = 3L, bisect_steps = 4L,
@@ -160,7 +171,7 @@ predict_survival <- function(gam_fit, newpars) {
 #' predict_survival(ab2$survival_gam, as.data.frame(t(ab2$center)))
 #' }
 #' @export
-auto_bounds <- function(tree, model = "cr", link = "linear",
+auto_bounds <- function(tree, model = "cr", link = "exponential",
                         n_test = 5L, bisect_steps = 8L,
                         margin = 0.5,
                         tip_range = c(0.1, 10),
@@ -939,7 +950,8 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 #'   \code{"nd"}, \code{"ed"}, \code{"ned"}, \code{"k"}, \code{"nk"}, or a
 #'   binary integer vector (length 3 to 5).
 #' @param sample_size Number of augmented trees per grid point (default 200).
-#' @param link \code{"linear"}, \code{"exponential"}, or \code{"gaussian"}.
+#' @param link \code{"exponential"} (default), \code{"linear"}, or
+#'   \code{"gaussian"} (experimental); see \code{\link{estimate_rates}}.
 #' @param max_missing Maximum missing lineages per augmentation (default 1e4).
 #' @param max_lambda Maximum speciation rate (default 500).
 #' @param maxN Total augmentation attempts per grid point.  If \code{NULL},
@@ -957,7 +969,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 #' @keywords internal
 estimate_likelihood_surface <- function(tree, pars_mat, model = "cr",
                                         sample_size = 200L,
-                                        link = "linear",
+                                        link = "exponential",
                                         max_missing = 1e4,
                                         max_lambda = 500,
                                         maxN = NULL,

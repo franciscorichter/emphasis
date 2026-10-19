@@ -22,7 +22,16 @@
 #' @param model Model specification: \code{"cr"}, \code{"dd"}, \code{"d"},
 #'   \code{"nd"}, \code{"ed"}, \code{"ned"}, \code{"k"}, \code{"nk"}, a formula
 #'   (e.g. \code{~ N + D}, \code{~ N + ED}, \code{~ N + K}), or a binary vector.
-#' @param link \code{"linear"} (default), \code{"exponential"}, or \code{"gaussian"}.
+#' @param link Link function: \code{"exponential"} (default),
+#'   \code{rate = exp(eta)}, under which the intercepts \code{beta_0} and
+#'   \code{gamma_0} are log rates; \code{"linear"},
+#'   \code{rate = max(0, eta)}, under which the parameters are rates and a
+#'   covariate can drive a rate to zero, where it is clipped;
+#'   \code{"gaussian"}, \code{beta_0 * exp(-(eta_cov - 1)^2 / 2)}, is
+#'   experimental: it has been used only in a convergence study of the
+#'   surrogate proposal's fixed-point iteration, never in an estimation
+#'   experiment; it is not available for ED or K models, and every model
+#'   with a covariate is fitted on it with the thinning proposal.
 #' @param stages Character vector of stages to run.  Default
 #'   \code{c("bounds", "gam", "cem", "mcem")}.  Remove stages to skip them,
 #'   e.g. \code{c("bounds", "gam")} for a quick exploratory fit.
@@ -52,11 +61,12 @@
 #'   }
 #' @examples
 #' set.seed(1)
-#' tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+#' tr  <- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 #' phy <- tr$tes
-#' # CEM stage only, with the search box given
+#' # CEM stage only, with the search box given (log rates: the
+#' # exponential link is the default)
 #' res <- emphasis_pipeline(phy, model = "cr", stages = "cem",
-#'   control = list(lower_bound = c(0, 0), upper_bound = c(2, 1),
+#'   control = list(lower_bound = c(-3, -5), upper_bound = c(1, 0),
 #'                  cem = list(max_iter = 3, num_particles = 10)),
 #'   verbose = FALSE)
 #' res
@@ -70,7 +80,7 @@
 #' @export
 emphasis_pipeline <- function(tree,
                               model   = "cr",
-                              link    = "linear",
+                              link    = "exponential",
                               stages  = c("bounds", "gam", "cem", "mcem"),
                               control = list(),
                               verbose = TRUE) {

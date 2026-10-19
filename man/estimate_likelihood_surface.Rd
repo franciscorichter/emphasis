@@ -9,7 +9,7 @@ estimate_likelihood_surface(
   pars_mat,
   model = "cr",
   sample_size = 200L,
-  link = "linear",
+  link = "exponential",
   max_missing = 10000,
   max_lambda = 500,
   maxN = NULL,
@@ -33,7 +33,8 @@ binary integer vector (length 3 to 5).}
 
 \item{sample_size}{Number of augmented trees per grid point (default 200).}
 
-\item{link}{\code{"linear"}, \code{"exponential"}, or \code{"gaussian"}.}
+\item{link}{\code{"exponential"} (default), \code{"linear"}, or
+\code{"gaussian"} (experimental); see \code{\link{estimate_rates}}.}
 
 \item{max_missing}{Maximum missing lineages per augmentation (default 1e4).}
 

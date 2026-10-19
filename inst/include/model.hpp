@@ -1415,10 +1415,16 @@ namespace emphasis {
         alive.push_back({crown_id_a, 0.0, 0.0, true});
         alive.push_back({crown_id_b, 0.0, 0.0, true});
       }
-      auto alive_by_id = [&alive](int id) {
-        if (id == no_parent) return alive.end();
-        return std::find_if(alive.begin(), alive.end(),
-                            [id](const alive_t& l) { return l.id == id; });
+      // The lineage with this id; when several share it (hand-built trees give
+      // every row the same id), the one whose start is nearest `ts`.
+      auto alive_by_id = [&alive](int id, double ts) {
+        auto best = alive.end();
+        if (id == no_parent) return best;
+        for (auto it = alive.begin(); it != alive.end(); ++it) {
+          if (it->id != id) continue;
+          if (best == alive.end() || std::abs(it->ts - ts) < std::abs(best->ts - ts)) best = it;
+        }
+        return best;
       };
       // The first-born entry whose start (or, with `obs`, whose start on the
       // observed tree) is nearest `ts`, optionally among observed lineages only.
@@ -1503,14 +1509,14 @@ namespace emphasis {
         // The alive set after this node's event
         if (model_bin_[2]) {
           if (is_extinction(node)) {
-            auto it = alive_by_id(node.id);
+            auto it = alive_by_id(node.id, node.tip_start);
             if (it == alive.end()) it = alive_nearest(node.tip_start, false, false);
             if (it != alive.end()) alive.erase(it);
           } else if (i != tree.size() - 1) {
             const bool observed = is_tip(node);
             auto it = alive.end();
             if (has_parent(node.parent_id)) {
-              it = alive_by_id(node.parent_id);
+              it = alive_by_id(node.parent_id, node.focal_tip_start);
             } else if (node.focal_tip_start >= 0.0) {
               it = alive_nearest(node.focal_tip_start, topology, false);
             } else if (topology && observed) {

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The covariates and what they mean · emphasis</title>
+<meta name="description" content="The speciation and extinction rates of every emphasis model are links of a linear predictor in up to four covariates, each read on the complete tree, hidden lineages included (the overview, section 2).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../covariates/index.html" aria-current="page">Covariates</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="">
+<header class="page-header">
+<h1>The covariates and what they mean</h1>
+</header>
+
+<p>The speciation and extinction rates of every <code>emphasis</code> model are links of a linear predictor in up to four covariates, each read on the complete tree, hidden lineages included (<a href="../index.html#covariates">the overview, section 2</a>). Each covariate encodes a hypothesis about diversification that the literature has argued for decades. This page introduces the four; each has its own page with the hypothesis, the exact definition, what the sign of its coefficient means and what else produces it, what it cannot be separated from, and what simulation and real phylogenies say.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>covariate</th>
+<th>page</th>
+<th>in one line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="math inline">\(N(t)\)</span></td>
+<td><a href="N.html">N: the number of lineages alive</a></td>
+<td>Clade-level. Asks whether a clade's rates change as it fills: ecological limits and diversity dependence.</td>
+</tr>
+<tr>
+<td><span class="math inline">\(D_s(t)\)</span></td>
+<td><a href="D.html">D: the centred pendant age</a></td>
+<td>Lineage-level, sums to zero. Asks whether a lineage that has gone longer without splitting than its contemporaries splits sooner or later: age-dependent and protracted speciation, and Van Valen's law on extinction.</td>
+</tr>
+<tr>
+<td><span class="math inline">\(\mathrm{ED}_s(t)\)</span>, <span class="math inline">\(\mathrm{ED}^c_s(t)\)</span></td>
+<td><a href="ED.html">ED: evolutionary distinctiveness</a></td>
+<td>Lineage-level, raw or centred. Asks whether a lineage that represents a large share of the clade's phylogenetic diversity speciates or dies at a different rate: the relict question of the EDGE programme.</td>
+</tr>
+<tr>
+<td><span class="math inline">\(K_s(t)\)</span></td>
+<td><a href="K.html">K: the number of ancestral splits</a></td>
+<td>Lineage-level. Asks whether a lineage from a speciation-rich ancestry splits sooner: the heritability of diversification rate that rate-shift models carry as a latent variable.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><span class="math inline">\(N\)</span> says when the clade diversifies; <span class="math inline">\(D\)</span>, ED and <span class="math inline">\(K\)</span> say which of its lineages do. Every covariate a model uses enters both rates, but on the trees analysed so far no extinction coefficient has been read: the reconstructed trees of 50 to 400 tips carry too little information on extinction (see <a href="N.html">N</a>, <a href="ED.html">ED</a>).</p>
+<h2 id="what-each-reads-and-what-each-shares">What each reads and what each shares</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th></th>
+<th><span class="math inline">\(N\)</span></th>
+<th><span class="math inline">\(D\)</span></th>
+<th><span class="math inline">\(\mathrm{ED}\)</span></th>
+<th><span class="math inline">\(K\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>level</td>
+<td>clade</td>
+<td>lineage</td>
+<td>lineage</td>
+<td>lineage</td>
+</tr>
+<tr>
+<td>reads</td>
+<td>the count of lineages alive</td>
+<td>the last edge of the lineage</td>
+<td>every edge on its path, each shared among its descendants</td>
+<td>the number of nodes on its path</td>
+</tr>
+<tr>
+<td>units</td>
+<td>count</td>
+<td>time</td>
+<td>time</td>
+<td>count</td>
+</tr>
+<tr>
+<td>centred</td>
+<td>no</td>
+<td>yes, by definition</td>
+<td>raw no; <span class="math inline">\(\mathrm{ED}^c\)</span> yes</td>
+<td>no</td>
+</tr>
+<tr>
+<td>changes</td>
+<td>at events</td>
+<td>at events, for every lineage</td>
+<td>grows at slope one between events (raw), jumps at events</td>
+<td>at the lineage's own splits</td>
+</tr>
+<tr>
+<td>needs a topology</td>
+<td>no</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>cannot be separated from</td>
+<td>time since the crown, on one tree</td>
+<td>ED (shared pendant edge, within-tree rank correlation 0.57 to 0.74)</td>
+<td><span class="math inline">\(D\)</span>; and <span class="math inline">\(K\)</span> on unbalanced trees</td>
+<td>ED on unbalanced trees (correlation <span class="math inline">\(-0.18\)</span> on simulated, <span class="math inline">\(-0.44\)</span> median on family trees); time, through its clade mean</td>
+</tr>
+<tr>
+<td>simulation</td>
+<td>estimated against an exact maximum; <code>dd</code> chosen on 0.90 of its own trees at 100 tips</td>
+<td>sign recovered, size short on every fit made before the likelihood fix of <code>4e0b9dd</code>; not yet remeasured</td>
+<td>sign on at least 0.95 of trees; selection over <code>dd</code> needs an effect of 0.35 to 0.60 of the speciation rate</td>
+<td>recovered at 0.92 to 0.95 by fitting, 0.65 to 0.76 on budget-stopped ladder fits; <code>nk</code> chosen on 11 to 15 of 20 of its trees</td>
+</tr>
+<tr>
+<td>real trees</td>
+<td><code>dd</code> leads <code>cr</code> in 33 of 47 families, <span class="math inline">\(\beta_N &lt; 0\)</span> in all 47</td>
+<td>no sign (factor 0.92, 18 of 59 above 1), on the old likelihood</td>
+<td>factor below 1 on all 46 read trees that chose <code>ned</code>, median 0.49</td>
+<td>factor above 1 on all 54 read trees that chose <code>nk</code>, median 1.63</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The within-tree correlations are from <a href="../experiments/E39.html">E39</a>; the simulation and real-tree numbers are from the experiments each page cites, summarised on <a href="../established.html">What is established</a> and <a href="../real-phylogenies.html">Real phylogenies</a>.</p>
+<h2 id="the-two-pairs-the-trees-do-not-separate">The two pairs the trees do not separate</h2>
+<p><strong><span class="math inline">\(D\)</span> and ED share the pendant edge.</strong> <span class="math inline">\(\mathrm{ED}_s\)</span> is the pendant age <span class="math inline">\(E_s\)</span> plus the lineage's shares of the branches above it, and <span class="math inline">\(D_s\)</span> is <span class="math inline">\(E_s\)</span> centred. On simulated trees of 100 to 400 tips the covariate path does not apportion an effect between them, and on 144 of 170 real trees it keeps both together. A comparison of <code>nd</code> against <code>ned</code> on one clade is a comparison of two readings of the same edge.</p>
+<p><strong><span class="math inline">\(K\)</span> and ED on unbalanced trees.</strong> A lineage deep in a radiation has many ancestral splits and a small share of every branch above it; a lineage alone on a long branch has few and a large share. On the balanced trees the simulators produce, the two are nearly independent; on real family trees, which are much less balanced, they rank the lineages in partly the same order, and more so the less balanced the tree.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E39-covariates.png" alt="Within-tree rank correlations between the covariates on simulated and real trees, and the ED-K correlation against imbalance" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Top: each pair's Spearman correlation within one tree over the lineages alive at half, three quarters and all of the crown age, one dot per tree, on 30 simulated diversity-dependent clades (complete and reconstructed) and the 47 family trees. Bottom: the ED-K correlation against the tree's Colless imbalance. From <a href="../experiments/E39.html">E39</a>.</figcaption>
+</figure>
+<p>The models are hypotheses about which lineage splits and when, not about why. Each page names, beside the mechanism a sign is read as, at least one other process that produces the same sign.</p>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 1.0.0. Francisco Richter, Università della Svizzera italiana.</p>
+</footer>
+</body>
+</html>

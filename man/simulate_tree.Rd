@@ -13,7 +13,7 @@ simulate_tree(
   max_tries = 1,
   useDDD = TRUE,
   n_trees = 1L,
-  link = "linear",
+  link = "exponential",
   max_missing = 10000,
   max_lambda = 500,
   maxN = NULL,
@@ -57,8 +57,16 @@ Default \code{TRUE}.}
 \item{n_trees}{Number of augmented trees to draw (augmentation only).
 Default \code{1L}.}
 
-\item{link}{Link function: \code{"linear"} (default),
-\code{"exponential"}, or \code{"gaussian"}.}
+\item{link}{Link function: \code{"exponential"} (default),
+\code{rate = exp(eta)}, under which the intercepts \code{beta_0} and
+\code{gamma_0} are log rates; \code{"linear"},
+\code{rate = max(0, eta)}, under which the parameters are rates and a
+covariate can drive a rate to zero, where it is clipped;
+\code{"gaussian"}, \code{beta_0 * exp(-(eta_cov - 1)^2 / 2)}, is
+experimental: it has been used only in a convergence study of the
+surrogate proposal's fixed-point iteration, never in an estimation
+experiment; it is not available for ED or K models, and every model
+with a covariate is fitted on it with the thinning proposal.}
 
 \item{max_missing}{Maximum extinct lineages per augmented tree.
 Default \code{1e4}.}
@@ -208,23 +216,29 @@ When \code{n_trees > 1}:
 }
 
 \examples{
-# Forward simulation
+# Forward simulation.  Under the exponential link (the default) the
+# intercepts are log rates: speciation 0.5, extinction 0.1
 set.seed(1)
-tr <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr <- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 tr$status
 tr$survival_prob
 
 # Batch: 20 constant-rate simulations
-pm <- cbind(beta_0 = runif(20, 0.3, 0.8), gamma_0 = runif(20, 0.05, 0.3))
+pm <- cbind(beta_0  = log(runif(20, 0.3, 0.8)),
+            gamma_0 = log(runif(20, 0.05, 0.3)))
 sims <- simulate_tree(pars = pm, max_t = 4, model = "cr")
 sims$survival_prob
 
 # Augmentation of the extant tree
-aug <- simulate_tree(tree = tr, pars = c(0.5, 0.1), model = "cr")
+aug <- simulate_tree(tree = tr, pars = log(c(0.5, 0.1)), model = "cr")
 aug$log_q
 
 # Many augmented trees
-augN <- simulate_tree(tree = tr, pars = c(0.5, 0.1), model = "cr",
+augN <- simulate_tree(tree = tr, pars = log(c(0.5, 0.1)), model = "cr",
                       n_trees = 20L)
 length(augN$log_q)
+
+# The linear link: the parameters are the rates themselves
+tr_lin <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr",
+                        link = "linear")
 }

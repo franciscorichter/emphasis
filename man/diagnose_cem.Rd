@@ -98,15 +98,16 @@ C++ format).
 
 \examples{
 set.seed(1)
-tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr  <- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy <- tr$tes
-lb <- c(0, 0)
-ub <- c(2, 1)
+# Exponential link (the default): the intercepts are log rates
+lb <- c(-3, -5)
+ub <- c(1, 0)
 fit <- estimate_rates(phy, method = "cem", model = "cr",
   control = list(lower_bound = lb, upper_bound = ub,
                  max_iter = 5, num_particles = 20))
 diag <- diagnose_cem(fit, lower_bound = lb, upper_bound = ub,
-                     true_pars = c(0.5, 0.1))
+                     true_pars = log(c(0.5, 0.1)))
 diag$convergence
 }
 \seealso{

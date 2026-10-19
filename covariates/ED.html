@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ED: evolutionary distinctiveness, raw and centred · emphasis</title>
+<meta name="description" content="In one line.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../covariates/index.html" aria-current="page">Covariates</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>ED: evolutionary distinctiveness, raw and centred</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#the-question-in-the-literature">The question in the literature</a>
+</li>
+<li><a href="#what-the-package-computes">What the package computes</a>
+</li>
+<li><a href="#what-the-sign-of-a-coefficient-means">What the sign of a coefficient means</a>
+</li>
+<li><a href="#what-ed-cannot-be-separated-from">What ED cannot be separated from</a>
+</li>
+<li><a href="#what-simulation-says">What simulation says</a>
+</li>
+<li><a href="#what-real-phylogenies-say">What real phylogenies say</a>
+</li>
+<li><a href="#references">References</a>
+</li>
+</ol>
+</nav>
+<p><strong>In one line.</strong> <span class="math inline">\(\mathrm{ED}_s(t)\)</span> is the share of the clade's phylogenetic diversity that lineage <span class="math inline">\(s\)</span> alone represents, and its coefficient asks whether being distinct changes what a lineage does next: the relict question of the EDGE programme turned round.</p>
+<p><span class="math inline">\(\mathrm{ED}\)</span> is a lineage-level covariate read along the whole path from the crown to the lineage. The package offers it raw, in <code>ed</code> and <code>ned</code>, and centred on its clade mean, in <code>edc</code> and <code>nedc</code>. It shares its last term, the pendant edge, with <a href="D.html">D</a>, and on unbalanced trees it ranks lineages in partly the same order as <a href="K.html">K</a>; the <a href="index.html">covariates page</a> compares the four.</p>
+<h2 id="the-question-in-the-literature">The question in the literature</h2>
+<p>Evolutionary distinctiveness was built for conservation, not for diversification. Vane-Wright et al. (1991) asked which species to protect when not all can be, and Faith (1992) defined phylogenetic diversity (PD) as the total branch length a set of species spans. The per-species apportionment of that length followed, as equal splits and as fair proportion (Redding and Mooers 2006; Isaac et al. 2007); fair proportion is the ED of the EDGE lists. It divides every branch on a species' path from the root equally among the living species below it, so a species with few close relatives, or a long terminal branch, carries a large share, and the shares sum to Faith's PD. Redding et al. (2008) showed that ranking by it captures more PD than the same number of random species, and Steel et al. (2007) gave the expected contribution of a species under extinction risk. Redding et al. (2014) compared eleven isolation metrics; Tucker et al. (2017) placed them in a common framework; Gumbs et al. (2023) revised the EDGE protocol on the same quantity. In birds, Jetz et al. (2014) found ED distributed very unevenly over the tree.</p>
+<p>Reading ED as a diversification covariate asks not what would be lost if a distinct lineage died, but whether being distinct changes the lineage's rates. Two positions exist under the names <em>relict</em> and <em>living fossil</em>. On the dead-end view a distinct lineage is the survivor of a group that has been losing members, alone because its relatives are gone and on the way out itself; Purvis et al. (2000) and Heard and Mooers (2000) showed that extinction concentrated on such lineages removes more history than random extinction would. On the panchronic view a distinct lineage persists through epochs at low rates of both speciation and extinction. Bennett et al. (2017) simulated trees in which both rates were functions of tip ED with random signs and found that the trees closest in shape to empirical ones were those in which the most distinct tips had lower rates of both: the panchronic reading fitted and the dead-end one did not. Grandcolas et al. (2014) argued that the relict concept conflates a phylogenetic, a biogeographic and a morphological property. The published model closest to the ED models is that of Qin et al. (2025), in which speciation depends on evolutionary relatedness measured at scales from the nearest neighbour to the whole clade; it is simulation-only, with a neural-network estimator proposed since (Qin et al. 2026).</p>
+<h2 id="what-the-package-computes">What the package computes</h2>
+<p>Fair proportion on the complete tree at time <span class="math inline">\(t\)</span>:</p>
+<p><span class="math display">\[
+\mathrm{ED}_s(t) = \sum_{b \succeq s} \frac{\ell_b(t)}{n_b(t)}, \qquad \sum_{s \in A(t)} \mathrm{ED}_s(t) = \mathrm{PD}(t),
+\]</span></p>
+<p>where <span class="math inline">\(b\)</span> runs over the branches from the crown to <span class="math inline">\(s\)</span>, <span class="math inline">\(\ell_b(t)\)</span> is the length of branch <span class="math inline">\(b\)</span> up to <span class="math inline">\(t\)</span> and <span class="math inline">\(n_b(t)\)</span> the number of lineages alive at <span class="math inline">\(t\)</span> that descend from it. The last branch on the path has one descendant, <span class="math inline">\(s\)</span> itself, and contributes the pendant age <span class="math inline">\(E_s(t)\)</span>; the rest is the ancestral share <span class="math inline">\(A_s = \mathrm{ED}_s - E_s\)</span>. ED has units of time.</p>
+<p><strong>When it changes.</strong> Between two events every ancestral share is constant and only the pendant edge grows, so raw <span class="math inline">\(\mathrm{ED}_s(u) = c_s + (u - \tau_s)\)</span> rises at slope one for every lineage alive, with <span class="math inline">\(c_s\)</span> the constant that one pass over the tree returns (<code>inst/include/ed_covariate.hpp</code>, shared by the simulator and the likelihood). At an event it jumps. A split anywhere below a branch <span class="math inline">\(b\)</span> raises <span class="math inline">\(n_b\)</span> and lowers the share of <span class="math inline">\(b\)</span> for every relative that descends from it; a death lowers <span class="math inline">\(n_b\)</span> and raises those shares. The lineage that splits loses most: its former pendant edge is now shared by two. Hidden events count in both directions, so an extinct sister lowers a living lineage's ED while it lives and raises it when it dies.</p>
+<p><strong>Raw and centred.</strong> The clade mean of raw ED is <span class="math inline">\(\mathrm{PD}/N\)</span>, phylogenetic diversity per lineage, a clade-level quantity that rises with the clade's age and falls with its diversity. In <code>ed</code> and <code>ned</code> the coefficient <span class="math inline">\(\beta_{ED}\)</span> therefore carries a clade-level component and a within-clade contrast at once. The centred covariate</p>
+<p><span class="math display">\[
+\mathrm{ED}^c_s(t) = \mathrm{ED}_s(t) - \frac{\mathrm{PD}(t)}{N(t)}
+\]</span></p>
+<p>sums to zero and keeps the contrast only; because every <span class="math inline">\(\mathrm{ED}_s\)</span> grows at the same unit rate, <span class="math inline">\(\mathrm{ED}^c_s\)</span> is constant on a segment. <code>edc</code> reduces to <code>cr</code> on a clade whose lineages are equally distinct, and <code>nedc</code> to <code>dd</code> at <span class="math inline">\(\beta_{ED} = 0\)</span>. An ED model needs a <code>phylo</code> object and refuses a bare vector of branching times.</p>
+<h2 id="what-the-sign-of-a-coefficient-means">What the sign of a coefficient means</h2>
+<p><strong>Speciation.</strong> A negative <span class="math inline">\(\beta_{ED}\)</span> says that distinct lineages speciate less: the panchronic direction on the speciation side, persistence at a low rate. A positive <span class="math inline">\(\beta_{ED}\)</span> says that distinct lineages speciate more, the direction the relatedness mechanism of Qin et al. (2025) predicts if competition among close relatives is what limits speciation, since a lineage with few close relatives has less of it; it is also the direction in which isolation in the tree stands for unoccupied space around the lineage.</p>
+<p><strong>Extinction.</strong> A negative <span class="math inline">\(\gamma_{ED}\)</span> is the panchronic view, distinct lineages persisting; a positive one is the dead-end view.</p>
+<p><strong>What else produces the same sign.</strong> ED is retrospective. At the tips, fair proportion and equal splits are close to the inverse of the DR statistic, which Title and Rabosky (2019) showed tracks the speciation rate of a lineage's recent ancestry. A lineage is distinct because its ancestry speciated slowly, and if rates are inherited its ancestry's slow rate is its own: a negative <span class="math inline">\(\beta_{ED}\)</span> is then rate persistence, not an effect of distinctiveness, and the two are the same statement about the tree with different words for the cause. On raw ED, the clade-level part <span class="math inline">\(\mathrm{PD}/N\)</span> lets a fit match a time trend in the clade's rate through <span class="math inline">\(\beta_{ED}\)</span>, which is the one way a tree with no lineage-level effect can produce a spurious raw-ED selection. Because ED is read on the complete tree, its value depends on the extinction rate through the hidden lineages drawn, so the ED coefficients and the extinction rate are not independent in a fit.</p>
+<h2 id="what-ed-cannot-be-separated-from">What ED cannot be separated from</h2>
+<p><strong>D, through the shared pendant edge.</strong> <span class="math inline">\(\mathrm{ED}_s = E_s + A_s\)</span>, and <span class="math inline">\(D_s\)</span> is <span class="math inline">\(E_s\)</span> centred. Within one tree over the lineages alive at three times, the rank correlation of <span class="math inline">\(D\)</span> and ED is 0.57 on simulated <code>dd</code> clades, 0.62 on the same clades reconstructed and 0.74 on the 47 family trees (<a href="../experiments/E39.html">E39</a>); ED and the nearest-neighbour distance correlate at 0.87 to 0.88. On the covariate path a generator with both effects returns <span class="math inline">\(D\)</span> alone on 0.80 of trees at 100 tips (<a href="../experiments/E20.html">E20</a>), and on <code>ned</code> trees <span class="math inline">\(D\)</span> replaces ED as the first covariate as trees grow, 19 of 20 at 400 tips (<a href="../experiments/E22.html">E22</a>). The question that would separate them, whether the ancestral share <span class="math inline">\(A_s\)</span> matters, needs a covariate the package does not offer.</p>
+<p><strong>K, on unbalanced trees.</strong> A lineage deep in a radiation has many ancestral splits and a small share of every branch it sits on; a lineage alone on a long branch has few splits and a large share. On simulated trees the two are nearly separate within a tree (median ED-K rank correlation <span class="math inline">\(-0.11\)</span> complete, <span class="math inline">\(-0.18\)</span> reconstructed), on the 47 family trees they are not (median <span class="math inline">\(-0.44\)</span>, as far as <span class="math inline">\(-0.84\)</span>), and the tie grows with imbalance: across families the rank correlation of the Colless index with the ED-K correlation is <span class="math inline">\(-0.51\)</span> (<a href="../experiments/E39.html">E39</a>). On trees generated with a <span class="math inline">\(K\)</span> effect, ED enters the path first, on every tree, carrying the <span class="math inline">\(K\)</span> signal with the sign reversed (<a href="../experiments/E21.html">E21</a>).</p>
+<p><strong>Its own intercept.</strong> Raw ED grows with time like its clade mean, so on a single tree <span class="math inline">\(\beta_0\)</span> and <span class="math inline">\(\beta_{ED}\)</span> lie on a ridge. On complete 100-tip trees, where nothing is hidden, the per-tree maximum places them along it (<span class="math inline">\(\beta_{ED}\)</span> at 0.81 and 1.22 of its value at <span class="math inline">\(\mp 0.35\)</span>), while the pooled maximum over 261 and 348 trees returns 1.005 and 1.002; centring removes the ridge, and <code>edc</code> and <code>nedc</code> return 1.04, 1.07, 1.03 and 1.01 (<a href="../experiments/E44.html">E44</a>).</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E12-power.png" alt="Power to select the ED term over dd, by effect size and tree size" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Fraction of 20 trees on which <code>ned</code> beats <code>dd</code> by more than 2 AIC, at turnover 0.10 on the linear link, by the ED effect as a fraction of the speciation rate per clade-mean unit of ED. Every <code>ned</code> fit at 200 and 400 tips ended on its clock, so the curves are floors. From <a href="../experiments/E12.html">E12</a>.</figcaption>
+</figure>
+<h2 id="what-simulation-says">What simulation says</h2>
+<p>ED is the lineage-level coefficient the estimator recovers best.</p>
+<ul>
+<li><strong>Sign.</strong> The sign of <span class="math inline">\(\beta_{ED}\)</span> is recovered on at least 0.95 of trees at every effect of 0.15 of the speciation rate and stronger, at 100, 200 and 400 tips (<a href="../experiments/E12.html">E12</a>).</li>
+<li><strong>Size.</strong> On unfinished fits the size is attenuated (0.69, 0.40 and 0.19 of its value at <span class="math inline">\(-0.60\)</span> from 100 to 400 tips) and comes back with more iterations (0.96, 0.67 and 0.72 at <span class="math inline">\(-0.35\)</span> with 300 iterations) (<a href="../experiments/E12.html">E12</a>); on the 7 fits that met the stopping rule at 200 tips it is 1.02 (<a href="../experiments/E29.html">E29</a>). Under the exact simulator, <code>ed</code> alone returns 0.85 and 1.10 at <span class="math inline">\(\mp 0.35\)</span> (<a href="../experiments/E24.html">E24</a>, part b), and <code>edc</code> 0.96 and 1.02 with the right sign on every tree (<a href="../experiments/E24.html">E24</a>).</li>
+<li><strong>Selection.</strong> Selecting <code>ned</code> over <code>dd</code> on 0.80 of trees needs an effect between <span class="math inline">\(-0.35\)</span> and <span class="math inline">\(-0.60\)</span> of the speciation rate, at 100 to 400 tips and at turnover 0.10 and 0.25 (Figure 1; <a href="../experiments/E12.html">E12</a>, <a href="../experiments/E16.html">E16</a>). At <span class="math inline">\(-0.15\)</span> selection is 0.05 to 0.55, and centring does not lift it (0.10 to 0.20; <a href="../experiments/E18.html">E18</a>). <code>edc</code> is selected over <code>cr</code> on 0.95 and 0.85 of trees at <span class="math inline">\(\mp 0.35\)</span> (<a href="../experiments/E24.html">E24</a>). In the one-call ladder, read by the parsimonious rule, <code>ned</code> is chosen on at most 2 of 20 of its own trees in any condition of <a href="../experiments/E27.html">E27</a>, although its coefficient is recovered at 0.91 to 0.98 in three of them: the two extra parameters are not paid for at these sizes.</li>
+<li><strong>False positives.</strong> On trees with no lineage-level effect, <code>ned</code> is selected on 2 of 60 (<a href="../experiments/E12.html">E12</a>) and 0 of 15 (<a href="../experiments/E16.html">E16</a>); <code>edc</code>, <code>nedc</code> and <code>ed</code> on 0 to 1 of 20 (<a href="../experiments/E18.html">E18</a>, <a href="../experiments/E24.html">E24</a>); on trees from another group's simulator, on 0.05 and 0.00 (<a href="../experiments/E11.html">E11</a>).</li>
+<li><strong>Where it breaks.</strong> At turnover 0.5 the <code>ned</code> estimates are biased by 1 to 4 standard deviations and trees with no ED effect select <code>ned</code> on up to 0.9 of them; at <span class="math inline">\(\rho = 0.7\)</span> the effective sample falls below 10 outside the weakest effects (<a href="../experiments/E2.html">E2</a>).</li>
+<li><strong>Extinction.</strong> The extinction slope on ED, generated at zero, is fitted at <span class="math inline">\(-0.25\)</span> to <span class="math inline">\(-0.73\)</span> per unit in every <code>ed</code> cell (<a href="../experiments/E24.html">E24</a>), and at 200 tips it is returned on the lower limit of the box whatever its generating value (<a href="../experiments/E29.html">E29</a>, <a href="../experiments/E32.html">E32</a>). Where the generating brake on speciation is strong, the fit adds a brake on extinction the generator did not have, so a negative <span class="math inline">\(\gamma_{ED}\)</span> on a real clade has a known way of arising from nothing.</li>
+</ul>
+<h2 id="what-real-phylogenies-say">What real phylogenies say</h2>
+<p><strong>The 47 family trees.</strong> <code>ned</code> leads <code>dd</code> by more than 2 AIC in 15 families and is the supported choice in 9 (<a href="../experiments/E26.html">E26</a>, <a href="../experiments/E28.html">E28</a>). <span class="math inline">\(\beta_{ED}\)</span> is negative in 30 of the 32 <code>ned</code> fits with at least 10 effective draws, with a median speciation factor of 0.68 per standard deviation of ED (0.33 to 1.08). Seven of the nine <code>ned</code> families have a <span class="math inline">\(\gamma\)</span> statistic between <span class="math inline">\(-4.6\)</span> and <span class="math inline">\(-7.7\)</span>, below every family in which <code>nk</code> is chosen. In the New World warblers (Parulidae) <code>ned</code> leads <code>dd</code> by 24 AIC with a factor of 0.40: the fast lineages are the yellowthroats of <em>Geothlypis</em> and part of <em>Setophaga</em>, the slowest the ovenbird, the worm-eating warbler and the black-and-white warbler, each the only species of its genus on a branch that reaches back near the base of the family. In the starlings (Sturnidae, 15 AIC, 0.45) the fast lineages are 18 of the 21 species of <em>Aplonis</em>, spread over the islands from the Sundas to Polynesia. Where the ladder chooses <code>ned</code>, the covariate path keeps ED in all 9 families.</p>
+<p><strong>The 170 bird and mammal trees.</strong> <code>ned</code> is the parsimonious choice on 51 trees. The ED factor is below 1 on all 46 readable chosen fits, median 0.49 per standard deviation, and on 141 of 145 readable <code>ned</code> fits whether chosen or not, median 0.62. 31 of those <span class="math inline">\(\beta_{ED}\)</span> values end on the lower edge of the box, so their factors are the box's bound and not the tree's. The ED factor falls with the tree's Colless imbalance (rank correlation <span class="math inline">\(-0.57\)</span> over 145 fits). On pairs of trees of the same taxon, a clade cut from a class tree and its family tree, the factor is below 1 on both members on 10 of 10 (<a href="../experiments/E40.html">E40</a>, <a href="../real-phylogenies.html">Real phylogenies</a>).</p>
+<p><strong>How to read it.</strong> Distinct lineages speciate less, wherever the model is chosen. That is the sign the EDGE literature assumes when it treats the distinct species of a clade as relicts, and also the sign of an inherited low rate and of the <span class="math inline">\(K\)</span> effect read from the other end of the tree: where both <code>ned</code> and <code>nk</code> rest on at least 10 effective draws on a family, <code>nk</code> has the lower AIC in 19 of 25, by a median 3.6 units, and the lineages a distinctiveness ranking puts first (the ovenbird, the bobolink, the crested jay) are those the fitted models give the lowest speciation rates.</p>
+<p><strong>Not yet read.</strong></p>
+<ul>
+<li>The extinction side. On every real tree the ED slope on extinction sits on a box edge, and the exact constant-rate likelihood excludes zero extinction on none of the 16 smallest trees tested (<a href="../experiments/E41.html">E41</a>), so the half of the panchronic hypothesis that separates it from rate persistence, lower extinction, is not answered by these phylogenies.</li>
+<li>An alternative generator. On three bird families the <code>ned</code> margin lay inside the central 90% of each family's own fitted-model bootstrap (<a href="../experiments/E17.html">E17</a>), which a model that fits the tree does by construction; a bootstrap from a fitted <code>nk</code> or <code>nd</code> on the same families has not been run.</li>
+<li>Raw against centred. The real-tree fits are raw <code>ned</code>; the ridge of <a href="../experiments/E44.html">E44</a> argues for quoting <code>nedc</code>, which has not been refitted on the real trees. The selection floors above come from clock-limited, unconditioned cells, which the conditioned estimability study (E46) replaces.</li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li>Vane-Wright R.I., Humphries C.J. and Williams P.H. (1991). What to protect? Systematics and the agony of choice. <em>Biological Conservation</em> 55, 235–254. <a href="https://doi.org/10.1016/0006-3207(91)90030-D">doi:10.1016/0006-3207(91)90030-D</a></li>
+<li>Faith D.P. (1992). Conservation evaluation and phylogenetic diversity. <em>Biological Conservation</em> 61, 1–10. <a href="https://doi.org/10.1016/0006-3207(92)91201-3">doi:10.1016/0006-3207(92)91201-3</a></li>
+<li>Redding D.W. and Mooers A. (2006). Incorporating evolutionary measures into conservation prioritization. <em>Conservation Biology</em> 20, 1670–1678. <a href="https://doi.org/10.1111/j.1523-1739.2006.00555.x">doi:10.1111/j.1523-1739.2006.00555.x</a></li>
+<li>Isaac N.J.B. et al. (2007). Mammals on the EDGE: conservation priorities based on threat and phylogeny. <em>PLoS ONE</em> 2, e296. <a href="https://doi.org/10.1371/journal.pone.0000296">doi:10.1371/journal.pone.0000296</a></li>
+<li>Redding D.W. et al. (2008). Evolutionarily distinctive species often capture more phylogenetic diversity than expected. <em>Journal of Theoretical Biology</em> 251, 606–615. <a href="https://doi.org/10.1016/j.jtbi.2007.12.006">doi:10.1016/j.jtbi.2007.12.006</a></li>
+<li>Steel M., Mimoto A. and Mooers A. (2007). Hedging our bets: the expected contribution of species to future phylogenetic diversity. <em>Evolutionary Bioinformatics</em> 3. <a href="https://doi.org/10.1177/117693430700300024">doi:10.1177/117693430700300024</a></li>
+<li>Redding D.W., Mazel F. and Mooers A. (2014). Measuring evolutionary isolation for conservation. <em>PLoS ONE</em> 9, e113490. <a href="https://doi.org/10.1371/journal.pone.0113490">doi:10.1371/journal.pone.0113490</a></li>
+<li>Tucker C.M. et al. (2017). A guide to phylogenetic metrics for conservation, community ecology and macroecology. <em>Biological Reviews</em> 92, 698–715. <a href="https://doi.org/10.1111/brv.12252">doi:10.1111/brv.12252</a></li>
+<li>Gumbs R. et al. (2023). The EDGE2 protocol: advancing the prioritisation of evolutionarily distinct and globally endangered species for practical conservation action. <em>PLOS Biology</em> 21, e3001991. <a href="https://doi.org/10.1371/journal.pbio.3001991">doi:10.1371/journal.pbio.3001991</a></li>
+<li>Jetz W. et al. (2014). Global distribution and conservation of evolutionary distinctness in birds. <em>Current Biology</em> 24, 919–930. <a href="https://doi.org/10.1016/j.cub.2014.03.011">doi:10.1016/j.cub.2014.03.011</a></li>
+<li>Purvis A., Agapow P., Gittleman J.L. and Mace G.M. (2000). Nonrandom extinction and the loss of evolutionary history. <em>Science</em> 288, 328–330. <a href="https://doi.org/10.1126/science.288.5464.328">doi:10.1126/science.288.5464.328</a></li>
+<li>Heard S.B. and Mooers A. (2000). Phylogenetically patterned speciation rates and extinction risks change the loss of evolutionary history during extinctions. <em>Proceedings of the Royal Society of London B: Biological Sciences</em> 267, 613–620. <a href="https://doi.org/10.1098/rspb.2000.1046">doi:10.1098/rspb.2000.1046</a></li>
+<li>Bennett D.J., Sutton M.D. and Turvey S.T. (2017). Evolutionarily distinct "living fossils" require both lower speciation and lower extinction rates. <em>Paleobiology</em> 43, 34–48. <a href="https://doi.org/10.1017/pab.2016.36">doi:10.1017/pab.2016.36</a></li>
+<li>Grandcolas P., Nattier R. and Trewick S. (2014). Relict species: a relict concept? <em>Trends in Ecology &amp; Evolution</em> 29, 655–663. <a href="https://doi.org/10.1016/j.tree.2014.10.002">doi:10.1016/j.tree.2014.10.002</a></li>
+<li>Qin T., Valente L. and Etienne R.S. (2025). Impact of evolutionary relatedness on species diversification and tree shape. <em>Journal of Theoretical Biology</em> 598, 111992. <a href="https://doi.org/10.1016/j.jtbi.2024.111992">doi:10.1016/j.jtbi.2024.111992</a></li>
+<li>Qin T., van Benthem K., Valente L. and Etienne R.S. (2026). Identifying evolutionary relatedness effects on diversification from phylogenies using neural networks. <em>bioRxiv preprint</em>. <a href="https://doi.org/10.64898/2026.01.12.699140">doi:10.64898/2026.01.12.699140</a></li>
+<li>Title P.O. and Rabosky D.L. (2019). Tip rates, phylogenies and diversification: what are we estimating, and how good are the estimates? <em>Methods in Ecology and Evolution</em> 10, 821–834. <a href="https://doi.org/10.1111/2041-210X.13153">doi:10.1111/2041-210X.13153</a></li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 1.0.0. Francisco Richter, Università della Svizzera italiana.</p>
+</footer>
+</body>
+</html>

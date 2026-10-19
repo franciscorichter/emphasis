@@ -114,19 +114,19 @@ test_that("estimate_rates validates rho for every method (H79)", {
                                     upper_bound = c(3, 3), num_threads = 1L), list(...))
   for (m in c("mcem", "cem", "gam"))
     expect_error(estimate_rates(brts16, method = m, model = "cr",
-                                init_pars = c(0.4, 0.2), control = ctrl(80)),
+                                init_pars = c(0.4, 0.2), control = ctrl(80), link = "linear"),
                  "must be a single number in \\(0, 1\\]")
   expect_error(estimate_rates(brts16, method = "mcem", model = "cr",
-                              init_pars = c(0.4, 0.2), control = ctrl(-1)),
+                              init_pars = c(0.4, 0.2), control = ctrl(-1), link = "linear"),
                "must be a single number in \\(0, 1\\]")
   expect_error(estimate_rates(brts16, method = "mcem", model = "cr",
-                              init_pars = c(0.4, 0.2), control = ctrl(0)),
+                              init_pars = c(0.4, 0.2), control = ctrl(0), link = "linear"),
                "must be a single number in \\(0, 1\\]")
   # The check runs after the control merge, so it sees the user's value and
   # not the default; and it runs before the bound check, which is why an
   # otherwise-invalid call still reports rho.
   expect_error(estimate_rates(brts16, method = "mcem", model = "cr",
-                              control = list(rho = 2)),
+                              control = list(rho = 2), link = "linear"),
                "must be a single number in \\(0, 1\\]")
 })
 
@@ -174,7 +174,7 @@ test_that("estimate_rates(rho < 1) keeps the BDI sampler and says nothing (H2)",
                num_threads = 1L, lower_bound = c(1e-3, 0), upper_bound = c(3, 3))
   expect_no_message(
     fit <- estimate_rates(brts16, method = "mcem", model = "cr",
-                          init_pars = c(0.4, 0.2), control = ctrl))
+                          init_pars = c(0.4, 0.2), control = ctrl, link = "linear"))
   # The trace is the BDI driver's (n_valid and rejected_max_missing); the
   # thinning driver writes maxN and four rejection channels instead.
   expect_true(all(c("n_valid", "rejected_max_missing") %in% names(fit$details$mcem)))
@@ -185,7 +185,7 @@ test_that("estimate_rates(rho < 1) keeps the BDI sampler and says nothing (H2)",
   expect_no_message(
     fit1 <- estimate_rates(brts16, method = "mcem", model = "cr",
                            init_pars = c(0.4, 0.2),
-                           control = utils::modifyList(ctrl, list(rho = 1))))
+                           control = utils::modifyList(ctrl, list(rho = 1)), link = "linear"))
   expect_true(all(c("n_valid", "rejected_max_missing") %in% names(fit1$details$mcem)))
   expect_equal(fit1$rho, 1)
 })
@@ -225,7 +225,7 @@ test_that("a cr fit at rho = 0.5 lands on the rho = 0.5 MLE (H2 gate)", {
     brts16, method = "mcem", model = "cr", init_pars = c(0.4, 0.2),
     control = list(rho = 0.5, sampling = "bdi", sample_size = 200L,
                    max_iter = 25L, max_time = 600, num_threads = 1L,
-                   lower_bound = c(1e-3, 0), upper_bound = c(3, 3))))
+                   lower_bound = c(1e-3, 0), upper_bound = c(3, 3)), link = "linear"))
   lam <- unname(fit$pars[1L])
   # Measured before the fix (dev/audit/checks/H2.R): 0.4727, 0.4785, 0.4713 —
   # the rho = 1 MLE.  The fallback to thinning gave 0.6782 to 0.7071.  The BDI
@@ -279,7 +279,7 @@ test_that("emphasis_pipeline inherits top-level rho into its stages (H29)", {
   # And the pipeline validates rho before any stage runs.
   expect_error(emphasis_pipeline(brts16, model = "cr", stages = "mcem",
                                  control = utils::modifyList(base, list(rho = 2)),
-                                 verbose = FALSE),
+                                 verbose = FALSE, link = "linear"),
                "must be a single number in \\(0, 1\\]")
 })
 
@@ -290,7 +290,7 @@ test_that("rho is reported only when it is below 1", {
                         control = list(sample_size = 20L, max_iter = 2L,
                                        num_threads = 1L,
                                        lower_bound = c(1e-3, 0),
-                                       upper_bound = c(3, 3)))
+                                       upper_bound = c(3, 3)), link = "linear")
   expect_false(any(grepl("rho", capture.output(print(fit)))))
   fit$rho <- 0.5
   expect_match(paste(capture.output(print(fit)), collapse = "\n"),

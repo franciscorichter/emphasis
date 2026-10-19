@@ -106,7 +106,7 @@ test_that("set.seed fixes em_cpp", {
 test_that("set.seed fixes the forward simulator", {
   sim <- function() simulate_tree(pars = c(0.6, 0.1), max_t = 3,
                                   max_tries = 50, model = "cr",
-                                  useDDD = FALSE)
+                                  useDDD = FALSE, link = "linear")
   set.seed(1); a <- sim()
   set.seed(1); b <- sim()
   set.seed(7); c <- sim()
@@ -131,7 +131,7 @@ test_that("a forward simulation's retries are distinct trees", {
   set.seed(3)
   sizes <- vapply(seq_len(8L), function(i)
     NROW(simulate_tree(pars = c(0.3, 0.25), max_t = 4, max_tries = 20,
-                       model = "cr", useDDD = FALSE)$L), 0L)
+                       model = "cr", useDDD = FALSE, link = "linear")$L), 0L)
   expect_gt(length(unique(sizes)), 1L)
 })
 
@@ -153,10 +153,10 @@ test_that("forked children of a primed parent draw different trees", {
 test_that("forked children of a primed parent simulate different trees", {
   skip_on_os("windows")
   invisible(simulate_tree(pars = c(0.6, 0.1), max_t = 3, max_tries = 50,
-                          model = "cr", useDDD = FALSE))
+                          model = "cr", useDDD = FALSE, link = "linear"))
   sizes <- unlist(parallel::mclapply(1:4, function(i)
     NROW(simulate_tree(pars = c(0.6, 0.1), max_t = 3, max_tries = 50,
-                       model = "cr", useDDD = FALSE)$L), mc.cores = 2L))
+                       model = "cr", useDDD = FALSE, link = "linear")$L), mc.cores = 2L))
   expect_gt(length(unique(sizes)), 1L)
 })
 

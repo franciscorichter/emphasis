@@ -170,9 +170,9 @@ test_that("the simulator runs an ED model, and a negative beta_ED slows distinct
   n_with <- n_without <- integer(30)
   for (i in seq_len(30)) {
     s0 <- simulate_tree(pars = c(0.5, 0.0, 0.0, 0.0, 0.0, 0.0), max_t = 8, model = "ned",
-                        max_lin = 2000L, num_threads = 1L)
+                        max_lin = 2000L, num_threads = 1L, link = "linear")
     s1 <- simulate_tree(pars = c(0.5, 0.0, -0.1, 0.0, 0.0, 0.0), max_t = 8, model = "ned",
-                        max_lin = 2000L, num_threads = 1L)
+                        max_lin = 2000L, num_threads = 1L, link = "linear")
     n_without[i] <- if (s0$status == "done") length(s0$tes$tip.label) else NA_integer_
     n_with[i]    <- if (s1$status == "done") length(s1$tes$tip.label) else NA_integer_
   }
@@ -188,7 +188,7 @@ test_that("estimate_rates fits an N + ED model end to end (smoke)", {
                                        max_iter = 3L, num_threads = 1L,
                                        lower_bound = c(0.01, -0.2, -1, 0.0, -0.2, -1),
                                        upper_bound = c(3, 0.2, 1, 2, 0.2, 1),
-                                       verbose = FALSE))
+                                       verbose = FALSE), link = "linear")
   expect_s3_class(fit, "emphasis_fit")
   expect_length(fit$pars, 6L)
   expect_equal(names(fit$pars), emphasis:::.par_names(emphasis:::.resolve_model("ned")))

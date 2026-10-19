@@ -7,7 +7,7 @@
 auto_bounds(
   tree,
   model = "cr",
-  link = "linear",
+  link = "exponential",
   n_test = 5L,
   bisect_steps = 8L,
   margin = 0.5,
@@ -25,7 +25,16 @@ auto_bounds(
 
 \item{model}{Model specification: \code{"cr"}, \code{"dd"}, etc.}
 
-\item{link}{\code{"linear"}, \code{"exponential"}, or \code{"gaussian"}.}
+\item{link}{Link function: \code{"exponential"} (default),
+\code{rate = exp(eta)}, under which the intercepts \code{beta_0} and
+\code{gamma_0} are log rates; \code{"linear"},
+\code{rate = max(0, eta)}, under which the parameters are rates and a
+covariate can drive a rate to zero, where it is clipped;
+\code{"gaussian"}, \code{beta_0 * exp(-(eta_cov - 1)^2 / 2)}, is
+experimental: it has been used only in a convergence study of the
+surrogate proposal's fixed-point iteration, never in an estimation
+experiment; it is not available for ED or K models, and every model
+with a covariate is fitted on it with the thinning proposal.}
 
 \item{n_test}{Number of replicate simulations per candidate point
 to assess feasibility (default 5).}
@@ -69,7 +78,7 @@ over a wide box.  Optionally trains a survival GAM over the detected region.
 }
 \examples{
 set.seed(1)
-tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr  <- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy <- tr$tes
 # A coarse search without the survival GAM
 ab <- auto_bounds(phy, model = "cr", n_test = 3L, bisect_steps = 4L,

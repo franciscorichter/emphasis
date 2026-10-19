@@ -126,7 +126,7 @@ test_that("final E-step: loglik is fhat at pars and final_IS matches the last ro
     brts1, model = "cr", method = "mcem", init_pars = c(0.5, 0.1),
     control = list(sampling = "dynamic_fresh", num_trees = 30L, maxN = 3000L,
                    max_iter = 2L, tol = 1e-2, patience = 3L,
-                   lower_bound = c(0, 0), upper_bound = c(2, 1), num_threads = 1L))
+                   lower_bound = c(0, 0), upper_bound = c(2, 1), num_threads = 1L), link = "linear")
   mm <- fit$details$mcem
   expect_equal(fit$loglik, mm$fhat[nrow(mm)])
   expect_equal(fit$details$loglik, mm$fhat[nrow(mm)])

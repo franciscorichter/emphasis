@@ -30,6 +30,7 @@ window.MathJax = {
 <a class="brand" href="index.html">emphasis</a>
 <ul>
 <li><a href="index.html" aria-current="page">Overview</a></li>
+<li><a href="covariates/index.html">Covariates</a></li>
 <li><a href="usage.html">Usage</a></li>
 <li><a href="reference.html">Reference</a></li>
 <li><a href="established.html">What is established</a></li>
@@ -38,7 +39,6 @@ window.MathJax = {
 <li><a href="experiments/index.html">Experiments</a></li>
 <li><a href="glossary.html">Glossary</a></li>
 <li><a href="simulator.html">Simulator</a></li>
-<li><a href="D.html">D</a></li>
 <li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
 </ul>
 </nav>
@@ -89,7 +89,7 @@ window.MathJax = {
 <p>A reconstructed phylogeny records the topology and branching times of the <span class="math inline">\(n\)</span> species of a clade that are alive at the present and were sampled. Everything else the diversification process produced is missing: every lineage that went extinct, with its birth, its attachment to the tree and its death, and every living lineage that was not sampled. Under constant rates the missing part can be integrated out in closed form (Nee, May and Harvey 1994), and under diversity-dependent rates by a system of differential equations in the number of lineages alive (the <code>DDD</code> package). The models of this package go one step further: a lineage's rates may depend on its own position in the tree, read on the <em>complete</em> tree, hidden lineages included. A hidden lineage lowers the distinctiveness of its living relatives while it lives, a hidden split raises the ancestral-split count of its descendants and restarts its parent's pendant age, and no finite family of equations carries that state. The integral over the hidden part is evaluated by Monte Carlo.</p>
 <p>Time <span class="math inline">\(t\)</span> runs forward from the crown (<span class="math inline">\(t = 0\)</span>) to the present (<span class="math inline">\(T\)</span>). The clade starts with two lineages. The complete tree holds every lineage that arose; <span class="math inline">\(A(t)\)</span> is the set of lineages alive on it at time <span class="math inline">\(t\)</span> and <span class="math inline">\(N(t)\)</span> their number. Lineage <span class="math inline">\(s\)</span> speciates at rate <span class="math inline">\(\lambda_s(t)\)</span> and goes extinct at rate <span class="math inline">\(\mu_s(t)\)</span>. A speciation replaces <span class="math inline">\(s\)</span> by two lineages, one of which keeps the identity of <span class="math inline">\(s\)</span>; an extinction removes <span class="math inline">\(s\)</span>. Each lineage alive at <span class="math inline">\(T\)</span> is sampled independently with a known probability <span class="math inline">\(\rho \in (0, 1]\)</span>. What remains after removing the extinct and unsampled lineages, together with every ancestor all of whose descendants are missing, is the reconstructed tree <span class="math inline">\(y\)</span>. The hidden part <span class="math inline">\(z\)</span> is the difference.</p>
 <span id="covariates"></span><h2 id="2-the-covariates">2. The covariates</h2>
-<p>Four covariates are read on the complete tree at time <span class="math inline">\(t\)</span>. The first is clade-level and depends only on the branching times; the other three are lineage-level and depend on the topology, so the <span class="math inline">\(\mathrm{ED}\)</span> and <span class="math inline">\(K\)</span> models need a <code>phylo</code> object and refuse a bare vector of branching times; a <span class="math inline">\(D\)</span> model fitted from a bare vector records every observed lineage as dating from the crown and reads <span class="math inline">\(D = 0\)</span> at every observed event.</p>
+<p>Four covariates are read on the complete tree at time <span class="math inline">\(t\)</span>. The first is clade-level and depends only on the branching times; the other three are lineage-level and depend on the topology, so the <span class="math inline">\(\mathrm{ED}\)</span> and <span class="math inline">\(K\)</span> models need a <code>phylo</code> object and refuse a bare vector of branching times; a <span class="math inline">\(D\)</span> model fitted from a bare vector records every observed lineage as dating from the crown and reads <span class="math inline">\(D = 0\)</span> at every observed event. Each covariate has a page on the hypothesis it encodes, what the sign of its coefficient means and what the experiments and real trees say: <a href="covariates/N.html">N</a>, <a href="covariates/D.html">D</a>, <a href="covariates/ED.html">ED</a> and <a href="covariates/K.html">K</a>, with <a href="covariates/index.html">the four compared</a>.</p>
 <p>Let <span class="math inline">\(\tau_s(t)\)</span> be the <em>pendant start</em> of lineage <span class="math inline">\(s\)</span>: the time of its birth or of its latest split, whichever is later. It restarts at every split of <span class="math inline">\(s\)</span>, observed or hidden. The pendant age <span class="math inline">\(E_s(t) = t - \tau_s(t)\)</span> is the length of the lineage's current terminal edge. Summed over the living lineages the pendant ages give the pendant phylogenetic diversity <span class="math inline">\(P(t)\)</span>, with clade mean <span class="math inline">\(M(t)\)</span>:</p>
 <p><span class="math display">\[
 E_s(t) = t - \tau_s(t), \qquad
@@ -110,40 +110,40 @@ M(t) = \frac{P(t)}{N(t)}.
 <tbody>
 <tr>
 <td><span class="math inline">\(N(t)\)</span></td>
-<td>diversity</td>
+<td><a href="covariates/N.html">diversity</a></td>
 <td>the number of lineages alive on the complete tree</td>
 <td>the branching times, hidden lineages counted</td>
 </tr>
 <tr>
 <td><span class="math inline">\(D_s(t)\)</span></td>
-<td>centred pendant age</td>
+<td><a href="covariates/D.html">centred pendant age</a></td>
 <td><span class="math inline">\(E_s(t) - M(t)\)</span>; sums to zero over the lineages alive</td>
 <td>whether <span class="math inline">\(s\)</span> is older or younger than its contemporaries</td>
 </tr>
 <tr>
 <td><span class="math inline">\(\mathrm{ED}_s(t)\)</span></td>
-<td>evolutionary distinctiveness</td>
+<td><a href="covariates/ED.html">evolutionary distinctiveness</a></td>
 <td>the fair proportion <span class="math inline">\(\sum_{b \succeq s} \ell_b(t)/n_b(t)\)</span> over the branches from the crown to <span class="math inline">\(s\)</span>; sums over the clade to Faith's phylogenetic diversity <span class="math inline">\(\mathrm{PD}(t)\)</span></td>
 <td>the whole ancestry of <span class="math inline">\(s\)</span>, each branch weighted by how little of it is shared</td>
 </tr>
 <tr>
 <td><span class="math inline">\(\mathrm{ED}^c_s(t)\)</span></td>
-<td>centred distinctiveness</td>
+<td><a href="covariates/ED.html">centred distinctiveness</a></td>
 <td><span class="math inline">\(\mathrm{ED}_s(t) - \mathrm{PD}(t)/N(t)\)</span>; sums to zero</td>
 <td>the within-clade contrast of distinctiveness alone</td>
 </tr>
 <tr>
 <td><span class="math inline">\(K_s(t)\)</span></td>
-<td>ancestral splits</td>
+<td><a href="covariates/K.html">ancestral splits</a></td>
 <td>the number of speciation events on the path from the crown to <span class="math inline">\(s\)</span>, hidden splits counted</td>
 <td>whether a speciation-rich ancestry speciates more, or less</td>
 </tr>
 </tbody>
 </table>
 </div>
-<p><strong><span class="math inline">\(D\)</span>, the centred pendant age.</strong> <span class="math inline">\(D_s(t) = E_s(t) - M(t)\)</span>, so <span class="math inline">\(\sum_{s \in A(t)} D_s(t) = 0\)</span> at every instant: <span class="math inline">\(D\)</span> carries no clade-level signal and is orthogonal to <span class="math inline">\(N\)</span>. Between two consecutive events every pendant age and their mean grow at unit rate, so on a segment <span class="math inline">\(D_s = \bar\tau - \tau_s\)</span>, the mean pendant start of the alive lineages minus the lineage's own, is constant. The simulator holds that value between events, and since commit <code>4e0b9dd</code> the likelihood reads the same value on the whole segment: the compensator integrates the rates at the <span class="math inline">\(D_s\)</span> the segment started with, and the event that ends the segment is charged with the same <span class="math inline">\(D_s\)</span>. The clade mean <span class="math inline">\(M\)</span> is used only to centre <span class="math inline">\(D\)</span> and is not a user covariate. What <span class="math inline">\(\beta_D\)</span> tests, in biological terms, is set out on <a href="D.html">the biological meaning of D</a>.</p>
-<p><strong><span class="math inline">\(\mathrm{ED}\)</span>, fair-proportion distinctiveness.</strong> <span class="math inline">\(b \succeq s\)</span> runs over the branches on the path from the crown to <span class="math inline">\(s\)</span>, <span class="math inline">\(\ell_b(t)\)</span> is the length of branch <span class="math inline">\(b\)</span> up to <span class="math inline">\(t\)</span> and <span class="math inline">\(n_b(t)\)</span> the number of lineages alive at <span class="math inline">\(t\)</span> that descend from it (Isaac et al. 2007). The last branch on the path has one alive descendant, <span class="math inline">\(s\)</span> itself, so it contributes the pendant age <span class="math inline">\(E_s(t)\)</span>; the sum of <span class="math inline">\(\mathrm{ED}_s\)</span> over the alive lineages is Faith's <span class="math inline">\(\mathrm{PD}(t)\)</span>, so the clade mean of <span class="math inline">\(\mathrm{ED}\)</span> is <span class="math inline">\(\mathrm{PD}/N\)</span>, a clade-level quantity. Within a segment every ancestral share is constant and only the pendant branch grows: <span class="math inline">\(\mathrm{ED}_s(u) = c_s + (u - \tau_s)\)</span>, with <span class="math inline">\(c_s\)</span> the constant one pass over the tree returns (<code>inst/include/ed_covariate.hpp</code>, shared by the simulator and the likelihood). The centred covariate <span class="math inline">\(\mathrm{ED}^c_s = \mathrm{ED}_s - \mathrm{PD}/N\)</span> removes the clade mean, which the <span class="math inline">\(N\)</span> term already tracks; because every <span class="math inline">\(\mathrm{ED}_s\)</span> grows at the same unit rate, <span class="math inline">\(\mathrm{ED}^c_s\)</span> is constant on a segment.</p>
-<p><strong><span class="math inline">\(K\)</span>, ancestral splits.</strong> At a split both daughters carry one more than the parent. On the segment <span class="math inline">\((t_0, t_1]\)</span> a lineage's <span class="math inline">\(K\)</span> is its value at <span class="math inline">\(t_0\)</span>, and the event at <span class="math inline">\(t_1\)</span> is charged with that value: a split at <span class="math inline">\(t_1\)</span> is not yet on the path. <span class="math inline">\(K\)</span> is the observable trace of what inherited-rate models carry as a latent variable, and it is the one candidate covariate the basis <span class="math inline">\(\{N, D, \mathrm{ED}\}\)</span> does not span (rank correlation at most 0.29 in magnitude with each, over 6,433 lineages on 30 complete diversity-dependent clades). <!-- README.md, section "The model", paragraph on K --></p>
+<p><strong><span class="math inline">\(D\)</span>, the centred pendant age.</strong> <span class="math inline">\(D_s(t) = E_s(t) - M(t)\)</span>, so <span class="math inline">\(\sum_{s \in A(t)} D_s(t) = 0\)</span> at every instant: <span class="math inline">\(D\)</span> carries no clade-level signal and is orthogonal to <span class="math inline">\(N\)</span>. Between two consecutive events every pendant age and their mean grow at unit rate, so on a segment <span class="math inline">\(D_s = \bar\tau - \tau_s\)</span>, the mean pendant start of the alive lineages minus the lineage's own, is constant. The simulator holds that value between events, and since commit <code>4e0b9dd</code> the likelihood reads the same value on the whole segment: the compensator integrates the rates at the <span class="math inline">\(D_s\)</span> the segment started with, and the event that ends the segment is charged with the same <span class="math inline">\(D_s\)</span>. The clade mean <span class="math inline">\(M\)</span> is used only to centre <span class="math inline">\(D\)</span> and is not a user covariate. What <span class="math inline">\(\beta_D\)</span> tests, in biological terms, is set out on <a href="covariates/D.html">the biological meaning of D</a>.</p>
+<p><strong><span class="math inline">\(\mathrm{ED}\)</span>, fair-proportion distinctiveness.</strong> <span class="math inline">\(b \succeq s\)</span> runs over the branches on the path from the crown to <span class="math inline">\(s\)</span>, <span class="math inline">\(\ell_b(t)\)</span> is the length of branch <span class="math inline">\(b\)</span> up to <span class="math inline">\(t\)</span> and <span class="math inline">\(n_b(t)\)</span> the number of lineages alive at <span class="math inline">\(t\)</span> that descend from it (Isaac et al. 2007). The last branch on the path has one alive descendant, <span class="math inline">\(s\)</span> itself, so it contributes the pendant age <span class="math inline">\(E_s(t)\)</span>; the sum of <span class="math inline">\(\mathrm{ED}_s\)</span> over the alive lineages is Faith's <span class="math inline">\(\mathrm{PD}(t)\)</span>, so the clade mean of <span class="math inline">\(\mathrm{ED}\)</span> is <span class="math inline">\(\mathrm{PD}/N\)</span>, a clade-level quantity. Within a segment every ancestral share is constant and only the pendant branch grows: <span class="math inline">\(\mathrm{ED}_s(u) = c_s + (u - \tau_s)\)</span>, with <span class="math inline">\(c_s\)</span> the constant one pass over the tree returns (<code>inst/include/ed_covariate.hpp</code>, shared by the simulator and the likelihood). The centred covariate <span class="math inline">\(\mathrm{ED}^c_s = \mathrm{ED}_s - \mathrm{PD}/N\)</span> removes the clade mean, which the <span class="math inline">\(N\)</span> term already tracks; because every <span class="math inline">\(\mathrm{ED}_s\)</span> grows at the same unit rate, <span class="math inline">\(\mathrm{ED}^c_s\)</span> is constant on a segment. What <span class="math inline">\(\beta_{ED}\)</span> tests is set out on <a href="covariates/ED.html">the biological meaning of ED</a>.</p>
+<p><strong><span class="math inline">\(K\)</span>, ancestral splits.</strong> At a split both daughters carry one more than the parent. On the segment <span class="math inline">\((t_0, t_1]\)</span> a lineage's <span class="math inline">\(K\)</span> is its value at <span class="math inline">\(t_0\)</span>, and the event at <span class="math inline">\(t_1\)</span> is charged with that value: a split at <span class="math inline">\(t_1\)</span> is not yet on the path. <span class="math inline">\(K\)</span> is the observable trace of what inherited-rate models carry as a latent variable, and it is the one candidate covariate the basis <span class="math inline">\(\{N, D, \mathrm{ED}\}\)</span> does not span (rank correlation at most 0.29 in magnitude with each, over 6,433 lineages on 30 complete diversity-dependent clades). What <span class="math inline">\(\beta_K\)</span> tests, and why on real trees it is no longer separate from <span class="math inline">\(\mathrm{ED}\)</span>, is set out on <a href="covariates/K.html">the biological meaning of K</a>. <!-- README.md, section "The model", paragraph on K --></p>
 <p>An unsampled lineage alive at <span class="math inline">\(T\)</span> counts in <span class="math inline">\(N\)</span> and in the covariates of its relatives, so below <span class="math inline">\(\rho = 1\)</span> a lineage-level fit reads covariates that are partly drawn. <code>lineage_table()</code> exposes the numbers the likelihood is built on: one row per lineage alive on each segment, with the segment's bounds <code>t0</code> and <code>t1</code>, <code>N</code>, the clade mean <code>M</code> at the segment's end, the lineage's pendant start <code>ts</code> (so that <code>D = (t1 - ts) - M</code>), its <code>ed0</code> at the segment's start, its <code>K</code>, and <code>event</code> (1 when the lineage's own speciation ends the segment, 2 when its extinction does, 0 otherwise). Rebuilding the log-likelihood from this table reproduces the compiled value to a relative tolerance of <span class="math inline">\(10^{-8}\)</span> on augmented trees, and the same table is the design matrix of the selection path of Section 9.</p>
 <h2 id="3-the-models">3. The models</h2>
 <p>Each rate is a link <span class="math inline">\(g\)</span> of a linear predictor in the covariates:</p>
@@ -253,7 +253,7 @@ M(t) = \frac{P(t)}{N(t)}.
 </div>
 <p>A model is named by its shortcut or by its formula (<code>model = "ned"</code> or <code>model = ~ N + ED</code>); <code>"ep"</code> is a legacy alias of <code>"d"</code>. The parameter vector lists the <span class="math inline">\(\beta\)</span> coefficients of the active covariates in the order <span class="math inline">\(N\)</span>, <span class="math inline">\(D\)</span>, <span class="math inline">\(\mathrm{ED}\)</span>, <span class="math inline">\(K\)</span>, then the <span class="math inline">\(\gamma\)</span> coefficients in the same order, so its length is <span class="math inline">\(2 + 2 \times\)</span> (number of covariates). <code>cr</code> and <code>dd</code> are the clade-level models and the other eight the lineage-level models. Two models have an exact likelihood against which the estimator is checked: <code>cr</code> through <code>DDD::bd_ML</code> (Nee et al. 1994), and <code>dd</code> on the linear link with constant extinction through <code>DDD::dd_ML</code> (Etienne et al. 2012), whose speciation rate <span class="math inline">\(\max\{0, \lambda_0 - (\lambda_0 - \mu_0)N/\text{capacity}\}\)</span> is the linear-link <code>dd</code> with <span class="math inline">\(\beta_0 = \lambda_0\)</span>, <span class="math inline">\(\beta_N = -(\lambda_0 - \mu_0)/\text{capacity}\)</span>, <span class="math inline">\(\gamma_0 = \mu_0\)</span> and <span class="math inline">\(\gamma_N = 0\)</span>. No lineage-level model has an exact reference.</p>
 <h2 id="4-the-link-functions">4. The link functions</h2>
-<p>The predictor is mapped to a non-negative rate by <code>link = "linear"</code> (the default), <code>"exponential"</code> or <code>"gaussian"</code>:</p>
+<p>The predictor is mapped to a non-negative rate by <code>link = "exponential"</code> (the default), <code>"linear"</code> or <code>"gaussian"</code>:</p>
 <div class="table-wrap">
 <table>
 <thead>
@@ -266,19 +266,19 @@ M(t) = \frac{P(t)}{N(t)}.
 </thead>
 <tbody>
 <tr>
-<td>linear</td>
-<td><span class="math inline">\(g(\eta) = \max(0, \eta)\)</span></td>
-<td>a change in rate per unit of its covariate</td>
-<td>every model; a lineage whose rate is truncated to zero cannot split, so an observed split by such a lineage gives a draw of zero weight unless a hidden split preceded it</td>
-</tr>
-<tr>
 <td>exponential</td>
 <td><span class="math inline">\(g(\eta) = e^{\eta}\)</span></td>
 <td>a change in log rate</td>
 <td>every model; the only link on which the selection path is defined, since the point process is then log-linear</td>
 </tr>
 <tr>
-<td>gaussian</td>
+<td>linear</td>
+<td><span class="math inline">\(g(\eta) = \max(0, \eta)\)</span></td>
+<td>a change in rate per unit of its covariate</td>
+<td>every model; a lineage whose rate is truncated to zero cannot split, so an observed split by such a lineage gives a draw of zero weight unless a hidden split preceded it</td>
+</tr>
+<tr>
+<td>gaussian (experimental)</td>
 <td><span class="math inline">\(\beta_0 \exp\{-(\eta&#39; - 1)^2/2\}\)</span>, with <span class="math inline">\(\eta&#39;\)</span> the predictor without its intercept</td>
 <td>the peak rate is <span class="math inline">\(\beta_0\)</span>, reached at <span class="math inline">\(\eta&#39; = 1\)</span></td>
 <td><code>cr</code>, <code>dd</code>, <code>d</code>, <code>nd</code>; refused for <span class="math inline">\(\mathrm{ED}\)</span> and <span class="math inline">\(K\)</span>, whose segment integrals have no closed form under it</td>
@@ -286,7 +286,7 @@ M(t) = \frac{P(t)}{N(t)}.
 </tbody>
 </table>
 </div>
-<p>The ladder experiments and the real-tree analyses use the exponential link; <code>estimate_rates()</code> itself defaults to <code>link = "linear"</code>.</p>
+<p>Every experiment the estimates on this site rest on uses the exponential link: the ladder, the real-tree analyses, the comparison with the exact maximum on real trees and the conditioned estimability study. Under it the intercepts <span class="math inline">\(\beta_0\)</span> and <span class="math inline">\(\gamma_0\)</span> are log rates. The linear link is supported, with the parameters on the rate scale; a covariate can drive its predictor below zero, where the rate is clipped at zero. The gaussian link is experimental: it has been used in one experiment, a convergence study of the surrogate proposal's fixed-point iteration (<a href="experiments/E10.html">E10</a>), and in no estimation experiment. It is not available for <span class="math inline">\(\mathrm{ED}\)</span> or <span class="math inline">\(K\)</span> models, and the surrogate proposal refuses it for every model with a covariate, so those are fitted on the thinning proposal.</p>
 <h2 id="5-the-likelihood">5. The likelihood</h2>
 <p>Write <span class="math inline">\(x = (y, z)\)</span> for the complete tree. Its log-density is that of a marked point process: a log-rate for every event, read on the lineage it belongs to, minus the compensator, the integrated total rate of everything that could have happened and did not, plus the sampling terms:</p>
 <p><span class="math display">\[
@@ -493,7 +493,7 @@ Q(\beta) = \sum_k \bar w_k \sum_{i \in z_k} \big[y_i(\beta_0 + x_i^\top\beta) - 
 </article>
 </main>
 <footer class="site-footer">
-<p>emphasis, version 1.0.0. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+<p>emphasis, version 1.0.0. Francisco Richter, Università della Svizzera italiana.</p>
 </footer>
 </body>
 </html>

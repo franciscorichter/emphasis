@@ -28,17 +28,17 @@ test_that("a D model runs on the thinning proposal by default and on the surroga
                lower_bound = c(0.05, -0.05, -0.2, 0, -0.05, -0.2), upper_bound = c(2, 0.02, 0.2, 1, 0.02, 0.2),
                maxN = 10000L, max_missing = 1e4)
   f1 <- suppressWarnings(suppressMessages(estimate_rates(phy, method = "mcem", model = "nd",
-                                                          init_pars = c(0.5, -0.01, 0, 0.05, 0, 0), control = ctrl)))
+                                                          init_pars = c(0.5, -0.01, 0, 0.05, 0, 0), control = ctrl, link = "linear")))
   expect_equal(f1$sampling, "dynamic_fresh")
   f2 <- suppressWarnings(suppressMessages(estimate_rates(phy, method = "mcem", model = "nd",
                                                           init_pars = c(0.5, -0.01, 0, 0.05, 0, 0),
-                                                          control = c(ctrl, list(sampling = "bdi")))))
+                                                          control = c(ctrl, list(sampling = "bdi")), link = "linear")))
   expect_equal(f2$sampling, "bdi")
   # a model without D keeps the surrogate default
   f3 <- suppressWarnings(suppressMessages(estimate_rates(phy, method = "mcem", model = "dd",
                                                           init_pars = c(0.5, -0.01, 0.05, 0),
                                                           control = list(sample_size = 20L, max_iter = 1L, num_threads = 1L,
-                                                                         lower_bound = c(0.05, -0.05, 0, -0.05), upper_bound = c(2, 0.02, 1, 0.02)))))
+                                                                         lower_bound = c(0.05, -0.05, 0, -0.05), upper_bound = c(2, 0.02, 1, 0.02)), link = "linear")))
   expect_equal(f3$sampling, "bdi")
 })
 

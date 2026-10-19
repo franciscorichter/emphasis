@@ -96,7 +96,7 @@ test_that("boxes [0,3], [0,30] and [0,300] give estimates within tolerance of ea
                    control = list(lower_bound = c(0, 0), upper_bound = c(ub, ub),
                                   sampling = "bdi", sample_size = 200L,
                                   num_threads = 1L, max_iter = 25L,
-                                  tol = 1e-2, patience = 3L))
+                                  tol = 1e-2, patience = 3L), link = "linear")
   }
   fits  <- lapply(c(3, 30, 300), fit_box)
   pars  <- t(sapply(fits, function(f) unname(f$pars)))
@@ -237,7 +237,7 @@ test_that("the H11 part D configuration does not report convergence through zero
                         control = list(lower_bound = lb, upper_bound = ub,
                                        sample_size = 200L, max_iter = 4L,
                                        max_missing = 30L, num_threads = 1L,
-                                       sampling = "bdi"))
+                                       sampling = "bdi"), link = "linear")
   m  <- fit$details$mcem
   em <- m[m$m_step, ]
   expect_true(all(c("delta_max", "abs_step", "drift", "m_moved",
@@ -263,7 +263,7 @@ test_that("fit$loglik is fhat at fit$pars, from an E-step recorded as the last t
                         control = list(lower_bound = c(0, 0), upper_bound = c(3, 3),
                                        sampling = "bdi", sample_size = 50L,
                                        num_threads = 1L, max_iter = 2L,
-                                       tol = 1e-2))
+                                       tol = 1e-2), link = "linear")
   m  <- fit$details$mcem
   th <- as.numeric(fit$details$pars)
 

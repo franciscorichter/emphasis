@@ -10,7 +10,7 @@ estimate_rates(
   model = "cr",
   init_pars = NULL,
   control = list(),
-  link = "linear",
+  link = "exponential",
   cond = NULL
 )
 }
@@ -98,9 +98,16 @@ Key entries:
   \item{\code{verbose}}{Print progress messages. Default \code{FALSE}.}
 }}
 
-\item{link}{Link function for rate computation: \code{"linear"} (default)
-uses \code{max(0, eta)}; \code{"exponential"} uses \code{exp(eta)};
-\code{"gaussian"} uses \code{beta_0 * exp(-(eta_cov - 1)^2 / 2)}.}
+\item{link}{Link function: \code{"exponential"} (default),
+\code{rate = exp(eta)}, under which the intercepts \code{beta_0} and
+\code{gamma_0} are log rates; \code{"linear"},
+\code{rate = max(0, eta)}, under which the parameters are rates and a
+covariate can drive a rate to zero, where it is clipped;
+\code{"gaussian"}, \code{beta_0 * exp(-(eta_cov - 1)^2 / 2)}, is
+experimental: it has been used only in a convergence study of the
+surrogate proposal's fixed-point iteration, never in an estimation
+experiment; it is not available for ED or K models, and every model
+with a covariate is fitted on it with the thinning proposal.}
 
 \item{cond}{A survival emulator for conditioning on survival: a GAM from
 \code{\link{train_GAM}}, a \code{nnet} object, or a function of the parameter
@@ -147,17 +154,18 @@ the chosen optimisation back-end.
 }
 \examples{
 set.seed(1)
-tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr  <- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy <- tr$tes
+# Exponential link (the default): the intercepts are log rates
 fit <- estimate_rates(phy, method = "mcem", model = "cr",
-  control = list(lower_bound = c(0, 0), upper_bound = c(2, 1),
+  control = list(lower_bound = c(-3, -5), upper_bound = c(1, 0),
                  max_iter = 10, num_trees = 50))
 fit
 \donttest{
 # Diversity-dependent model on the same tree
 fit_dd <- estimate_rates(phy, method = "mcem", model = "dd",
-  control = list(lower_bound = c(0, -0.1, 0, -0.1),
-                 upper_bound = c(2, 0.1, 1, 0.1),
+  control = list(lower_bound = c(-3, -0.1, -5, -0.1),
+                 upper_bound = c(1, 0.1, 0, 0.1),
                  max_iter = 10, num_trees = 50))
 fit_dd$pars
 }

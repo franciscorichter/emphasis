@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>K: the number of ancestral splits · emphasis</title>
+<meta name="description" content="In one line.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../covariates/index.html" aria-current="page">Covariates</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>K: the number of ancestral splits</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#the-question-in-the-literature">The question in the literature</a>
+</li>
+<li><a href="#what-the-package-computes">What the package computes</a>
+</li>
+<li><a href="#what-the-sign-of-a-coefficient-means">What the sign of a coefficient means</a>
+</li>
+<li><a href="#what-k-cannot-be-separated-from">What K cannot be separated from</a>
+</li>
+<li><a href="#what-simulation-says">What simulation says</a>
+</li>
+<li><a href="#what-real-phylogenies-say">What real phylogenies say</a>
+</li>
+<li><a href="#references">References</a>
+</li>
+</ol>
+</nav>
+<p><strong>In one line.</strong> <span class="math inline">\(K_s(t)\)</span> counts the speciation events on the path from the crown to lineage <span class="math inline">\(s\)</span>, hidden ones included, and its coefficient asks whether a lineage from a speciation-rich ancestry splits sooner: the heritability of diversification rate.</p>
+<p><span class="math inline">\(K\)</span> is a lineage-level covariate that reads the topology of a lineage's ancestry and none of its branch lengths. It is fitted alone in <code>k</code> and beside <a href="N.html">N</a> in <code>nk</code>. On simulated trees it is the one covariate the others do not span; on real trees, which are less balanced, it ranks lineages in partly the same order as <a href="ED.html">ED</a>. The <a href="index.html">covariates page</a> compares the four.</p>
+<h2 id="the-question-in-the-literature">The question in the literature</h2>
+<p>If the rate at which a lineage splits is set by traits that pass to its daughters, a lineage whose ancestors split often had ancestors with a high rate, and is likely to split often itself. Savolainen et al. (2002) tested this with the correlation between ancestral and descendant branch lengths in large sequence-based trees of plants, insects, fungi and bacteria, and found a pattern consistent with heritable cladogenesis in most clades. The idea has a longer history as the mechanism behind tree imbalance: Kirkpatrick and Slatkin (1993) and Heard (1996) showed that speciation rates that evolve along lineages produce imbalanced trees, Heard (1996) that very large rate variation is needed to reach the imbalance of real trees, and Mooers and Heard (1997) and Blum and François (2006) measured that imbalance across the tree of life, with the index of Colless (1982) among others. For species selection, heritability of the rate is the condition for selection among species to act (Jablonski 2008; Rabosky and McCune 2010). On the extinction side Rabosky (2009) showed that heritable extinction risk with pulsed turnover produces the early-burst pattern of molecular phylogenies without any change in net rate.</p>
+<p>The rate-shift models carry the same idea as a latent variable: a per-branch rate, inherited along the tree, that changes at discrete points or continuously. MEDUSA (Alfaro et al. 2009) and BAMM (Rabosky 2014) place shifts on branches; in ClaDS (Maliet et al. 2019) each daughter draws a new rate from a distribution centred on its parent's, so the rate is a heritable trait with small changes at every split; the multitype birth-death model of Barido-Sottani et al. (2020) has a finite set of rate types. The likelihood of the shift models was disputed (Moore et al. 2016; Rabosky et al. 2017) and corrected by Laudanno et al. (2021), who showed that whether shifts in now-extinct lineages count is a modelling choice. <span class="math inline">\(K\)</span> is the observable count that such an inherited rate leaves behind.</p>
+<h2 id="what-the-package-computes">What the package computes</h2>
+<p><span class="math inline">\(K_s(t)\)</span> is the number of speciation events on the path from the crown to <span class="math inline">\(s\)</span> on the complete tree. Both crown lineages start at 0. At a split, both daughters carry one more than the parent, and every split counts, including hidden ones whose other daughter died or was not sampled. <span class="math inline">\(K\)</span> is a count, without units, and it is not centred. It changes only at the lineage's own splits, so it is constant on every segment: on a segment <span class="math inline">\((t_0, t_1]\)</span> a lineage's <span class="math inline">\(K\)</span> is its value at <span class="math inline">\(t_0\)</span>, and the event at <span class="math inline">\(t_1\)</span> is charged with that value, a split at <span class="math inline">\(t_1\)</span> not yet being on the path.</p>
+<p><span class="math inline">\(K\)</span> is the complete-tree, time-resolved analogue of the depth of a tip, the number of nodes between it and the root; the Sackin index of tree imbalance is the sum of tip depths. It reads topology where ED reads branch lengths, and the whole ancestry where the pendant age reads the last edge. Like ED, it needs a <code>phylo</code> object and refuses a bare vector of branching times. The surrogate proposal carries no count of ancestral splits, so <code>k</code> and <code>nk</code> are fitted on the thinning proposal only. On the exponential link a coefficient <span class="math inline">\(\beta_K\)</span> multiplies a lineage's speciation rate by <span class="math inline">\(e^{\beta_K}\)</span> per ancestral split; the real-tree results below are factors per standard deviation of <span class="math inline">\(K\)</span> over the tree's tips, <span class="math inline">\(\exp(\hat\beta_K\,\mathrm{sd}_K)\)</span>.</p>
+<p><strong>Its clade mean grows with time.</strong> Under constant rates every lineage's ancestry splits at rate <span class="math inline">\(\lambda\)</span>, and each split doubles the number of lineages that carry the incremented count. The expected number of lineages with <span class="math inline">\(k\)</span> ancestral splits solves <span class="math inline">\(\dot n_k = -\lambda n_k + 2\lambda n_{k-1}\)</span>, which gives</p>
+<p><span class="math display">\[
+n_k(t) = \frac{2\,(2\lambda t)^k\, e^{-\lambda t}}{k!},
+\]</span></p>
+<p>so among the lineages alive at <span class="math inline">\(t\)</span> the count is Poisson with mean <span class="math inline">\(2\lambda t\)</span>. The clade mean of <span class="math inline">\(K\)</span> is a clade-level quantity that rises linearly with time since the crown; the contrast among lineages alive at the same instant is the part a heritability hypothesis owns. Under the null that contrast has Poisson dispersion, and an inherited rate inflates it. A centred <span class="math inline">\(K\)</span>, which would carry the contrast alone as <span class="math inline">\(D\)</span> and <span class="math inline">\(\mathrm{ED}^c\)</span> do, is not offered.</p>
+<h2 id="what-the-sign-of-a-coefficient-means">What the sign of a coefficient means</h2>
+<p><strong>Speciation.</strong> A positive <span class="math inline">\(\beta_K\)</span> says that speciation begets speciation: a lineage whose ancestry has split often splits again sooner. Under a heritable rate that is the expected sign, and what the ClaDS parent-to-daughter draw produces. A negative <span class="math inline">\(\beta_K\)</span> says that lineages from prolific ancestry are exhausted, diminishing returns to radiation. Zero is the null in which the count of past splits carries no information about the next, which is what constant rates imply and also what a rate that varies without being inherited implies.</p>
+<p><strong>Extinction.</strong> A positive <span class="math inline">\(\gamma_K\)</span> is heritable extinction risk (Rabosky 2009): prolific ancestry carries a short life, the regime in which speciation and extinction are both high on the same lineages.</p>
+<p><strong>What else produces a positive <span class="math inline">\(\beta_K\)</span>.</strong> Three things besides inherited traits.</p>
+<ul>
+<li><em>Time.</em> Because the clade mean of <span class="math inline">\(K\)</span> grows with time, a positive <span class="math inline">\(\beta_K\)</span> on one clade is also what a speciation rate that rises in time for any other reason produces, one of the histories Louca and Pennell (2020) showed a reconstructed tree cannot separate. <code>nk</code> holds a clade-level term beside it, but <span class="math inline">\(N\)</span> is not time.</li>
+<li><em>Geography.</em> The descendants of a lineage that reached an archipelago or a mountain chain may stay there and keep splitting; the count of their ancestral splits rises because of where they live, not of what they inherit.</li>
+<li><em>The augmentation.</em> Hidden splits count in <span class="math inline">\(K\)</span>, so the covariate is partly drawn rather than observed, and its coefficient inherits the effective sample of the draws.</li>
+</ul>
+<h2 id="what-k-cannot-be-separated-from">What K cannot be separated from</h2>
+<p><strong>ED, on unbalanced trees.</strong> A lineage deep in a radiation has many ancestral splits and a small share of every branch it sits on; a lineage alone on a long branch has few splits and a large share. On a balanced tree those descriptions pick out different lineages; on an imbalanced one they pick out the same lineages from opposite ends. <a href="../experiments/E39.html">E39</a> measured the within-tree Spearman correlation over the lineages alive at half, three quarters and all of the crown age:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>pair</th>
+<th>simulated <code>dd</code> clades, complete (30)</th>
+<th>the same, reconstructed</th>
+<th>47 family trees</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="math inline">\(K\)</span> and ED</td>
+<td><span class="math inline">\(-0.11\)</span></td>
+<td><span class="math inline">\(-0.18\)</span></td>
+<td><span class="math inline">\(-0.44\)</span> (as far as <span class="math inline">\(-0.84\)</span>)</td>
+</tr>
+<tr>
+<td><span class="math inline">\(K\)</span> and <span class="math inline">\(D\)</span></td>
+<td><span class="math inline">\(-0.34\)</span></td>
+<td><span class="math inline">\(-0.35\)</span></td>
+<td><span class="math inline">\(-0.46\)</span></td>
+</tr>
+<tr>
+<td><span class="math inline">\(K\)</span> and nearest-neighbour distance</td>
+<td><span class="math inline">\(-0.16\)</span></td>
+<td><span class="math inline">\(-0.20\)</span></td>
+<td><span class="math inline">\(-0.31\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The family trees are far less balanced than the simulated ones (median normalised Colless index 1.43 against <span class="math inline">\(-0.20\)</span>), and across the 47 families the rank correlation of imbalance with the ED-K correlation is <span class="math inline">\(-0.51\)</span>. Over the tips at the present of the 170 trees of <a href="../experiments/E40.html">E40</a> the ED-K correlation is negative on every tree, median <span class="math inline">\(-0.79\)</span> (Figure 1, left). On trees generated with a <span class="math inline">\(K\)</span> effect, the covariate path admits ED first, on every tree, carrying the <span class="math inline">\(K\)</span> signal with the sign reversed (<a href="../experiments/E21.html">E21</a>). A choice between <code>nk</code> and <code>ned</code> on an unbalanced tree is a choice between two covariates that rank its lineages in partly the same order.</p>
+<p><strong>Imbalance itself.</strong> <span class="math inline">\(K\)</span> is depth, and depth summed is an imbalance index, so a tree more imbalanced than a single-rate process produces carries a <span class="math inline">\(K\)</span> signal whatever made it imbalanced.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/real-covariates.png" alt="The ED-K correlation within each tree, and the fitted K factor against the tree&#39;s imbalance" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Left: the Spearman correlation of ED and <span class="math inline">\(K\)</span> within each tree, over the tips at the present and over the lineages alive at three times, on the 170 trees of E40, and on E39's 47 families; no tree is above 0. Right: the speciation factor per standard deviation of <span class="math inline">\(K\)</span> from each tree's <code>nk</code> fit against its Colless imbalance (Yule balance at 0), 124 readable fits; filled points chose <code>nk</code>. From <a href="../real-phylogenies.html">Real phylogenies</a>.</figcaption>
+</figure>
+<h2 id="what-simulation-says">What simulation says</h2>
+<ul>
+<li><strong>On complete trees</strong> the likelihood returns <span class="math inline">\(\beta_K\)</span> at 1.005 and 0.97 of its value at <span class="math inline">\(\mp 0.35\)</span> (<a href="../experiments/E44.html">E44</a>).</li>
+<li><strong>Recovery on reconstructed trees.</strong> By fitting <code>nk</code> at 100 tips, <span class="math inline">\(\beta_K\)</span> comes back at 0.95 and 0.92 of its value at <span class="math inline">\(\mp 0.35\)</span>, with the right sign on 1.00 and 0.95 of trees (<a href="../experiments/E21.html">E21</a>). <code>k</code> alone returns 0.87 at <span class="math inline">\(-0.35\)</span> with the right sign on every tree; its <span class="math inline">\(+0.35\)</span> cell is sampler-limited (median effective sample 2.6 of 300) and not read (<a href="../experiments/E24.html">E24</a>). In the conditions of <a href="../experiments/E27.html">E27</a>, on fits mostly stopped by the clock at 100 iterations, <span class="math inline">\(\beta_K\)</span> returns at 0.65 to 0.76 of its value at 50 to 200 tips, 1.04 at turnover 0.25 and 1.30 at turnover 0.40.</li>
+<li><strong>Selection.</strong> In the one-call ladder <code>nk</code> is chosen on 7 of 10 of its own trees at 100 tips (<a href="../experiments/E23.html">E23</a>) and on 11 to 15 of 20 in the six readable conditions of <a href="../experiments/E27.html">E27</a>, below the 0.80 line in all of them. Fitted pairwise against <code>dd</code> on fits cut at 30 minutes, <code>nk</code> is selected on 0.60 of trees at <span class="math inline">\(+0.35\)</span> and 0.15 at <span class="math inline">\(-0.35\)</span>, where the negative effect caps the clades near 60 to 75 tips (<a href="../experiments/E21.html">E21</a>). <code>k</code> is selected over <code>cr</code> on 0.85 of trees at <span class="math inline">\(-0.35\)</span> (<a href="../experiments/E24.html">E24</a>).</li>
+<li><strong>False positives.</strong> No <code>nk</code> or <code>k</code> selection on trees without a <span class="math inline">\(K\)</span> effect in <a href="../experiments/E21.html">E21</a> and <a href="../experiments/E24.html">E24</a>; on the path <span class="math inline">\(K\)</span> is admitted on at most 1 of 20 trees of any other generator.</li>
+<li><strong>Sampling fraction.</strong> Told 0.1 too high or too low, <span class="math inline">\(\beta_K\)</span> moves by 5 to 8% and the chosen model does not change (<a href="../experiments/E35.html">E35</a>, part b).</li>
+<li><strong>Extinction.</strong> The extinction slope <span class="math inline">\(\gamma_K\)</span>, generated at zero, is fitted at <span class="math inline">\(-0.06\)</span> to <span class="math inline">\(-0.15\)</span> per split in every cell of <a href="../experiments/E21.html">E21</a>, so a negative <span class="math inline">\(\gamma_K\)</span> on a real clade is not a finding about extinction. At turnover 0.25 a generated negative <span class="math inline">\(\gamma_K\)</span> returns at 0.75 of its value with the right sign on 18 of 20 trees, but the positive arm is sampler-limited, and by the pre-set rule the slope is not identified (<a href="../experiments/E35.html">E35</a>, part a).</li>
+</ul>
+<h2 id="what-real-phylogenies-say">What real phylogenies say</h2>
+<p><strong>The 47 family trees.</strong> <code>nk</code> is the lineage-level model most often supported: in 12 of the 37 usable families by minimum AIC (<a href="../experiments/E26.html">E26</a>, <a href="../experiments/E28.html">E28</a>). Of the 31 <code>nk</code> fits that rest on at least 10 effective draws, <span class="math inline">\(\beta_K\)</span> is positive in 30, with a median factor of 1.40 per standard deviation of <span class="math inline">\(K\)</span> (0.78 to 2.74). In each family where it is supported, one genus holds most of the fast lineages and the slow ones are small or monotypic genera on long branches. In the gulls and terns (Laridae) <code>nk</code> leads <code>dd</code> by 42 AIC with a factor of 2.5, the fast lineages being 20 of the 22 gulls of <em>Larus</em>. In the crows and jays (Corvidae, 30 AIC, factor 2.1) 31 of the 42 species of <em>Corvus</em> are in the fastest quarter of the family, and the slowest lineage is the crested jay <em>Platylophus galericulatus</em>, sister to the rest of the family and unsplit for its whole 30-million-year crown; the fitted rate of a crow is about twenty times that of the crested jay. In the hares and rabbits (Leporidae, 22 AIC, 2.7) the hares of <em>Lepus</em> are fast and the volcano, Amami and riverine rabbits, each the only species of its genus, are the slowest. The same shape recurs in the whistlers, the tapaculos, the weavers and the reed warblers.</p>
+<p><strong>Imbalance.</strong> Across the usable <code>nk</code> fits the factor rises with the Colless imbalance of the tree (rank correlation 0.54) and does not follow the tree's size or crown age. The association rests on the most imbalanced trees: the four with a normalised imbalance above 0.17 hold four of the five largest effects, and among the other 27 the correlation is 0.32.</p>
+<p><strong>The 170 bird and mammal trees.</strong> <code>nk</code> is the parsimonious choice on 67 trees, the most of any model. The <span class="math inline">\(K\)</span> factor is above 1 on all 54 readable chosen fits, median 1.63, and on 120 of 124 readable <code>nk</code> fits whether chosen or not, median 1.48 (Figure 1, right). It rises with imbalance, rank correlation 0.53 over the 124 fits and 0.38 over the 54 that chose <code>nk</code>. On pairs of trees of the same taxon the factor is above 1 on both members on 11 of 11 (<a href="../experiments/E40.html">E40</a>, <a href="../real-phylogenies.html">Real phylogenies</a>). The covariate path keeps <span class="math inline">\(K\)</span> on 43 of the 67 <code>nk</code> trees and enters it first on 1 of 170; where it does not keep <span class="math inline">\(K\)</span> it keeps <span class="math inline">\(D\)</span> and ED, as <a href="../experiments/E21.html">E21</a> predicts.</p>
+<p><strong>How to read it.</strong> The lineages that have split most keep splitting, on every tree where the model is chosen, by a median factor of 1.4 to 1.6 per standard deviation. That is the pattern the rate-shift models draw with a latent rate per branch, here with one coefficient on an observable covariate. It does not name the mechanism: the genera these families hold as their radiations share geography of the kind that makes populations into species (archipelagos for the whistlers, the reed warblers and the swiftlets, a chain of montane forests for the tapaculos) as much as any trait, and on these trees a high <span class="math inline">\(K\)</span> and a low ED are largely the same lineages, so the counts of <code>nk</code> and <code>ned</code> choices are not counts of two mechanisms.</p>
+<p><strong>Not yet read.</strong></p>
+<ul>
+<li>The size. Most lineage-level fits did not meet the stopping rule (24 of 141 on the families), and the nearest simulated cells put <span class="math inline">\(\beta_K\)</span> at 0.65 to 0.76 of its value on fits stopped at this budget, so the factors above are likely about a quarter short. On the 16 smallest trees continued to 1,000 iterations and 2,400 draws, no <code>nk</code> fit met the stopping rule (<a href="../experiments/E41.html">E41</a>), and on the 170 trees the four-hour clock ended 40 <code>nk</code> fits, mostly above 150 tips.</li>
+<li>The alternative generators. Every simulation behind <span class="math inline">\(K\)</span> used the package's own models, which do not produce trees as unbalanced as the real ones (<a href="../experiments/E39.html">E39</a>). Trees generated under a latent-rate process (ClaDS-like or multitype), under protracted speciation and under a geographic process, fitted with the ladder to see whether each produces the <code>nk</code> choice and a factor of the size the real trees give, have not been run. Neither has a centred <span class="math inline">\(K\)</span>.</li>
+<li>The extinction side: every real-tree <span class="math inline">\(\gamma_K\)</span> sits on a box edge and none is read.</li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li>Savolainen V. et al. (2002). Is cladogenesis heritable? <em>Systematic Biology</em> 51, 835–843. <a href="https://doi.org/10.1080/10635150290102537">doi:10.1080/10635150290102537</a></li>
+<li>Kirkpatrick M. and Slatkin M. (1993). Searching for evolutionary patterns in the shape of a phylogenetic tree. <em>Evolution</em> 47, 1171–1181. <a href="https://doi.org/10.1111/j.1558-5646.1993.tb02144.x">doi:10.1111/j.1558-5646.1993.tb02144.x</a></li>
+<li>Heard S.B. (1996). Patterns in phylogenetic tree balance with variable and evolving speciation rates. <em>Evolution</em> 50, 2141–2148. <a href="https://doi.org/10.1111/j.1558-5646.1996.tb03604.x">doi:10.1111/j.1558-5646.1996.tb03604.x</a></li>
+<li>Mooers A. and Heard S.B. (1997). Inferring evolutionary process from phylogenetic tree shape. <em>The Quarterly Review of Biology</em> 72, 31–54. <a href="https://doi.org/10.1086/419657">doi:10.1086/419657</a></li>
+<li>Blum M.G.B. and François O. (2006). Which random processes describe the tree of life? A large-scale study of phylogenetic tree imbalance. <em>Systematic Biology</em> 55, 685–691. <a href="https://doi.org/10.1080/10635150600889625">doi:10.1080/10635150600889625</a></li>
+<li>Colless D.H. (1982). Review of: Phylogenetics: the theory and practice of phylogenetic systematics, by E. O. Wiley. <em>Systematic Zoology</em> 31, 100–104. <a href="https://doi.org/10.2307/2413420">doi:10.2307/2413420</a></li>
+<li>Jablonski D. (2008). Species selection: theory and data. <em>Annual Review of Ecology, Evolution, and Systematics</em> 39, 501–524. <a href="https://doi.org/10.1146/annurev.ecolsys.39.110707.173510">doi:10.1146/annurev.ecolsys.39.110707.173510</a></li>
+<li>Rabosky D.L. and McCune A.R. (2010). Reinventing species selection with molecular phylogenies. <em>Trends in Ecology &amp; Evolution</em> 25, 68–74. <a href="https://doi.org/10.1016/j.tree.2009.07.002">doi:10.1016/j.tree.2009.07.002</a></li>
+<li>Rabosky D.L. (2009). Heritability of extinction rates links diversification patterns in molecular phylogenies and fossils. <em>Systematic Biology</em> 58, 629–640. <a href="https://doi.org/10.1093/sysbio/syp069">doi:10.1093/sysbio/syp069</a></li>
+<li>Alfaro M.E. et al. (2009). Nine exceptional radiations plus high turnover explain species diversity in jawed vertebrates. <em>Proceedings of the National Academy of Sciences</em> 106, 13410–13414. <a href="https://doi.org/10.1073/pnas.0811087106">doi:10.1073/pnas.0811087106</a></li>
+<li>Rabosky D.L. (2014). Automatic detection of key innovations, rate shifts, and diversity-dependence on phylogenetic trees. <em>PLoS ONE</em> 9, e89543. <a href="https://doi.org/10.1371/journal.pone.0089543">doi:10.1371/journal.pone.0089543</a></li>
+<li>Maliet O., Hartig F. and Morlon H. (2019). A model with many small shifts for estimating species-specific diversification rates. <em>Nature Ecology &amp; Evolution</em> 3, 1086–1092. <a href="https://doi.org/10.1038/s41559-019-0908-0">doi:10.1038/s41559-019-0908-0</a></li>
+<li>Barido-Sottani J., Vaughan T.G. and Stadler T. (2020). A multitype birth–death model for Bayesian inference of lineage-specific birth and death rates. <em>Systematic Biology</em> 69, 973–986. <a href="https://doi.org/10.1093/sysbio/syaa016">doi:10.1093/sysbio/syaa016</a></li>
+<li>Moore B.R. et al. (2016). Critically evaluating the theory and performance of Bayesian analysis of macroevolutionary mixtures. <em>Proceedings of the National Academy of Sciences</em> 113, 9569–9574. <a href="https://doi.org/10.1073/pnas.1518659113">doi:10.1073/pnas.1518659113</a></li>
+<li>Rabosky D.L., Mitchell J.S. and Chang J. (2017). Is BAMM flawed? Theoretical and practical concerns in the analysis of multi-rate diversification models. <em>Systematic Biology</em> 66, 477–498. <a href="https://doi.org/10.1093/sysbio/syx037">doi:10.1093/sysbio/syx037</a></li>
+<li>Laudanno G., Haegeman B., Rabosky D.L. and Etienne R.S. (2021). Detecting lineage-specific shifts in diversification: a proper likelihood approach. <em>Systematic Biology</em> 70, 389–407. <a href="https://doi.org/10.1093/sysbio/syaa048">doi:10.1093/sysbio/syaa048</a></li>
+<li>Louca S. and Pennell M.W. (2020). Extant timetrees are consistent with a myriad of diversification histories. <em>Nature</em> 580, 502–505. <a href="https://doi.org/10.1038/s41586-020-2176-1">doi:10.1038/s41586-020-2176-1</a></li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 1.0.0. Francisco Richter, Università della Svizzera italiana.</p>
+</footer>
+</body>
+</html>

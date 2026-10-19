@@ -40,7 +40,7 @@ test_that("symmetric box [0,1]^2 with default init runs on the BDI sampler (H12,
     brts20, model = "cr", method = "mcem",
     control = list(lower_bound = c(0, 0), upper_bound = c(1, 1),
                    sampling = "bdi", sample_size = 20L, max_iter = 5L,
-                   num_threads = 1L))
+                   num_threads = 1L), link = "linear")
   expect_false(identical(fit$stop_reason, "e_step_failure"))
   expect_gte(fit$iterations, 1L)
   expect_true(is.finite(fit$loglik))
@@ -54,7 +54,7 @@ test_that("symmetric box [0,2]^2 with default init runs on the BDI sampler (H21)
     brts20, model = "cr", method = "mcem",
     control = list(lower_bound = c(0, 0), upper_bound = c(2, 2),
                    sampling = "bdi", sample_size = 20L, max_iter = 5L,
-                   num_threads = 1L))
+                   num_threads = 1L), link = "linear")
   expect_false(identical(fit$stop_reason, "e_step_failure"))
   expect_gte(fit$iterations, 1L)
   expect_true(is.finite(fit$loglik))
@@ -80,7 +80,7 @@ test_that("mu fixed at the lambda midpoint runs on the BDI sampler (H12)", {
     brts20, model = "cr", method = "mcem",
     control = list(lower_bound = c(0, 0.5), upper_bound = c(1, 0.5),
                    sampling = "bdi", sample_size = 20L, max_iter = 2L,
-                   num_threads = 1L))
+                   num_threads = 1L), link = "linear")
   expect_s3_class(fit, "emphasis_fit")
   expect_true(is.finite(fit$loglik))
   expect_equal(unname(fit$pars["gamma_0"]), 0.5)
@@ -93,7 +93,7 @@ test_that("the thinning sampler also accepts a default init with lambda == mu", 
     brts20, model = "cr", method = "mcem",
     control = list(lower_bound = c(0, 0.5), upper_bound = c(1, 0.5),
                    sampling = "dynamic_fresh", sample_size = 20L,
-                   max_iter = 2L, max_time = 60, num_threads = 1L)))
+                   max_iter = 2L, max_time = 60, num_threads = 1L), link = "linear"))
   expect_s3_class(fit, "emphasis_fit")
   expect_equal(unname(fit$pars["gamma_0"]), 0.5)
 })
@@ -106,7 +106,7 @@ test_that("estimate_rates errors when maxN < num_trees under thinning (H22 A)", 
       brts20, model = "cr", method = "mcem", init_pars = c(1, 0.3),
       control = list(sampling = "dynamic_fresh", num_trees = 300L, maxN = 200L,
                      max_iter = 2L, lower_bound = c(0, 0), upper_bound = c(4, 4),
-                     num_threads = 1L)),
+                     num_threads = 1L), link = "linear"),
     "maxN")
 })
 
@@ -118,13 +118,13 @@ test_that("the BDI sampler ignores maxN, including maxN < num_trees", {
     brts20, model = "cr", method = "mcem", init_pars = c(1, 0.3),
     control = list(sampling = "bdi", num_trees = 30L, maxN = 5L,
                    max_iter = 2L, lower_bound = c(0, 0), upper_bound = c(4, 4),
-                   num_threads = 1L))
+                   num_threads = 1L), link = "linear")
   set.seed(12)
   big <- estimate_rates(
     brts20, model = "cr", method = "mcem", init_pars = c(1, 0.3),
     control = list(sampling = "bdi", num_trees = 30L, maxN = 5000L,
                    max_iter = 2L, lower_bound = c(0, 0), upper_bound = c(4, 4),
-                   num_threads = 1L))
+                   num_threads = 1L), link = "linear")
   expect_true(is.finite(small$loglik))
   expect_identical(small$pars, big$pars)
   expect_identical(small$loglik, big$loglik)
@@ -136,7 +136,7 @@ test_that("a non-finite maxN is treated like NULL", {
     brts20, model = "cr", method = "mcem", init_pars = c(1, 0.3),
     control = list(sampling = "dynamic_fresh", num_trees = 20L, maxN = NA,
                    max_iter = 2L, lower_bound = c(0, 0), upper_bound = c(4, 4),
-                   max_time = 60, num_threads = 1L)))
+                   max_time = 60, num_threads = 1L), link = "linear"))
   expect_true(is.finite(fit$loglik))
   expect_equal(fit$iterations, 2L)
   # the resolved cap is the NULL default, not NA
@@ -151,7 +151,7 @@ test_that("default mcem maxN is NULL so max(2000, 10 * num_trees) applies", {
     brts20, model = "cr", method = "mcem", init_pars = c(1, 0.3),
     control = list(sampling = "dynamic_fresh", num_trees = 300L, max_iter = 1L,
                    lower_bound = c(0, 0), upper_bound = c(4, 4),
-                   max_time = 60, num_threads = 1L)))
+                   max_time = 60, num_threads = 1L), link = "linear"))
   expect_equal(fit$iterations, 1L)
   expect_true(is.finite(fit$loglik))
 })
@@ -189,7 +189,7 @@ run_mocked_mcem <- function(driver) {
     brts20, model = "cr", method = "mcem", init_pars = c(1, 0.3),
     control = list(lower_bound = c(0, 0), upper_bound = c(4, 4),
                    sampling = "bdi", sample_size = 10L, max_iter = 1L,
-                   num_threads = 1L))
+                   num_threads = 1L), link = "linear")
 }
 
 test_that("a failed final E-step gives loglik NA, not the previous iterate's fhat (H20)", {
@@ -251,7 +251,7 @@ test_that("print shows iterations and stop reason for a completed run", {
     brts20, model = "cr", method = "mcem", init_pars = c(1, 0.3),
     control = list(lower_bound = c(0, 0), upper_bound = c(4, 4),
                    sampling = "bdi", sample_size = 20L, max_iter = 3L,
-                   num_threads = 1L))
+                   num_threads = 1L), link = "linear")
   expect_true(fit$stop_reason %in% c("converged", "max_iter", "time_budget"))
   # the final E-step is a trace row but not an iteration
   expect_equal(fit$iterations, sum(emphasis:::.mcem_iter_rows(fit$details$mcem)))
@@ -282,7 +282,7 @@ test_that("diagnose_mcem excludes the final E-step row on both samplers", {
     brts20, model = "cr", method = "mcem", init_pars = c(1, 0.3),
     control = list(lower_bound = c(0, 0), upper_bound = c(4, 4),
                    sampling = "bdi", sample_size = 20L, max_iter = 3L,
-                   num_threads = 1L))
+                   num_threads = 1L), link = "linear")
   db <- diagnose_mcem(fb, plot = FALSE)
   expect_equal(nrow(db$convergence), fb$iterations)
   expect_equal(nrow(fb$details$mcem), fb$iterations + 1L)
@@ -297,7 +297,7 @@ test_that("diagnose_mcem excludes the final E-step row on both samplers", {
     brts20, model = "cr", method = "mcem", init_pars = c(1, 0.3),
     control = list(lower_bound = c(0, 0), upper_bound = c(4, 4),
                    sampling = "dynamic_fresh", sample_size = 20L, max_iter = 3L,
-                   max_time = 60, num_threads = 1L)))
+                   max_time = 60, num_threads = 1L), link = "linear"))
   dt <- diagnose_mcem(ft, plot = FALSE)
   expect_equal(nrow(dt$convergence), ft$iterations)
   expect_equal(nrow(ft$details$mcem), ft$iterations + 1L)

@@ -74,14 +74,14 @@ this covers its variance.
 }
 \examples{
 set.seed(1)
-tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr  <- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy <- tr$tes
 ctrl <- list(max_iter = 5, num_trees = 30)
 fit_cr <- estimate_rates(phy, method = "mcem", model = "cr",
-  control = c(ctrl, list(lower_bound = c(0, 0), upper_bound = c(2, 1))))
+  control = c(ctrl, list(lower_bound = c(-3, -5), upper_bound = c(1, 0))))
 fit_dd <- estimate_rates(phy, method = "mcem", model = "dd",
-  control = c(ctrl, list(lower_bound = c(0, -0.1, 0, -0.1),
-                         upper_bound = c(2, 0.1, 1, 0.1))))
+  control = c(ctrl, list(lower_bound = c(-3, -0.1, -5, -0.1),
+                         upper_bound = c(1, 0.1, 0, 0.1))))
 compare_models(cr = fit_cr, dd = fit_dd)
 }
 \seealso{

@@ -18,7 +18,7 @@
 #'   \code{ed0}.
 #' @examples
 #' set.seed(1)
-#' tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+#' tr  <- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 #' phy <- tr$tes
 #' head(lineage_table(phy))
 #' @export
@@ -92,7 +92,7 @@ lineage_table <- function(tree) {
 #'   are empty and \code{n_events} is 0.
 #' @examples
 #' set.seed(1)
-#' tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+#' tr  <- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 #' phy <- tr$tes
 #' cp <- covariate_path(phy, rate = "speciation")
 #' cp$speciation$entry_order

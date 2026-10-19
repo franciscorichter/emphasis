@@ -42,10 +42,10 @@ The MLE parameter estimates and predicted log-likelihood at the optimum.
 
 \examples{
 set.seed(1)
-tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr  <- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy <- tr$tes
 fit <- estimate_rates(phy, method = "gam", model = "cr",
-  control = list(lower_bound = c(0.05, 0), upper_bound = c(2, 1),
+  control = list(lower_bound = c(-3, -5), upper_bound = c(1, 0),
                  grid_points = 8, sample_size = 20))
 diagnose_gam(fit)
 }

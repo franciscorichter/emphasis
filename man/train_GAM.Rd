@@ -48,12 +48,13 @@ fast, which then rewards the fit for moving there (E36c of the paper).
 }
 \examples{
 set.seed(1)
-pars_mat <- cbind(beta_0  = runif(100, 0.3, 1.2),
-                  gamma_0 = runif(100, 0.05, 0.5))
+# Exponential link (the default): the intercepts are log rates
+pars_mat <- cbind(beta_0  = log(runif(100, 0.3, 1.2)),
+                  gamma_0 = log(runif(100, 0.05, 0.5)))
 sims <- simulate_tree(pars = pars_mat, max_t = 4, model = "cr",
                       max_tries = 0)
 gam_uni <- train_GAM(sims$simulations, pars_mat, model = "cr")
-predict_survival(gam_uni, data.frame(beta_0 = 0.8, gamma_0 = 0.2))
+predict_survival(gam_uni, data.frame(beta_0 = log(0.8), gamma_0 = log(0.2)))
 }
 \seealso{
 \code{\link{simulate_tree}}, \code{\link{predict_survival}}

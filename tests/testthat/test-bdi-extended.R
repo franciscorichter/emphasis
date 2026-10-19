@@ -477,7 +477,7 @@ test_that("estimate_rates routes to BDI where the gate now allows it", {
                           control = list(sampling = "bdi", num_trees = 20L,
                                          max_iter = 3L, rho = 0.5,
                                          lower_bound = c(1e-3, 0),
-                                         upper_bound = c(3, 3))),
+                                         upper_bound = c(3, 3)), link = "linear"),
     NA)
   expect_equal(fit$rho, 0.5)
   # the gaussian link for cr, likewise

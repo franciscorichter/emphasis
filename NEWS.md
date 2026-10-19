@@ -7,6 +7,14 @@ the interface is the one described below.
 
 ## Changes since version 0.4
 
+* The default link of `estimate_rates()`, `simulate_tree()`, `auto_bounds()`
+  and `emphasis_pipeline()` is now `"exponential"`, under which the
+  intercepts are log rates; it was `"linear"`. Every experiment the papers
+  rest on uses the exponential link. Scripts relying on the linear default
+  must pass `link = "linear"`, which stays supported. The `"gaussian"` link
+  is experimental: it has been used in one convergence study of the surrogate
+  proposal and in no estimation experiment, and it is not available for `ED`
+  or `K` models.
 * A tree that is not ultrametric (one with branching times after the present)
   is refused with a message, instead of being scored with the present read as
   an observed split.
@@ -44,7 +52,8 @@ the interface is the one described below.
   distinctiveness `ED` (raw or centred, `EDc`) and the number of ancestral
   splits `K`. Models are named (`"cr"`, `"dd"`, `"d"`, `"nd"`, `"ed"`,
   `"ned"`, `"edc"`, `"nedc"`, `"k"`, `"nk"`) or given as a formula such as
-  `~ N + ED`, on a linear, exponential or gaussian link.
+  `~ N + ED`, on an exponential (the default), linear or gaussian
+  (experimental) link.
 
 ## Estimation
 

@@ -219,7 +219,7 @@ test_that("cr and dd MCEM fits return the estimates they did before the fix", {
                          init_pars = c(0.5, 0.1),
                          control = list(lower_bound = c(0, 0),
                                         upper_bound = c(2, 1),
-                                        num_trees = 30L, max_iter = 5L))
+                                        num_trees = 30L, max_iter = 5L), link = "linear")
   # the estimates the fix left unchanged; 1e-4 relative, since the surrogate's
   # mean-field iteration and the optimiser drift by 1e-5 across platforms
   expect_equal(unname(f_cr$pars), c(0.589424195886, 0.087076327205),
@@ -231,7 +231,7 @@ test_that("cr and dd MCEM fits return the estimates they did before the fix", {
                          init_pars = c(0.8, -0.02, 0.2, 0),
                          control = list(lower_bound = c(0.1, -0.5, 0, -0.01),
                                         upper_bound = c(3, 0.01, 1, 0.01),
-                                        num_trees = 30L, max_iter = 5L))
+                                        num_trees = 30L, max_iter = 5L), link = "linear")
   expect_equal(unname(f_dd$pars),
                c(0.589209485828, 0.01, 0.130313707174, 0.009922713960),
                tolerance = 1e-4)
@@ -307,7 +307,7 @@ test_that("estimate_rates accepts branching times with no topology", {
                         init_pars = c(0.5, 0.1),
                         control = list(lower_bound = c(0, 0),
                                        upper_bound = c(2, 1),
-                                       num_trees = 10L, max_iter = 2L))
+                                       num_trees = 10L, max_iter = 2L), link = "linear")
   expect_s3_class(fit, "emphasis_fit")
   expect_true(is.finite(fit$loglik))
 })
