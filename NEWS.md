@@ -9,8 +9,10 @@ the interface is the one described below.
 
 * The default link of `estimate_rates()`, `simulate_tree()`, `auto_bounds()`
   and `emphasis_pipeline()` is now `"exponential"`, under which the
-  intercepts are log rates; it was `"linear"`. Every experiment the papers
-  rest on uses the exponential link. Scripts relying on the linear default
+  intercepts are log rates; it was `"linear"`. The model ladder, the
+  real-tree analyses, the exact comparison on real trees and the conditioned
+  estimability study use the exponential link; the earlier simulation studies
+  ran on the linear link and remain valid for it. Scripts relying on the linear default
   must pass `link = "linear"`, which stays supported. The `"gaussian"` link
   is experimental: it has been used in one convergence study of the surrogate
   proposal and in no estimation experiment, and it is not available for `ED`
