@@ -66,7 +66,7 @@ window.MathJax = {
 <ul>
 <li><strong>Relaxation default.</strong> E10b's pre-set rule is met (a fixed ⅛ converges 107 of 139 diverging units at 1000 sweeps, <code>"auto"</code> 77), so the rule changes the default to ⅛; the package still ships <code>damping = "auto"</code>. <a href="experiments/E10.html">E10</a></li>
 <li><strong>The ED-aware thinning ordering.</strong> It fails rule C4 (ED-aware ≥ mean-field on 77% of trees against 95%) and remains the default thinning variant for ED and K models. <a href="experiments/E3.html">E3</a></li>
-<li><strong>Which family split to quote.</strong> For the 29 families of E28 the parsimonious choice gives <code>nd</code> 1, <code>ned</code> 8, <code>nk</code> 7 among the 18 lineage-level verdicts (plus <code>cr</code> on 2), the minimum AIC gives <code>ned</code> 8, <code>nk</code> 10; the merged-table counts (21: <code>nk</code> 12, <code>ned</code> 9) use the minimum-AIC winner. The record does not say which a paper quotes. <a href="experiments/E28.html">E28</a>, <a href="experiments/E26.html">E26</a></li>
+<li><strong>Which family split to quote.</strong> For the 29 families of E28 the parsimonious choice gives <code>ned</code> 8, <code>nk</code> 8 among the 18 lineage-level verdicts (plus <code>cr</code> on 2), the minimum AIC gives <code>ned</code> 8, <code>nk</code> 10; the merged-table counts (21: <code>nk</code> 12, <code>ned</code> 9) use the minimum-AIC winner. The record does not say which a paper quotes. <a href="experiments/E28.html">E28</a>, <a href="experiments/E26.html">E26</a></li>
 <li><strong>Whether relaxation is reported to the caller.</strong> Raised by E10's design; no decision is recorded. <a href="experiments/E10.html">E10</a></li>
 <li><strong>The supplement's reading of E35 (a).</strong> It calls the turnover-0.25 negative K slope "the first extinction slope recovered in the study"; by the pre-set rule the slope is "not identified" (positive arm sampler-limited). <a href="experiments/E35.html">E35</a></li>
 </ul>
@@ -78,7 +78,6 @@ window.MathJax = {
 <li><strong>Survival emulator label (fixed).</strong> Clades passing the lineage cap were labelled extinct; fixed in <code>d3dee92</code> (labelled survived, 2000 clades). <a href="experiments/E36.html">E36</a> (b) was not rerun after the fix. E34r (<a href="experiments/E34.html">E34</a>) confirms E34's verdict under it.</li>
 <li><strong>Raw-ED simulator (fixed).</strong> Before <code>f30a791</code> the forward simulator held rates fixed between events, giving <code>ed</code> clades 30% too large; E24b reruns <code>ed</code>. Trees drawn from the same seeds differ before and after <code>f30a791</code>, so E29/E31 are not E27's trees and E30 is not E19b's. <a href="experiments/E24.html">E24</a>, <a href="experiments/E29.html">E29</a>, <a href="experiments/E30.html">E30</a></li>
 <li><strong>Two figures print NA.</strong> <code>fig-clades-effects</code> prints "NA of 32 families" and an empty NA panel; <code>fig-clades-shape</code>'s subtitle carries an NA (a missing label in the figure script). <a href="experiments/E26.html">E26</a></li>
-<li><strong><code>compare_models()</code> against its own tie rule.</strong> On Meliphagidae it chose <code>nd</code> although <code>ned</code> has the lower AIC with the same number of parameters, which the tie rule in <code>R/inference.R</code> does not allow. <a href="experiments/E28.html">E28</a></li>
 <li><strong><code>E26-analysis.R</code> has no refusal for tip spread.</strong> Macropodidae (tip spread 19%) was fitted and appears in the merged table (<code>dd</code>, lead over <code>cr</code> 32.6), although the design refuses trees above 15%. <a href="experiments/E26.html">E26</a></li>
 </ul>
 <h2 id="where-the-written-record-disagrees-with-the-data">Where the written record disagrees with the data</h2>
@@ -199,7 +198,7 @@ window.MathJax = {
 <td><a href="experiments/E28.html">E28</a></td>
 <td>README</td>
 <td>"a lineage-level model is the parsimonious choice in 18 (<code>nk</code> 7, <code>ned</code> 8, <code>nd</code> 1)"</td>
-<td>the split sums to 16; over 25 usable families <code>cr</code> 4, <code>dd</code> 5, <code>nd</code> 1, <code>ned</code> 8, <code>nk</code> 7; the readings differ on 5 families</td>
+<td>the split sums to 16; over 25 usable families <code>cr</code> 4, <code>dd</code> 5, <code>nd</code> 0, <code>ned</code> 8, <code>nk</code> 8; the readings differ on 3 families</td>
 </tr>
 <tr>
 <td><a href="experiments/E30.html">E30</a></td>
