@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E33 — The path as a user runs it, and the extinction path with a driver · emphasis</title>
+<meta name="description" content="Every dgLARS path measured so far (E20, E21b, E22) drew the hidden lineages at the generating parameters, which a user does not have; and every generator had extinction slopes of zero, so the extinction path had only been tested where there was nothing to admit.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E33 — The path as a user runs it, and the extinction path with a driver</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete: (a) 160 paths in two arms, (b) 200 paths in ten arms</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis <code>f30a791</code></td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E20-path.R</code> (<code>--at dd</code>, <code>--at chosen</code>, <code>--trees-dir</code>), trees for (b) by <code>sim/E27-conditions.R</code> <code>--trees-only</code>; <code>sim/E33-analysis.R</code> → <code>report/e33-numbers.tex</code>, <code>e33-table-a.tex</code>, <code>e33-table-b.tex</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E33/a-cells.csv</code> (8 rows), <code>results/E33/b-cells.csv</code> (10 rows); per-arm folders <code>a-dd/</code>, <code>a-chosen/</code>, <code>b-*</code>, <code>paths/</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Every dgLARS path measured so far (<a href="E20.html">E20</a>, <a href="E21.html">E21b</a>, <a href="E22.html">E22</a>) drew the hidden lineages at the generating parameters, which a user does not have; and every generator had extinction slopes of zero, so the extinction path had only been tested where there was nothing to admit. E33 asks two things: (a) does the path still choose the right set when the draws are taken at an MCEM estimate, as a user would run it — E20's second arm, which E20's rule had made conditional on a pass; (b) does the extinction path find a covariate that does drive extinction?</p>
+<h2 id="design">Design</h2>
+<p><strong>(a) The path at a fitted estimate.</strong> <a href="E20.html">E20</a>'s trees at 100 tips by seed (<code>cr</code>, <code>dd</code>, <code>nd</code>, <code>ned</code>, 20 each), the path over <span class="math inline">\(N\)</span>, <span class="math inline">\(D\)</span>, ED with 3000 draws and the 150 of largest weight as in E20, but the draws taken at an MCEM estimate of the tree:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>arm</th>
+<th>draws taken at</th>
+<th>MCEM fit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dd</code></td>
+<td>the <code>dd</code> fit of the tree (<code>--at dd</code>)</td>
+<td>300 draws, 300 iterations, four-hour clock</td>
+</tr>
+<tr>
+<td><code>chosen</code></td>
+<td>the fit of the model the one-call ladder chooses (<code>--at chosen</code>)</td>
+<td>the same, per rung</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Under the <code>f30a791</code> simulator <a href="E20.html">E20</a>'s seeds reproduce its <code>nd</code> trees (20 of 20) and not its <code>cr</code> (1 of 20), <code>dd</code> or <code>ned</code> (0 of 20) trees, so the pairing with E20 holds tree by tree for <code>nd</code> only.</p>
+<p><strong>(b) The extinction path with a driver.</strong> Generators whose covariate acts on extinction only (speciation slope zero, <code>--beta-eff 0</code>), the intercept centred at the covariate's mean as in <a href="E32.html">E32</a>, capacity calibrated per arm:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>arm</th>
+<th>generator</th>
+<th>extinction slope</th>
+<th>per unit at 100 / 200 tips</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ED + / ED -</td>
+<td><code>ned</code></td>
+<td><span class="math inline">\(\gamma_{ED} = \pm\log 2\)</span> per mean ED</td>
+<td>±0.1446 / ±0.1807</td>
+</tr>
+<tr>
+<td>K + / K -</td>
+<td><code>nk</code></td>
+<td><span class="math inline">\(\gamma_K = \pm\log 1.5\)</span> per sd of <span class="math inline">\(K\)</span></td>
+<td>±0.1525 / ±0.1471</td>
+</tr>
+<tr>
+<td>null</td>
+<td>E27's <code>dd</code> trees of the same cells</td>
+<td>0</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>At 100 tips (<a href="E27.html">E27</a>'s <code>ref</code> cell) and 200 tips (<code>n200</code>), 20 trees an arm; the path over <span class="math inline">\(N\)</span>, <span class="math inline">\(D\)</span>, ED and <span class="math inline">\(K\)</span> for both rates at the generating parameters, 3000 draws, 150 kept. Proposal: surrogate for the ED and null arms, thinning for the <span class="math inline">\(K\)</span> arms.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p><strong>(a)</strong> (1) <a href="E20.html">E20</a>'s rule per arm: the generating set on <span class="math inline">\(\ge 0.80\)</span> of <code>cr</code> and <code>dd</code> trees, an absent covariate admitted on <span class="math inline">\(\le 0.10\)</span>. (2) Paired with E20 on the same trees: the share with the same set as at the generating parameters; <strong>usable as a route</strong> if <span class="math inline">\(\ge 0.80\)</span> on <code>cr</code> and <code>dd</code> trees and the false-admission rate within 0.05 of E20's. (3) In the <code>chosen</code> arm, the share on which the path's set and the ladder's model name the same covariates. (4) The path's median ESS per arm and generator beside E20's; a cell below 10 is sampler-limited and reported, not read.</p>
+<p><strong>(b)</strong> (1) <strong>Detected</strong>: the driver in the extinction set BIC chooses on <span class="math inline">\(\ge 0.80\)</span> of trees in both signed arms. (2) <strong>Specific</strong>: on the zero arms the extinction path admits any covariate on <span class="math inline">\(\le 0.10\)</span>, and in the signed arms a non-driver on <span class="math inline">\(\le 0.10\)</span>. (3) <strong>Recovered</strong>: right sign on <span class="math inline">\(\ge 80\%\)</span> and median 0.75 to 1.25 of the generating value. (4) The speciation path on these trees read by <a href="E20.html">E20</a>'s rule (<span class="math inline">\(N\)</span> alone, absent lineage-level covariates on <span class="math inline">\(\le 0.10\)</span>). (5) An arm with median ESS below 10 of 3000 is sampler-limited; an arm whose generator misses its size by more than 15% is reported and not fitted.</p>
+<h2 id="results">Results</h2>
+<p><strong>(a)</strong> (<a href="E20.html">E20</a>'s value at the generating parameters in parentheses):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>arm</th>
+<th>generator</th>
+<th>exact set</th>
+<th>absent covariate admitted</th>
+<th>same tree / same set</th>
+<th>path = ladder's model</th>
+<th>ladder names generator</th>
+<th>path ESS</th>
+<th>MCEM fits finished / 20</th>
+<th>median hours per fit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dd</code> fit</td>
+<td>cr</td>
+<td>1.00 (0.90)</td>
+<td>0.00 (0.10)</td>
+<td>1 / 1</td>
+<td>—</td>
+<td>—</td>
+<td>726 (3000)</td>
+<td>17</td>
+<td>0.12</td>
+</tr>
+<tr>
+<td><code>dd</code> fit</td>
+<td>dd</td>
+<td>0.35 (0.55)</td>
+<td>0.45 (0.30)</td>
+<td>0 / 0</td>
+<td>—</td>
+<td>—</td>
+<td>1893 (2424)</td>
+<td>19</td>
+<td>0.11</td>
+</tr>
+<tr>
+<td><code>dd</code> fit</td>
+<td>nd</td>
+<td>0.00 (0.00)</td>
+<td>0.80 (0.80)</td>
+<td>20 / 12</td>
+<td>—</td>
+<td>—</td>
+<td>1507 (24)</td>
+<td>16</td>
+<td>0.12</td>
+</tr>
+<tr>
+<td><code>dd</code> fit</td>
+<td>ned</td>
+<td>0.20 (0.20)</td>
+<td>0.15 (0.60)</td>
+<td>0 / 0</td>
+<td>—</td>
+<td>—</td>
+<td>1293 (5)</td>
+<td>17</td>
+<td>0.14</td>
+</tr>
+<tr>
+<td>chosen fit</td>
+<td>cr</td>
+<td>1.00 (0.90)</td>
+<td>0.00 (0.10)</td>
+<td>1 / 1</td>
+<td>0.90</td>
+<td>0.90</td>
+<td>3000 (3000)</td>
+<td>20</td>
+<td>8.8</td>
+</tr>
+<tr>
+<td>chosen fit</td>
+<td>dd</td>
+<td>0.25 (0.55)</td>
+<td>0.55 (0.30)</td>
+<td>0 / 0</td>
+<td>0.40</td>
+<td>0.85</td>
+<td>2666 (2424)</td>
+<td>19</td>
+<td>9.6</td>
+</tr>
+<tr>
+<td>chosen fit</td>
+<td>nd</td>
+<td>0.00 (0.00)</td>
+<td>0.80 (0.80)</td>
+<td>20 / 16</td>
+<td>0.15</td>
+<td>0.10</td>
+<td>2700 (24)</td>
+<td>17</td>
+<td>5.7</td>
+</tr>
+<tr>
+<td>chosen fit</td>
+<td>ned</td>
+<td>0.20 (0.20)</td>
+<td>0.20 (0.60)</td>
+<td>0 / 0</td>
+<td>0.45</td>
+<td>0.05</td>
+<td>2752 (5)</td>
+<td>19</td>
+<td>6.8</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>"Hours per fit" in the <code>chosen</code> arm is the ladder's (<code>hours_fit</code>). No cell is sampler-limited. The generator-specific ESS is far larger at a fitted estimate than at the generating parameters for <code>nd</code> and <code>ned</code> (1507-2752 against 24 and 5), because the <code>dd</code> estimate carries no ED brake.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E33-a-route.png" alt="E33 (a)" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Share of 20 trees with exactly the generating speciation set (left) and with an absent covariate admitted (right), by where the draws are taken. The null on <code>cr</code> trees holds (1.00); <span class="math inline">\(N\)</span> alone on <code>dd</code> trees falls from 0.55 to 0.35 and 0.25, with false admissions rising from 0.30 to 0.45 and 0.55; <code>nd</code> is never returned.</figcaption>
+</figure>
+<p><strong>(b)</strong> Shares of 20 trees:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>arm</th>
+<th>tips</th>
+<th>driver admitted to extinction</th>
+<th>extinction admits <span class="math inline">\(N\)</span> / <span class="math inline">\(D\)</span> / ED / <span class="math inline">\(K\)</span></th>
+<th>ratio (trees kept, right sign)</th>
+<th>speciation: <span class="math inline">\(N\)</span> alone / absent lineage covariate</th>
+<th>ESS</th>
+<th>fits &lt; 10</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ED +log 2</td>
+<td>100</td>
+<td>0.00</td>
+<td>0 / 0.50 / 0 / 0</td>
+<td>—</td>
+<td>0.35 / 0.40</td>
+<td>454</td>
+<td>0</td>
+</tr>
+<tr>
+<td>ED +log 2</td>
+<td>200</td>
+<td>0.10</td>
+<td>0 / 0.70 / 0.10 / 0</td>
+<td>1.36 (2, 2)</td>
+<td>0.65 / 0.30</td>
+<td>99</td>
+<td>1</td>
+</tr>
+<tr>
+<td>ED -log 2</td>
+<td>100</td>
+<td>0.00</td>
+<td>0 / 0.05 / 0 / 0</td>
+<td>—</td>
+<td>0.40 / 0.45</td>
+<td>728</td>
+<td>0</td>
+</tr>
+<tr>
+<td>ED -log 2</td>
+<td>200</td>
+<td>0.05</td>
+<td>0 / 0.15 / 0.05 / 0</td>
+<td>1.33 (1, 1)</td>
+<td>0.65 / 0.30</td>
+<td>250</td>
+<td>0</td>
+</tr>
+<tr>
+<td>K +log 1.5</td>
+<td>100</td>
+<td>0.10</td>
+<td>0 / 0 / 0 / 0.10</td>
+<td>0.60 (2, 2)</td>
+<td>0.35 / 0.50</td>
+<td>22</td>
+<td>5</td>
+</tr>
+<tr>
+<td>K +log 1.5</td>
+<td>200</td>
+<td>0.10</td>
+<td>0 / 0 / 0 / 0.10</td>
+<td>0.51 (2, 2)</td>
+<td>0.50 / 0.45</td>
+<td>6.0 (<strong>s-l</strong>)</td>
+<td>15</td>
+</tr>
+<tr>
+<td>K -log 1.5</td>
+<td>100</td>
+<td>0.20</td>
+<td>0.05 / 0.15 / 0 / 0.20</td>
+<td>0.79 (4, 4)</td>
+<td>0.50 / 0.35</td>
+<td>11</td>
+<td>8</td>
+</tr>
+<tr>
+<td>K -log 1.5</td>
+<td>200</td>
+<td>0.40</td>
+<td>0.35 / 0.60 / 0 / 0.40</td>
+<td>0.66 (8, 8)</td>
+<td>0.60 / 0.30</td>
+<td>2.9 (<strong>s-l</strong>)</td>
+<td>20</td>
+</tr>
+<tr>
+<td>null</td>
+<td>100</td>
+<td>—</td>
+<td>0 / 0 / 0 / 0</td>
+<td>—</td>
+<td>0.40 / 0.30</td>
+<td>2254</td>
+<td>0</td>
+</tr>
+<tr>
+<td>null</td>
+<td>200</td>
+<td>—</td>
+<td>0 / 0 / 0 / 0</td>
+<td>—</td>
+<td>0.75 / 0.15</td>
+<td>2505</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+</div>
+<figure id="figure-2">
+<img src="../assets/wiki/E33-b-extinction.png" alt="E33 (b)" loading="lazy">
+<figcaption><strong>Figure 2.</strong> Share of 20 trees on which the extinction path admits each covariate (columns), by driver arm (rows) and size; framed cells are the driver. The ED driver is admitted on 0.00-0.10 while <span class="math inline">\(D\)</span> is admitted on 0.50 and 0.70 where extinction rises with ED; nothing is admitted on null trees. The 200-tip <span class="math inline">\(K\)</span> arms (*) are sampler-limited.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p><strong>(a) Not usable as a route by its rule</strong> (both arms, verbatim from <code>e33-numbers.tex</code>: "<a href="E20.html">E20</a>'s rule on cr and dd: not met; same set as at the generating parameters on 1 of 1 and 0 of 0 of the same trees: not usable by the rule"). Rule (2) is degenerate on <code>cr</code> and <code>dd</code> here, with 1 and 0 trees identical to E20's, so the verdict rests on rule (1): at a fitted estimate the path keeps the null (1.00 on <code>cr</code>) and loses diversity dependence (<code>dd</code> exact 0.35 and 0.25, absent covariate admitted on 0.45-0.55). On <code>nd</code> trees, where the trees are E20's own, the set equals E20's on 12 and 16 of 20, and <code>nd</code> is never returned. The path agrees with the ladder's model on 0.90 (<code>cr</code>), 0.40, 0.15, 0.45, and the ladder itself names the generator on 0.90, 0.85, 0.10, 0.05.</p>
+<p><strong>(b) Not detected.</strong> By <code>e33-numbers.tex</code>: ED "not detected, not specific" at 100 and 200 tips; <span class="math inline">\(K\)</span> "not detected, not specific" at 100 tips and sampler-limited at 200. With extinction driven by ED the path admits ED on at most 0.10 of trees and <span class="math inline">\(D\)</span> instead on 0.50-0.70 in the positive arm: it reads the pendant edge as raw age rather than as distinctiveness, and only where extinction rises with it. Nothing is admitted to extinction on null trees. The <span class="math inline">\(K\)</span> driver is admitted on 0.10-0.20 at 100 tips; the 200-tip <span class="math inline">\(K\)</span> arms rest on 6 and 3 effective draws. A fact the supplement does not state as a verdict: the <strong>speciation</strong> path on these trees keeps <span class="math inline">\(N\)</span> alone on only 0.35-0.75 and admits an absent lineage-level covariate on 0.15-0.50, above <a href="E20.html">E20</a>'s 0.10 ceiling, at the generating parameters (rule 4 not met).</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E20.html">E20</a> — the path at the generating parameters, whose second arm this is.</li>
+<li><a href="E22.html">E22</a> — the same path at 50-400 tips.</li>
+<li><a href="E23.html">E23</a>, <a href="E27.html">E27</a> — the one-call ladder whose chosen fit the <code>chosen</code> arm draws at; E27's <code>dd</code> trees are (b)'s null.</li>
+<li><a href="E32.html">E32</a> — the extinction side by fitting at 200 tips, whose generators (b) borrows.</li>
+<li><a href="E34.html">E34</a> — the conditional likelihood; every result up to E33 is unconditional.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

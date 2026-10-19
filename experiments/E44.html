@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E44 — on complete trees, is the likelihood the simulator&#x27;s, for every model? · emphasis</title>
+<meta name="description" content="Every estimation experiment so far mixed two things: whether the complete-data likelihood is that of the process the simulator runs, and how well Monte Carlo EM integrates over the hidden part.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E44 — on complete trees, is the likelihood the simulator's, for every model?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete; the raw-ED failure diagnosed as estimability and selection, not a mismatch (see Conclusion)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>before: emphasis <code>d3dee92</code>; after: <code>4e0b9dd</code> (the likelihood holds D constant between events)</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E44-complete.R</code>, <code>sim/E44-analysis.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E44/before/E44.csv</code>, <code>results/E44/after/E44.csv</code>, <code>results/E44/analysis.txt</code>, <code>results/E44/design.rds</code> (the 720 simulated L-tables)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Every estimation experiment so far mixed two things: whether the complete-data likelihood is that of the process the simulator runs, and how well Monte Carlo EM integrates over the hidden part. On a complete tree, every lineage kept, extinct ones included, nothing is hidden, so maximising the complete-data likelihood directly tests the first alone. Step 0.2 of the <a href="../estimability.html">estimability plan</a>. The D model was known to be defined two ways: the simulator held <span class="math inline">\(D\)</span> constant between events, the likelihood held the clade mean <span class="math inline">\(M\)</span> at its end-of-segment value so <span class="math inline">\(D\)</span> grew within a segment (<a href="../open-issues.html">Open issues</a>).</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<tbody>
+<tr>
+<td>models</td>
+<td><code>cr</code>, <code>dd</code>, <code>d</code>, <code>nd</code>, <code>ed</code>, <code>edc</code>, <code>ned</code>, <code>nedc</code>, <code>k</code>, <code>nk</code>, exponential link</td>
+</tr>
+<tr>
+<td>trees</td>
+<td>complete (extinct lineages kept), <span class="math inline">\(\rho = 1\)</span>, crown age 15, kept if both crown lineages survive and 60-160 extant tips</td>
+</tr>
+<tr>
+<td>turnover</td>
+<td>0.10 at the crown</td>
+</tr>
+<tr>
+<td>effect</td>
+<td>the model's lineage-level coefficient at <span class="math inline">\(-0.35\)</span> and <span class="math inline">\(+0.35\)</span> per scale unit; single-covariate models in <a href="E24.html">E24</a>'s unit (log(1 + effect) / sd of the covariate on <code>cr</code> clades, intercept calibrated), <span class="math inline">\(N\)</span> models in <a href="E27.html">E27</a>'s (<span class="math inline">\(\lambda_0 = 0.5\)</span>, <span class="math inline">\(\beta_N = \log 0.1 / K\)</span>, <span class="math inline">\(K\)</span> calibrated)</td>
+</tr>
+<tr>
+<td>trees per cell</td>
+<td>40, the same trees before and after</td>
+</tr>
+<tr>
+<td>fit</td>
+<td>the complete-data log-likelihood maximised by Subplex from the generating values and from a perturbed start, each restarted until a restart gains less than <span class="math inline">\(10^{-6}\)</span>; the two starts reached the same maximum on every tree</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>For every model and cell: the median ratio of each speciation coefficient to its generating value lies in [0.9, 1.1], and each slope has the right sign on at least 95% of trees. A model that fails has a likelihood that is not its simulator's and is corrected before the estimability study.</p>
+<h2 id="results">Results</h2>
+<p>Median ratio of the lineage-level speciation coefficient, and the share of trees with its right sign:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>model, cell</th>
+<th>before</th>
+<th>after</th>
+<th>rule before / after</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code>, <code>dd</code></td>
+<td>-</td>
+<td>-</td>
+<td>pass / pass</td>
+</tr>
+<tr>
+<td><code>d</code> -0.35</td>
+<td>0.70, 1.00</td>
+<td>0.95, 1.00</td>
+<td>fail / <strong>pass</strong></td>
+</tr>
+<tr>
+<td><code>d</code> +0.35</td>
+<td>1.46, 1.00</td>
+<td>1.16, 1.00</td>
+<td>fail / fail</td>
+</tr>
+<tr>
+<td><code>nd</code> -0.35</td>
+<td>0.77, 0.975</td>
+<td>1.01, 0.975</td>
+<td>fail / <strong>pass</strong></td>
+</tr>
+<tr>
+<td><code>nd</code> +0.35</td>
+<td>1.20, 1.00</td>
+<td>0.80, 0.95</td>
+<td>fail / fail</td>
+</tr>
+<tr>
+<td><code>ed</code> -0.35</td>
+<td>0.81 (<span class="math inline">\(\beta_0\)</span> 1.36)</td>
+<td>same</td>
+<td>fail / fail</td>
+</tr>
+<tr>
+<td><code>ed</code> +0.35</td>
+<td>1.22</td>
+<td>same</td>
+<td>fail / fail</td>
+</tr>
+<tr>
+<td><code>edc</code> -0.35 / +0.35</td>
+<td>1.04 / 1.07</td>
+<td>same</td>
+<td>pass / pass</td>
+</tr>
+<tr>
+<td><code>ned</code> -0.35 / +0.35</td>
+<td>0.82, 0.90 / 1.00, 0.875</td>
+<td>same</td>
+<td>fail / fail</td>
+</tr>
+<tr>
+<td><code>nedc</code> -0.35 / +0.35</td>
+<td>1.03 / 1.01</td>
+<td>same</td>
+<td>pass / pass</td>
+</tr>
+<tr>
+<td><code>k</code> -0.35 / +0.35</td>
+<td>1.005 (<span class="math inline">\(\beta_0\)</span> 0.23) / 0.97</td>
+<td>same</td>
+<td>fail / pass</td>
+</tr>
+<tr>
+<td><code>nk</code> -0.35 / +0.35</td>
+<td>1.14, <span class="math inline">\(\beta_N\)</span> 1.93, sign 0.60 / 1.00</td>
+<td>same</td>
+<td>fail / pass</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Bootstrap 95% intervals of the medians (a reading beside the rule, not a change to it): before the D change the <code>d</code> medians exclude 1 (0.70 [0.58, 0.78]; 1.46 [1.24, 1.65]) and so does <code>nd</code> -0.35 (0.77 [0.66, 0.91]); after it all four <code>d</code>/<code>nd</code> intervals contain 1 (<code>d</code> [0.86, 1.05] and [0.94, 1.40]; <code>nd</code> [0.91, 1.17] and [0.63, 1.25]). Raw <code>ed</code> excludes 1 in both cells (0.81 [0.74, 0.93]; 1.22 [1.02, 1.32]), both consistent with an additive +0.04 in <span class="math inline">\(\beta_{ED}\)</span>. The two D conventions differ by 0.40-1.20 nats per complete tree.</p>
+<h2 id="conclusion">Conclusion</h2>
+<ul>
+<li><strong>The D change was needed and brings <code>d</code> and <code>nd</code> to their generating values</strong> (emphasis <code>4e0b9dd</code>); the <code>d</code> and <code>nd</code> +0.35 cells still miss the [0.9, 1.1] band at 40 trees, with intervals that contain 1. Every D experiment before <code>4e0b9dd</code> (<a href="E19.html">E19</a>, <a href="E24.html">E24</a>'s <code>d</code> arm, <a href="E30.html">E30</a>, <a href="E31.html">E31</a>, <a href="E37.html">E37</a>, <span class="math inline">\(D\)</span> on the path in <a href="E20.html">E20</a>, <a href="E22.html">E22</a>, <a href="E33.html">E33</a>, and <a href="E40.html">E40</a>'s <code>nd</code> fits) maximised the old convention's likelihood; the persistent <span class="math inline">\(\beta_D\)</span> shortfall of those experiments is consistent with it.</li>
+<li><strong>Raw ED: no mismatch, a ridge and a window.</strong> An independent R computation of the ED likelihood from the definition equals <code>eval_logf</code> to <span class="math inline">\(3 \cdot 10^{-13}\)</span>, and an independent R simulator of the raw-ED process agrees with <code>simulate_tree()</code> (KS p 0.14-1 on 17 of 18 comparisons over 400 clades a cell). Pooled over 261 and 348 trees conditioned on survival only, the MLE returns <span class="math inline">\(\beta_{ED}\)</span> at 1.005 and 1.002 of its value. What fails is the per-tree estimate: raw ED grows with time like the clade mean, so <span class="math inline">\(\beta_0\)</span> and <span class="math inline">\(\beta_{ED}\)</span> lie on a ridge and a single 100-tip tree places them along it (<span class="math inline">\(\beta_{ED}\)</span> 0.93 and 1.17, <span class="math inline">\(\beta_0\)</span> 1.20 and 1.07, with no selection on size). In the -0.35 cell E44's 60-160 tip window adds a selection bias: the generator's survivors have a median of 145 tips, so the window keeps the smaller quarter (pooled MLE on those trees <span class="math inline">\(\beta_0\)</span> 1.25, <span class="math inline">\(\beta_{ED}\)</span> 0.89). Centring removes the ridge, which is why <code>edc</code> and <code>nedc</code> pass. A regression test now holds the ED likelihood to the definition (emphasis <code>e1c2e82</code>). The diagnosis is in <code>results/E44/ed-diagnosis/</code>.</li>
+<li><code>ned</code> fails on sign share at a small effect in <a href="E27.html">E27</a>'s unit (<span class="math inline">\(\beta\)</span> -0.095 / +0.066): a power limit, its medians' intervals contain 1. <code>k</code> -0.35 fails on the intercept ratio because the generating intercept is -0.12; <span class="math inline">\(\beta_K\)</span> recovers at 1.005. <code>nk</code> -0.35 fails because its generator stops at a median 73 tips, where <span class="math inline">\(\beta_N \approx -0.001\)</span> is not identified.</li>
+</ul>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="../estimability.html">Estimability</a> — the plan this is step 0.2 of.</li>
+<li><a href="E19.html">E19</a>, <a href="E30.html">E30</a>, <a href="E31.html">E31</a>, <a href="E37.html">E37</a> — the <span class="math inline">\(\beta_D\)</span> shortfall the D change addresses.</li>
+<li><a href="E24.html">E24</a> — the raw-ED simulator change (<code>f30a791</code>) and the single-covariate design.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

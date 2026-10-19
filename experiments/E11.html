@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E11 — Does the estimator invent an ED effect on trees from an independent simulator (evesim)? · emphasis</title>
+<meta name="description" content="No exact likelihood exists for the ED models, so the estimator had never been run against code that shares no line with it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E11 — Does the estimator invent an ED effect on trees from an independent simulator (<code>evesim</code>)?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete; the <code>ned</code> fits are unfinished (15-20 of 20 per cell ended on the 100-iteration cap)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>not recorded (the build audit finds no surviving launch record for E7-E16)</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E11-crosscheck.R</code>; figure <code>sim/figures-e11e14.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E11/crosscheck.csv</code> (240 rows = 12 cells x 20 trees), <code>results/E11/design.rds</code>; the supplement's data index says "no merged CSV", which is wrong on disk</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>No exact likelihood exists for the ED models, so the estimator had never been run against code that shares no line with it. One independent implementation exists: <code>evesim</code> (Qin, Valente &amp; Etienne 2025, <em>J. Theor. Biol.</em> 598:111992), which simulates <span class="math inline">\(\lambda\)</span><em>i = max(<span class="math inline">\(\lambda\)</span>0 + <span class="math inline">\(\beta\)</span>N N + <span class="math inline">\(\beta\)</span></em><span class="math inline">\(\Phi\)</span> <span class="math inline">\(\Phi\)</span>_i, 0) with <span class="math inline">\(\Phi\)</span><em>i a per-lineage relatedness metric. Their metrics are not this package's fair-proportion ED, so <strong>this is a misspecification test, not a validation</strong>, and the design said so. Two things are testable without the metrics matching: <em>specificity</em> — at <span class="math inline">\(\beta\)</span></em><span class="math inline">\(\Phi\)</span> = 0 there is no relatedness effect under any metric, so <code>ned</code> should return <span class="math inline">\(\hat{\beta}\)</span><em>ED near zero and not be selected; and <em>sensitivity under a different metric</em> — at <span class="math inline">\(\beta\)</span></em><span class="math inline">\(\Phi\)</span> &lt; 0, reported as measured. <a href="E14.html">E14</a> checked first that the two simulators agree where they implement the same process.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>value</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>simulator</td>
+<td><code>evesim::edd_sim</code>, crown age 15, <span class="math inline">\(\lambda\)</span>0 = 0.5</td>
+<td></td>
+</tr>
+<tr>
+<td>metric</td>
+<td><code>ed</code> (their ED: mean pairwise distance to the other species) and <code>nnd</code> (nearest-neighbour distance)</td>
+<td>neither is the fair proportion</td>
+</tr>
+<tr>
+<td><span class="math inline">\(\beta\)</span>_<span class="math inline">\(\Phi\)</span></td>
+<td>0, -0.005 ("moderate"), -0.015 ("strong")</td>
+<td></td>
+</tr>
+<tr>
+<td>turnover</td>
+<td>0 (<span class="math inline">\(\mu\)</span>0 = 0, their reported case, nothing hidden) and 0.25 (<span class="math inline">\(\mu\)</span>0 = 0.125)</td>
+<td>the second is the case where the augmentation has work to do</td>
+</tr>
+<tr>
+<td><span class="math inline">\(\beta\)</span>N</td>
+<td>calibrated per cell so the median tree is near 100 tips</td>
+<td></td>
+</tr>
+<tr>
+<td>cells</td>
+<td>2 metrics x 3 <span class="math inline">\(\beta\)</span><em><span class="math inline">\(\Phi\)</span> x 2 turnovers = 12; at <span class="math inline">\(\beta\)</span></em><span class="math inline">\(\Phi\)</span> = 0 the two metric cells hold the same trees (identical rows)</td>
+<td></td>
+</tr>
+<tr>
+<td>trees</td>
+<td>20 per cell</td>
+<td></td>
+</tr>
+<tr>
+<td>fits</td>
+<td><code>dd</code> and <code>ned</code>, surrogate proposal, 400 draws, <code>max_iter</code> 100, clock 3600 s, <code>rel_change</code> tol 10<span class="math inline">\(^{-2}\)</span>, patience 3, linear link, study box</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p><strong>Specificity:</strong> at <span class="math inline">\(\beta\)</span>_<span class="math inline">\(\Phi\)</span> = 0, ≥ 90% of trees give <span class="math inline">\(\hat{\beta}\)</span>_ED within one standard error of zero, <strong>and</strong> ≤ 5% select <code>ned</code> over <code>dd</code> by more than 2 AIC. <strong>Sensitivity:</strong> descriptive, no threshold. A failure of specificity is a finding about this estimator; a failure of sensitivity is not.</p>
+<h2 id="results">Results</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>cell</th>
+<th><span class="math inline">\(\beta\)</span>_<span class="math inline">\(\Phi\)</span></th>
+<th>turnover</th>
+<th><code>ned</code> over <code>dd</code> by &gt; 2 AIC</th>
+<th>median <span class="math inline">\(\hat{\beta}\)</span>_ED</th>
+<th>share <span class="math inline">\(\hat{\beta}\)</span>_ED &lt; 0</th>
+<th>median ESS (<code>ned</code>)</th>
+<th><code>ned</code> stop reasons</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>null</td>
+<td>0</td>
+<td>0</td>
+<td><strong>0.05</strong> (1 of 20)</td>
+<td>-0.0034</td>
+<td>0.80</td>
+<td>99.7</td>
+<td>18 cap, 1 converged, 1 clock</td>
+</tr>
+<tr>
+<td>null</td>
+<td>0</td>
+<td>0.25</td>
+<td><strong>0.00</strong></td>
+<td>+0.0099</td>
+<td>0.20</td>
+<td>85.6</td>
+<td>20 cap</td>
+</tr>
+<tr>
+<td><code>nnd</code> moderate</td>
+<td>-0.005</td>
+<td>0</td>
+<td>0.65</td>
+<td>-0.0194</td>
+<td>0.95</td>
+<td>35.2</td>
+<td>15 cap, 1 converged, 4 clock</td>
+</tr>
+<tr>
+<td><code>nnd</code> strong</td>
+<td>-0.015</td>
+<td>0</td>
+<td>0.90</td>
+<td>-0.0455</td>
+<td>0.95</td>
+<td>27.5</td>
+<td>15 cap, 5 clock</td>
+</tr>
+<tr>
+<td><code>ed</code> moderate</td>
+<td>-0.005</td>
+<td>0</td>
+<td>0.15</td>
+<td>-0.0055</td>
+<td>0.75</td>
+<td>55.1</td>
+<td>19 cap, 1 converged</td>
+</tr>
+<tr>
+<td><code>ed</code> strong</td>
+<td>-0.015</td>
+<td>0</td>
+<td>0.15</td>
+<td>-0.0064</td>
+<td>0.75</td>
+<td>175.0</td>
+<td>18 cap, 1 converged, 1 E-step failure</td>
+</tr>
+<tr>
+<td><code>nnd</code> moderate</td>
+<td>-0.005</td>
+<td>0.25</td>
+<td>0.05</td>
+<td>-0.0030</td>
+<td>0.55</td>
+<td>70.3</td>
+<td>20 cap</td>
+</tr>
+<tr>
+<td><code>nnd</code> strong</td>
+<td>-0.015</td>
+<td>0.25</td>
+<td>0.00</td>
+<td>-0.0124</td>
+<td>0.70</td>
+<td>82.9</td>
+<td>19 cap, 1 clock</td>
+</tr>
+<tr>
+<td><code>ed</code> moderate</td>
+<td>-0.005</td>
+<td>0.25</td>
+<td>0.05</td>
+<td>-0.0026</td>
+<td>0.60</td>
+<td>87.9</td>
+<td>20 cap</td>
+</tr>
+<tr>
+<td><code>ed</code> strong</td>
+<td>-0.015</td>
+<td>0.25</td>
+<td>0.00</td>
+<td>+0.0009</td>
+<td>0.45</td>
+<td>136.5</td>
+<td>20 cap</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>No cell is sampler-limited (median ESS 27.5-175). The clock ended 4 and 5 of 20 <code>ned</code> fits in the two <code>nnd</code> cells without extinction (above a tenth); every cell is dominated by the iteration cap.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E11-crosscheck.png" alt="Share of evesim trees on which ned beats dd by more than 2 AIC, by their metric, effect strength and turnover" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Dashed line: the 5% specificity limit. On null trees <code>ned</code> is selected on 0.05 (no extinction) and 0.00 (turnover 0.25). Under their nearest-neighbour metric the selection rate is 0.65 and 0.90 without extinction; under their mean pairwise distance it is 0.15; at turnover 0.25 it is 0.00-0.05 under both.</figcaption>
+</figure>
+<p>The record attributes the difference between the two metrics to how much each varies across a clade's lineages: mean pairwise distance by 5%, nearest-neighbour distance by 54%, so a coefficient on the first is close to a shift in <span class="math inline">\(\lambda\)</span>0.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Specificity, selection half: <strong>met</strong> (0.05 and 0.00 against ≤ 0.05). Specificity, standard-error half: <strong>not evaluable</strong> — the merged CSV carries no standard error of <span class="math inline">\(\hat{\beta}\)</span>_ED and no source reports one. Sensitivity (descriptive): the estimator picks up a nearest-neighbour effect at turnover 0 and a mean-pairwise-distance effect rarely, with <span class="math inline">\(\hat{\beta}\)</span>_ED negative on 0.75-0.95 of trees at turnover 0; at turnover 0.25 the signal is gone under both metrics at these effect sizes. E11 shows the estimator does not select an ED term on another group's null trees; it does not show recovery, since the metrics differ, and its <code>ned</code> fits are unfinished (iteration cap), so the selection rates are floors.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E14.html">E14</a> — the simulator agreement that gates E11.</li>
+<li><a href="E12.html">E12</a> — selection power for the ED term on this package's own trees.</li>
+<li><a href="E7.html">E7</a> — why turnover 0.25 leaves the proposal less room.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

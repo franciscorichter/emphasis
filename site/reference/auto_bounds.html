@@ -1,0 +1,118 @@
+<h3>Description</h3>
+
+<p>Starts from a safe center point (low rates, zero covariates) and expands
+outward along each parameter axis using bisection to find the feasibility
+boundary &mdash; where trees transition from surviving with sensible size to
+going extinct or exploding.  Much more efficient than blanket LHS sampling
+over a wide box.  Optionally trains a survival GAM over the detected region.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>auto_bounds(
+  tree,
+  model = "cr",
+  link = "linear",
+  n_test = 5L,
+  bisect_steps = 8L,
+  margin = 0.5,
+  tip_range = c(0.1, 10),
+  train_surv_gam = TRUE,
+  num_threads = 1L,
+  verbose = TRUE,
+  rho = 1,
+  surv_tries = 20L
+)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="auto_bounds_:_tree">tree</code></td>
+<td>
+<p>A <code>phylo</code> object or anything accepted by
+<code><a href="#estimate_rates">estimate_rates</a></code>.</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_model">model</code></td>
+<td>
+<p>Model specification: <code>"cr"</code>, <code>"dd"</code>, etc.</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_link">link</code></td>
+<td>
+<p><code>"linear"</code>, <code>"exponential"</code>, or <code>"gaussian"</code>.</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_n_test">n_test</code></td>
+<td>
+<p>Number of replicate simulations per candidate point
+to assess feasibility (default 5).</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_bisect_steps">bisect_steps</code></td>
+<td>
+<p>Number of bisection steps per axis direction
+(default 8; gives ~1/256 resolution).</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_margin">margin</code></td>
+<td>
+<p>Fractional expansion of detected bounds (default 0.5).</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_tip_range">tip_range</code></td>
+<td>
+<p>Multiplier range for acceptable tip counts relative
+to the observed tree.  Default <code>c(0.1, 10)</code>.</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_train_surv_gam">train_surv_gam</code></td>
+<td>
+<p>If <code>TRUE</code> (default), train a survival GAM
+on the detected region.</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_num_threads">num_threads</code></td>
+<td>
+<p>Parallel threads for batch simulation (default 1).</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_verbose">verbose</code></td>
+<td>
+<p>Print progress (default <code>TRUE</code>).</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_rho">rho</code></td>
+<td>
+<p>Sampling fraction (0, 1]. Default <code>1</code> (complete sampling).</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_surv_tries">surv_tries</code></td>
+<td>
+<p>Simulations per candidate when judging whether a parameter
+vector produces surviving clades of a usable size (default 20).
+Passed through to IS feasibility diagnostics.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>A list with components:
+</p>
+
+<dl>
+<dt>lower_bound</dt><dd><p>Numeric vector of lower bounds (compact layout).</p>
+</dd>
+<dt>upper_bound</dt><dd><p>Numeric vector of upper bounds (compact layout).</p>
+</dd>
+<dt>survival_gam</dt><dd><p>A <code>gam</code> object if trained, else <code>NULL</code>.</p>
+</dd>
+<dt>center</dt><dd><p>The safe center point used as starting location.</p>
+</dd>
+</dl>
+
+<h3>Examples</h3>
+
+<pre><code class='language-R'>## Not run: 
+library(ape)
+data(bird.orders)
+ab &lt;- auto_bounds(bird.orders, model = "dd", link = "exponential")
+fit &lt;- estimate_rates(bird.orders, method = "gam", model = "dd",
+         link = "exponential",
+         control = list(lower_bound = ab$lower_bound,
+                        upper_bound = ab$upper_bound),
+         cond = ab$survival_gam)
+
+## End(Not run)
+</code></pre>
+

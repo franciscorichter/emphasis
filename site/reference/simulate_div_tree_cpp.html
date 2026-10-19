@@ -1,0 +1,62 @@
+<h3>Description</h3>
+
+<p>Simulate a single phylogenetic tree under the general diversification model
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>simulate_div_tree_cpp(
+  pars,
+  model,
+  max_t,
+  max_N,
+  max_tries,
+  link = 0L,
+  seed = 0L
+)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="simulate_div_tree_cpp_:_pars">pars</code></td>
+<td>
+<p>Numeric vector of length 8:
+<code>c(beta_0, beta_N, beta_M, beta_D, gamma_0, gamma_N, gamma_M, gamma_D)</code>.
+Inactive parameters (those not selected by <code>model</code>) should be set to 0.</p>
+</td></tr>
+<tr><td><code id="simulate_div_tree_cpp_:_model">model</code></td>
+<td>
+<p>Integer vector of length 3: <code>c(use_N, use_P, use_E)</code> (each 0 or 1).</p>
+</td></tr>
+<tr><td><code id="simulate_div_tree_cpp_:_max_t">max_t</code></td>
+<td>
+<p>Crown age (forward simulation end time).</p>
+</td></tr>
+<tr><td><code id="simulate_div_tree_cpp_:_max_N">max_N</code></td>
+<td>
+<p>Maximum number of lineages before simulation is declared too large.</p>
+</td></tr>
+<tr><td><code id="simulate_div_tree_cpp_:_max_tries">max_tries</code></td>
+<td>
+<p>Maximum retries after extinction; an overflow is not retried.</p>
+</td></tr>
+<tr><td><code id="simulate_div_tree_cpp_:_link">link</code></td>
+<td>
+<p>Link function: 0 = linear (max(0,...)), 1 = exponential.</p>
+</td></tr>
+<tr><td><code id="simulate_div_tree_cpp_:_seed">seed</code></td>
+<td>
+<p>Positive integer seeding the simulator. <code>0</code> (the default)
+draws one from R's generator, so <code>set.seed()</code> reaches the simulator
+whether or not a seed is passed. Note that <code>max_tries</code> retries
+continue the same stream: a retry is a fresh tree, not the same one again.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>A named list with <code>Ltable</code> (4-column numeric matrix in DDD format)
+and <code>status</code> (one of <code>"done"</code>, <code>"extinct"</code>, <code>"too_large"</code>).
+</p>
+

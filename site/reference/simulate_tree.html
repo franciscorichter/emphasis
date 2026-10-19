@@ -1,0 +1,317 @@
+<h3>Description</h3>
+
+<p>Unified entry point for forward and conditional tree simulation.
+When <code>tree = NULL</code> (default) a complete tree is simulated forward
+from the crown; when <code>tree</code> is supplied the observed extant tree is
+augmented with stochastically drawn extinct lineages.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>simulate_tree(
+  tree = NULL,
+  pars,
+  max_t = 1,
+  model = "cr",
+  max_lin = 1e+06,
+  max_tries = 1,
+  useDDD = TRUE,
+  n_trees = 1L,
+  link = "linear",
+  max_missing = 10000,
+  max_lambda = 500,
+  maxN = NULL,
+  num_threads = 1L,
+  rho = 1,
+  method = "bdi"
+)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="simulate_tree_:_tree">tree</code></td>
+<td>
+<p>Optional observed extant tree for augmentation. Accepts
+<code>NULL</code> (forward sim), a <code>simulate_tree</code> result, a
+<code>phylo</code> object, or a numeric branching-time vector.  A <code>phylo</code>
+also supplies the topology the pendant-age covariates <code>M</code> and
+<code>D</code> are computed from; with a bare branching-time vector every
+observed lineage is recorded as dating from the crown and <code>D = 0</code> at
+every observed branching event.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_pars">pars</code></td>
+<td>
+<p>Numeric parameter vector or matrix. When a matrix each row
+produces one forward simulation.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_max_t">max_t</code></td>
+<td>
+<p>Crown age (forward simulation only). Default <code>1</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_model">model</code></td>
+<td>
+<p>Model specification (string, formula, or binary vector).
+Default <code>"cr"</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_max_lin">max_lin</code></td>
+<td>
+<p>Maximum lineages alive before declaring the tree too large;
+a clade that has had ten times as many lineages in all, alive and dead,
+is too large as well, which bounds the cost of a simulation that churns
+(high speciation and extinction over a long crown) under the cap.
+Default <code>1e6</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_max_tries">max_tries</code></td>
+<td>
+<p>Maximum additional attempts after extinction (forward
+simulation only). A clade that overflows <code>max_lin</code> is not retried:
+the overflow is a property of the parameters, not of the draw, and every
+retry would run to the cap again. Retries are tracked at the R level to
+compute <code>survival_prob</code>. Default <code>1</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_useDDD">useDDD</code></td>
+<td>
+<p>Convert L-table to <code>phylo</code> via <span class="pkg">DDD</span>.
+Default <code>TRUE</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_n_trees">n_trees</code></td>
+<td>
+<p>Number of augmented trees to draw (augmentation only).
+Default <code>1L</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_link">link</code></td>
+<td>
+<p>Link function: <code>"linear"</code> (default),
+<code>"exponential"</code>, or <code>"gaussian"</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_max_missing">max_missing</code></td>
+<td>
+<p>Maximum extinct lineages per augmented tree.
+Default <code>1e4</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_max_lambda">max_lambda</code></td>
+<td>
+<p>Maximum speciation rate (thinning bound) for augmentation.
+Default <code>500</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_maxN">maxN</code></td>
+<td>
+<p>Maximum total augmentation attempts. <code>NULL</code> (default)
+sets this to <code>max(2000, 200 * n_trees)</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_num_threads">num_threads</code></td>
+<td>
+<p>Threads for parallel augmentation. Default <code>1L</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_rho">rho</code></td>
+<td>
+<p>Sampling fraction in <code>(0, 1]</code>. Default <code>1</code> (complete
+sampling). With <code>rho &lt; 1</code> a random fraction of extant tips is dropped
+(forward simulation) or unsampled extant lineages are inserted
+(augmentation), matching incomplete taxon sampling.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_method">method</code></td>
+<td>
+<p>Augmentation method: <code>"bdi"</code> (default, exact BDI
+sampler) or <code>"thinning"</code> (C++ thinning proposal). The BDI sampler
+draws from the exact conditional distribution under constant rates
+(ESS = S, zero variance) and uses a self-consistent backward-forward
+iteration under diversity dependence. It covers N-only models
+(<code>"cr"</code>, <code>"dd"</code>) on the linear and exponential links;
+any other model or link falls back to thinning.
+</p>
+<p><strong><code>method = "bdi"</code> returns <code>NULL</code> for part of its draws.</strong>
+The BDI sampler has no notion of the two crown lineages, so a lineage born
+before the first observed branching is recorded as a daughter of observed
+node 0, which is not yet born then.  Such a draw cannot be turned into a
+<code>tas</code>: it is refused, and that element of <code>trees</code> (or
+<code>tas</code>, with <code>n_trees = 1</code>) is <code>NULL</code>.  On seven trees
+measured for this release, 0 to 168 of 200 draws built; a tree whose first
+observed branching is late loses most of them.  <code>log_q</code> is returned
+for every draw either way.  It was previously silent and wrong &ndash; every
+such draw produced a <code>phylo</code> with an edge of negative length.  The
+<code>"thinning"</code> method draws the parent from every lineage alive, the
+two crown lineages included, and is not affected.</p>
+</td></tr>
+</table>
+
+<h3>Model specification</h3>
+
+<p>The model's covariates are diversity <code>N</code>, age-imbalance
+<code>D = E - M</code> (a lineage's isolation relative to the clade mean
+<code>M</code>, which is used only internally to centre <code>D</code>) and
+evolutionary distinctiveness <code>ED</code> (the fair-proportion score on the
+complete tree: the branches from the crown to the lineage, each divided by
+the alive lineages below it; its last term is the pendant age and its sum
+over lineages is Faith's phylogenetic diversity).  Selected by named
+shortcuts or a formula:
+</p>
+
+<table>
+<tr>
+ <td style="text-align: left;">
+  <code>"cr"</code>  </td><td style="text-align: left;"> constant rate</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+  <code>"dd"</code>  </td><td style="text-align: left;"> diversity dependence (N)</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+  <code>"d"</code>   </td><td style="text-align: left;"> age-imbalance (D)</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+  <code>"nd"</code>  </td><td style="text-align: left;"> N + D</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+  <code>"ed"</code>  </td><td style="text-align: left;"> evolutionary distinctiveness (ED)</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+  <code>"ned"</code> </td><td style="text-align: left;"> N + ED</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+  <code>"edc"</code> </td><td style="text-align: left;"> centred ED (ED minus its mean over the lineages alive)</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+  <code>"nedc"</code> </td><td style="text-align: left;"> N + centred ED</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+  <code>"k"</code>   </td><td style="text-align: left;"> ancestral splits (K: the speciation events on the path from the crown)</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+  <code>"nk"</code>  </td><td style="text-align: left;"> N + K</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+</td>
+</tr>
+
+</table>
+
+<p>Formulas <code>~ N</code>, <code>~ N + D</code>, <code>~ N + ED</code>, <code>~ N + EDc</code> and <code>~ N + K</code>
+are also accepted (<code>ep</code> is a legacy alias for <code>d</code>).  An <code>ED</code> or <code>K</code>
+model needs the tree's topology (a <code>phylo</code>, not a branching-time vector) and is not
+available under the gaussian link.
+</p>
+
+<h3>Parameter vector</h3>
+
+<p>Compact layout; <code>beta_D</code> is the age-imbalance coefficient and
+<code>beta_ED</code> the distinctiveness coefficient (<code>M</code> is internal only,
+never part of the user vector):
+</p>
+<pre>c(beta_0,  [beta_N],  [beta_D],  [beta_ED],
+  gamma_0, [gamma_N], [gamma_D], [gamma_ED])</pre>
+<p>Only active covariates are included; length = <code>2 + 2 * sum(model)</code>.
+</p>
+
+<h3>Reproducibility</h3>
+
+<p>Every call draws its seed for the C++ sampler from R's generator, so
+<code>set.seed()</code> fixes both the forward simulator and the thinning
+augmenter: two runs under one seed return the same tree, two runs under
+different seeds do not. The retries a forward simulation makes draw a seed
+each, so they are distinct trees rather than one tree redrawn. Under
+<code>parallel::mclapply</code> each child has its own R stream and therefore its
+own seeds. Augmentation with <code>num_threads &gt; 1</code> is not reproducible:
+each worker draws from its own substream of the seed, but the sample keeps
+the first <code>n_trees</code> augmentations to finish.
+</p>
+
+<h3>Output &ndash; forward simulation (single)</h3>
+
+
+<dl>
+<dt><code>tes</code></dt><dd><p>Extant-only phylogeny (<code>phylo</code>), or <code>NULL</code>.</p>
+</dd>
+<dt><code>tas</code></dt><dd><p>Full phylogeny with extinct lineages (<code>phylo</code>),
+or <code>NULL</code>.</p>
+</dd>
+<dt><code>L</code></dt><dd><p>L-table (DDD format), or <code>NULL</code> if simulation
+failed.</p>
+</dd>
+<dt><code>status</code></dt><dd><p><code>"done"</code>, <code>"extinct"</code>, or
+<code>"too_large"</code>.</p>
+</dd>
+<dt><code>survival_prob</code></dt><dd><p>Empirical survival probability: <code>1 /
+    n_attempts</code> when the simulation succeeded, <code>0</code> otherwise.</p>
+</dd>
+<dt><code>attempts</code></dt><dd><p>Number of forward simulations run, counting the
+retries after extinction; 1 when the first draw completed or overflowed.</p>
+</dd>
+</dl>
+
+<h3>Output &ndash; forward simulation (batch, matrix <code>pars</code>)</h3>
+
+
+<dl>
+<dt><code>simulations</code></dt><dd><p>List of individual results (one per row of
+<code>pars</code>), each with the fields above.</p>
+</dd>
+<dt><code>survival_prob</code></dt><dd><p>Fraction of simulations with
+<code>status == "done"</code>.</p>
+</dd>
+</dl>
+
+<h3>Output &ndash; conditional simulation / augmentation</h3>
+
+<p>When <code>n_trees = 1</code>:
+</p>
+
+<dl>
+<dt><code>tas</code></dt><dd><p>Augmented phylogeny (<code>phylo</code>) including extinct
+lineages, or <code>NULL</code> on failure or when <code>useDDD = FALSE</code>.</p>
+</dd>
+<dt><code>log_q</code></dt><dd><p>Log sampling probability <span class="reqn">\(\log q(z \mid
+    \text{obs}, \theta)\)</span> of the augmentation.  <code>NA</code> on failure.</p>
+</dd>
+</dl>
+
+<p>When <code>n_trees &gt; 1</code>:
+</p>
+
+<dl>
+<dt><code>trees</code></dt><dd><p>List of <code>tas</code> phylogenies (length up to
+<code>n_trees</code>; failed draws are <code>NULL</code>).</p>
+</dd>
+<dt><code>log_q</code></dt><dd><p>Numeric vector of log sampling probabilities,
+one per successful draw.</p>
+</dd>
+</dl>
+
+<h3>Examples</h3>
+
+<pre><code class='language-R'>## Not run: 
+# --- Forward simulation ---
+tr &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr")
+tr$status          # "done"
+tr$survival_prob   # e.g. 0.25 if took 4 attempts
+
+# Batch: 200 CR simulations
+pm &lt;- cbind(beta_0 = runif(200, 0.3, 0.8), gamma_0 = runif(200, 0.05, 0.3))
+sims &lt;- simulate_tree(pars = pm, max_t = 8, model = "cr")
+sims$survival_prob              # fraction that succeeded
+sims$simulations[[1]]$tes      # first extant phylo
+
+# --- Augmentation ---
+aug &lt;- simulate_tree(tree = tr, pars = c(0.5, 0.1), model = "cr")
+aug$tas     # augmented phylo
+aug$log_q   # log q(z | obs, theta)
+
+# Many augmented trees
+augN &lt;- simulate_tree(tree = tr, pars = c(0.5, 0.1), model = "cr",
+                      n_trees = 100L)
+augN$log_q          # vector of length 100
+augN$trees[[1]]     # first augmented phylo
+
+## End(Not run)
+</code></pre>
+

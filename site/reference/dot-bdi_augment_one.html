@@ -1,0 +1,117 @@
+<h3>Description</h3>
+
+<p>Under CR: uses exact time-change method with analytical cumulative hazard.
+The event times are drawn from the correct inhomogeneous BDI process,
+giving zero-variance IS weights (logf - logg = constant).
+Under DD: uses approximate Gillespie with piecewise-constant rates.
+IS weights have nonzero variance (importance sampling, not exact).
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.bdi_augment_one(
+  bt,
+  pars8,
+  model_bin,
+  link,
+  tp,
+  p_fun = NULL,
+  Nhat_fun = NULL,
+  Phat_fun = NULL,
+  Ehat_fun = NULL,
+  max_missing = 10000L,
+  rho = 1,
+  track_parents = FALSE,
+  first_aug_id = 0L,
+  step_max = Inf,
+  obs_pid = NULL,
+  beta_ed = 0,
+  attach_fn = NULL
+)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id=".bdi_augment_one_:_bt">bt</code></td>
+<td>
+<p>Branching times, measured forward from the crown.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_pars8">pars8</code></td>
+<td>
+<p>The rate vector in the packed slot layout.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_model_bin">model_bin</code></td>
+<td>
+<p>Which covariate slots the model uses.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_link">link</code></td>
+<td>
+<p>Link index: 0 linear, 1 exponential, 2 gaussian.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_tp">tp</code></td>
+<td>
+<p>The present, as a time from the crown.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_p_fun">p_fun</code>, <code id=".bdi_augment_one_:_Nhat_fun">Nhat_fun</code>, <code id=".bdi_augment_one_:_Phat_fun">Phat_fun</code>, <code id=".bdi_augment_one_:_Ehat_fun">Ehat_fun</code></td>
+<td>
+<p>The converged mean field, as
+functions of time; <code>NULL</code> under CR, where the rates are exact.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_max_missing">max_missing</code></td>
+<td>
+<p>Draw budget for hidden lineages before the draw is
+abandoned.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_rho">rho</code></td>
+<td>
+<p>Sampling fraction.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_track_parents">track_parents</code></td>
+<td>
+<p>Whether to record, for every inserted lineage, which
+lineage it was attached to.  The parent is decoded from the same uniform
+that chose the event, so recording it costs no extra draw and leaves the
+stream bit-identical to a run without it.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_first_aug_id">first_aug_id</code></td>
+<td>
+<p>The id the inserted lineages are numbered from, so that
+ids stay distinct from the observed ones.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_step_max">step_max</code></td>
+<td>
+<p>Cap on the Gillespie step, which is how often the frozen
+rates are re-evaluated.  <code>Inf</code> leaves the step uncapped.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_obs_pid">obs_pid</code></td>
+<td>
+<p>Parent ids of the observed nodes, when the topology is known.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_beta_ed">beta_ed</code></td>
+<td>
+<p>The ED coefficient, which tilts the attachment choice toward
+the lineages the model gives a higher rate.  Zero attaches uniformly.</p>
+</td></tr>
+</table>
+
+<h3>Details</h3>
+
+<p>At <code>rho &lt; 1</code> a missing lineage still alive at tp is not a rejection but
+an <em>unsampled extant</em> lineage: the conditioning event is &quot;leaves no
+sampled descendant&quot;, and at the present that is satisfied by being alive and
+unsampled, an event of probability <code>1 - rho</code>.  Those lineages are
+returned in <code>$unsampled</code> (birth times) and written with the <code>5e10</code>
+sentinel by <code><a href="#dot-bdi_to_tree_df">.bdi_to_tree_df</a></code>, so <code>N(t)</code> counts them.
+</p>
+
+<h3>Value</h3>
+
+<p>List with <code>$reason</code>: <code>"accepted"</code> (then also
+<code>$species</code>, <code>$unsampled</code>, <code>$n_alive_at_tp</code>, <code>$logg</code>,
+and the parent records when <code>track_parents</code>), <code>"max_missing"</code>
+(more than <code>max_missing</code> missing lineages drawn) or
+<code>"survivor"</code> (a missing lineage still alive at tp; only reachable at
+<code>rho = 1</code>, where such a tree has f = 0).
+</p>
+

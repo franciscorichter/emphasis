@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E22 — The covariate path at other sizes (50, 200, 400 tips) · emphasis</title>
+<meta name="description" content="E20 and E21b measured the path at one size, 100 tips, where it found the null and \(N\) but could not separate \(D\) from ED.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E22 — The covariate path at other sizes (50, 200, 400 tips)</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete (60 trees a size, no errors)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>not recorded</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E20-path.R</code> with <code>--tips 50/200/400 --gens cr,dd,ned</code>; figures <code>fig-s-path-size</code>, <code>fig-study-path</code>, <code>fig-study-routes-coef</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E22/t50/path.csv</code>, <code>t200/path.csv</code>, <code>t400/path.csv</code> (60 rows each), per-size <code>design.rds</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p><a href="E20.html">E20</a> and <a href="E21.html">E21b</a> measured the path at one size, 100 tips, where it found the null and <span class="math inline">\(N\)</span> but could not separate <span class="math inline">\(D\)</span> from ED. E22 asks whether that holds or changes as the tree grows, and in particular whether the <code>ned</code> generating set <span class="math inline">\(N + \mathrm{ED}\)</span> is chosen on <span class="math inline">\(\ge 80\%\)</span> at any size.</p>
+<h2 id="design">Design</h2>
+<p><a href="E20.html">E20</a>'s design at 50, 200 and 400 tips, on the <code>cr</code>, <code>dd</code> and <code>ned</code> generators (<code>nd</code> is sampler-limited at every size and was left out).</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>value</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>tips</td>
+<td>50, 200, 400</td>
+<td>observed trees 31-73, 122-295, 245-611 tips (the supplement says 31-70 at 50)</td>
+</tr>
+<tr>
+<td>crown, turnover, link</td>
+<td>15, 0.10, exponential</td>
+<td><span class="math inline">\(K\)</span> recalibrated per size</td>
+</tr>
+<tr>
+<td><code>dd</code> <span class="math inline">\(\beta_N\)</span></td>
+<td>-0.0327 / -0.00624 / -0.0017</td>
+<td>at 50 / 200 / 400 tips</td>
+</tr>
+<tr>
+<td><code>ned</code> <span class="math inline">\(\beta_{ED}\)</span></td>
+<td>-0.0797 / -0.104 / -0.138 per unit</td>
+<td><span class="math inline">\(\log 0.65\)</span> at each size's ED scale</td>
+</tr>
+<tr>
+<td>trees per cell</td>
+<td>20</td>
+<td>180 trees</td>
+</tr>
+<tr>
+<td>draws</td>
+<td>3000 surrogate draws at the generating parameters, 150 of largest weight entering</td>
+<td></td>
+</tr>
+<tr>
+<td>covariates offered</td>
+<td><span class="math inline">\(N\)</span>, <span class="math inline">\(D\)</span>, ED</td>
+<td>for speciation and extinction</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Recorded as in <a href="E20.html">E20</a>, plus the wall-clock of the augmentation and of the path per tree.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p><code>00-design.md</code> §E22: the <a href="E20.html">E20</a> rule at each size (BIC set equal to the generating set on <span class="math inline">\(\ge 80\%\)</span> for <code>cr</code> and <code>dd</code>; an absent covariate on <span class="math inline">\(\le 10\%\)</span>; nothing on the extinction path on more than 10%), and for <code>ned</code> the size at which <span class="math inline">\(N + \mathrm{ED}\)</span> is chosen on <span class="math inline">\(\ge 80\%\)</span>, if any of the three reaches it. The 400-tip cell is also a cost measurement: a tree whose augmentation or path exceeds two hours is reported as such and the rule is applied to the trees that finished.</p>
+<h2 id="results">Results</h2>
+<p>With <a href="E20.html">E20</a>'s 100-tip cell in the second column:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>generator / quantity</th>
+<th>50 tips</th>
+<th>100 (E20)</th>
+<th>200</th>
+<th>400</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code>: exact (∅)</td>
+<td>0.85 (<span class="math inline">\(D\)</span> 2, <span class="math inline">\(N{+}D\)</span> 1)</td>
+<td>0.90</td>
+<td><strong>1.00</strong></td>
+<td><strong>1.00</strong></td>
+</tr>
+<tr>
+<td><code>dd</code>: exact (<span class="math inline">\(N\)</span> alone)</td>
+<td>0.40</td>
+<td>0.55</td>
+<td>0.70</td>
+<td>0.65</td>
+</tr>
+<tr>
+<td><code>dd</code>: <span class="math inline">\(N\)</span> in set / <span class="math inline">\(D\)</span> added / ED added</td>
+<td>1.00 / 0.35 / 0.30</td>
+<td>0.85 / 0.20 / 0.10</td>
+<td>0.95 / 0.25 / 0.00</td>
+<td>0.85 / 0.20 / 0.00 (∅ on 0.15)</td>
+</tr>
+<tr>
+<td><code>dd</code>: <span class="math inline">\(N\)</span> coefficient at the BIC point (trees kept)</td>
+<td>0.82 (20)</td>
+<td>0.85 (17)</td>
+<td>0.97 (19)</td>
+<td>0.81 (17)</td>
+</tr>
+<tr>
+<td><code>ned</code>: exact (<span class="math inline">\(N{+}\)</span>ED)</td>
+<td>0.30</td>
+<td>0.20</td>
+<td>0.05</td>
+<td><strong>0.00</strong></td>
+</tr>
+<tr>
+<td><code>ned</code>: <span class="math inline">\(N\)</span> / <span class="math inline">\(D\)</span> / ED in set</td>
+<td>0.75 / 0.25 / 0.55</td>
+<td>0.75 / 0.60 / 0.75</td>
+<td>0.65 / 0.70 / 0.70</td>
+<td>0.30 / 0.75 / 0.60</td>
+</tr>
+<tr>
+<td><code>ned</code>: median ESS of 3000 (&lt; 10)</td>
+<td>16.3 (7)</td>
+<td>5.4 (16) <strong>s-l</strong></td>
+<td>6.7 (12) <strong>s-l</strong></td>
+<td>6.0 (13) <strong>s-l</strong></td>
+</tr>
+<tr>
+<td><code>ned</code>: ED coefficient where kept (trees)</td>
+<td>2.19 (11)</td>
+<td>1.78 (15)</td>
+<td>1.47 (14)</td>
+<td>1.42 (12)</td>
+</tr>
+<tr>
+<td><code>ned</code>: first to enter</td>
+<td><span class="math inline">\(N\)</span> 12, <span class="math inline">\(D\)</span> 5, ED 3</td>
+<td><span class="math inline">\(D\)</span> 10, <span class="math inline">\(N\)</span> 9</td>
+<td><span class="math inline">\(D\)</span> 10, <span class="math inline">\(N\)</span> 10</td>
+<td><strong><span class="math inline">\(D\)</span> 19</strong>, <span class="math inline">\(N\)</span> 1</td>
+</tr>
+<tr>
+<td>extinction path</td>
+<td><span class="math inline">\(D\)</span> on 0.05 of <code>ned</code> trees, else nothing</td>
+<td>nothing</td>
+<td>nothing</td>
+<td>nothing</td>
+</tr>
+<tr>
+<td>path cost per tree (median s)</td>
+<td>134-199</td>
+<td>65-82</td>
+<td>816-1121</td>
+<td>3084-4668 (max 3.1 h)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>s-l = sampler-limited (median ESS &lt; 10). The ESS printed in <code>fig-s-path-size</code> is that of the 150 draws entering the path (9, 4, 5, 5 for <code>ned</code>); the table gives the ESS of all 3000 (<code>ess</code> column). At 400 tips the generating <span class="math inline">\(\beta_N = -0.0014\)</span> per lineage on <code>dd</code> trees, and the null is chosen on 0.15 of them. At 400 tips 5 of 60 paths took more than two hours (<code>sec_path</code>, maximum 3.1 h); every row of the file has a result, so the rule is applied here to all 60 trees, and the record does not say that those five were set aside.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E22-size.png" alt="E22 path by size" loading="lazy">
+<figcaption><strong>Figure 1.</strong> What BIC admits for speciation as the tree grows, by generator. Red: the exact generating set; blue, gold, purple: <span class="math inline">\(N\)</span>, <span class="math inline">\(D\)</span>, ED in the set; numbers above each size are the ESS of the entering draws. On <code>cr</code> trees the null rises to 1.00; on <code>dd</code> trees <span class="math inline">\(N\)</span> stays at 0.85-1.00 while <span class="math inline">\(N\)</span> alone reaches 0.70 at most; on <code>ned</code> trees <span class="math inline">\(N\)</span> falls and <span class="math inline">\(D\)</span> rises, and the exact set falls to 0.00.</figcaption>
+</figure>
+<figure id="figure-2">
+<img src="../assets/wiki/E22-routes-coef.png" alt="E22 coefficients by route" loading="lazy">
+<figcaption><strong>Figure 2.</strong> Fitted over generating coefficient by route and size (ladder from <a href="E27.html">E27</a>, path from <a href="E20.html">E20</a>, <a href="E21.html">E21b</a>, E22). <span class="math inline">\(N\)</span> on <code>dd</code> trees is within the band by the path at every size (0.81-0.97); ED on <code>ned</code> trees comes back from the path at 1.42-2.19 of its value, red-ringed where more than half the fits have ESS below 10.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<ul>
+<li><strong><code>cr</code></strong>: rule met at every size (0.85, 0.90, 1.00, 1.00).</li>
+<li><strong><code>dd</code></strong>: rule not met at any size: <span class="math inline">\(N\)</span> alone on 0.40-0.70, although <span class="math inline">\(N\)</span> is in the set on 0.85-1.00 and enters first on 0.95-1.00 at 50, 200 and 400 tips (0.85 at 100); <span class="math inline">\(D\)</span> is falsely added on 0.20-0.35, above the 0.10 ceiling. Specificity rises from 50 tips (0.40) to 200-400 (0.65-0.70).</li>
+<li><strong><code>ned</code></strong>: <span class="math inline">\(N + \mathrm{ED}\)</span> is not chosen on <span class="math inline">\(\ge 80\%\)</span> at any size (0.30 at 50, 0.00 at 400), and every cell above 50 tips is sampler-limited — the surrogate proposal's map from <a href="E7.html">E7</a> at -0.35<span class="math inline">\(\lambda\)</span>, read at the path. As the tree grows, <span class="math inline">\(N\)</span> leaves the set (0.75 → 0.30) and <span class="math inline">\(D\)</span> enters (0.25 → 0.75), first to enter on 19 of 20 trees at 400 tips: the path's preference moves from ED toward <span class="math inline">\(D\)</span>, the two still sharing the pendant edge.</li>
+</ul>
+<p>The null and the entry of <span class="math inline">\(N\)</span> hold from 50 to 400 tips; the separation of <span class="math inline">\(D\)</span> and ED does not appear at any size. The <code>ned</code> cells are sampler-limited, so they do not show what the path would do on adequately sampled draws. The cost grows from about a minute to about an hour per path between 100 and 400 tips.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E20.html">E20</a> — the 100-tip design E22 extends.</li>
+<li><a href="E21.html">E21</a> — E21b, <span class="math inline">\(K\)</span> offered to the path at 100 tips.</li>
+<li><a href="E33.html">E33</a> — the path at a fitted estimate rather than the generating parameters.</li>
+<li><a href="E27.html">E27</a> — the ladder at 50 and 200 tips, the other route in <code>fig-study-routes</code>.</li>
+<li><a href="E7.html">E7</a> — the surrogate proposal's feasibility map that predicts the <code>ned</code> ESS.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

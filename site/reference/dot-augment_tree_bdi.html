@@ -1,0 +1,93 @@
+<h3>Description</h3>
+
+<p>Returns the same structure as the augment_trees() C++ function,
+list(trees, logf, logg, weights, fhat), plus the draw counts.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.augment_tree_bdi(
+  tree,
+  pars,
+  model_bin = c(0L, 0L, 0L),
+  sample_size = 1L,
+  max_missing = 10000,
+  link = 0L,
+  rho = 1,
+  use_gaussian_closure = TRUE,
+  topology = NULL,
+  mesh = NULL,
+  attach = c("rate", "uniform"),
+  damping = "auto"
+)
+</code></pre>
+
+<h3>Details</h3>
+
+<p>Draws are attempted until <code>sample_size</code> have completed or the budget
+of <code>5 * sample_size</code> attempts is spent.  A draw is rejected when its
+missing-lineage count exceeds <code>max_missing</code> (counted in
+<code>n_rejected_max_missing</code>) or, under DD, when a missing lineage is
+still alive at the present (counted in <code>n_rejected</code>; such a tree has
+f = 0 at rho = 1).  Completed draws with a non-finite log-weight are
+dropped from the returned tree set (the M-step set) but stay in the fhat
+denominator with weight zero.
+</p>
+<p>fhat = log(sum_w / n_valid) + max_lw + log(acc), where n_valid counts every
+completed draw and acc = n_valid / (n_valid + n_rejected) is the acceptance
+rate of the survivor channel.  max_missing overflows are excluded from the
+denominator, as in the thinning E-step (S_completed in src/E_step.cpp).
+</p>
+<p>The log(acc) correction is derived at <code>rho = 1</code>, where a surviving
+missing lineage has f = 0 and the rejection is a property of the target.
+At <code>rho &lt; 1</code> an unsampled survivor is a legitimate configuration and is
+emitted rather than rejected, so <code>n_rejected</code> is 0, <code>acc</code> is 1 and
+the factor is inert.  <code>acc</code> is the
+stop-at-<code>n_valid</code> plug-in estimate of the acceptance rate, which is
+biased at small <code>sample_size</code>: at the function's own default
+<code>sample_size = 1L</code> a draw with three survivor rejections moves fhat
+by log(1/4) = -1.39.  At the MCEM default of a few hundred draws the bias
+is of order 1e-3.
+</p>
+
+<h3>Every pre-first-split lineage is attached to observed node 0</h3>
+
+<p><code>.bdi_to_tree_df</code> records, as the parent of an augmented lineage born
+at <code>t</code>, the last observed branching at or before <code>t</code>
+(<code>max(which(bt_sorted &lt;= birth) - 1L)</code>).  For a lineage born before the
+<strong>first</strong> observed branching there is none, and the expression falls
+back to observed node 0 &ndash; a lineage that is not yet born at <code>t</code>.  The
+sampler has no notion of the two crown lineages, which is where such a birth
+really attaches, and it never records the reserved crown ids the thinning
+sampler uses.
+</p>
+<p>The consequence used to be silent and wrong: <code>tas</code> carried an edge of
+negative length wherever it happened.  On seven trees measured here, the
+parent build turned all 200 draws into a <code>phylo</code> and 5 to 200 of them
+had a negative edge, the shortest <code>-7.15</code>.
+</p>
+<p><code>.aug_to_Ltable</code> now refuses an attachment older than its
+recorded parent and returns <code>NULL</code>, so those draws produce no tree at
+all.  The failure is loud where it used to be silent, and the throughput is
+the price: on the same seven trees, <code>simulate_tree(method = "bdi")</code>
+built 0, 106, 124, 129, 153, 156 and 168 trees out of 200, with the refused
+draws in every case exactly those carrying a lineage born before the first
+observed branching.  A tree whose first observed branching is late loses
+most of its draws; one whose crown splits early loses few.
+</p>
+<p>The parent assignment itself is unchanged and still wrong.  Fixing it means
+giving the BDI sampler the two crown lineages and the same uniform draw over
+labelled attachments the thinning sampler makes (audit finding H45).
+</p>
+
+<h3>Value</h3>
+
+<p>List: <code>trees</code>, <code>logf</code>, <code>logg</code>, <code>weights</code>
+(finite-weight draws only), <code>fhat</code>, <code>n_valid</code> (completed
+draws), <code>n_nonfinite</code> (completed draws dropped for a non-finite
+log-weight), <code>n_attempts</code>, <code>n_rejected</code> (survivors at tp),
+<code>n_rejected_max_missing</code>, <code>acc</code>.  <code>trees</code> is empty when
+no draw completed or every completed draw has a non-finite log-weight;
+a warning is issued when fewer than <code>sample_size</code> draws completed.
+</p>
+

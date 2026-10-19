@@ -1,0 +1,124 @@
+<h3>Description</h3>
+
+<p>Runs a multi-stage estimation workflow with automatic bounds detection,
+exploratory fits (GAM and CEM), and optional MCEM refinement.  Each stage
+is timed and logged.  If MCEM fails, the best exploratory result is
+returned.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>emphasis_pipeline(
+  tree,
+  model = "cr",
+  link = "linear",
+  stages = c("bounds", "gam", "cem", "mcem"),
+  control = list(),
+  verbose = TRUE
+)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="emphasis_pipeline_:_tree">tree</code></td>
+<td>
+<p>A <code>phylo</code> object, branching-time vector, or
+<code><a href="#simulate_tree">simulate_tree</a></code> result.</p>
+</td></tr>
+<tr><td><code id="emphasis_pipeline_:_model">model</code></td>
+<td>
+<p>Model specification: <code>"cr"</code>, <code>"dd"</code>, <code>"d"</code>,
+<code>"nd"</code>, <code>"ed"</code>, <code>"ned"</code>, <code>"k"</code>, <code>"nk"</code>, a formula
+(e.g. <code>~ N + D</code>, <code>~ N + ED</code>, <code>~ N + K</code>), or a binary vector.</p>
+</td></tr>
+<tr><td><code id="emphasis_pipeline_:_link">link</code></td>
+<td>
+<p><code>"linear"</code> (default), <code>"exponential"</code>, or <code>"gaussian"</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_pipeline_:_stages">stages</code></td>
+<td>
+<p>Character vector of stages to run.  Default
+<code>c("bounds", "gam", "cem", "mcem")</code>.  Remove stages to skip them,
+e.g. <code>c("bounds", "gam")</code> for a quick exploratory fit.</p>
+</td></tr>
+<tr><td><code id="emphasis_pipeline_:_control">control</code></td>
+<td>
+<p>Named list with optional sub-lists <code>bounds</code>, <code>gam</code>,
+<code>cem</code>, <code>mcem</code> to override defaults for each stage.  Common
+parameters (<code>num_threads</code>, <code>max_missing</code>, <code>max_time</code>,
+<code>rho</code>) can be set at the top level and are inherited by all stages.
+<code>rho</code>, the sampling fraction in <code>(0, 1]</code>, is inherited by the
+bounds, gam, cem and mcem stages alike, and a value nested under
+<code>control$gam</code>, <code>control$cem</code> or <code>control$mcem</code> overrides
+the inherited one for that stage.</p>
+</td></tr>
+<tr><td><code id="emphasis_pipeline_:_verbose">verbose</code></td>
+<td>
+<p>Logical.  If <code>TRUE</code> (default), print progress and a
+summary log to the console.</p>
+</td></tr>
+</table>
+
+<h3>Stages</h3>
+
+
+<ol>
+<li> <p><strong>Bounds</strong>: <code><a href="#auto_bounds">auto_bounds</a></code> detects parameter bounds
+and trains a survival GAM for conditioning.
+</p>
+</li>
+<li> <p><strong>GAM</strong>: Fits a smooth likelihood surface over a grid and
+optimises it.  Fast, one-shot.
+</p>
+</li>
+<li> <p><strong>CEM</strong>: Cross-entropy global search.  Stochastic, no init
+needed.  Explores the space differently than GAM.
+</p>
+</li>
+<li> <p><strong>MCEM</strong>: Monte Carlo EM starting from the best init found
+in stages 2&ndash;3.  Local refinement for precise estimates.
+</p>
+</li></ol>
+
+<h3>Value</h3>
+
+<p>A list of class <code>"emphasis_pipeline"</code> with:
+</p>
+
+<dl>
+<dt><code>pars</code></dt><dd><p>Named parameter vector from the best stage.</p>
+</dd>
+<dt><code>loglik</code></dt><dd><p>Log-likelihood from the best stage.</p>
+</dd>
+<dt><code>AIC</code></dt><dd><p>AIC from the best stage.</p>
+</dd>
+<dt><code>best_stage</code></dt><dd><p>Which stage produced the final result.</p>
+</dd>
+<dt><code>rho</code></dt><dd><p>The sampling fraction the best stage ran at.</p>
+</dd>
+<dt><code>log</code></dt><dd><p>Data frame with one row per stage: stage name,
+pars, loglik, AIC, elapsed seconds, status, rho.</p>
+</dd>
+<dt><code>mcem_trace</code></dt><dd><p>If MCEM ran, a data frame of per-iteration
+fhat and parameter values.  <code>NULL</code> otherwise.</p>
+</dd>
+<dt><code>bounds</code></dt><dd><p>The <code>auto_bounds</code> result (bounds + survival GAM).</p>
+</dd>
+<dt><code>fits</code></dt><dd><p>Named list of individual <code>emphasis_fit</code> objects.</p>
+</dd>
+</dl>
+
+<h3>Examples</h3>
+
+<pre><code class='language-R'>## Not run: 
+library(ape)
+data(bird.orders)
+result &lt;- emphasis_pipeline(bird.orders, model = "dd", link = "linear")
+result           # prints summary log
+result$pars      # best parameters
+result$log       # full stage log
+
+## End(Not run)
+</code></pre>
+

@@ -1,0 +1,32 @@
+<h3>Description</h3>
+
+<p>The ED covariate needs to know which lineage is which across events, which
+the tip start of <code>.observed_parent_tip_start</code> does not say.  Lineages
+are named as the C++ layer names them: the two crown lineages are
+<code>-2</code> (the one that splits first) and <code>-3</code>; the daughter born at
+the k-th observed branching event (forward-time order, 0-based) is lineage
+<code>k</code>.  Which child of a node continues the parent's lineage is fixed by
+a convention that any consistent rule would do for: the child whose subtree
+holds the lowest tip label continues, the other is the daughter.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.observed_parent_id(phy)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id=".observed_parent_id_:_phy">phy</code></td>
+<td>
+<p>A <code>phylo</code> object.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>Integer vector of length <code>Nnode(phy) - 1</code>, in forward-time
+order: the id of the lineage splitting at each event.
+</p>
+

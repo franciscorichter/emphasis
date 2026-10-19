@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E17 — are the three clades&#x27; ned-over-dd margins what the fitted model predicts of itself? · emphasis</title>
+<meta name="description" content="On Corvidae and Icteridae E5 found ned beating dd by 18.6 and 14.7 AIC (the design text says &quot;15-19&quot;).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E17 — are the three clades' ned-over-dd margins what the fitted model predicts of itself?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>not recorded; the fitting code is E5's, copied verbatim</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E17-bootstrap.R</code>; figure <code>sim/figures-e15e18.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E17/bootstrap.csv</code> (60 rows), <code>results/E17/jobs/</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>On Corvidae and Icteridae <a href="E5.html">E5</a> found <code>ned</code> beating <code>dd</code> by 18.6 and 14.7 AIC (the design text says "15-19"). A richer model can win on real data by absorbing structure that is not ED. E17 asks whether the real margin is the margin the clade's own fitted <code>ned</code> produces on trees it generates, or something the model does not contain.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>setting</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>generator</td>
+<td>each clade's fitted <code>ned</code> from E5 (linear link)</td>
+</tr>
+<tr>
+<td>crown age</td>
+<td>the clade's own: Corvidae 30.5, Icteridae 14.5, Cotingidae 24.6 Ma</td>
+</tr>
+<tr>
+<td>sampling fraction</td>
+<td>the clade's own: 0.968, 0.971, 1</td>
+</tr>
+<tr>
+<td>size window</td>
+<td>0.6 to 1.6 x the real tip count</td>
+</tr>
+<tr>
+<td>trees</td>
+<td>20 per clade, 60 in all</td>
+</tr>
+<tr>
+<td>fits</td>
+<td><code>dd</code> and <code>ned</code> with exactly E5's settings: thinning proposal, 200 draws, <code>max_iter</code> 200, E5's box</td>
+</tr>
+<tr>
+<td>read-out</td>
+<td>AIC(dd) - AIC(ned) per bootstrap tree, against the real value</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This is the only experiment in the study run at real crown ages.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>The real <span class="math inline">\(\Delta\)</span>AIC inside the central 90% of the bootstrap distribution means the result is what the fitted model predicts of itself; outside it, the model is winning for a reason it does not contain, and <a href="E5.html">E5</a> is reported as illustration rather than evidence.</p>
+<h2 id="results">Results</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>clade</th>
+<th>real AIC(dd) - AIC(ned)</th>
+<th>bootstrap 5%</th>
+<th>median</th>
+<th>95%</th>
+<th>inside</th>
+<th>bootstrap selection rate (&gt; 2)</th>
+<th>median <span class="math inline">\(\hat\beta_{ED}/\beta_{fit}\)</span></th>
+<th>median bootstrap tips (real)</th>
+<th>median ESS <code>ned</code> (of 200)</th>
+<th>stop</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Corvidae</td>
+<td>+18.6</td>
+<td>-2.2</td>
+<td>12.2</td>
+<td>22.8</td>
+<td>yes</td>
+<td>0.65</td>
+<td>0.95</td>
+<td>106.5 (120)</td>
+<td>87</td>
+<td>19 <code>max_iter</code>, 1 clock</td>
+</tr>
+<tr>
+<td>Icteridae</td>
+<td>+14.7</td>
+<td>-0.4</td>
+<td>6.1</td>
+<td>26.2</td>
+<td>yes</td>
+<td>0.80</td>
+<td>1.05</td>
+<td>80.5 (102)</td>
+<td>123</td>
+<td>20 <code>max_iter</code></td>
+</tr>
+<tr>
+<td>Cotingidae</td>
+<td>-2.7</td>
+<td>-4.0</td>
+<td>-3.3</td>
+<td>2.2</td>
+<td>yes</td>
+<td>0.10</td>
+<td>0.66</td>
+<td>56 (65)</td>
+<td>200</td>
+<td>20 <code>max_iter</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>59 of the 60 <code>ned</code> fits ended on the iteration cap, so the selection rates and coefficient ratios are those of unfinished fits. No cell is sampler-limited (lowest median ESS 87).</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E17-bootstrap.png" alt="E17 bootstrap" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Each clade's real margin (red diamond) against the margins of 20 trees simulated from its own fitted <code>ned</code> (dots; band, the central 90%). All three diamonds sit inside their bands, the two wins and the loss alike.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p>Met for all three clades: every real margin lies inside the central 90% of its own fitted model's bootstrap distribution. The wins on Corvidae and Icteridae, and the loss on Cotingidae, are what each fitted <code>ned</code> produces on trees of its own kind; the same fitted models win on 65% and 80% of their own trees and on 10% for Cotingidae. The bootstrap trees come out smaller than the real ones (medians 106, 80, 56 against 120, 102, 65), which lowers a margin rather than raising it. What it does not show: that ED is the cause. A model that fits the tree reproduces its own margin by construction; a test against an alternative generator (a K or pendant-age model) was not part of E17. The fits are <a href="E5.html">E5</a>'s linear-link fits, which <a href="E25.html">E25</a> and <a href="E28.html">E28</a> replace with the exponential-link ladder, where Corvidae's choice is <code>nk</code>, not <code>ned</code>.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E5.html">E5</a> — the margins being bootstrapped.</li>
+<li><a href="E16.html">E16</a> — the selection floor at turnover 0.25, the other check on <a href="E5.html">E5</a>.</li>
+<li><a href="E25.html">E25</a> — the same trees under the ladder, where a K model takes Corvidae.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

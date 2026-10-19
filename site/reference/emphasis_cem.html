@@ -1,0 +1,179 @@
+<h3>Description</h3>
+
+<p>Implements the Cross-Entropy Method (CEM) with an IS log-likelihood
+objective.  A population of parameter particles is evaluated via IS
+(<code>fhat</code>), the elite fraction is retained, and the remainder is
+refilled by perturbing elite copies.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>emphasis_cem(
+  brts,
+  max_iter,
+  num_points,
+  max_missing,
+  sd_vec,
+  lower_bound,
+  upper_bound,
+  maxN = 10L,
+  sample_size = 1L,
+  shared_trees = FALSE,
+  bias_correct = FALSE,
+  disc_prop = 0.5,
+  tol = 1e-04,
+  patience = 5L,
+  sd_decay = 0.85,
+  sd_min_frac = 0.01,
+  verbose = FALSE,
+  num_threads = 1L,
+  model = c(0L, 0L, 0L),
+  link = 0L,
+  cond_fun = NULL,
+  max_time = NULL,
+  rho = 1
+)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="emphasis_cem_:_brts">brts</code></td>
+<td>
+<p>Numeric vector of branching times.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_max_iter">max_iter</code></td>
+<td>
+<p>Maximum number of iterations (hard cap).</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_num_points">num_points</code></td>
+<td>
+<p>Population size.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_max_missing">max_missing</code></td>
+<td>
+<p>Max extinct lineages per augmentation.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_sd_vec">sd_vec</code></td>
+<td>
+<p>Initial perturbation SD per parameter (8-element).</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_lower_bound">lower_bound</code>, <code id="emphasis_cem_:_upper_bound">upper_bound</code></td>
+<td>
+<p>Search bounds (8-element).</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_maxN">maxN</code></td>
+<td>
+<p>Max augmentation attempts per particle. Default <code>10</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_sample_size">sample_size</code></td>
+<td>
+<p>Trees simulated per particle per evaluation. Default <code>1</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_shared_trees">shared_trees</code></td>
+<td>
+<p>If <code>TRUE</code>, use pooled-tree estimator (Mode 2).
+Default <code>FALSE</code> (independent, Mode 1).</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_bias_correct">bias_correct</code></td>
+<td>
+<p>If <code>TRUE</code>, apply moment-based bias correction to
+the IS log-likelihood. Default <code>FALSE</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_disc_prop">disc_prop</code></td>
+<td>
+<p>Elite fraction retained per iteration. Default <code>0.5</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_tol">tol</code></td>
+<td>
+<p>Minimum improvement in best <code>fhat</code> required to avoid
+incrementing the plateau counter.  Default <code>1e-4</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_patience">patience</code></td>
+<td>
+<p>Consecutive plateau iterations before early stopping.
+Default <code>5</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_sd_decay">sd_decay</code></td>
+<td>
+<p>Multiplicative factor applied to <code>sd_vec</code> when the
+best log-likelihood has not improved.  Default <code>0.85</code>.  Set to
+<code>NULL</code> to use the legacy linear annealing schedule.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_sd_min_frac">sd_min_frac</code></td>
+<td>
+<p>Minimum SD as a fraction of the initial <code>sd_vec</code>.
+Default <code>0.01</code> (1%).  SD will not decay below this floor.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_verbose">verbose</code></td>
+<td>
+<p>Print iteration summaries. Default <code>FALSE</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_num_threads">num_threads</code></td>
+<td>
+<p>Parallel threads. Default <code>1</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_model">model</code></td>
+<td>
+<p>Length-3 binary integer vector <code>c(use_N, use_M, use_D)</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_link">link</code></td>
+<td>
+<p>Integer link code: <code>0</code> = linear, <code>1</code> = exponential.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_rho">rho</code></td>
+<td>
+<p>Sampling fraction (0, 1]. Default <code>1</code> (complete sampling).</p>
+</td></tr>
+</table>
+
+<h3>Details</h3>
+
+<p><strong>Adaptive SD annealing:</strong> The perturbation SD is decayed
+multiplicatively (factor <code>sd_decay</code>, default 0.85) only when the
+best log-likelihood has not improved by more than <code>tol</code> in the
+current iteration.  When the likelihood is still improving, the SD is
+held constant to maintain exploration.  A minimum SD floor
+(<code>sd_min_frac * initial_sd</code>, default 1% of initial) prevents
+complete collapse.  This replaces the former linear annealing schedule
+which coupled the SD decay to <code>max_iter</code> and could cause
+premature collapse on easy problems or insufficient exploration on
+hard ones.
+</p>
+<p><strong>Stopping rules</strong> (first triggered wins):
+</p>
+
+<ol>
+<li><p> Plateau: best <code>fhat</code> has not improved by more than <code>tol</code>
+for <code>patience</code> consecutive iterations <em>and</em> the SD has
+reached its floor &ndash; the population has both converged in likelihood
+and exhausted its perturbation budget.
+</p>
+</li>
+<li><p> Hard cap: <code>max_iter</code> iterations reached (safety limit).
+</p>
+</li></ol>
+
+<h3>Value</h3>
+
+<p>A list:
+</p>
+
+<dl>
+<dt><code>best_loglik</code></dt><dd><p>fhat of best particle per completed iteration
+(length = actual iterations run, <span class="reqn">\(\leq\)</span> <code>max_iter</code>).</p>
+</dd>
+<dt><code>best_pars</code></dt><dd><p>Parameter matrix, one row per iteration.</p>
+</dd>
+<dt><code>obtained_estim</code></dt><dd><p>Globally best parameter vector.</p>
+</dd>
+<dt><code>loglik_var</code></dt><dd><p>Bootstrap variance of <code>fhat</code> at best
+particle (<code>NA</code> if <code>sample_size = 1</code>).</p>
+</dd>
+<dt><code>converged</code></dt><dd><p>Character string naming the stopping rule that
+fired: <code>"annealing"</code>, <code>"plateau"</code>, or <code>"max_iter"</code>.</p>
+</dd>
+<dt><code>time</code></dt><dd><p>Elapsed <code>proc.time()</code>.</p>
+</dd>
+</dl>
+

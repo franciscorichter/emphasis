@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E41 — E40&#x27;s fits run to convergence, and their box edges moved out · emphasis</title>
+<meta name="description" content="E40&#x27;s interim report (16 trees) found 25 of 80 fits on the 300-iteration cap, every nd fit among them, and 128 of 384 parameter trajectories ending on a box edge, almost all lower edges of the extinction intercept and of the extinction slope on \(N\).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E41 — E40's fits run to convergence, and their box edges moved out</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results-pilot-16-trees-complete">Results (pilot, 16 trees, complete)</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td><strong>closed at the pilot</strong> (16 trees, 135 of 135 jobs, 2026-10-19; amendment of the same date). Neither rule triggers: the parsimonious choice is unchanged on 16 of 16 trees and the edge binds on 4 of 63 edge fits; zero extinction excluded on 0 of 16 trees. The 154 trees beyond the pilot are not run</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td><code>f30a791</code></td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E41-followup.R</code> / <code>sim/E41-analysis.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E41/exact-cr.csv</code>, <code>results/E41/jobs.csv</code> (one row per job), <code>pairs.csv</code> (one row per edge pair), <code>rerank.csv</code>, <code>summary.txt</code> in the repository; the per-job <code>.csv</code> and <code>.trace.rds</code> outside the repository (<code>results/E41/jobs/</code>)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p><a href="E40.html">E40</a>'s interim report (16 trees) found 25 of 80 fits on the 300-iteration cap, every <code>nd</code> fit among them, and 128 of 384 parameter trajectories ending on a box edge, almost all lower edges of the extinction intercept and of the extinction slope on <span class="math inline">\(N\)</span>. Two questions follow for every such fit: does it change its answer when allowed to finish, and is the edge holding it, that is, would the likelihood rise if the box were wider? And one for every tree: does the tree exclude zero extinction at all?</p>
+<h2 id="design">Design</h2>
+<p>For every <a href="E40.html">E40</a> fit that ended on its iteration cap or with a parameter on a box edge (<code>results/E40/report/edges.csv</code>):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>arm</th>
+<th>what is run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A, run on</td>
+<td>the fit continued from its estimate in the same box: the edge bound at the value the fit returned to, the other bounds from <code>auto_bounds()</code> recomputed with the estimate kept inside; the <code>mc_error</code> rule (draws grown x1.5 when a step is within its Monte Carlo error, up to 2400); at most 1000 iterations; an eight-hour clock</td>
+</tr>
+<tr>
+<td>B, edge moved out</td>
+<td>edge fits only: as arm A with every edge bound moved out, an intercept by 4 log units, a slope to three times its distance from zero</td>
+</tr>
+<tr>
+<td>exact reference</td>
+<td>per tree, <code>DDD::bd_ML</code> (constant rates, crown conditioned, the missing species from <span class="math inline">\(\rho\)</span>), free and with <span class="math inline">\(\mu = 0\)</span>; <span class="math inline">\(\mathrm{LR}(0) = 2(\hat\ell - \ell_0)\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The pilot: 16 trees, 135 jobs (72 arm A, 63 arm B), 3 workers (<code>results/E41.log</code>). The 154 trees beyond the pilot were not run (closed at the pilot by the amendment of 2026-10-19; see Conclusion).</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<ol type="1">
+<li><strong>Convergence.</strong> The share of arm-A fits that meet the rule within 1000 iterations, by model. If re-ranking each tree with the arm-A log-likelihoods changes the parsimonious choice on more than 10% of trees, <a href="E40.html">E40</a>'s choices are read only with the continuation.</li>
+<li><strong>The bound.</strong> Per edge fit, <span class="math inline">\(\Delta = \hat\ell_B - \hat\ell_A\)</span> with standard error <span class="math inline">\(\sqrt{v_A + v_B}\)</span> from the fits' log-likelihood variances; the edge is <strong>binding</strong> if <span class="math inline">\(\Delta &gt; 1\)</span> and <span class="math inline">\(\Delta &gt; 2\)</span> standard errors. If edges bind on at least 20% of edge fits, <code>auto_bounds()</code> is too narrow for these trees: its box is widened in the package and E40 is refitted. Otherwise the likelihood is flat across the edge, and a parameter on an edge is reported as not bounded by the tree in that direction and its value is not read. Recorded beside it: whether arm B's estimate ends on the new edge.</li>
+<li><strong>The exact profile.</strong> The share of trees whose constant-rate likelihood excludes zero extinction (<span class="math inline">\(\mathrm{LR}(0) &gt; 3.84\)</span>).</li>
+</ol>
+<h2 id="results-pilot-16-trees-complete">Results (pilot, 16 trees, complete)</h2>
+<p><strong>Rule 1, convergence.</strong> Arm A meets the stopping rule within 1000 iterations on <strong>34 of 72</strong> fits (47%): <code>dd</code> 16 of 16, <code>ned</code> 12 of 16, <code>cr</code> 6 of 8, <code>nd</code> 0 of 16, <code>nk</code> 0 of 16. The 25 fits that <a href="E40.html">E40</a> had left on its 300-iteration cap split the same way: the 4 <code>dd</code> converge, the 16 <code>nd</code> and 5 <code>nk</code> do not (<code>nd</code>: 11 on the 1000-iteration cap, 5 on the eight-hour clock; <code>nk</code>: 16 on the cap). Continuing changes the log-likelihood by a median 0.000 to 0.007 per model (largest gain 1.07, an <code>nd</code> fit; <code>nd</code>'s fits also lose up to 0.4, the Monte Carlo noise of fits that do not converge). The models that converge end with a median ESS of about 2400 of 2400 draws; <code>nd</code> ends at 123 and <code>nk</code> at 272. Re-ranking each tree with the arm-A log-likelihoods changes the parsimonious choice on <strong>0 of 16</strong> trees (the rule reproduces E40's recorded choice on 16 of 16), far from the 10% that would make E40 readable only with the continuation.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E41-continue.png" alt="E41 continuation" loading="lazy">
+<figcaption><strong>Figure 1.</strong> One point per arm-A fit, grouped by model: the log-likelihood gained over the E40 fit; the shape is how the continuation stopped. <code>cr</code>, <code>dd</code> and <code>ned</code> converge and gain nothing; <code>nd</code> and <code>nk</code> never meet the rule and scatter by their Monte Carlo noise.</figcaption>
+</figure>
+<p><strong>Rule 2, the bound.</strong> Of the <strong>63 edge pairs</strong>, the edge binds (gain above 1 nat and above two standard errors) on <strong>4</strong> (6%), against the 20% that would widen the package's box: Vireonidae <code>nd</code> (gain 2.67, se 1.20), Pachycephalidae <code>nk</code> (1.67, se 0.05), Bucconidae <code>nd</code> (1.33, se 0.65) and Rhinocryptidae <code>ned</code> (1.28, se 0.04). In three of the four an arm did not converge (both <code>nd</code> pairs stopped on the clock and the cap; the <code>nk</code> pair on both caps), so their gain is the difference of two unfinished fits. The gain is a median 0.004 (quartiles 0.001 and 0.039), within 1 nat in absolute value on 58 of 63 and negative on 15. Arm B ends on its new edge on 37 of 63: the extinction slopes follow the edge wherever it is put. By parameter (arm B's value over the old edge, median): <span class="math inline">\(\gamma_N\)</span> 47 pairs, all lower edges, ratio 3.00; <span class="math inline">\(\gamma_{ED}\)</span> 16, 3.00; <span class="math inline">\(\gamma_K\)</span> 11, 3.00; <span class="math inline">\(\gamma_0\)</span> 47, 1.52 (moved out by 4 log units, the intercept moves part of the way); <span class="math inline">\(\beta_N\)</span> 2, 1.36; <span class="math inline">\(\gamma_D\)</span> 2 (upper edges), 1.89; <span class="math inline">\(\beta_0\)</span> 3, 1.00 (stays).</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>pairs</th>
+<th>binding</th>
+<th>gain, median</th>
+<th>gain, max</th>
+<th>arm B on its new edge</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code></td>
+<td>8</td>
+<td>0</td>
+<td>0.045</td>
+<td>0.066</td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>dd</code></td>
+<td>15</td>
+<td>0</td>
+<td>0.004</td>
+<td>0.068</td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>nd</code></td>
+<td>9</td>
+<td>2</td>
+<td>-0.024</td>
+<td>2.667</td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>ned</code></td>
+<td>16</td>
+<td>1</td>
+<td>0.003</td>
+<td>1.277</td>
+<td>15</td>
+</tr>
+<tr>
+<td><code>nk</code></td>
+<td>15</td>
+<td>1</td>
+<td>0.015</td>
+<td>1.668</td>
+<td>11</td>
+</tr>
+</tbody>
+</table>
+</div>
+<figure id="figure-2">
+<img src="../assets/wiki/E41-bound.png" alt="E41 bound" loading="lazy">
+<figcaption><strong>Figure 2.</strong> One point per edge pair: the gain from moving the edge out against its standard error; the shaded region is where the rule calls the edge binding; open points are pairs whose arm B ended on the moved edge.</figcaption>
+</figure>
+<p><strong>Rule 3, the exact profile.</strong> Zero extinction is excluded (<span class="math inline">\(\mathrm{LR}(0) &gt; 3.84\)</span>) on <strong>0 of 16</strong> trees. On 15 the exact <code>cr</code> estimate of <span class="math inline">\(\mu\)</span> is zero to machine precision and <span class="math inline">\(\mathrm{LR}(0)\)</span> below <span class="math inline">\(10^{-7}\)</span>; the exception is mamm-039-Dipodidae (<span class="math inline">\(\hat\mu = 0.065\)</span>, <span class="math inline">\(\hat\lambda = 0.130\)</span>, <span class="math inline">\(\mathrm{LR}(0) = 1.64\)</span>). On bird-070-Tinamidae the free fit returns a log-likelihood 0.003 below the <span class="math inline">\(\mu = 0\)</span> fit (<span class="math inline">\(\mathrm{LR}(0) = -0.006\)</span>), an optimiser shortfall.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>tree</th>
+<th>tips</th>
+<th><span class="math inline">\(\rho\)</span></th>
+<th><span class="math inline">\(\hat\lambda\)</span></th>
+<th><span class="math inline">\(\hat\mu\)</span></th>
+<th>LR(0)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mamm-039-Dipodidae</td>
+<td>51</td>
+<td>1</td>
+<td>0.130</td>
+<td>0.065</td>
+<td>1.64</td>
+</tr>
+<tr>
+<td>the other 15</td>
+<td>50-65</td>
+<td>0.93-1</td>
+<td>0.029-0.244</td>
+<td>&lt; <span class="math inline">\(10^{-14}\)</span></td>
+<td>&lt; <span class="math inline">\(10^{-7}\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Both panels, with the per-tree profile, are on <a href="../real-phylogenies.html#extinction-on-real-trees">Real phylogenies</a>.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>On the 16 smallest trees neither rule triggers. The parsimonious choice is the same with the continued fits as with <a href="E40.html">E40</a>'s (0 of 16 changed), so E40's choices are read as they stand. The edge binds on 4 of 63 edge fits, three of them pairs with an unfinished arm, so the box of <code>auto_bounds()</code> stays: the extinction slopes (<span class="math inline">\(\gamma_N\)</span>, <span class="math inline">\(\gamma_{ED}\)</span>, <span class="math inline">\(\gamma_K\)</span>) run to whatever edge they are given for no likelihood gain, which is the flat-across-the-edge case the rule anticipated. A parameter on an edge is reported as not bounded by the tree in that direction and its value is not read; this is the same statement as <a href="E42.html">E42</a>'s exact <code>dd</code> maximum (the slope on <span class="math inline">\(N\)</span> at its cap on 61 of 69 trees) and as rule 3 (no tree excludes zero extinction).</p>
+<p>The second finding is about the two models that did not converge. <code>nd</code> and <code>nk</code> do not meet the stopping rule within 1000 iterations and 2400 draws on any of the 32 continued fits, with a final ESS of 123 and 272 draws: on real trees of 50 to 65 tips these models are sampler-limited, and continuing a capped fit does not make it converge. E40's <code>nd</code> and <code>nk</code> coefficients remain values from fits that did not meet the rule.</p>
+<p>Closed at the pilot (amendment of 2026-10-19 in <code>00-design.md</code>): the 154 trees beyond it are not run. At 135 jobs per 16 trees they would cost about 1,300 jobs to move a 6% and a 0% against thresholds of 20% and 10%, and the finding they would refine is the one <a href="E42.html">E42</a>'s exact <code>dd</code> maximum already makes on 61 of 69 trees. What the pilot adds instead is the <code>nd</code>/<code>nk</code> result above, which sets E46's budget for those models in draws rather than iterations.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E40.html">E40</a> — the fits continued here and the edges counted.</li>
+<li><a href="E42.html">E42</a> — the exact maximum for <code>cr</code> and <code>dd</code> on the same trees; where E41 continues a fit, its estimate is set against that maximum.</li>
+<li><a href="E38.html">E38</a> — the exact profile likelihood of extinction by turnover and size.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

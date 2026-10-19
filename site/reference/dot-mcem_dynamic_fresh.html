@@ -1,0 +1,93 @@
+<h3>Description</h3>
+
+<p>E-step and M-step of one iteration are a single <code>em_cpp()</code> call: the
+augmented trees are drawn by the thinning sampler, up to <code>maxN</code>
+attempts per E-step.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.mcem_dynamic_fresh(
+  brts,
+  pars,
+  sample_size,
+  maxN,
+  max_missing,
+  lower_bound,
+  upper_bound,
+  max_iter,
+  xtol,
+  tol = 0.01,
+  patience = 3L,
+  num_threads,
+  verbose = FALSE,
+  conditional = NULL,
+  model = c(0L, 0L, 0L),
+  link = 0L,
+  max_time = NULL,
+  rho = 1,
+  rel_floor = 0.01,
+  stop_rule = c("rel_change", "mc_error"),
+  mc_batches = 5L,
+  mc_z = 1,
+  mc_grow = 1.5,
+  max_draws = NULL
+)
+</code></pre>
+
+<h3>Details</h3>
+
+<p>Stopping rule, the same statistic <code>.mcem_bdi</code> uses.  With theta_k the
+M-step output of iteration k,
+</p>
+<p style="text-align: center;"><span class="reqn">\[\delta_k = \max_j |\theta_k[j] - \theta_{k-1}[j]| / \max(|\theta_{k-1}[j]|, \epsilon)\]</span>
+</p>
+
+<p>and the run stops as &quot;converged&quot; once <span class="reqn">\(\delta_k &lt; tol\)</span> for
+<code>patience</code> consecutive iterations.  The search box does not enter, so
+the same fit stops at the same point whatever bounds the user passes.  The
+floor <span class="reqn">\(\epsilon\)</span> comes from <code>.rel_floor(brts, link, rel_floor)</code>
+and carries the units of the parameters (<code>rel_floor / crown_age</code> for
+the rate-valued links, <code>rel_floor</code> for the log-rates of the
+exponential link), so the statistic is unchanged when the tree and the
+rates are expressed in another unit of time.  An iteration whose M-step
+returned its starting point unchanged carries no information about
+stability and resets the streak (trace column <code>m_moved</code>).  The trace
+also records the absolute step <code>abs_step</code> and <code>drift</code>, the same
+relative displacement measured over the last <code>patience</code> iterations.
+</p>
+<p>Trace.  Row k of <code>mcem</code> pairs theta_k with the E-step value
+fhat(theta_{k-1}) it was computed from, and with the rejection counters
+of that E-step.  The likelihood of the returned point is a separate E-step
+at the final iterate, appended as the last row (<code>m_step = FALSE</code>, step
+columns <code>NA</code>); only that row is evaluated at <code>pars</code>, and it is
+not counted in <code>iterations</code>.  It is attempted whenever at least one
+iteration succeeded, including after a <code>"e_step_failure"</code> or
+<code>"time_budget"</code> stop, and may itself fail, in which case there is no
+such row and <code>loglik</code>, <code>loglik_var</code> and <code>final_IS</code> report
+nothing rather than the previous iterate's values.
+</p>
+<p>Rejection columns.  <code>rejected_errors</code> (unhandled exception),
+<code>rejected_overruns</code> (<code>max_missing</code> exceeded),
+<code>rejected_lambda</code> (<code>max_lambda</code> exceeded) and
+<code>rejected_nonfinite</code> (log weight <code>+Inf</code> or <code>NaN</code>) are the
+four disjoint ways a draw is discarded; <code>n_rejected</code> is their sum, the
+quantity <code>final_IS$n_rejected</code> reports, and <code>rejected</code> is that
+same total under the name the BDI trace uses.  <code>rejected_zero_weights</code>
+is counted apart: those draws completed, have weight zero and stay in the
+<code>fhat</code> denominator.
+</p>
+
+<h3>Value</h3>
+
+<p>A list: <code>mcem</code> (trace, one row per completed iteration plus the
+final E-step), <code>pars</code>, <code>iterations</code> (number of completed E+M
+iterations, not loop passes and not <code>nrow(mcem)</code>), <code>n_failed</code>
+(E-step failures over the whole run), <code>stop_reason</code>,
+<code>final_estep</code> (did the final E-step at <code>pars</code> succeed),
+<code>maxN</code> (the ratcheted attempt cap: doubled on every E-step failure
+up to 50000, never reset after a success), <code>loglik</code> (fhat at
+<code>pars</code>, <code>NA</code> when the final E-step failed), <code>loglik_var</code>,
+<code>final_IS</code>.
+</p>
+

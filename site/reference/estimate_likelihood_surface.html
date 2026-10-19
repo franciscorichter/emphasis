@@ -1,0 +1,93 @@
+<h3>Description</h3>
+
+<p>For each row of <code>pars_mat</code>, augments <code>sample_size</code> trees via IS
+and computes the IS log-likelihood estimate (fhat).  Returns a data frame
+ready for <code><a href="#train_likelihood_GAM">train_likelihood_GAM</a></code>.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>estimate_likelihood_surface(
+  tree,
+  pars_mat,
+  model = "cr",
+  sample_size = 200L,
+  link = "linear",
+  max_missing = 10000,
+  max_lambda = 500,
+  maxN = NULL,
+  num_threads = 1L,
+  bias_correct = FALSE,
+  verbose = TRUE,
+  max_time = NULL,
+  rho = 1
+)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="estimate_likelihood_surface_:_tree">tree</code></td>
+<td>
+<p>A <code>phylo</code> object, branching-time vector, or anything
+accepted by <code><a href="#estimate_rates">estimate_rates</a></code>.</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_pars_mat">pars_mat</code></td>
+<td>
+<p>Numeric matrix whose rows are compact parameter vectors
+(same layout as <code>pars</code> in <code><a href="#estimate_rates">estimate_rates</a></code>).</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_model">model</code></td>
+<td>
+<p>Model specification: <code>"cr"</code>, <code>"dd"</code>, <code>"d"</code>,
+<code>"nd"</code>, <code>"ed"</code>, <code>"ned"</code>, <code>"k"</code>, <code>"nk"</code>, or a
+binary integer vector (length 3 to 5).</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_sample_size">sample_size</code></td>
+<td>
+<p>Number of augmented trees per grid point (default 200).</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_link">link</code></td>
+<td>
+<p><code>"linear"</code>, <code>"exponential"</code>, or <code>"gaussian"</code>.</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_max_missing">max_missing</code></td>
+<td>
+<p>Maximum missing lineages per augmentation (default 1e4).</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_max_lambda">max_lambda</code></td>
+<td>
+<p>Maximum speciation rate (default 500).</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_maxN">maxN</code></td>
+<td>
+<p>Total augmentation attempts per grid point.  If <code>NULL</code>,
+set automatically.</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_num_threads">num_threads</code></td>
+<td>
+<p>Number of threads for the C++ E-step.</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_bias_correct">bias_correct</code></td>
+<td>
+<p>Logical; if <code>TRUE</code>, use the moment-based
+bias-corrected IS estimator (truncated at order <code>K</code>).
+Default <code>FALSE</code> uses the standard log-mean-exp estimator.</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_verbose">verbose</code></td>
+<td>
+<p>Print progress (default <code>TRUE</code>).</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_rho">rho</code></td>
+<td>
+<p>Sampling fraction (0, 1]. Default <code>1</code> (complete sampling).</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>A data frame with columns for each parameter plus <code>fhat</code>
+(IS log-likelihood) and <code>n_trees</code> (number of valid trees obtained).
+Rows where IS failed have <code>fhat = NA</code>.
+</p>
+

@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E40 — birds and mammals cut into clade-sized trees · emphasis</title>
+<meta name="description" content="E26 and E28 fitted 47 family trees.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E40 — birds and mammals cut into clade-sized trees</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results-interim-16-of-175-trees-report-of-2026-10-14-2111">Results (interim: 16 of 175 trees, report of 2026-10-14 21:11)</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td><strong>closed 2026-10-18 at 170 of 175 trees</strong>: five trees (four mammal clades of 91-135 tips and Picidae, 223 tips) ran 42 h after the reboot of 2026-10-16 with no fit written, past the 20 h five four-hour clocks allow (the clock is read only between iterations), and were stopped by hand; <code>results/E40/STOPPED-trees.txt</code>. The results on the 170 are on <a href="../real-phylogenies.html">Real phylogenies</a>; the interim report below covers the first 16</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td><code>f30a791</code> (the build of <a href="E28.html">E28</a>)</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E40-tiles.R</code>, <code>sim/E40-survey.R</code>, <code>sim/E40-units.R</code> (the trees); <code>sim/E25-real.R</code> <code>--cand results/E40/candidates.csv</code> (the fits); <code>sim/E40-report.R</code> (the interim report, and the tables of <code>results/E40/report/</code> regenerated over the 170 trees on 2026-10-18)</td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E40/candidates.csv</code>, <code>pairs.csv</code>, <code>class-tree-tiles-*.csv</code>, <code>condamine-families.csv</code>; outside the repository, <code>results/E40/fits/fit-&lt;id&gt;.rds</code> and <code>results/E40/report/</code> (<code>fits.csv</code>, <code>edges.csv</code>, <code>coefficients.csv</code>, <code>trees.csv</code>, <code>slot-check.csv</code>); interim report <code>report/e40-status/e40-status.pdf</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p><a href="E26.html">E26</a> and <a href="E28.html">E28</a> fitted 47 family trees. Whole class trees are beyond the estimator: a lineage-level ladder at 10,000 tips is months of compute by the measured scaling, and the path's per-lineage table would not fit in memory. E40 fits birds and mammals as many trees of the size the study has measured, and asks whether the class trees, whose taxonomic placements and dating differ from the family trees', give the same answers where the two overlap.</p>
+<h2 id="design">Design</h2>
+<p><strong>Set (a), class-tree clades.</strong> The atlas's class trees, Upham et al. 2019 (mammals, 5,912 tips) and McTavish et al. 2025 (birds, 10,824 tips), cut from the root into disjoint clades of at most 200 tips, kept from 50 (<code>sim/E40-tiles.R</code>): 116 clades (77 bird, 39 mammal), 14,965 tips, about 90% of each class, <span class="math inline">\(\rho = 1\)</span>. Both trees are fully binary, so species placed by taxonomy are not visible in the topology (about 1,800 of Upham's 5,912 by that paper's count; the birds' share is not known here).</p>
+<p><strong>Set (b), Condamine family trees.</strong> Bird and mammal family trees of Condamine et al. (2019) with 50 to 400 tips, tip spread at most 15% of the crown age, and <span class="math inline">\(\rho\)</span> = tips / the family's species in the class tree between 0.5 and 1.10, taken as <span class="math inline">\(\min(\rho, 1)\)</span> (12 trees above 1, where the Condamine family concept is slightly wider than the Catalogue of Life's): 59 trees (45 bird, 14 mammal), 17 of them not among <a href="E26.html">E26</a>'s 47.</p>
+<p><strong>Pairs.</strong> A clade of (a) with at least 90% of its tips in one family that has a tree in (b): 30 clades in 24 families (<code>results/E40/pairs.csv</code>).</p>
+<p><strong>Fits.</strong></p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>setting</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ladder</td>
+<td><code>cr</code> → <code>dd</code> → {<code>nd</code>, <code>ned</code>, <code>nk</code>}, exponential link, at each tree's <span class="math inline">\(\rho\)</span></td>
+</tr>
+<tr>
+<td>box</td>
+<td><code>auto_bounds()</code></td>
+</tr>
+<tr>
+<td>draws</td>
+<td>300</td>
+</tr>
+<tr>
+<td>iterations</td>
+<td>300 (the budget)</td>
+</tr>
+<tr>
+<td>clock</td>
+<td>4 h per fit (the safety; E28's 60-minute clock ended 45 of its 116 fits)</td>
+</tr>
+<tr>
+<td>choice</td>
+<td><code>compare_models()</code>: fewest parameters within 2 AIC of the minimum</td>
+</tr>
+<tr>
+<td>path</td>
+<td>over <span class="math inline">\(N\)</span>, <span class="math inline">\(D\)</span>, ED, <span class="math inline">\(K\)</span> on the observed tree and on 3000 surrogate draws</td>
+</tr>
+<tr>
+<td>order</td>
+<td>smallest trees first</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Recorded per tree: everything <a href="E28.html">E28</a> records, the Colless index and the set.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p><strong>Readings.</strong> Per tree, the parsimonious choice and each lineage-level coefficient as a factor per standard deviation of its covariate, read only where the fit has a median effective sample of at least 10 and did not end on its clock (sampler-limited and clock-limited otherwise, reported and not read). Across trees, by class and set: the share choosing each model, and the distribution and sign of each read coefficient.</p>
+<p><strong>Rule for the pairs.</strong> Over the pairs where both fits of the chosen model are read: the class-tree clade and its family tree agree on the parsimonious choice on at least 70% of pairs, and on the sign of each lineage-level coefficient read in both on at least 80%. If both hold, set (a)'s across-tree statements are read beside (b)'s; otherwise set (a) is reported and its across-tree statements are not made. Fewer than 10 readable pairs: not evaluable, and said so.</p>
+<h2 id="results-interim-16-of-175-trees-report-of-2026-10-14-2111">Results (interim: 16 of 175 trees, report of 2026-10-14 21:11)</h2>
+<p>The results on the 170 finished trees are on <a href="../real-phylogenies.html">Real phylogenies</a>; this section is the interim report of 2026-10-14 on the first 16 trees, kept as the record it was.</p>
+<p>These are the 16 smallest trees (50 to 65 tips): 5 bird and 3 mammal clades, 6 bird and 2 mammal family trees. No tree failed and no fit returned an error; median wall time per tree 1.3 h (largest 2.0 h). The report projected the end of the run between Thu 15 Oct 15:14 (<a href="E28.html">E28</a>'s slope of time on tips, 0.92) and Sat 17 Oct 10:53 (E40's own, 2.32), and Mon 19 Oct 20:15 if every remaining fit ran to its clock; the largest tree, 370 tips, is predicted at 6.8 to 20 h.</p>
+<p><strong>Stop reasons.</strong> Of 80 fits, 55 met the stopping rule, 25 ran to the 300-iteration cap, 0 ended on the clock. By rung, on the cap: <code>cr</code> 0 of 16, <code>dd</code> 4, <code>nd</code> 16 of 16, <code>ned</code> 0, <code>nk</code> 5.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E40-stop.png" alt="E40 stop reasons" loading="lazy">
+<figcaption><strong>Figure 1.</strong> How each of the 80 fits ended. Every <code>nd</code> fit ran to the cap; <code>cr</code> and <code>ned</code> all met the rule.</figcaption>
+</figure>
+<p><strong>Convergence.</strong> Each of the 384 parameter trajectories is put on one axis as <span class="math inline">\((\theta_k - \theta_{final})/s\)</span>, <span class="math inline">\(s\)</span> the standard deviation of its last 50 iterates. A parameter of a fit that met the rule stays within <span class="math inline">\(3s\)</span> of its final value from a median iteration of 25; of a capped fit, from iteration 203. The log-likelihood rises a median 3.0 units from first to last iterate, 99% of the gain by the third iteration. 182 of 384 trajectories touch a box edge at least three times (172 of them a lower edge) and 128 end on it; most often the extinction intercept <span class="math inline">\(\gamma_0\)</span> (64), the extinction slope on <span class="math inline">\(N\)</span>, <span class="math inline">\(\gamma_N\)</span> (63), and <span class="math inline">\(\gamma_{ED}\)</span> (16). Where <span class="math inline">\(\gamma_0\)</span> or <span class="math inline">\(\gamma_N\)</span> ends on its lower edge the extinction rate is held at the smallest value the box allows. 3 of 80 fits end with an effective sample below 10 (lowest 1), and 14 dip below 10 on at least one iterate; <code>nd</code> has the lowest median final ESS, 76 of 300. The 25 capped fits end with a largest relative step of median 0.83 against the tolerance 0.01.</p>
+<figure id="figure-2">
+<img src="../assets/wiki/E40-traces-pars.png" alt="E40 parameter traces" loading="lazy">
+<figcaption><strong>Figure 2.</strong> Every free parameter of every fit in units of its own end-of-run spread, by rung (rows) and parameter role (columns). Blue traces (met the rule) enter the ±3 band by a median iteration of 25; ochre traces (capped) by 203; the <code>nd</code> row never settles.</figcaption>
+</figure>
+<p><strong>Model choice.</strong></p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>set</th>
+<th><code>cr</code></th>
+<th><code>dd</code></th>
+<th><code>nd</code></th>
+<th><code>ned</code></th>
+<th><code>nk</code></th>
+<th>differs from min AIC</th>
+<th>trees</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>class-tree clades, birds</td>
+<td>0</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>4</td>
+<td>1</td>
+<td>5</td>
+</tr>
+<tr>
+<td>class-tree clades, mammals</td>
+<td>1</td>
+<td>2</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>3</td>
+</tr>
+<tr>
+<td>Condamine family trees, birds</td>
+<td>3</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>3</td>
+<td>1</td>
+<td>6</td>
+</tr>
+<tr>
+<td>Condamine family trees, mammals</td>
+<td>0</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+</tr>
+<tr>
+<td>all</td>
+<td>4</td>
+<td>4</td>
+<td>0</td>
+<td>0</td>
+<td>8</td>
+<td>3</td>
+<td>16</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The median distance from the minimum to the nearest model outside the 2-AIC window is 3.4.</p>
+<figure id="figure-3">
+<img src="../assets/wiki/E40-aic.png" alt="E40 model choice" loading="lazy">
+<figcaption><strong>Figure 3.</strong> Each rung's AIC above the lowest, per tree; the ring marks the parsimonious choice. On 3 trees a model with fewer parameters within 2 AIC is taken over the lowest.</figcaption>
+</figure>
+<p><strong>Coefficients.</strong> 45 of 48 lineage-level fits are read. Median speciation factor per sd: D 0.80 (above 1 on 2 of 14 trees), ED 0.76 (0 of 15), K 1.63 (14 of 16). 30 of the 45 read extinction factors come from fits whose extinction intercept or slope ends on a box edge, so the extinction side is not read. Over the read fits the rank correlation of the log factor with Colless imbalance (median 1.52, range -0.66 to 4.48) is -0.53 for D, -0.75 for ED and 0.66 for K.</p>
+<figure id="figure-4">
+<img src="../assets/wiki/E40-coef-colless.png" alt="E40 coefficients against imbalance" loading="lazy">
+<figcaption><strong>Figure 4.</strong> Speciation factor per sd of each covariate against tree imbalance. The more unbalanced the tree, the smaller the D and ED factors and the larger the K factor; without the two most unbalanced trees the correlations are -0.26, -0.61 and 0.49.</figcaption>
+</figure>
+<p><strong>Paths.</strong> The path's BIC set on speciation equals the covariates of the ladder's choice on 4 of 16 trees (observed tree and draws alike); it is empty on 5; D enters first on 9.</p>
+<p><strong>Pairs.</strong> At the report, 1 of 30 pairs had both members finished: Falconidae, where the clade chose <code>nk</code> and the family tree <code>cr</code>. By the file names at 23:03, Cotingidae's pair is also complete. The rule was evaluated on 2026-10-18 on the 29 pairs E40 finished (see Conclusion).</p>
+<figure id="figure-5">
+<img src="../assets/wiki/E40-time.png" alt="E40 wall time" loading="lazy">
+<figcaption><strong>Figure 5.</strong> Wall time per tree against tips: the E40 trees finished at the interim report, <a href="E28.html">E28</a>'s families for reference, and ticks for the trees then still to run.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p><strong>The pairs rule (2026-10-18).</strong> Read on the 29 pairs with both members finished (Picidae's is missing): both chosen fits readable on 18, so the rule is evaluable; the clade and its family tree make the same parsimonious choice on 10 of 29 (34%, rule 70%), so <strong>set (a)'s across-tree statements are reported and not read</strong>. Where both read the same covariate the sign agrees on 21 of 21 (ED 10, K 11) and the factor per sd lies within 1.3 of its pair's on 13 of 21. The four-hour clock ended 144 of 850 fits (<code>nd</code> 86, <code>nk</code> 40, <code>ned</code> 18), mostly on trees above 150 tips; <code>nd</code> meets the stopping rule on 3 of 170. See <a href="../real-phylogenies.html">Real phylogenies</a>.</p>
+<p><strong>The interim reading (2026-10-14, 16 trees).</strong> The rule was not then evaluable. The first 16 trees already showed three things the readings must handle. Every <code>nd</code> fit ran to the 300-iteration cap. A third of the parameter trajectories ended on a box edge, almost all lower edges of the extinction parameters, so the extinction side was held by the box rather than the tree (<a href="E41.html">E41</a> tested whether those edges bind: they bind on 4 of 63). And the coefficients tracked imbalance in the direction <a href="E39.html">E39</a> found for the covariates' overlap on real trees, which bears on reading a K choice and an ED choice as distinct. With 16 small trees these were interim readings, not results; the 170-tree results are on <a href="../real-phylogenies.html">Real phylogenies</a>.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E26.html">E26</a>, <a href="E28.html">E28</a> — the family-tree analyses whose fits E40 repeats at a larger budget and scale.</li>
+<li><a href="E39.html">E39</a> — what the covariates share on real trees, and imbalance.</li>
+<li><a href="E41.html">E41</a> — E40's capped and edge fits continued, and the edges moved out.</li>
+<li><a href="E42.html">E42</a> — the exact maximum-likelihood estimate on E40's trees for <code>cr</code> and <code>dd</code>.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

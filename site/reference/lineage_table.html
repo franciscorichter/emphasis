@@ -1,0 +1,36 @@
+<h3>Description</h3>
+
+<p>One row per lineage alive on each segment between consecutive events of an
+augmented tree: the segment's bounds, the covariates the rates read there
+(<code>N</code>, the clade mean pendant age <code>M</code> at the segment's end
+<code>t1</code>, the lineage's pendant start <code>ts</code>, so that
+<code>D = (t1 - ts) - M</code>, constant on the segment, and its <code>ED</code> at the
+segment start, growing at slope one within it), and whether the lineage's own event
+ends the segment (<code>event</code>: 0 none, 1 speciation, 2 extinction).  These
+are the numbers the likelihood is built on; <code><a href="#covariate_path">covariate_path</a></code>
+runs a selection path over them.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>lineage_table(tree)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="lineage_table_:_tree">tree</code></td>
+<td>
+<p>An augmented-tree data frame with the topology (the frames
+<code>augment_trees</code> returns when given parent ids), or a <code>phylo</code>
+object, which is taken as fully observed.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>A data frame with columns <code>seg</code>, <code>lineage</code>, <code>id</code>,
+<code>event</code>, <code>t0</code>, <code>t1</code>, <code>N</code>, <code>M</code>, <code>ts</code>,
+<code>ed0</code>.
+</p>
+

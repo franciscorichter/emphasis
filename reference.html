@@ -1,0 +1,4910 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference · emphasis</title>
+<meta name="description" content="The functions of the emphasis package.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="index.html">emphasis</a>
+<ul>
+<li><a href="index.html">Overview</a></li>
+<li><a href="usage.html">Usage</a></li>
+<li><a href="reference.html" aria-current="page">Reference</a></li>
+<li><a href="established.html">What is established</a></li>
+<li><a href="estimability.html">Estimability</a></li>
+<li><a href="real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="experiments/index.html">Experiments</a></li>
+<li><a href="glossary.html">Glossary</a></li>
+<li><a href="simulator.html">Simulator</a></li>
+<li><a href="D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="">
+<header class="page-header">
+<h1>Reference</h1>
+</header>
+<nav class="toc toc-index" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<p><a href="#export">Exported functions</a>: <a href="#auto_bounds"><code>auto_bounds</code></a>, <a href="#compare_models"><code>compare_models</code></a>, <a href="#covariate_path"><code>covariate_path</code></a>, <a href="#diagnose_cem"><code>diagnose_cem</code></a>, <a href="#diagnose_gam"><code>diagnose_gam</code></a>, <a href="#diagnose_mcem"><code>diagnose_mcem</code></a>, <a href="#emphasis_pipeline"><code>emphasis_pipeline</code></a>, <a href="#estimate_rates"><code>estimate_rates</code></a>, <a href="#lineage_table"><code>lineage_table</code></a>, <a href="#predict_survival"><code>predict_survival</code></a>, <a href="#simulate_tree"><code>simulate_tree</code></a>, <a href="#train_GAM"><code>train_GAM</code></a>.</p>
+<p><a href="#S3method">Methods</a>: <a href="#print.cem_diagnostics"><code>print.cem_diagnostics</code></a>, <a href="#print.emphasis_fit"><code>print.emphasis_fit</code></a>, <a href="#print.emphasis_fits"><code>print.emphasis_fits</code></a>, <a href="#print.emphasis_pipeline"><code>print.emphasis_pipeline</code></a>, <a href="#print.gam_diagnostics"><code>print.gam_diagnostics</code></a>, <a href="#print.mcem_diagnostics"><code>print.mcem_diagnostics</code></a>, <a href="#print.model_selection"><code>print.model_selection</code></a>.</p>
+<p><a href="#internal">Internal functions</a>: <a href="#augment_trees"><code>augment_trees</code></a>, <a href="#dot-attach_w"><code>.attach_w</code></a>, <a href="#dot-augment_tree_bdi"><code>.augment_tree_bdi</code></a>, <a href="#dot-bdi_augment_one"><code>.bdi_augment_one</code></a>, <a href="#dot-bdi_find_event_time_cr"><code>.bdi_find_event_time_cr</code></a>, <a href="#dot-bdi_integral_cr"><code>.bdi_integral_cr</code></a>, <a href="#dot-bdi_integral_cr_rho"><code>.bdi_integral_cr_rho</code></a>, <a href="#dot-bdi_iterate"><code>.bdi_iterate</code></a>, <a href="#dot-bdi_P_obs"><code>.bdi_P_obs</code></a>, <a href="#dot-bdi_solve_mean_forward"><code>.bdi_solve_mean_forward</code></a>, <a href="#dot-bdi_solve_meanvar_forward"><code>.bdi_solve_meanvar_forward</code></a>, <a href="#dot-bdi_solve_p_backward"><code>.bdi_solve_p_backward</code></a>, <a href="#dot-bdi_supported"><code>.bdi_supported</code></a>, <a href="#dot-bdi_to_tree_df"><code>.bdi_to_tree_df</code></a>, <a href="#dot-bdi_unsupported_reason"><code>.bdi_unsupported_reason</code></a>, <a href="#dot-bootstrap_fhat_var"><code>.bootstrap_fhat_var</code></a>, <a href="#dot-build_cond_fun"><code>.build_cond_fun</code></a>, <a href="#dot-check_rho"><code>.check_rho</code></a>, <a href="#dot-ess_from_lw"><code>.ess_from_lw</code></a>, <a href="#dot-eval_independent"><code>.eval_independent</code></a>, <a href="#dot-eval_particles"><code>.eval_particles</code></a>, <a href="#dot-eval_shared"><code>.eval_shared</code></a>, <a href="#dot-extract_brts"><code>.extract_brts</code></a>, <a href="#dot-fit_ess"><code>.fit_ess</code></a>, <a href="#dot-fit_gap"><code>.fit_gap</code></a>, <a href="#dot-fit_gap_heavy"><code>.fit_gap_heavy</code></a>, <a href="#dot-init_population"><code>.init_population</code></a>, <a href="#dot-is_fhat"><code>.is_fhat</code></a>, <a href="#dot-is_summary"><code>.is_summary</code></a>, <a href="#dot-jensen_gap"><code>.jensen_gap</code></a>, <a href="#dot-mcem_bdi"><code>.mcem_bdi</code></a>, <a href="#dot-mcem_dynamic_fresh"><code>.mcem_dynamic_fresh</code></a>, <a href="#dot-mcem_iter_rows"><code>.mcem_iter_rows</code></a>, <a href="#dot-observed_parent_id"><code>.observed_parent_id</code></a>, <a href="#dot-observed_parent_tip_start"><code>.observed_parent_tip_start</code></a>, <a href="#dot-pid"><code>.pid</code></a>, <a href="#dot-pts"><code>.pts</code></a>, <a href="#dot-rel_change"><code>.rel_change</code></a>, <a href="#dot-rel_floor"><code>.rel_floor</code></a>, <a href="#dot-resample_particles"><code>.resample_particles</code></a>, <a href="#dot-resolve_control_aliases"><code>.resolve_control_aliases</code></a>, <a href="#dot-simulate_particle"><code>.simulate_particle</code></a>, <a href="#dot-validate_linear_init_pars"><code>.validate_linear_init_pars</code></a>, <a href="#ed_fair_proportion"><code>ed_fair_proportion</code></a>, <a href="#em_cpp"><code>em_cpp</code></a>, <a href="#emphasis_cem"><code>emphasis_cem</code></a>, <a href="#estimate_likelihood_surface"><code>estimate_likelihood_surface</code></a>, <a href="#estimate_rates_control"><code>estimate_rates_control</code></a>, <a href="#eval_attachments"><code>eval_attachments</code></a>, <a href="#eval_logf"><code>eval_logf</code></a>, <a href="#eval_nh_rate"><code>eval_nh_rate</code></a>, <a href="#eval_pendant_sweep"><code>eval_pendant_sweep</code></a>, <a href="#find_MLE"><code>find_MLE</code></a>, <a href="#lineage_table_cpp"><code>lineage_table_cpp</code></a>, <a href="#m_cpp"><code>m_cpp</code></a>, <a href="#prune_to_extant"><code>prune_to_extant</code></a>, <a href="#select_diversification_model"><code>select_diversification_model</code></a>, <a href="#simulate_div_tree_cpp"><code>simulate_div_tree_cpp</code></a>, <a href="#thinning_envelope_violations"><code>thinning_envelope_violations</code></a>, <a href="#train_likelihood_GAM"><code>train_likelihood_GAM</code></a>.</p>
+</nav>
+<p>The documented functions of <code>emphasis</code> version 0.4: the 12 exported functions first, then the methods and the internal functions that the package documents.</p>
+<h2 id="export">Exported functions</h2>
+<section class="ref">
+<h3 id="auto_bounds"><code>auto_bounds</code> <span class="ref-title">Automatically determine parameter bounds via forward simulation</span></h3>
+<h4>Description</h4>
+
+<p>Starts from a safe center point (low rates, zero covariates) and expands
+outward along each parameter axis using bisection to find the feasibility
+boundary &mdash; where trees transition from surviving with sensible size to
+going extinct or exploding.  Much more efficient than blanket LHS sampling
+over a wide box.  Optionally trains a survival GAM over the detected region.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>auto_bounds(
+  tree,
+  model = "cr",
+  link = "linear",
+  n_test = 5L,
+  bisect_steps = 8L,
+  margin = 0.5,
+  tip_range = c(0.1, 10),
+  train_surv_gam = TRUE,
+  num_threads = 1L,
+  verbose = TRUE,
+  rho = 1,
+  surv_tries = 20L
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="auto_bounds_:_tree">tree</code></td>
+<td>
+<p>A <code>phylo</code> object or anything accepted by
+<code><a href="#estimate_rates">estimate_rates</a></code>.</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_model">model</code></td>
+<td>
+<p>Model specification: <code>"cr"</code>, <code>"dd"</code>, etc.</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_link">link</code></td>
+<td>
+<p><code>"linear"</code>, <code>"exponential"</code>, or <code>"gaussian"</code>.</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_n_test">n_test</code></td>
+<td>
+<p>Number of replicate simulations per candidate point
+to assess feasibility (default 5).</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_bisect_steps">bisect_steps</code></td>
+<td>
+<p>Number of bisection steps per axis direction
+(default 8; gives ~1/256 resolution).</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_margin">margin</code></td>
+<td>
+<p>Fractional expansion of detected bounds (default 0.5).</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_tip_range">tip_range</code></td>
+<td>
+<p>Multiplier range for acceptable tip counts relative
+to the observed tree.  Default <code>c(0.1, 10)</code>.</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_train_surv_gam">train_surv_gam</code></td>
+<td>
+<p>If <code>TRUE</code> (default), train a survival GAM
+on the detected region.</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_num_threads">num_threads</code></td>
+<td>
+<p>Parallel threads for batch simulation (default 1).</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_verbose">verbose</code></td>
+<td>
+<p>Print progress (default <code>TRUE</code>).</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_rho">rho</code></td>
+<td>
+<p>Sampling fraction (0, 1]. Default <code>1</code> (complete sampling).</p>
+</td></tr>
+<tr><td><code id="auto_bounds_:_surv_tries">surv_tries</code></td>
+<td>
+<p>Simulations per candidate when judging whether a parameter
+vector produces surviving clades of a usable size (default 20).
+Passed through to IS feasibility diagnostics.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>A list with components:
+</p>
+
+<dl>
+<dt>lower_bound</dt><dd><p>Numeric vector of lower bounds (compact layout).</p>
+</dd>
+<dt>upper_bound</dt><dd><p>Numeric vector of upper bounds (compact layout).</p>
+</dd>
+<dt>survival_gam</dt><dd><p>A <code>gam</code> object if trained, else <code>NULL</code>.</p>
+</dd>
+<dt>center</dt><dd><p>The safe center point used as starting location.</p>
+</dd>
+</dl>
+
+<h4>Examples</h4>
+
+<pre><code class='language-R'>## Not run: 
+library(ape)
+data(bird.orders)
+ab &lt;- auto_bounds(bird.orders, model = "dd", link = "exponential")
+fit &lt;- estimate_rates(bird.orders, method = "gam", model = "dd",
+         link = "exponential",
+         control = list(lower_bound = ab$lower_bound,
+                        upper_bound = ab$upper_bound),
+         cond = ab$survival_gam)
+
+## End(Not run)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="compare_models"><code>compare_models</code> <span class="ref-title">Compare fitted models by AIC, carrying the Monte Carlo handicap</span></h3>
+<h4>Description</h4>
+
+<p>Ranks two or more fits from <code><a href="#estimate_rates">estimate_rates</a></code> by AIC. Each fit's
+log-likelihood is a log of a Monte Carlo mean, so it sits below the
+log-likelihood it estimates; how far below grows as that fit's own effective
+sample falls, and the amounts do not cancel between models. A model that is
+harder to sample is therefore penalised for being harder to sample, and the
+AIC difference between two fits can be smaller than the difference in their
+biases.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>compare_models(..., margin = 2)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="compare_models_:_...">...</code></td>
+<td>
+<p>Two or more <code>emphasis_fit</code> objects. Names become the row
+labels; unnamed arguments are labelled from the fitted model.</p>
+</td></tr>
+<tr><td><code id="compare_models_:_margin">margin</code></td>
+<td>
+<p>AIC units within which two models are not told apart.
+Default 2.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Details</h4>
+
+<p>The returned table carries <code>ESS</code> and <code>loglik_gap</code> per fit and
+<code>AIC_swing</code>, twice the gap relative to the leader's, which is how much
+of the AIC difference the bias alone could account for.
+</p>
+<p><code>ranking_at_risk</code> names the models that could overtake the leader once
+both biases are corrected. A model qualifies only if its own gap is larger
+than the leader's &mdash; so that correcting both closes the distance &mdash; and
+then either the swing reaches its <code>delta_AIC</code> or its draw is heavy
+enough that the swing understates the gap. A warning is issued with it.
+</p>
+<p>Two things follow that a caller should not have to infer. The attribute is
+about the ORDER, not about precision: when the leader is itself the
+heavily-handicapped fit, correcting the biases only widens its lead, so
+nothing is named and nothing is wrong with that. And it covers bias, not
+variance. A fit can lead on a log-likelihood estimated from a handful of
+effective draws &mdash; measured: a winner with an effective sample of 6.5 of 300
+&mdash; and be named by nothing here, because its <em>expected</em> position is
+safe while its realised one is noisy. <code>loglik_se</code> and <code>ESS</code> are
+the columns for that, and they are in the table to be read.
+</p>
+<p>The row with the lowest AIC is not the model the table chooses. Among
+nested models the richer one has the lower AIC whenever its two extra
+parameters raise the log-likelihood by more than 2, which they do on a
+share of trees generated without them: with two extra parameters the
+likelihood-ratio statistic is chi-squared on two degrees of freedom under
+the null, so the richer model takes the minimum on about 13% of null
+trees, and with three richer models offered beside the null, on more.
+Measured, on 20 trees a cell from a diversity-dependent generator at 50 to
+200 tips: a lineage-level model had the minimum AIC on 2 to 7 of 20, and
+led by more than 2 AIC on 0 to 2 of 20 (E27). The <code>chosen</code> attribute
+is therefore the model with the fewest parameters among those within
+<code>margin</code> AIC units of the minimum, and <code>within_margin</code> marks
+those rows; the full ranking is kept so that the margin can be read.
+</p>
+<p>A warning names the chosen model when its own effective sample is below
+10 draws: its log-likelihood is then an estimate from a handful of
+histories and the margin it rests on is noise as much as evidence. The
+<code>ranking_at_risk</code> attribute covers the bias of unequal precision;
+this covers its variance.
+</p>
+
+<h4>Value</h4>
+
+<p>A <code>model_selection</code> data frame, one row per fit, with columns
+<code>model</code>, <code>n_pars</code>, <code>loglik</code>, <code>AIC</code>, <code>loglik_se</code>,
+<code>ESS</code>, <code>loglik_gap</code>, <code>gap_heavy</code>, <code>delta_AIC</code>,
+<code>AICw</code>, <code>AIC_swing</code> and <code>within_margin</code>, ordered by AIC,
+with attributes <code>chosen</code> (the most parsimonious model within
+<code>margin</code> of the minimum), <code>chosen_starved</code> (whether that
+model's effective sample is below 10) and <code>ranking_at_risk</code>.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="covariate_path"><code>covariate_path</code> <span class="ref-title">Selection along a path over the covariates</span></h3>
+<h4>Description</h4>
+
+<p>Instead of comparing nested models one pair at a time, this traces the
+differential-geometric LARS path of Augugliaro, Mineo and Wit (2013) over
+all the covariates a rate can read &mdash; <code>N</code>, <code>D</code> and <code>ED</code> &mdash;
+on the same augmented trees an M-step maximises over.  Under the
+exponential link the complete-data log-likelihood is a log-linear point
+process: one row per lineage and segment between consecutive events, with
+<code>N</code>, <code>D</code> and <code>K</code> at their values on the segment (each is
+constant between events), <code>ED</code> at the segment's midpoint, the
+segment's length as exposure, and
+a count of one when that lineage's own event ends the segment.  The
+speciation and extinction halves separate, so each rate gets its own path.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>covariate_path(
+  trees,
+  log_weights = NULL,
+  n_trees = 40L,
+  covariates = c("N", "D", "ED"),
+  rate = c("speciation", "extinction"),
+  criterion = c("BIC", "AIC"),
+  n_gamma = 60L
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="covariate_path_:_trees">trees</code></td>
+<td>
+<p>A list of augmented-tree data frames with the topology, as
+<code>augment_trees</code> returns them with parent ids, or a single
+<code>phylo</code> taken as fully observed.</p>
+</td></tr>
+<tr><td><code id="covariate_path_:_log_weights">log_weights</code></td>
+<td>
+<p>Optional log importance weights, one per tree; without
+them every tree weighs the same.</p>
+</td></tr>
+<tr><td><code id="covariate_path_:_n_trees">n_trees</code></td>
+<td>
+<p>How many trees to use: the <code>n_trees</code> of largest weight
+(the first <code>n_trees</code> without weights), renormalised.</p>
+</td></tr>
+<tr><td><code id="covariate_path_:_covariates">covariates</code></td>
+<td>
+<p>Which covariates to offer the path; any of <code>"N"</code>,
+<code>"D"</code>, <code>"ED"</code>, <code>"EDc"</code> (ED centred on the alive lineages),
+<code>"K"</code> (the number of speciation events on the path from the crown).</p>
+</td></tr>
+<tr><td><code id="covariate_path_:_rate">rate</code></td>
+<td>
+<p><code>"speciation"</code>, <code>"extinction"</code> or both.</p>
+</td></tr>
+<tr><td><code id="covariate_path_:_criterion">criterion</code></td>
+<td>
+<p><code>"BIC"</code> or <code>"AIC"</code> along the path.</p>
+</td></tr>
+<tr><td><code id="covariate_path_:_n_gamma">n_gamma</code></td>
+<td>
+<p>Number of points on the path.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Details</h4>
+
+<p>The path is the curve on which the Rao score statistics of the active
+covariates are equal in size and the inactive ones smaller,
+<span class="reqn">\(|r_j(\beta)| = \gamma\)</span> for <span class="reqn">\(j\)</span> active, traced from the
+<span class="reqn">\(\gamma\)</span> at which the first covariate enters down to zero, with the
+intercept always free.  It is solved here on a grid of <span class="reqn">\(\gamma\)</span> by
+Newton steps rather than by <span class="pkg">dglars</span>'s predictor&ndash;corrector, because
+the point process needs a true exposure offset, which that package does
+not take; on a constant-exposure problem the two agree
+(<code>tests/testthat/test-lineage-table.R</code>).  The order of entry says
+which covariates the data ask for first; AIC and BIC along the path pick a
+point, with BIC's sample size the number of events.
+</p>
+<p>Importance weights enter the likelihood as row weights, one per tree and
+normalised to sum to one, so the objective is the expected complete-data
+log-likelihood of one tree &mdash; the M-step's Q function &mdash; and the sample
+size behind BIC is the weighted mean number of events per tree.
+</p>
+
+<h4>Value</h4>
+
+<p>A list with one element per rate: the path (a data frame with one
+row per <span class="reqn">\(\gamma\)</span>: the coefficients, the log-likelihood, the active
+set size, AIC and BIC), the entry order of the covariates (the
+<span class="reqn">\(\gamma\)</span> at which each enters), the coefficients and active set at
+the criterion's optimum, and the frame's size.  A rate with no event in
+the trees (the extinction rate of a fully observed tree) gets an empty
+path: <code>path</code> is <code>NULL</code>, <code>active</code> and <code>entry_order</code>
+are empty and <code>n_events</code> is 0.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="diagnose_cem"><code>diagnose_cem</code> <span class="ref-title">Diagnostics for a CEM fit</span></h3>
+<h4>Description</h4>
+
+<p>Computes convergence, importance-sampling quality, and population-diversity
+diagnostics from the output of <code><a href="#emphasis_cem">emphasis_cem</a></code> or
+<code><a href="#estimate_rates">estimate_rates</a></code> (method <code>"cem"</code>).
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>diagnose_cem(
+  x,
+  plot = TRUE,
+  lower_bound = NULL,
+  upper_bound = NULL,
+  true_pars = NULL
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="diagnose_cem_:_x">x</code></td>
+<td>
+<p>An <code>emphasis_fit</code> object (from <code><a href="#estimate_rates">estimate_rates</a></code>
+with <code>method = "cem"</code>) or the raw list from <code><a href="#emphasis_cem">emphasis_cem</a></code>.</p>
+</td></tr>
+<tr><td><code id="diagnose_cem_:_plot">plot</code></td>
+<td>
+<p>Logical; if <code>TRUE</code> (default), produce diagnostic plots.</p>
+</td></tr>
+<tr><td><code id="diagnose_cem_:_lower_bound">lower_bound</code>, <code id="diagnose_cem_:_upper_bound">upper_bound</code></td>
+<td>
+<p>Optional numeric vectors of the same length as
+the parameter vector.  When provided, dashed horizontal lines are drawn at
+the lower (orange) and upper (purple) bounds in each parameter-trace panel,
+making it easy to see whether the estimate has converged away from the
+boundary.</p>
+</td></tr>
+<tr><td><code id="diagnose_cem_:_true_pars">true_pars</code></td>
+<td>
+<p>Optional named or unnamed numeric vector of true parameter
+values.  Useful in simulation studies where the generative parameters are
+known.  When provided, a red dashed line is added to each parameter-trace
+panel at the true value.  In real-data analyses this argument should be
+omitted (the true parameters are unknown).</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Details</h4>
+
+<p>The function works on the <code>details</code> component of an
+<code>emphasis_fit</code> object or directly on the list returned by
+<code>emphasis_cem</code>.  It requires that the fit was produced with the
+current version of the package (which stores <code>history</code>,
+<code>final_pop</code>, and <code>best_IS</code> in the output).
+</p>
+
+<h4>Convergence (<code>$convergence</code>)</h4>
+
+<p>A data frame with one row per iteration containing:
+</p>
+
+<dl>
+<dt><code>iteration</code></dt><dd><p>Iteration index.</p>
+</dd>
+<dt><code>best_loglik</code></dt><dd><p>IS log-likelihood of the best particle.</p>
+</dd>
+<dt><code>n_valid</code></dt><dd><p>Number of particles with a finite <code>fhat</code>.</p>
+</dd>
+<dt><code>rej_lambda</code></dt><dd><p>Trees rejected due to <code>max_lambda</code> exceedance.</p>
+</dd>
+<dt><code>rej_overruns</code></dt><dd><p>Trees rejected due to <code>max_missing</code>
+exceedance.</p>
+</dd>
+</dl>
+
+<h4>Population spread (<code>$population_spread</code>)</h4>
+
+<p>Per-iteration summary of the <code>fhat</code> distribution across all valid
+particles: median, interquartile range, and total range.  A narrowing
+range indicates population convergence.
+</p>
+
+<h4>IS quality (<code>$IS_quality</code>)</h4>
+
+<p>Importance-sampling diagnostics computed from the final evaluation of the
+globally best parameter vector (with <code>max(sample_size, n_boot, 1)</code>
+augmented trees):
+</p>
+
+<dl>
+<dt><code>ESS</code></dt><dd><p>Effective sample size:
+<span class="reqn">\((\sum w_i)^2 / \sum w_i^2\)</span>.</p>
+</dd>
+<dt><code>ESS_fraction</code></dt><dd><p>ESS as a fraction of <code>n_trees</code>.</p>
+</dd>
+<dt><code>mean_lw</code>, <code>sd_lw</code></dt><dd><p>Mean and SD of IS log-weights.</p>
+</dd>
+<dt><code>fhat</code></dt><dd><p>IS log-likelihood estimate.</p>
+</dd>
+<dt><code>n_trees</code>, <code>n_rejected</code></dt><dd><p>Trees simulated and rejected.</p>
+</dd>
+</dl>
+
+<h4>Final population (<code>$final_pop</code>)</h4>
+
+<p>The full particle population at the last completed iteration (before
+resampling), with columns for parameters and <code>fhat</code> per particle.
+Useful for inspecting the distribution of surviving particles.
+</p>
+
+<h4>Raw IS data (<code>$best_IS</code>)</h4>
+
+<p>The raw IS output for the best particle: <code>logf</code>, <code>log_q</code>,
+<code>lw</code> (log-weights), and <code>trees</code> (augmented tree data frames in
+C++ format).
+</p>
+
+<h4>Value</h4>
+
+<p>A list of class <code>"cem_diagnostics"</code> (invisibly) with components
+<code>convergence</code>, <code>population_spread</code>, <code>IS_quality</code>,
+<code>final_pop</code>, and <code>best_IS</code>.
+</p>
+
+<h4>Examples</h4>
+
+<pre><code class='language-R'>## Not run: 
+lb  &lt;- c(0.01, -0.5, 0, -0.5)
+ub  &lt;- c(2,     0.5, 1,  0.5)
+sim &lt;- simulate_tree(c(0.6, -0.05, 0.15, -0.03), max_t = 10, model = "d")
+fit &lt;- estimate_rates(sim, method = "cem", model = "d",
+  lower_bound = lb, upper_bound = ub,
+  control = list(max_iter = 50, num_points = 80, n_boot = 100))
+
+# Basic diagnostics -- bounds shown as dashed lines in parameter panels
+diag &lt;- diagnose_cem(fit, lower_bound = lb, upper_bound = ub)
+
+# Simulation study: also show the true generating parameters
+diag &lt;- diagnose_cem(fit, lower_bound = lb, upper_bound = ub,
+                     true_pars = c(0.6, -0.05, 0.15, -0.03))
+
+diag$IS_quality$ESS_fraction  # IS efficiency at the best particle
+head(diag$final_pop)          # last-iteration particle cloud
+diag$convergence              # per-iteration best fhat and rejection counts
+
+## End(Not run)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="diagnose_gam"><code>diagnose_gam</code> <span class="ref-title">Diagnostics for a GAM-based MLE fit</span></h3>
+<h4>Description</h4>
+
+<p>Produces diagnostic plots and returns summary statistics from a
+<code><a href="#estimate_rates">estimate_rates</a></code> fit obtained with <code>method = "gam"</code>.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>diagnose_gam(x, plot = TRUE, true_pars = NULL)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="diagnose_gam_:_x">x</code></td>
+<td>
+<p>An <code>emphasis_fit</code> object from <code><a href="#estimate_rates">estimate_rates</a></code>
+with <code>method = "gam"</code>.</p>
+</td></tr>
+<tr><td><code id="diagnose_gam_:_plot">plot</code></td>
+<td>
+<p>Logical; if <code>TRUE</code> (default), produce diagnostic plots.</p>
+</td></tr>
+<tr><td><code id="diagnose_gam_:_true_pars">true_pars</code></td>
+<td>
+<p>Optional numeric vector of true parameter values
+(for simulation studies).</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Surface coverage (<code>$surface_summary</code>)</h4>
+
+<p>Summary of the IS log-likelihood grid: total grid points, number with
+finite fhat, fhat range, and mean trees per grid point.
+</p>
+
+<h4>GAM quality (<code>$gam_summary</code>)</h4>
+
+<p>Key statistics from the fitted GAM: deviance explained, GCV score,
+and effective degrees of freedom.
+</p>
+
+<h4>MLE (<code>$mle</code>)</h4>
+
+<p>The MLE parameter estimates and predicted log-likelihood at the optimum.
+</p>
+
+<h4>Value</h4>
+
+<p>A list of class <code>"gam_diagnostics"</code> (invisibly) with
+components <code>surface_summary</code>, <code>gam_summary</code>, and <code>mle</code>.
+</p>
+
+<h4>Examples</h4>
+
+<pre><code class='language-R'>## Not run: 
+sim &lt;- simulate_tree(c(0.5, 0.1), max_t = 5, model = "cr")
+fit &lt;- estimate_rates(sim, method = "gam", model = "cr",
+  control = list(lower_bound = c(0, 0), upper_bound = c(2, 1)))
+diagnose_gam(fit)
+
+## End(Not run)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="diagnose_mcem"><code>diagnose_mcem</code> <span class="ref-title">Diagnostics for an MCEM fit</span></h3>
+<h4>Description</h4>
+
+<p>Computes convergence and importance-sampling quality diagnostics from
+the output of <code><a href="#estimate_rates">estimate_rates</a></code> with <code>method = "mcem"</code>.
+</p>
+<p>Diagnostic plots include:
+</p>
+
+<dl>
+<dt>Log-likelihood trace</dt><dd><p>fhat vs. EM iteration, showing
+convergence of the sequence.</p>
+</dd>
+<dt>Parameter traces</dt><dd><p>Per-parameter estimates across iterations,
+with optional bound and true-value lines.</p>
+</dd>
+<dt>Parameter stability</dt><dd><p>Max relative parameter change (delta_max)
+vs.\ iteration; convergence is declared when this falls below tol
+for patience consecutive iterations.</p>
+</dd>
+<dt>IS weight histogram</dt><dd><p>Distribution of IS log-weights at the
+final iteration, annotated with ESS.</p>
+</dd>
+</dl>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>diagnose_mcem(x, plot = TRUE, lower_bound = NULL,
+              upper_bound = NULL, true_pars = NULL)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="diagnose_mcem_:_x">x</code></td>
+<td>
+<p>An <code>emphasis_fit</code> object (from <code><a href="#estimate_rates">estimate_rates</a></code>
+with <code>method = "mcem"</code>) or the raw list from the internal
+<code>.mcem_dynamic_fresh</code> function.</p>
+</td></tr>
+<tr><td><code id="diagnose_mcem_:_plot">plot</code></td>
+<td>
+<p>Logical; if <code>TRUE</code> (default), produce diagnostic plots.</p>
+</td></tr>
+<tr><td><code id="diagnose_mcem_:_lower_bound">lower_bound</code></td>
+<td>
+<p>Optional numeric vector of lower parameter bounds.
+Dashed orange lines are drawn at these values in parameter trace panels.</p>
+</td></tr>
+<tr><td><code id="diagnose_mcem_:_upper_bound">upper_bound</code></td>
+<td>
+<p>Optional numeric vector of upper parameter bounds.
+Dashed purple lines are drawn at these values in parameter trace panels.</p>
+</td></tr>
+<tr><td><code id="diagnose_mcem_:_true_pars">true_pars</code></td>
+<td>
+<p>Optional numeric vector of true parameter values
+(for simulation studies). Red dashed lines are drawn at these values.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>A list of class <code>"mcem_diagnostics"</code> (invisibly) with:
+</p>
+
+<dl>
+<dt><code>convergence</code></dt><dd><p>Data frame with per-iteration <code>fhat</code>,
+<code>delta_max</code> (max relative parameter change), <code>rejected</code>,
+<code>num_trees</code>, and <code>time</code>.</p>
+</dd>
+<dt><code>stop_reason</code></dt><dd><p>Why MCEM stopped: <code>"converged"</code>,
+<code>"max_iter"</code>, or <code>"e_step_failure"</code>.</p>
+</dd>
+<dt><code>IS_quality</code></dt><dd><p>List with ESS, mean/sd of log-weights,
+and bootstrap variance at the final iteration.</p>
+</dd>
+<dt><code>final_IS</code></dt><dd><p>Raw IS components (<code>logf</code>, <code>logg</code>,
+<code>lw</code>) from the final E-step.</p>
+</dd>
+</dl>
+
+<h4>Examples</h4>
+
+<pre><code class='language-R'>## Not run: 
+sim &lt;- simulate_tree(c(0.5, 0.1), max_t = 5, model = "cr")
+fit &lt;- estimate_rates(sim, method = "mcem", model = "cr",
+  control = list(lower_bound = c(0, 0), upper_bound = c(2, 1)))
+diagnose_mcem(fit, lower_bound = c(0, 0), upper_bound = c(2, 1))
+
+## End(Not run)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="emphasis_pipeline"><code>emphasis_pipeline</code> <span class="ref-title">Full estimation pipeline: auto_bounds -&gt; GAM -&gt; CEM -&gt; MCEM</span></h3>
+<h4>Description</h4>
+
+<p>Runs a multi-stage estimation workflow with automatic bounds detection,
+exploratory fits (GAM and CEM), and optional MCEM refinement.  Each stage
+is timed and logged.  If MCEM fails, the best exploratory result is
+returned.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>emphasis_pipeline(
+  tree,
+  model = "cr",
+  link = "linear",
+  stages = c("bounds", "gam", "cem", "mcem"),
+  control = list(),
+  verbose = TRUE
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="emphasis_pipeline_:_tree">tree</code></td>
+<td>
+<p>A <code>phylo</code> object, branching-time vector, or
+<code><a href="#simulate_tree">simulate_tree</a></code> result.</p>
+</td></tr>
+<tr><td><code id="emphasis_pipeline_:_model">model</code></td>
+<td>
+<p>Model specification: <code>"cr"</code>, <code>"dd"</code>, <code>"d"</code>,
+<code>"nd"</code>, <code>"ed"</code>, <code>"ned"</code>, <code>"k"</code>, <code>"nk"</code>, a formula
+(e.g. <code>~ N + D</code>, <code>~ N + ED</code>, <code>~ N + K</code>), or a binary vector.</p>
+</td></tr>
+<tr><td><code id="emphasis_pipeline_:_link">link</code></td>
+<td>
+<p><code>"linear"</code> (default), <code>"exponential"</code>, or <code>"gaussian"</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_pipeline_:_stages">stages</code></td>
+<td>
+<p>Character vector of stages to run.  Default
+<code>c("bounds", "gam", "cem", "mcem")</code>.  Remove stages to skip them,
+e.g. <code>c("bounds", "gam")</code> for a quick exploratory fit.</p>
+</td></tr>
+<tr><td><code id="emphasis_pipeline_:_control">control</code></td>
+<td>
+<p>Named list with optional sub-lists <code>bounds</code>, <code>gam</code>,
+<code>cem</code>, <code>mcem</code> to override defaults for each stage.  Common
+parameters (<code>num_threads</code>, <code>max_missing</code>, <code>max_time</code>,
+<code>rho</code>) can be set at the top level and are inherited by all stages.
+<code>rho</code>, the sampling fraction in <code>(0, 1]</code>, is inherited by the
+bounds, gam, cem and mcem stages alike, and a value nested under
+<code>control$gam</code>, <code>control$cem</code> or <code>control$mcem</code> overrides
+the inherited one for that stage.</p>
+</td></tr>
+<tr><td><code id="emphasis_pipeline_:_verbose">verbose</code></td>
+<td>
+<p>Logical.  If <code>TRUE</code> (default), print progress and a
+summary log to the console.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Stages</h4>
+
+
+<ol>
+<li> <p><strong>Bounds</strong>: <code><a href="#auto_bounds">auto_bounds</a></code> detects parameter bounds
+and trains a survival GAM for conditioning.
+</p>
+</li>
+<li> <p><strong>GAM</strong>: Fits a smooth likelihood surface over a grid and
+optimises it.  Fast, one-shot.
+</p>
+</li>
+<li> <p><strong>CEM</strong>: Cross-entropy global search.  Stochastic, no init
+needed.  Explores the space differently than GAM.
+</p>
+</li>
+<li> <p><strong>MCEM</strong>: Monte Carlo EM starting from the best init found
+in stages 2&ndash;3.  Local refinement for precise estimates.
+</p>
+</li></ol>
+
+<h4>Value</h4>
+
+<p>A list of class <code>"emphasis_pipeline"</code> with:
+</p>
+
+<dl>
+<dt><code>pars</code></dt><dd><p>Named parameter vector from the best stage.</p>
+</dd>
+<dt><code>loglik</code></dt><dd><p>Log-likelihood from the best stage.</p>
+</dd>
+<dt><code>AIC</code></dt><dd><p>AIC from the best stage.</p>
+</dd>
+<dt><code>best_stage</code></dt><dd><p>Which stage produced the final result.</p>
+</dd>
+<dt><code>rho</code></dt><dd><p>The sampling fraction the best stage ran at.</p>
+</dd>
+<dt><code>log</code></dt><dd><p>Data frame with one row per stage: stage name,
+pars, loglik, AIC, elapsed seconds, status, rho.</p>
+</dd>
+<dt><code>mcem_trace</code></dt><dd><p>If MCEM ran, a data frame of per-iteration
+fhat and parameter values.  <code>NULL</code> otherwise.</p>
+</dd>
+<dt><code>bounds</code></dt><dd><p>The <code>auto_bounds</code> result (bounds + survival GAM).</p>
+</dd>
+<dt><code>fits</code></dt><dd><p>Named list of individual <code>emphasis_fit</code> objects.</p>
+</dd>
+</dl>
+
+<h4>Examples</h4>
+
+<pre><code class='language-R'>## Not run: 
+library(ape)
+data(bird.orders)
+result &lt;- emphasis_pipeline(bird.orders, model = "dd", link = "linear")
+result           # prints summary log
+result$pars      # best parameters
+result$log       # full stage log
+
+## End(Not run)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="estimate_rates"><code>estimate_rates</code> <span class="ref-title">Estimate diversification rates from a phylogenetic tree</span></h3>
+<h4>Description</h4>
+
+<p>Unified entry point for parameter inference under the general
+diversification model. Accepts a simulated or empirical tree, extracts
+branching times (pruning to extant tips if needed), and dispatches to
+the chosen optimisation back-end.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>estimate_rates(
+  tree,
+  method = c("mcem", "cem", "gam"),
+  model = "cr",
+  init_pars = NULL,
+  control = list(),
+  link = "linear",
+  cond = NULL
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="estimate_rates_:_tree">tree</code></td>
+<td>
+<p>One of:
+</p>
+
+<ul>
+<li><p> a <code>phylo</code> object (extant tips only recommended),
+</p>
+</li>
+<li><p> the list returned by <code><a href="#simulate_tree">simulate_tree</a></code> (<code>$tes</code> is
+used automatically, falling back to a pruned <code>$tas</code>), or
+</p>
+</li>
+<li><p> a numeric vector of branching times (crown-age ordering).
+</p>
+</li></ul>
+
+<p>The covariate <code>D</code> is a lineage's pendant age &ndash; measured from the
+last time that lineage became a tip &ndash; centred on the mean over the alive
+lineages, so it is a function of the topology and not of the branching
+times alone.  A <code>phylo</code> (or a <code>simulate_tree</code> result) carries
+it; a bare numeric vector does not, and every observed lineage is then
+recorded as dating from the crown, which leaves <code>D = 0</code> at every
+observed branching event.  Fit <code>"d"</code> or <code>"nd"</code> from a tree, not
+from branching times.</p>
+</td></tr>
+<tr><td><code id="estimate_rates_:_method">method</code></td>
+<td>
+<p>Optimisation method:
+</p>
+
+<dl>
+<dt><code>"mcem"</code></dt><dd><p>Monte Carlo Expectation-Maximisation (default).
+Iterates E- and M-steps until parameters stabilise (max relative
+change &lt; <code>tol</code> for <code>patience</code> consecutive iterations)
+or <code>max_iter</code> is reached. Requires <code>init_pars</code>.</p>
+</dd>
+<dt><code>"cem"</code></dt><dd><p>Monte Carlo Cross-Entropy Method. Initialises a
+particle population randomly within the bounds and evolves it until
+convergence (annealing exhausted, plateau, or <code>control$max_iter</code>
+reached). Does not need <code>init_pars</code>.</p>
+</dd>
+<dt><code>"gam"</code></dt><dd><p>GAM-based MLE. Evaluates the IS log-likelihood
+on a grid spanning the bounds, fits a smooth GAM surface, and
+optimises it via L-BFGS-B. One-shot (non-iterative); no
+<code>init_pars</code> needed. Requires the <span class="pkg">mgcv</span> package.</p>
+</dd>
+</dl>
+</td></tr>
+<tr><td><code id="estimate_rates_:_model">model</code></td>
+<td>
+<p>Model specification. Accepts:
+</p>
+
+<ul>
+<li><p> a formula such as <code>~ N</code>, <code>~ N + D</code>, <code>~ N + ED</code> or <code>~ N + K</code>,
+</p>
+</li>
+<li><p> a string shortcut (<code>"cr"</code>, <code>"dd"</code>, <code>"d"</code>,
+<code>"nd"</code>, <code>"ed"</code>, <code>"ned"</code>, <code>"edc"</code>, <code>"nedc"</code>,
+<code>"k"</code>, <code>"nk"</code>), or
+</p>
+</li>
+<li><p> an integer vector <code>c(use_N, use_M, use_D, use_ED, use_K)</code>
+(<code>use_M</code> is internal only and should be 0; a shorter vector is
+an earlier layout and is padded; <code>use_ED = 3</code> selects the
+centred covariate).
+</p>
+</li></ul>
+
+<p><code>model = "all"</code> fits the nested ladder <code>cr</code>, <code>dd</code>,
+<code>nd</code>, <code>ned</code>, <code>nk</code> (the last two need a <code>phylo</code> and
+are left out on the gaussian link), each started from the estimate of the
+model it nests, with each model's box from <code><a href="#auto_bounds">auto_bounds</a></code>
+unless <code>control$bounds</code> names one per model, and returns the fits
+with their <code><a href="#compare_models">compare_models</a></code> table and its <code>chosen</code>
+model, the fewest parameters within 2 AIC of the minimum (an
+<code>emphasis_fits</code> object); <code>control$models</code> restricts the
+ladder.
+Default <code>"cr"</code> (constant rate). <code>"nd"</code> (<code>~ N + D</code>) is
+diversity and age-imbalance; <code>"ned"</code> (<code>~ N + ED</code>) diversity and
+evolutionary distinctiveness, which needs a <code>phylo</code>. <code>"nedc"</code>
+(<code>~ N + EDc</code>) reads ED minus its mean over the lineages alive at the
+same time, a covariate with clade mean zero, so that <code>beta_ED</code>
+carries only the within-clade contrast and none of the clade-level level
+that <code>N</code> tracks. <code>"nk"</code> (<code>~ N + K</code>) is diversity and the
+number of speciation events on the path from the crown to the lineage,
+hidden splits counted; it needs a <code>phylo</code> and runs on the thinning
+sampler.</p>
+</td></tr>
+<tr><td><code id="estimate_rates_:_init_pars">init_pars</code></td>
+<td>
+<p>Starting parameter vector. Required for <code>"mcem"</code>;
+ignored for <code>"cem"</code>. If <code>NULL</code> with <code>"mcem"</code>, the
+midpoint of the bounds is used, with covariate slopes started at 0
+(linear link) so that lambda stays positive during the early E-steps.</p>
+</td></tr>
+<tr><td><code id="estimate_rates_:_control">control</code></td>
+<td>
+<p>Named list of tuning parameters. Must include
+<code>lower_bound</code> and <code>upper_bound</code>. Use
+<code><a href="#estimate_rates_control">estimate_rates_control</a></code> to inspect other defaults.
+Key entries:
+</p>
+
+<dl>
+<dt><code>lower_bound</code></dt><dd><p>Numeric vector of lower parameter bounds.
+Length must be <code>2 + 2*sum(model)</code>.
+Order: <code>c(beta_0, [beta_N], [beta_D],
+    gamma_0, [gamma_N], [gamma_D])</code> (D = age-imbalance covariate;
+M is internal only).</p>
+</dd>
+<dt><code>upper_bound</code></dt><dd><p>Numeric vector of upper parameter bounds
+(same order).</p>
+</dd>
+<dt><code>verbose</code></dt><dd><p>Print progress messages. Default <code>FALSE</code>.</p>
+</dd>
+</dl>
+</td></tr>
+<tr><td><code id="estimate_rates_:_link">link</code></td>
+<td>
+<p>Link function for rate computation: <code>"linear"</code> (default)
+uses <code>max(0, eta)</code>; <code>"exponential"</code> uses <code>exp(eta)</code>;
+<code>"gaussian"</code> uses <code>beta_0 * exp(-(eta_cov - 1)^2 / 2)</code>.</p>
+</td></tr>
+<tr><td><code id="estimate_rates_:_cond">cond</code></td>
+<td>
+<p>A survival emulator for conditioning on survival: a GAM from
+<code><a href="#train_GAM">train_GAM</a></code>, a <code>nnet</code> object, or a function of the parameter
+data frame (see <code><a href="#predict_survival">predict_survival</a></code>); <code>NULL</code> (default) for no
+conditioning. When provided, the
+log-likelihood is conditioned: <span class="reqn">\(\ell_{\rm cond} = \ell -
+\log\hat{P}_{\rm tree}(\theta)\)</span>.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>A list with class <code>"emphasis_fit"</code> containing:
+</p>
+
+<dl>
+<dt><code>pars</code></dt><dd><p>Named numeric vector of parameter estimates.</p>
+</dd>
+<dt><code>loglik</code></dt><dd><p>Final log-likelihood estimate. For MCEM this is
+the importance-sampling estimate at the returned parameters, and is
+<code>NA</code> when the E-step evaluating them failed.</p>
+</dd>
+<dt><code>loglik_var</code></dt><dd><p>Bootstrap variance of <code>loglik</code> due to
+Monte Carlo noise. Populated automatically when
+<code>control$num_trees &gt;= 2</code> (B = 200 replicates); <code>NA</code>
+when <code>num_trees = 1</code>.</p>
+</dd>
+<dt><code>n_pars</code></dt><dd><p>Number of free parameters (used for AIC):
+parameters with <code>lower_bound == upper_bound</code> are fixed and
+not counted.</p>
+</dd>
+<dt><code>AIC</code></dt><dd><p>Akaike Information Criterion: <code>-2 * loglik + 2 * n_pars</code>.</p>
+</dd>
+<dt><code>method</code></dt><dd><p>Method used (<code>"mcem"</code> or <code>"cem"</code>).</p>
+</dd>
+<dt><code>model</code></dt><dd><p>Resolved binary model vector.</p>
+</dd>
+<dt><code>rho</code></dt><dd><p>The sampling fraction the fit was computed at,
+after the control merge.</p>
+</dd>
+<dt><code>stop_reason</code></dt><dd><p>Why the MCEM run stopped (<code>"converged"</code>,
+<code>"max_iter"</code>, <code>"time_budget"</code>, <code>"e_step_failure"</code>,
+<code>"m_step_failure"</code>); <code>NA</code> for other methods.</p>
+</dd>
+<dt><code>iterations</code></dt><dd><p>Number of completed MCEM iterations
+(<code>0</code> when every E-step failed); <code>NA</code> for other methods.</p>
+</dd>
+<dt><code>n_failed</code></dt><dd><p>Number of E- or M-step failures over the MCEM
+run; <code>NA</code> for other methods.</p>
+</dd>
+<dt><code>details</code></dt><dd><p>Full output from the back-end function
+(<code>.mcem_dynamic_fresh</code> or <code>emphasis_cem</code>).</p>
+</dd>
+</dl>
+
+<h4>Examples</h4>
+
+<pre><code class='language-R'>## Not run: 
+set.seed(42)
+# Constant-rate model
+sim &lt;- simulate_tree(c(0.5, 0.1), max_t = 5, model = "cr")
+fit &lt;- estimate_rates(sim, method = "mcem", model = "cr",
+  control = list(lower_bound = c(0, 0), upper_bound = c(2, 1)))
+fit$pars
+
+# Diversity-dependent model
+sim_dd &lt;- simulate_tree(c(0.5, -0.005, 0.1, 0), max_t = 8, model = "dd")
+fit_dd &lt;- estimate_rates(sim_dd, method = "mcem", model = "dd",
+  control = list(lower_bound = c(0.1, -0.1, 0, -0.01),
+                 upper_bound = c(2, 0.01, 0.5, 0.01)))
+fit_dd$pars
+
+## End(Not run)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="lineage_table"><code>lineage_table</code> <span class="ref-title">The per-lineage design of an augmented tree</span></h3>
+<h4>Description</h4>
+
+<p>One row per lineage alive on each segment between consecutive events of an
+augmented tree: the segment's bounds, the covariates the rates read there
+(<code>N</code>, the clade mean pendant age <code>M</code> at the segment's end
+<code>t1</code>, the lineage's pendant start <code>ts</code>, so that
+<code>D = (t1 - ts) - M</code>, constant on the segment, and its <code>ED</code> at the
+segment start, growing at slope one within it), and whether the lineage's own event
+ends the segment (<code>event</code>: 0 none, 1 speciation, 2 extinction).  These
+are the numbers the likelihood is built on; <code><a href="#covariate_path">covariate_path</a></code>
+runs a selection path over them.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>lineage_table(tree)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="lineage_table_:_tree">tree</code></td>
+<td>
+<p>An augmented-tree data frame with the topology (the frames
+<code>augment_trees</code> returns when given parent ids), or a <code>phylo</code>
+object, which is taken as fully observed.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>A data frame with columns <code>seg</code>, <code>lineage</code>, <code>id</code>,
+<code>event</code>, <code>t0</code>, <code>t1</code>, <code>N</code>, <code>M</code>, <code>ts</code>,
+<code>ed0</code>.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="predict_survival"><code>predict_survival</code> <span class="ref-title">Predict survival probability from a trained emulator</span></h3>
+<h4>Description</h4>
+
+<p>The emulator <code>estimate_rates(cond = )</code> conditions through.  A <code>gam</code> from
+<code><a href="#train_GAM">train_GAM</a></code> is the default; a <code>nnet</code> object, or a function that takes
+the parameter data frame and returns probabilities, is carried the same way.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>predict_survival(gam_fit, newpars)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="predict_survival_:_gam_fit">gam_fit</code></td>
+<td>
+<p>A <code>gam</code> object returned by <code><a href="#train_GAM">train_GAM</a></code>, a <code>nnet</code>
+object trained on the same columns, or a function of a parameter data frame.</p>
+</td></tr>
+<tr><td><code id="predict_survival_:_newpars">newpars</code></td>
+<td>
+<p>Numeric matrix or data frame of parameter values to predict
+at.  Column names must match those used in <code>train_GAM</code>.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>Numeric vector of predicted survival probabilities.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="simulate_tree"><code>simulate_tree</code> <span class="ref-title">Simulate a phylogenetic tree under the general diversification model</span></h3>
+<h4>Description</h4>
+
+<p>Unified entry point for forward and conditional tree simulation.
+When <code>tree = NULL</code> (default) a complete tree is simulated forward
+from the crown; when <code>tree</code> is supplied the observed extant tree is
+augmented with stochastically drawn extinct lineages.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>simulate_tree(
+  tree = NULL,
+  pars,
+  max_t = 1,
+  model = "cr",
+  max_lin = 1e+06,
+  max_tries = 1,
+  useDDD = TRUE,
+  n_trees = 1L,
+  link = "linear",
+  max_missing = 10000,
+  max_lambda = 500,
+  maxN = NULL,
+  num_threads = 1L,
+  rho = 1,
+  method = "bdi"
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="simulate_tree_:_tree">tree</code></td>
+<td>
+<p>Optional observed extant tree for augmentation. Accepts
+<code>NULL</code> (forward sim), a <code>simulate_tree</code> result, a
+<code>phylo</code> object, or a numeric branching-time vector.  A <code>phylo</code>
+also supplies the topology the pendant-age covariates <code>M</code> and
+<code>D</code> are computed from; with a bare branching-time vector every
+observed lineage is recorded as dating from the crown and <code>D = 0</code> at
+every observed branching event.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_pars">pars</code></td>
+<td>
+<p>Numeric parameter vector or matrix. When a matrix each row
+produces one forward simulation.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_max_t">max_t</code></td>
+<td>
+<p>Crown age (forward simulation only). Default <code>1</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_model">model</code></td>
+<td>
+<p>Model specification (string, formula, or binary vector).
+Default <code>"cr"</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_max_lin">max_lin</code></td>
+<td>
+<p>Maximum lineages alive before declaring the tree too large;
+a clade that has had ten times as many lineages in all, alive and dead,
+is too large as well, which bounds the cost of a simulation that churns
+(high speciation and extinction over a long crown) under the cap.
+Default <code>1e6</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_max_tries">max_tries</code></td>
+<td>
+<p>Maximum additional attempts after extinction (forward
+simulation only). A clade that overflows <code>max_lin</code> is not retried:
+the overflow is a property of the parameters, not of the draw, and every
+retry would run to the cap again. Retries are tracked at the R level to
+compute <code>survival_prob</code>. Default <code>1</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_useDDD">useDDD</code></td>
+<td>
+<p>Convert L-table to <code>phylo</code> via <span class="pkg">DDD</span>.
+Default <code>TRUE</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_n_trees">n_trees</code></td>
+<td>
+<p>Number of augmented trees to draw (augmentation only).
+Default <code>1L</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_link">link</code></td>
+<td>
+<p>Link function: <code>"linear"</code> (default),
+<code>"exponential"</code>, or <code>"gaussian"</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_max_missing">max_missing</code></td>
+<td>
+<p>Maximum extinct lineages per augmented tree.
+Default <code>1e4</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_max_lambda">max_lambda</code></td>
+<td>
+<p>Maximum speciation rate (thinning bound) for augmentation.
+Default <code>500</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_maxN">maxN</code></td>
+<td>
+<p>Maximum total augmentation attempts. <code>NULL</code> (default)
+sets this to <code>max(2000, 200 * n_trees)</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_num_threads">num_threads</code></td>
+<td>
+<p>Threads for parallel augmentation. Default <code>1L</code>.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_rho">rho</code></td>
+<td>
+<p>Sampling fraction in <code>(0, 1]</code>. Default <code>1</code> (complete
+sampling). With <code>rho &lt; 1</code> a random fraction of extant tips is dropped
+(forward simulation) or unsampled extant lineages are inserted
+(augmentation), matching incomplete taxon sampling.</p>
+</td></tr>
+<tr><td><code id="simulate_tree_:_method">method</code></td>
+<td>
+<p>Augmentation method: <code>"bdi"</code> (default, exact BDI
+sampler) or <code>"thinning"</code> (C++ thinning proposal). The BDI sampler
+draws from the exact conditional distribution under constant rates
+(ESS = S, zero variance) and uses a self-consistent backward-forward
+iteration under diversity dependence. It covers N-only models
+(<code>"cr"</code>, <code>"dd"</code>) on the linear and exponential links;
+any other model or link falls back to thinning.
+</p>
+<p><strong><code>method = "bdi"</code> returns <code>NULL</code> for part of its draws.</strong>
+The BDI sampler has no notion of the two crown lineages, so a lineage born
+before the first observed branching is recorded as a daughter of observed
+node 0, which is not yet born then.  Such a draw cannot be turned into a
+<code>tas</code>: it is refused, and that element of <code>trees</code> (or
+<code>tas</code>, with <code>n_trees = 1</code>) is <code>NULL</code>.  On seven trees
+measured for this release, 0 to 168 of 200 draws built; a tree whose first
+observed branching is late loses most of them.  <code>log_q</code> is returned
+for every draw either way.  It was previously silent and wrong &ndash; every
+such draw produced a <code>phylo</code> with an edge of negative length.  The
+<code>"thinning"</code> method draws the parent from every lineage alive, the
+two crown lineages included, and is not affected.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Model specification</h4>
+
+<p>The model's covariates are diversity <code>N</code>, age-imbalance
+<code>D = E - M</code> (a lineage's isolation relative to the clade mean
+<code>M</code>, which is used only internally to centre <code>D</code>) and
+evolutionary distinctiveness <code>ED</code> (the fair-proportion score on the
+complete tree: the branches from the crown to the lineage, each divided by
+the alive lineages below it; its last term is the pendant age and its sum
+over lineages is Faith's phylogenetic diversity).  Selected by named
+shortcuts or a formula:
+</p>
+
+<div class="table-wrap">
+<table>
+<tr>
+ <td style="text-align: left;">
+  <code>"cr"</code>  </td><td style="text-align: left;"> constant rate</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+  <code>"dd"</code>  </td><td style="text-align: left;"> diversity dependence (N)</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+  <code>"d"</code>   </td><td style="text-align: left;"> age-imbalance (D)</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+  <code>"nd"</code>  </td><td style="text-align: left;"> N + D</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+  <code>"ed"</code>  </td><td style="text-align: left;"> evolutionary distinctiveness (ED)</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+  <code>"ned"</code> </td><td style="text-align: left;"> N + ED</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+  <code>"edc"</code> </td><td style="text-align: left;"> centred ED (ED minus its mean over the lineages alive)</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+  <code>"nedc"</code> </td><td style="text-align: left;"> N + centred ED</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+  <code>"k"</code>   </td><td style="text-align: left;"> ancestral splits (K: the speciation events on the path from the crown)</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+  <code>"nk"</code>  </td><td style="text-align: left;"> N + K</td>
+</tr>
+<tr>
+ <td style="text-align: left;">
+</td>
+</tr>
+
+</table>
+</div>
+
+<p>Formulas <code>~ N</code>, <code>~ N + D</code>, <code>~ N + ED</code>, <code>~ N + EDc</code> and <code>~ N + K</code>
+are also accepted (<code>ep</code> is a legacy alias for <code>d</code>).  An <code>ED</code> or <code>K</code>
+model needs the tree's topology (a <code>phylo</code>, not a branching-time vector) and is not
+available under the gaussian link.
+</p>
+
+<h4>Parameter vector</h4>
+
+<p>Compact layout; <code>beta_D</code> is the age-imbalance coefficient and
+<code>beta_ED</code> the distinctiveness coefficient (<code>M</code> is internal only,
+never part of the user vector):
+</p>
+<pre>c(beta_0,  [beta_N],  [beta_D],  [beta_ED],
+  gamma_0, [gamma_N], [gamma_D], [gamma_ED])</pre>
+<p>Only active covariates are included; length = <code>2 + 2 * sum(model)</code>.
+</p>
+
+<h4>Reproducibility</h4>
+
+<p>Every call draws its seed for the C++ sampler from R's generator, so
+<code>set.seed()</code> fixes both the forward simulator and the thinning
+augmenter: two runs under one seed return the same tree, two runs under
+different seeds do not. The retries a forward simulation makes draw a seed
+each, so they are distinct trees rather than one tree redrawn. Under
+<code>parallel::mclapply</code> each child has its own R stream and therefore its
+own seeds. Augmentation with <code>num_threads &gt; 1</code> is not reproducible:
+each worker draws from its own substream of the seed, but the sample keeps
+the first <code>n_trees</code> augmentations to finish.
+</p>
+
+<h4>Output &ndash; forward simulation (single)</h4>
+
+
+<dl>
+<dt><code>tes</code></dt><dd><p>Extant-only phylogeny (<code>phylo</code>), or <code>NULL</code>.</p>
+</dd>
+<dt><code>tas</code></dt><dd><p>Full phylogeny with extinct lineages (<code>phylo</code>),
+or <code>NULL</code>.</p>
+</dd>
+<dt><code>L</code></dt><dd><p>L-table (DDD format), or <code>NULL</code> if simulation
+failed.</p>
+</dd>
+<dt><code>status</code></dt><dd><p><code>"done"</code>, <code>"extinct"</code>, or
+<code>"too_large"</code>.</p>
+</dd>
+<dt><code>survival_prob</code></dt><dd><p>Empirical survival probability: <code>1 /
+    n_attempts</code> when the simulation succeeded, <code>0</code> otherwise.</p>
+</dd>
+<dt><code>attempts</code></dt><dd><p>Number of forward simulations run, counting the
+retries after extinction; 1 when the first draw completed or overflowed.</p>
+</dd>
+</dl>
+
+<h4>Output &ndash; forward simulation (batch, matrix <code>pars</code>)</h4>
+
+
+<dl>
+<dt><code>simulations</code></dt><dd><p>List of individual results (one per row of
+<code>pars</code>), each with the fields above.</p>
+</dd>
+<dt><code>survival_prob</code></dt><dd><p>Fraction of simulations with
+<code>status == "done"</code>.</p>
+</dd>
+</dl>
+
+<h4>Output &ndash; conditional simulation / augmentation</h4>
+
+<p>When <code>n_trees = 1</code>:
+</p>
+
+<dl>
+<dt><code>tas</code></dt><dd><p>Augmented phylogeny (<code>phylo</code>) including extinct
+lineages, or <code>NULL</code> on failure or when <code>useDDD = FALSE</code>.</p>
+</dd>
+<dt><code>log_q</code></dt><dd><p>Log sampling probability <span class="reqn">\(\log q(z \mid
+    \text{obs}, \theta)\)</span> of the augmentation.  <code>NA</code> on failure.</p>
+</dd>
+</dl>
+
+<p>When <code>n_trees &gt; 1</code>:
+</p>
+
+<dl>
+<dt><code>trees</code></dt><dd><p>List of <code>tas</code> phylogenies (length up to
+<code>n_trees</code>; failed draws are <code>NULL</code>).</p>
+</dd>
+<dt><code>log_q</code></dt><dd><p>Numeric vector of log sampling probabilities,
+one per successful draw.</p>
+</dd>
+</dl>
+
+<h4>Examples</h4>
+
+<pre><code class='language-R'>## Not run: 
+# --- Forward simulation ---
+tr &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr")
+tr$status          # "done"
+tr$survival_prob   # e.g. 0.25 if took 4 attempts
+
+# Batch: 200 CR simulations
+pm &lt;- cbind(beta_0 = runif(200, 0.3, 0.8), gamma_0 = runif(200, 0.05, 0.3))
+sims &lt;- simulate_tree(pars = pm, max_t = 8, model = "cr")
+sims$survival_prob              # fraction that succeeded
+sims$simulations[[1]]$tes      # first extant phylo
+
+# --- Augmentation ---
+aug &lt;- simulate_tree(tree = tr, pars = c(0.5, 0.1), model = "cr")
+aug$tas     # augmented phylo
+aug$log_q   # log q(z | obs, theta)
+
+# Many augmented trees
+augN &lt;- simulate_tree(tree = tr, pars = c(0.5, 0.1), model = "cr",
+                      n_trees = 100L)
+augN$log_q          # vector of length 100
+augN$trees[[1]]     # first augmented phylo
+
+## End(Not run)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="train_GAM"><code>train_GAM</code> <span class="ref-title">Train a survival-probability GAM on forward simulation results</span></h3>
+<h4>Description</h4>
+
+<p>Fits a binomial GAM to estimate P(survival | parameters) from forward
+simulations run with <code>max_tries = 0</code>.  Each simulation row has a
+binary outcome: 1 if both crown lineages reached the present (<code>status</code>
+<code>"done"</code>) or the clade passed the lineage cap (<code>"too_large"</code>),
+0 if it went extinct.  A clade stopped at the cap has survived so far, and
+the conditional likelihood divides by the probability of survival; counting
+it as extinct teaches the GAM a survival near zero wherever clades grow
+fast, which then rewards the fit for moving there (E36c of the paper).
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>train_GAM(
+  simulations,
+  pars_mat,
+  model = "cr",
+  spline_type = c("univariate", "bivariate")
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="train_GAM_:_simulations">simulations</code></td>
+<td>
+<p>List of <code>simulate_tree()</code> outputs (one per row of
+<code>pars_mat</code>), produced with <code>max_tries = 0</code>.</p>
+</td></tr>
+<tr><td><code id="train_GAM_:_pars_mat">pars_mat</code></td>
+<td>
+<p>Numeric matrix whose rows are the parameter vectors used to
+generate <code>simulations</code>.  Column names are used as predictor names; if
+absent, names are auto-generated from <code>model</code>.</p>
+</td></tr>
+<tr><td><code id="train_GAM_:_model">model</code></td>
+<td>
+<p>String or binary integer vector (length 3 or 4) matching the
+model used in simulation.  Used only when <code>pars_mat</code> has no column names.
+Default <code>"cr"</code>.</p>
+</td></tr>
+<tr><td><code id="train_GAM_:_spline_type">spline_type</code></td>
+<td>
+<p><code>"univariate"</code> (default) fits independent smooth
+terms <code>s(x)</code> for each varying predictor.  <code>"bivariate"</code> fits
+tensor-product smooths <code>te(x, y)</code> for every pair of varying
+predictors, which can capture interaction effects.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>A <code>gam</code> object (binomial family) representing
+<span class="reqn">\(P(\text{survival} \mid \theta)\)</span>.
+</p>
+
+<h4>Examples</h4>
+
+<pre><code class='language-R'>## Not run: 
+set.seed(1)
+pars_mat &lt;- cbind(beta_0  = runif(200, 0.3, 1.2),
+                  gamma_0 = runif(200, 0.05, 0.5))
+sims &lt;- simulate_tree(pars = pars_mat, max_t = 8,
+                      model = "cr", max_tries = 0, useDDD = FALSE)
+gam_uni &lt;- train_GAM(sims, pars_mat, model = "cr")
+gam_biv &lt;- train_GAM(sims, pars_mat, model = "cr", spline_type = "bivariate")
+
+## End(Not run)
+</code></pre>
+
+
+</section>
+<h2 id="S3method">Methods</h2>
+<section class="ref">
+<h3 id="print.cem_diagnostics"><code>print.cem_diagnostics</code> <span class="ref-title">Print method for CEM diagnostics</span></h3>
+<h4>Description</h4>
+
+<p>Print method for CEM diagnostics
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>## S3 method for class 'cem_diagnostics'
+print(x, ...)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="print.cem_diagnostics_:_x">x</code></td>
+<td>
+<p>Output of <code><a href="#diagnose_cem">diagnose_cem</a></code>.</p>
+</td></tr>
+<tr><td><code id="print.cem_diagnostics_:_...">...</code></td>
+<td>
+<p>Additional arguments (ignored).</p>
+</td></tr>
+</table>
+</div>
+
+
+</section>
+<section class="ref">
+<h3 id="print.emphasis_fit"><code>print.emphasis_fit</code> <span class="ref-title">Print method for emphasis_fit objects</span></h3>
+<h4>Description</h4>
+
+<p>Print method for emphasis_fit objects
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>## S3 method for class 'emphasis_fit'
+print(x, ...)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="print.emphasis_fit_:_x">x</code></td>
+<td>
+<p>An <code>emphasis_fit</code> object returned by <code><a href="#estimate_rates">estimate_rates</a></code>.</p>
+</td></tr>
+<tr><td><code id="print.emphasis_fit_:_...">...</code></td>
+<td>
+<p>Additional arguments (ignored).</p>
+</td></tr>
+</table>
+</div>
+
+
+</section>
+<section class="ref">
+<h3 id="print.emphasis_fits"><code>print.emphasis_fits</code> <span class="ref-title">Print method for the fits of estimate_rates(model = &quot;all&quot;)</span></h3>
+<h4>Description</h4>
+
+<p>Print method for the fits of <code>estimate_rates(model = "all")</code>
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>## S3 method for class 'emphasis_fits'
+print(x, ...)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="print.emphasis_fits_:_x">x</code></td>
+<td>
+<p>An <code>emphasis_fits</code> object.</p>
+</td></tr>
+<tr><td><code id="print.emphasis_fits_:_...">...</code></td>
+<td>
+<p>Ignored.</p>
+</td></tr>
+</table>
+</div>
+
+
+</section>
+<section class="ref">
+<h3 id="print.emphasis_pipeline"><code>print.emphasis_pipeline</code> <span class="ref-title">Print method for emphasis_pipeline objects</span></h3>
+<h4>Description</h4>
+
+<p>Print method for emphasis_pipeline objects
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>## S3 method for class 'emphasis_pipeline'
+print(x, ...)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="print.emphasis_pipeline_:_x">x</code></td>
+<td>
+<p>An <code>emphasis_pipeline</code> result.</p>
+</td></tr>
+<tr><td><code id="print.emphasis_pipeline_:_...">...</code></td>
+<td>
+<p>Additional arguments (ignored).</p>
+</td></tr>
+</table>
+</div>
+
+
+</section>
+<section class="ref">
+<h3 id="print.gam_diagnostics"><code>print.gam_diagnostics</code> <span class="ref-title">Print method for GAM diagnostics</span></h3>
+<h4>Description</h4>
+
+<p>Print method for GAM diagnostics
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>## S3 method for class 'gam_diagnostics'
+print(x, ...)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="print.gam_diagnostics_:_x">x</code></td>
+<td>
+<p>Output of <code><a href="#diagnose_gam">diagnose_gam</a></code>.</p>
+</td></tr>
+<tr><td><code id="print.gam_diagnostics_:_...">...</code></td>
+<td>
+<p>Additional arguments (ignored).</p>
+</td></tr>
+</table>
+</div>
+
+
+</section>
+<section class="ref">
+<h3 id="print.mcem_diagnostics"><code>print.mcem_diagnostics</code> <span class="ref-title">Print method for MCEM diagnostics</span></h3>
+<h4>Description</h4>
+
+<p>Print method for MCEM diagnostics
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>## S3 method for class 'mcem_diagnostics'
+print(x, ...)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="print.mcem_diagnostics_:_x">x</code></td>
+<td>
+<p>Output of <code><a href="#diagnose_mcem">diagnose_mcem</a></code>.</p>
+</td></tr>
+<tr><td><code id="print.mcem_diagnostics_:_...">...</code></td>
+<td>
+<p>Additional arguments (ignored).</p>
+</td></tr>
+</table>
+</div>
+
+
+</section>
+<section class="ref">
+<h3 id="print.model_selection"><code>print.model_selection</code> <span class="ref-title">Print method for model_selection objects</span></h3>
+<h4>Description</h4>
+
+<p>Print method for model_selection objects
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>## S3 method for class 'model_selection'
+print(x, ...)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="print.model_selection_:_x">x</code></td>
+<td>
+<p>A <code>model_selection</code> object from
+<code><a href="#select_diversification_model">select_diversification_model</a></code>.</p>
+</td></tr>
+<tr><td><code id="print.model_selection_:_...">...</code></td>
+<td>
+<p>Additional arguments (ignored).</p>
+</td></tr>
+</table>
+</div>
+
+
+</section>
+<h2 id="internal">Internal functions</h2>
+<section class="ref">
+<h3 id="augment_trees"><code>augment_trees</code> <span class="ref-title">Draw augmented trees via importance sampling</span></h3>
+<h4>Description</h4>
+
+<p>Augments an observed extant tree (given by its branching times) with
+stochastically drawn extinct lineages, and returns the simulated trees
+together with their log proposal probabilities.  Scoring (<code>logf</code>)
+and IS aggregation (<code>fhat</code>) are intentionally left to the R layer
+via <code><a href="#eval_logf">eval_logf</a></code> and <code>.is_fhat</code>.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>augment_trees(
+  brts,
+  pars,
+  sample_size,
+  maxN,
+  max_missing,
+  max_lambda,
+  num_threads,
+  model = as.integer(c(0, 0, 0)),
+  link = 0L,
+  rho = 1,
+  parent_tip_start = as.numeric(c()),
+  seed = 0L,
+  parent_id = as.integer(c())
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="augment_trees_:_brts">brts</code></td>
+<td>
+<p>Numeric vector of branching times (crown age first,
+sorted decreasing).</p>
+</td></tr>
+<tr><td><code id="augment_trees_:_pars">pars</code></td>
+<td>
+<p>Numeric vector of 8 model parameters
+<code>c(beta_0, beta_N, beta_M, beta_D, gamma_0, gamma_N, gamma_M, gamma_D)</code>.</p>
+</td></tr>
+<tr><td><code id="augment_trees_:_sample_size">sample_size</code></td>
+<td>
+<p>Number of valid augmented trees to collect.</p>
+</td></tr>
+<tr><td><code id="augment_trees_:_maxN">maxN</code></td>
+<td>
+<p>Maximum total augmentation attempts (including failures).</p>
+</td></tr>
+<tr><td><code id="augment_trees_:_max_missing">max_missing</code></td>
+<td>
+<p>Maximum extinct lineages per augmented tree.</p>
+</td></tr>
+<tr><td><code id="augment_trees_:_max_lambda">max_lambda</code></td>
+<td>
+<p>Upper bound on the speciation rate (thinning bound).</p>
+</td></tr>
+<tr><td><code id="augment_trees_:_num_threads">num_threads</code></td>
+<td>
+<p>Threads for parallel augmentation.</p>
+</td></tr>
+<tr><td><code id="augment_trees_:_model">model</code></td>
+<td>
+<p>Integer vector <code>c(use_N, use_P, use_E)</code>.</p>
+</td></tr>
+<tr><td><code id="augment_trees_:_link">link</code></td>
+<td>
+<p>Link function: <code>0</code> = linear, <code>1</code> = exponential.</p>
+</td></tr>
+<tr><td><code id="augment_trees_:_rho">rho</code></td>
+<td>
+<p>Sampling fraction in <code>(0, 1]</code>.</p>
+</td></tr>
+<tr><td><code id="augment_trees_:_parent_tip_start">parent_tip_start</code></td>
+<td>
+<p>Tip start of the lineage that splits at each
+observed branching event, in the same forward-time order as <code>brts</code>
+(that is, <code>rev</code> of the decreasing <code>brts</code>); one entry per event,
+or one per node with the last ignored. Empty (the default) means the
+topology is not available: every observed lineage is then recorded as
+dating from the crown and every observed event gets <code>D = 0</code>, which
+is what a bare branching-time vector has always produced.</p>
+</td></tr>
+<tr><td><code id="augment_trees_:_seed">seed</code></td>
+<td>
+<p>Positive integer seeding the C++ sampler. <code>0</code> (the
+default) draws one from R's generator, so <code>set.seed()</code> reaches the
+sampler whether or not a seed is passed. Two calls carrying the same
+seed, the same arguments and <code>num_threads = 1</code> draw the same trees.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>A named list:
+</p>
+
+<dl>
+<dt>trees</dt><dd><p>List of augmented-tree data frames.</p>
+</dd>
+<dt>logf</dt><dd><p>Per-tree log p(obs, z | theta).</p>
+</dd>
+<dt>logg</dt><dd><p>Per-tree log q(z | obs, theta).</p>
+</dd>
+<dt>rejected</dt><dd><p>Unhandled rejections.</p>
+</dd>
+<dt>rejected_overruns</dt><dd><p>Rejected: too many extinct lineages.</p>
+</dd>
+<dt>rejected_lambda</dt><dd><p>Rejected: lambda bound exceeded.</p>
+</dd>
+<dt>rejected_zero_weights</dt><dd><p>Rejected: zero IS weight (log weight -Inf).</p>
+</dd>
+<dt>rejected_nonfinite</dt><dd><p>Rejected: log weight +Inf or NaN.</p>
+</dd>
+<dt>num_trees</dt><dd><p>Number of trees returned (<code>length(trees)</code>).</p>
+</dd>
+<dt>envelope_violations</dt><dd><p>Thinning candidates drawn during this call
+whose acceptance probability exceeded 1, i.e. the envelope did not
+dominate the rate. Non-zero means the draws are not from the density
+<code>logg</code> charges them; a warning is issued.</p>
+</dd>
+<dt>time</dt><dd><p>Elapsed time (ms).</p>
+</dd>
+</dl>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-attach_w"><code>.attach_w</code> <span class="ref-title">Attachment weights: each lineage&#x27;s own rate, around the aggregate</span></h3>
+<h4>Description</h4>
+
+<p>The proposal's aggregate rate already carries the clade mean of the
+covariate, so a lineage's own rate is that aggregate plus its own
+departure from the mean, <code>lam + beta * (c_s - mean(c))</code> &ndash; not
+<code>lam + beta * c_s</code>, which shifts every lineage instead of spreading
+them and leaves the mean in twice.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.attach_w(cov, lam, beta)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id=".attach_w_:_cov">cov</code></td>
+<td>
+<p>Per-lineage covariate values (here the pendant age).</p>
+</td></tr>
+<tr><td><code id=".attach_w_:_lam">lam</code></td>
+<td>
+<p>The aggregate rate the mean field supplies.</p>
+</td></tr>
+<tr><td><code id=".attach_w_:_beta">beta</code></td>
+<td>
+<p>The covariate's coefficient.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Details</h4>
+
+<p>Weights are floored away from zero rather than at it.  A lineage the
+model gives a positive rate must stay reachable, or the proposal no
+longer covers the target and the estimate is biased rather than merely
+noisy.  The floor is a thousandth of the aggregate, which costs a
+bounded amount of weight variance and keeps the support.
+</p>
+
+<h4>Value</h4>
+
+<p>A positive weight per lineage, averaging <code>lam</code>.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-augment_tree_bdi"><code>.augment_tree_bdi</code> <span class="ref-title">BDI augmentation: draw sample_size augmented trees.</span></h3>
+<h4>Description</h4>
+
+<p>Returns the same structure as the augment_trees() C++ function,
+list(trees, logf, logg, weights, fhat), plus the draw counts.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.augment_tree_bdi(
+  tree,
+  pars,
+  model_bin = c(0L, 0L, 0L),
+  sample_size = 1L,
+  max_missing = 10000,
+  link = 0L,
+  rho = 1,
+  use_gaussian_closure = TRUE,
+  topology = NULL,
+  mesh = NULL,
+  attach = c("rate", "uniform"),
+  damping = "auto"
+)
+</code></pre>
+
+<h4>Details</h4>
+
+<p>Draws are attempted until <code>sample_size</code> have completed or the budget
+of <code>5 * sample_size</code> attempts is spent.  A draw is rejected when its
+missing-lineage count exceeds <code>max_missing</code> (counted in
+<code>n_rejected_max_missing</code>) or, under DD, when a missing lineage is
+still alive at the present (counted in <code>n_rejected</code>; such a tree has
+f = 0 at rho = 1).  Completed draws with a non-finite log-weight are
+dropped from the returned tree set (the M-step set) but stay in the fhat
+denominator with weight zero.
+</p>
+<p>fhat = log(sum_w / n_valid) + max_lw + log(acc), where n_valid counts every
+completed draw and acc = n_valid / (n_valid + n_rejected) is the acceptance
+rate of the survivor channel.  max_missing overflows are excluded from the
+denominator, as in the thinning E-step (S_completed in src/E_step.cpp).
+</p>
+<p>The log(acc) correction is derived at <code>rho = 1</code>, where a surviving
+missing lineage has f = 0 and the rejection is a property of the target.
+At <code>rho &lt; 1</code> an unsampled survivor is a legitimate configuration and is
+emitted rather than rejected, so <code>n_rejected</code> is 0, <code>acc</code> is 1 and
+the factor is inert.  <code>acc</code> is the
+stop-at-<code>n_valid</code> plug-in estimate of the acceptance rate, which is
+biased at small <code>sample_size</code>: at the function's own default
+<code>sample_size = 1L</code> a draw with three survivor rejections moves fhat
+by log(1/4) = -1.39.  At the MCEM default of a few hundred draws the bias
+is of order 1e-3.
+</p>
+
+<h4>Every pre-first-split lineage is attached to observed node 0</h4>
+
+<p><code>.bdi_to_tree_df</code> records, as the parent of an augmented lineage born
+at <code>t</code>, the last observed branching at or before <code>t</code>
+(<code>max(which(bt_sorted &lt;= birth) - 1L)</code>).  For a lineage born before the
+<strong>first</strong> observed branching there is none, and the expression falls
+back to observed node 0 &ndash; a lineage that is not yet born at <code>t</code>.  The
+sampler has no notion of the two crown lineages, which is where such a birth
+really attaches, and it never records the reserved crown ids the thinning
+sampler uses.
+</p>
+<p>The consequence used to be silent and wrong: <code>tas</code> carried an edge of
+negative length wherever it happened.  On seven trees measured here, the
+parent build turned all 200 draws into a <code>phylo</code> and 5 to 200 of them
+had a negative edge, the shortest <code>-7.15</code>.
+</p>
+<p><code>.aug_to_Ltable</code> now refuses an attachment older than its
+recorded parent and returns <code>NULL</code>, so those draws produce no tree at
+all.  The failure is loud where it used to be silent, and the throughput is
+the price: on the same seven trees, <code>simulate_tree(method = "bdi")</code>
+built 0, 106, 124, 129, 153, 156 and 168 trees out of 200, with the refused
+draws in every case exactly those carrying a lineage born before the first
+observed branching.  A tree whose first observed branching is late loses
+most of its draws; one whose crown splits early loses few.
+</p>
+<p>The parent assignment itself is unchanged and still wrong.  Fixing it means
+giving the BDI sampler the two crown lineages and the same uniform draw over
+labelled attachments the thinning sampler makes (audit finding H45).
+</p>
+
+<h4>Value</h4>
+
+<p>List: <code>trees</code>, <code>logf</code>, <code>logg</code>, <code>weights</code>
+(finite-weight draws only), <code>fhat</code>, <code>n_valid</code> (completed
+draws), <code>n_nonfinite</code> (completed draws dropped for a non-finite
+log-weight), <code>n_attempts</code>, <code>n_rejected</code> (survivors at tp),
+<code>n_rejected_max_missing</code>, <code>acc</code>.  <code>trees</code> is empty when
+no draw completed or every completed draw has a non-finite log-weight;
+a warning is issued when fewer than <code>sample_size</code> draws completed.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-bdi_augment_one"><code>.bdi_augment_one</code> <span class="ref-title">Draw one augmented tree via the BDI process.</span></h3>
+<h4>Description</h4>
+
+<p>Under CR: uses exact time-change method with analytical cumulative hazard.
+The event times are drawn from the correct inhomogeneous BDI process,
+giving zero-variance IS weights (logf - logg = constant).
+Under DD: uses approximate Gillespie with piecewise-constant rates.
+IS weights have nonzero variance (importance sampling, not exact).
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.bdi_augment_one(
+  bt,
+  pars8,
+  model_bin,
+  link,
+  tp,
+  p_fun = NULL,
+  Nhat_fun = NULL,
+  Phat_fun = NULL,
+  Ehat_fun = NULL,
+  max_missing = 10000L,
+  rho = 1,
+  track_parents = FALSE,
+  first_aug_id = 0L,
+  step_max = Inf,
+  obs_pid = NULL,
+  beta_ed = 0,
+  attach_fn = NULL
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id=".bdi_augment_one_:_bt">bt</code></td>
+<td>
+<p>Branching times, measured forward from the crown.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_pars8">pars8</code></td>
+<td>
+<p>The rate vector in the packed slot layout.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_model_bin">model_bin</code></td>
+<td>
+<p>Which covariate slots the model uses.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_link">link</code></td>
+<td>
+<p>Link index: 0 linear, 1 exponential, 2 gaussian.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_tp">tp</code></td>
+<td>
+<p>The present, as a time from the crown.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_p_fun">p_fun</code>, <code id=".bdi_augment_one_:_Nhat_fun">Nhat_fun</code>, <code id=".bdi_augment_one_:_Phat_fun">Phat_fun</code>, <code id=".bdi_augment_one_:_Ehat_fun">Ehat_fun</code></td>
+<td>
+<p>The converged mean field, as
+functions of time; <code>NULL</code> under CR, where the rates are exact.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_max_missing">max_missing</code></td>
+<td>
+<p>Draw budget for hidden lineages before the draw is
+abandoned.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_rho">rho</code></td>
+<td>
+<p>Sampling fraction.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_track_parents">track_parents</code></td>
+<td>
+<p>Whether to record, for every inserted lineage, which
+lineage it was attached to.  The parent is decoded from the same uniform
+that chose the event, so recording it costs no extra draw and leaves the
+stream bit-identical to a run without it.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_first_aug_id">first_aug_id</code></td>
+<td>
+<p>The id the inserted lineages are numbered from, so that
+ids stay distinct from the observed ones.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_step_max">step_max</code></td>
+<td>
+<p>Cap on the Gillespie step, which is how often the frozen
+rates are re-evaluated.  <code>Inf</code> leaves the step uncapped.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_obs_pid">obs_pid</code></td>
+<td>
+<p>Parent ids of the observed nodes, when the topology is known.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_beta_ed">beta_ed</code></td>
+<td>
+<p>The ED coefficient, which tilts the attachment choice toward
+the lineages the model gives a higher rate.  Zero attaches uniformly.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Details</h4>
+
+<p>At <code>rho &lt; 1</code> a missing lineage still alive at tp is not a rejection but
+an <em>unsampled extant</em> lineage: the conditioning event is &quot;leaves no
+sampled descendant&quot;, and at the present that is satisfied by being alive and
+unsampled, an event of probability <code>1 - rho</code>.  Those lineages are
+returned in <code>$unsampled</code> (birth times) and written with the <code>5e10</code>
+sentinel by <code><a href="#dot-bdi_to_tree_df">.bdi_to_tree_df</a></code>, so <code>N(t)</code> counts them.
+</p>
+
+<h4>Value</h4>
+
+<p>List with <code>$reason</code>: <code>"accepted"</code> (then also
+<code>$species</code>, <code>$unsampled</code>, <code>$n_alive_at_tp</code>, <code>$logg</code>,
+and the parent records when <code>track_parents</code>), <code>"max_missing"</code>
+(more than <code>max_missing</code> missing lineages drawn) or
+<code>"survivor"</code> (a missing lineage still alive at tp; only reachable at
+<code>rho = 1</code>, where such a tree has f = 0).
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-bdi_find_event_time_cr"><code>.bdi_find_event_time_cr</code> <span class="ref-title">Find next event time using exact time-change for CR.</span></h3>
+<h4>Description</h4>
+
+<p>Given cumulative hazard H(s) = .bdi_integral_cr(t_cur, s, ...),
+find t* such that H(t*) = U where U ~ Exp(1).
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.bdi_find_event_time_cr(t_cur, U, n, k, lam0, mu0, tp, t_max, rho = 1)
+</code></pre>
+
+<h4>Value</h4>
+
+<p>Event time, or value &gt; t_max if no event before boundary.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-bdi_integral_cr"><code>.bdi_integral_cr</code> <span class="ref-title">Exact integral of total BDI rate over [t1, t2] for CR with constant n, k.</span></h3>
+<h4>Description</h4>
+
+<p>total_rate(t) = (n+2k)*lam0*(1-p(t)) + n*mu0/(1-p(t))
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.bdi_integral_cr(t1, t2, n, k, lam0, mu0, tp, rho = 1)
+</code></pre>
+
+<h4>Details</h4>
+
+<p>Uses the identities:
+int lam0*(1-p) dt = mu0*(t2-t1) + ln[p(t1)/p(t2)]
+int mu0/(1-p) dt  = lam0*(t2-t1) + ln[(1-p(t1))/(1-p(t2))]
+</p>
+<p>Valid on both sides of lam0 = mu0.  Both log-ratios are evaluated with
+s = |lam0 - mu0| in the exponent, so the argument of exp is never
+positive and the mu0 &gt; lam0 side does not overflow; writing the factors
+as <code>s - r*expm1(-s*tau)</code> also removes the cancellation of
+<code>lam0 - mu0*E</code> near lam0 = mu0.
+</p>
+<p>Under incomplete sampling the same two identities hold with p replaced by
+its rho-sampled counterpart &ndash; they follow from dp/dt = lam*p^2 - (lam-mu)*p
+alone, which carries no terminal condition &ndash; so only the closed forms of
+the two log-ratios change.  With
+</p>
+<p>A(t) = d*E + rho*lam0*(1 - E)          (so p = rho*d/A)
+B(t) = A(t) - rho*d                    (so 1 - p = B/A)
+</p>
+<p>and E = exp(-d*(tp - t)), the integrals are
+</p>
+<p>int lam0*(1-p) dt = min(lam0,mu0)*(t2-t1) + ln[A(t2)/A(t1)]
+int mu0/(1-p)  dt = max(lam0,mu0)*(t2-t1) + ln[B(t1)/B(t2)]
+</p>
+<p>At rho = 1, B(tp) = 0 and the second integral diverges as t2 -&gt; tp: a
+doomed lineage must die before the present.  At rho &lt; 1, B(tp) = d*(1-rho)
+is non-zero and the integral is finite &ndash; a doomed lineage may survive to
+the present as an unsampled extant tip, which is the configuration
+<code>.bdi_augment_one</code> then has to emit.
+</p>
+
+<h4>Value</h4>
+
+<p>The integral value (Inf when rho = 1, n &gt; 0 and t2 == tp).
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-bdi_integral_cr_rho"><code>.bdi_integral_cr_rho</code> <span class="ref-title">The rho &lt; 1 branch of .bdi_integral_cr.</span></h3>
+<h4>Description</h4>
+
+<p>Kept in its own function so that the complete-sampling path is the code
+the validation study measured, byte for byte.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.bdi_integral_cr_rho(t1, t2, n, k, lam0, mu0, tp, rho)
+</code></pre>
+
+<h4>Details</h4>
+
+<p>A and B are written so that every exponential argument is non-positive and
+every term of every sum is non-negative, on both sides of lam0 = mu0:
+</p>
+<p>d &gt; 0:  A = d*(1 + em) - rho*lam0*em,  em = expm1(-d*(tp - t))
+B = d*(1 - rho) + em*(d - rho*lam0)
+d &lt; 0:  both multiplied by exp(-s*(tp - t)), s = |d|, and negated
+A = s - rho*lam0*em,           em = expm1(-s*(tp - t))
+B = s*(1 - rho)*exp(-s*(tp-t)) + em*(s + rho*lam0)
+the scale factor exp(-s*(tp - t)) contributes -s*(t2 - t1) to ln[A2/A1]
+and +s*(t2 - t1) to ln[B1/B2], which is exactly what turns the min/max
+prefactors around.
+</p>
+<p>B is 1 - p times A and p is in (0, 1], so B &gt; 0 throughout for either sign
+of d - rho*lam0.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-bdi_iterate"><code>.bdi_iterate</code> <span class="ref-title">Backward-forward iteration for self-consistent BDI rates.</span></h3>
+<h4>Description</h4>
+
+<p>Mean-field state: N̂(t) = k(t) + m̂(t), P̂(t) = P_obs(t) + P̂_miss(t),
+Ê(t) = P̂(t) / N̂(t).  All three enter the rate function; inactive
+covariates (pars8 slopes pinned to 0) make the extension transparent
+for CR/DD and activate PD/EP/mixed models.
+The sweep budget is 60 because the iteration slows as <code>rho</code> falls: the
+unsampled extant lineages raise <code>N̂</code>, which feeds back into the rates
+that produced them.  On the 20-tip DD tree at <code>K = 20</code> the fixed point
+is reached in 6 sweeps at <code>rho = 1</code>, 7 at 0.9, 14 at 0.5 and 27 at 0.2.
+The old budget of 20 therefore returned a non-converged mean field at small
+<code>rho</code> &ndash; <code>delta = 2.9e-3</code> against <code>tol = 1e-4</code> in that last
+case &ndash; and the loop still breaks on <code>tol</code>, so raising the cap cannot
+change a run that already converged.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.bdi_iterate(
+  pars8,
+  model_bin,
+  link,
+  bt,
+  tp,
+  max_iter = NULL,
+  tol = 1e-04,
+  n_grid = 500,
+  use_gaussian_closure = TRUE,
+  rho = 1,
+  pd_mode = c("pendant", "faith"),
+  damping = "auto"
+)
+</code></pre>
+
+<h4>Value</h4>
+
+<p>List with p_fun, Nhat_fun, Phat_fun, Ehat_fun, and the fixed-point
+diagnostics converged / delta / iterations.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-bdi_P_obs"><code>.bdi_P_obs</code> <span class="ref-title">Observed-tree phylogenetic diversity under the emphasis tip_start=0 convention.</span></h3>
+<h4>Description</h4>
+
+<p>The BDI tree data frame (.bdi_to_tree_df) sets tip_start = 0 for every
+observed lineage, so their pendant PD at t is k(t) * t, with k counting the
+two crown lineages.  Missing species carry their actual birth time.
+P(t) = P_obs(t) + P_miss(t).
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.bdi_P_obs(t, bt)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-bdi_solve_mean_forward"><code>.bdi_solve_mean_forward</code> <span class="ref-title">Solve the forward mean ODE jointly for (m, P_miss).</span></h3>
+<h4>Description</h4>
+
+<p>State: s = (m, P_miss) with
+dm/dt       = (lam_bdi - mu_bdi) * m + nu      (self-consistent BDI mean)
+dP_miss/dt  = m                                (mean-field: each alive
+missing lineage extends
+its pendant edge at rate 1)
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.bdi_solve_mean_forward(
+  pars8,
+  model_bin,
+  link,
+  bt,
+  tp,
+  p_fun,
+  Nhat_fun,
+  Phat_fun,
+  Ehat_fun,
+  t_grid
+)
+</code></pre>
+
+<h4>Details</h4>
+
+<p>Rates lam, mu are evaluated at (N̂, P̂, Ê) to support DD/PD/EP + mixed.
+</p>
+
+<h4>Value</h4>
+
+<p>list(m_vals, pm_vals) on t_grid.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-bdi_solve_meanvar_forward"><code>.bdi_solve_meanvar_forward</code> <span class="ref-title">Solve the forward mean + second-moment ODE (Gaussian closure).</span></h3>
+<h4>Description</h4>
+
+<p>Augments '.bdi_solve_mean_forward' with variance state needed to cancel
+the process-level Jensen residual E[P/N] − P̂/N̂ ≈ −Cov(P,N)/N̂² + P̂ Var(N)/N̂³.
+State: s = (m, P_miss, Var(N), Cov(N,P)) with
+dm/dt         = (lam_bdi − mu_bdi) m + nu
+dP_miss/dt    = m
+dVar(N)/dt    = 2(lam_bdi − mu_bdi) Var(N) + (lam_bdi + mu_bdi) m + nu
+dCov(N,P)/dt  = (lam_bdi − mu_bdi) Cov(N,P) + Var(N)
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.bdi_solve_meanvar_forward(
+  pars8,
+  model_bin,
+  link,
+  bt,
+  tp,
+  p_fun,
+  Nhat_fun,
+  Phat_fun,
+  Ehat_fun,
+  t_grid
+)
+</code></pre>
+
+<h4>Details</h4>
+
+<p>The Var(N) ODE is the standard jump-diffusion variance infusion for a BDI
+process; the Cov(N,P) ODE comes from the deterministic coupling dP = N dt
+between events. Cross-jumps at deaths (ΔN = −1, ΔP = −age) are dropped
+at this order — they are second-order corrections to cNP and would require
+tracking the age distribution.
+</p>
+
+<h4>Value</h4>
+
+<p>list(m_vals, pm_vals, vN_vals, cNP_vals) on t_grid.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-bdi_solve_p_backward"><code>.bdi_solve_p_backward</code> <span class="ref-title">Solve survival probability p(t) backward from tp to 0. ODE: dp/dt = lam(t)*p^2 - (lam(t)-mu(t))*p, p(tp) = rho. Rates use the mean-field covariates (N̂, P̂, Ê) — supports DD/PD/EP and mixed models. For CR (all model_bin = 0) the covariate arguments are ignored inside .bdi_lam/.bdi_mu.</span></h3>
+<h4>Description</h4>
+
+<p>The ODE itself carries no sampling fraction; <code>rho</code> enters only as the
+terminal condition <code>p(tp) = rho</code>, which is the probability that a
+lineage alive at the present leaves a sampled descendant (itself).  That is
+the whole of the incomplete-sampling change on the backward side, and it
+reproduces the closed form of <code>.bdi_p_cr</code> under constant rates.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.bdi_solve_p_backward(
+  pars8,
+  model_bin,
+  link,
+  bt,
+  tp,
+  Nhat_fun,
+  Phat_fun,
+  Ehat_fun,
+  t_grid,
+  rho = 1
+)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-bdi_supported"><code>.bdi_supported</code> <span class="ref-title">Can the BDI sampler be used for this model/link/rho?</span></h3>
+<h4>Description</h4>
+
+<p>The sampler conditions on a rate that is a function of the lineage count
+alone: <code>.bdi_p_cr</code> and <code>.bdi_solve_p_backward</code> solve one survival
+probability <code>p(t)</code> shared by every lineage alive at <code>t</code>, and the
+aggregate Gillespie of <code>.bdi_augment_one</code> moves <code>n_alive</code> lineages
+with one pair of rates.  That is what an N-only model gives it.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.bdi_supported(model_bin, link, rho = 1)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id=".bdi_supported_:_model_bin">model_bin</code></td>
+<td>
+<p>Length-3 binary model vector <code>c(use_N, use_M, use_D)</code>.</p>
+</td></tr>
+<tr><td><code id=".bdi_supported_:_link">link</code></td>
+<td>
+<p>Integer link code: 0 linear, 1 exponential, 2 gaussian.</p>
+</td></tr>
+<tr><td><code id=".bdi_supported_:_rho">rho</code></td>
+<td>
+<p>Sampling fraction in <code>(0, 1]</code>. Default <code>1</code>.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Details</h4>
+
+<p>A lineage-level model (D, <code>model_bin[3] != 0</code>, or ED,
+<code>model_bin[4] != 0</code>) gives each lineage its own rate, so no single
+<code>p(t)</code> is the model's.  The sampler then conditions on the rate of the
+clade's average lineage instead: an ED of <code>P-hat/N-hat</code>, which the
+mean-field iteration solves for, and a D of zero, since D is centred.  The
+proposal is exact for that surrogate model and the importance weights carry
+each lineage's departure from the average; the attachment of a birth is
+tilted by the parent's pendant age, where D and ED read the tree.  This is
+available on the linear and exponential links.  The M covariate
+(<code>model_bin[2]</code>) is not in scope: the sampler's own mean-field state
+would have to be closed on <code>P</code> as well as <code>N</code>, which is written
+but not gated.
+</p>
+<p>Under the <code>gaussian</code> link the rate is
+<code>beta_0 * exp(-(beta_N*N - 1)^2 / 2)</code>, still a function of <code>N</code>
+alone.  For <code>cr</code> the covariate part is zero and the rate is the
+constant <code>beta_0 * exp(-1/2)</code>, so constant rates on the gaussian link
+are the constant-rates case under a reparameterisation and are sampled
+exactly, as they are on the other two links.  For <code>dd</code> they are not:
+<code>lambda(N)</code> rises to a peak at <code>N = 1/beta_N</code> and falls after it,
+and the Picard iteration of <code><a href="#dot-bdi_iterate">.bdi_iterate</a></code> does not contract on
+the far side.  Measured on a 20-tip tree over a 4 x 8 x 4 grid in
+<code>(beta_0, beta_N, rho)</code> with a 200-sweep budget &ndash; more than three times
+what this function allows &ndash; it failed to reach <code>tol</code> in 36 of 128
+cells, with <code>delta</code> running to 104.  That is divergence, not slow
+convergence.  The failing region is not an interval that could be excluded:
+at <code>rho = 0.5, beta_0 = 1</code> the iteration converges at
+<code>beta_N = 0.08</code>, fails at 0.1, and converges again at 0.2, 0.3 and 0.5;
+and the whole pattern moves with <code>rho</code>.  Where it does converge it can
+take 164 sweeps.  <code>dd</code> on the gaussian link therefore stays on the
+thinning proposal.  The linear and exponential <code>dd</code> rates are monotone
+in <code>N</code> and reached the fixed point in every cell of the same sweep, in
+at most 27 iterations at <code>rho = 1</code>.  They are slower below it: an
+exponential <code>dd</code> cell needs 63 sweeps at <code>rho = 0.2</code>, and
+converging linear <code>dd</code> cells have needed 126 and 134, which is what
+sets the <code>rho &lt; 1</code> budget.
+</p>
+<p>Incomplete sampling is in scope for every model and link the gate otherwise
+accepts.  <code>p(t)</code> becomes the probability of leaving a <em>sampled</em>
+descendant (<code>.bdi_p_cr</code>, <code>.bdi_solve_p_backward</code>, both of which
+take <code>rho</code>), and <code>.bdi_to_tree_df</code> emits the <code>5e10</code> sentinel
+for a missing lineage still alive at the present, so the draws carry
+unsampled extant lineages and <code>N(t)</code> counts them.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-bdi_to_tree_df"><code>.bdi_to_tree_df</code> <span class="ref-title">Convert BDI species list to the tree data frame format used by emphasis. Columns: brts, n, t_ext, pd, tip_start, id, parent_id</span></h3>
+<h4>Description</h4>
+
+<p>The parent recorded for a lineage born at <code>t</code> is the last observed
+branching at or before <code>t</code>.  A lineage born before the first observed
+branching has none, and <code>max(0L, ...)</code> makes it observed node 0, which
+is not yet born then; <code>.aug_to_Ltable</code> refuses that attachment
+rather than building a <code>tas</code> with a negative edge.  See the
+<code>.augment_tree_bdi</code> documentation for what that costs and what fixing
+it would take.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.bdi_to_tree_df(
+  species,
+  bt,
+  tp,
+  unsampled = numeric(0),
+  obs_parent_id = NULL,
+  obs_focal_ts = NULL,
+  aug_id = NULL,
+  aug_par = NULL,
+  uns_id = NULL,
+  uns_par = NULL
+)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-bdi_unsupported_reason"><code>.bdi_unsupported_reason</code> <span class="ref-title">Why .bdi_supported refused, as a phrase for a message.</span></h3>
+<h4>Description</h4>
+
+<p>Returns <code>NULL</code> when the sampler is available.  The reasons are ordered
+so that the first thing wrong with the call is the one reported.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.bdi_unsupported_reason(model_bin, link, rho = 1)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id=".bdi_unsupported_reason_:_model_bin">model_bin</code></td>
+<td>
+<p>Length-3 binary model vector <code>c(use_N, use_M, use_D)</code>.</p>
+</td></tr>
+<tr><td><code id=".bdi_unsupported_reason_:_link">link</code></td>
+<td>
+<p>Integer link code: 0 linear, 1 exponential, 2 gaussian.</p>
+</td></tr>
+<tr><td><code id=".bdi_unsupported_reason_:_rho">rho</code></td>
+<td>
+<p>Sampling fraction in <code>(0, 1]</code>. Default <code>1</code>.</p>
+</td></tr>
+</table>
+</div>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-bootstrap_fhat_var"><code>.bootstrap_fhat_var</code> <span class="ref-title">Bootstrap variance of the bias-corrected IS log-likelihood estimate</span></h3>
+<h4>Description</h4>
+
+<p>Draws <code>B</code> bootstrap replicates (sampling with replacement from the IS
+log-weights <code>lw = logf - log_q</code>) and computes
+<span class="reqn">\(\hat\ell_{\rm BC,K}\)</span> for each replicate.  Returns the sample variance
+of the <code>B</code> estimates, which approximates
+<span class="reqn">\(\mathrm{Var}(\hat\ell_{\rm BC,K}(L))\)</span> due to Monte Carlo noise.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.bootstrap_fhat_var(logf, log_q, K = 2L, B = 200L)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id=".bootstrap_fhat_var_:_logf">logf</code></td>
+<td>
+<p>Numeric vector of <code>log p(obs, z | theta)</code> for valid trees.</p>
+</td></tr>
+<tr><td><code id=".bootstrap_fhat_var_:_log_q">log_q</code></td>
+<td>
+<p>Numeric vector of <code>log q(z | obs, theta)</code> for valid trees.</p>
+</td></tr>
+<tr><td><code id=".bootstrap_fhat_var_:_K">K</code></td>
+<td>
+<p>Moment truncation order (default <code>2</code>).</p>
+</td></tr>
+<tr><td><code id=".bootstrap_fhat_var_:_B">B</code></td>
+<td>
+<p>Number of bootstrap replicates (default <code>200</code>).</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Details</h4>
+
+<p>This variance is used downstream for AIC uncertainty quantification:
+<span class="reqn">\(\mathrm{Var}(\Delta\mathrm{AIC}) = 4[\mathrm{Var}(\hat\ell_1) +
+\mathrm{Var}(\hat\ell_2)]\)</span>, enabling a Gaussian test of equal AIC.
+</p>
+
+<h4>Value</h4>
+
+<p>Numeric scalar: estimated variance of the log-likelihood estimator.
+<code>NA</code> if fewer than 2 valid log-weights are available.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-build_cond_fun"><code>.build_cond_fun</code> <span class="ref-title">Build a conditioning function from a survival GAM</span></h3>
+<h4>Description</h4>
+
+<p>Returns a function that takes an 8-element parameter vector (C++ layout)
+and returns <code>log(P_tree(pars))</code>, the log-probability that both basal
+lineages survive to the present.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.build_cond_fun(gam_fit, model_bin)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-check_rho"><code>.check_rho</code> <span class="ref-title">Validate a sampling fraction</span></h3>
+<h4>Description</h4>
+
+<p><code>rho</code> is the fraction of extant species present in the tree, so it
+lives in <code>(0, 1]</code>.  The C++ layer (<code>model.hpp</code>) replaces any
+value outside that range by 1 and reports nothing, so a call made with
+<code>rho = 80</code> or <code>rho = -1</code> returns a complete-sampling fit under
+the label the user asked for (audit finding H79).  Every R entry point
+that accepts <code>rho</code> checks it here first.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.check_rho(rho, arg = "control$rho")
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id=".check_rho_:_rho">rho</code></td>
+<td>
+<p>The value supplied by the caller.</p>
+</td></tr>
+<tr><td><code id=".check_rho_:_arg">arg</code></td>
+<td>
+<p>Name to quote in the error message.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p><code>rho</code> as a length-1 double.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-ess_from_lw"><code>.ess_from_lw</code> <span class="ref-title">Effective Sample Size from IS log-weights</span></h3>
+<h4>Description</h4>
+
+<p><span class="reqn">\(\text{ESS} = (\sum w_i)^2 / \sum w_i^2\)</span>, computed in log-space for
+numerical stability.  Measures IS efficiency: ESS close to <span class="reqn">\(n\)</span> means
+all trees contribute roughly equally; ESS close to 1 means one tree
+dominates.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.ess_from_lw(lw)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-eval_independent"><code>.eval_independent</code> <span class="ref-title">Evaluate particles independently (Mode 1)</span></h3>
+<h4>Description</h4>
+
+<p>Only evaluates particles with <code>NA</code> fhat.  For each such particle
+<span class="reqn">\(\theta_i\)</span>, simulates <code>sample_size</code> trees from
+<span class="reqn">\(q(z \mid \text{obs}, \theta_i)\)</span> and computes:
+</p>
+<p style="text-align: center;"><span class="reqn">\[\hat{f}(\theta_i) = \log\text{mean}\exp(\text{logf}(z, \theta_i) -
+  \log q(z, \theta_i))\]</span>
+</p>
+
+<p>Elite particles with cached <code>fhat</code> are skipped entirely.  Their
+cached trees and <code>log_q</code> values are also stored for potential use
+by the shared evaluator if the mode is later switched.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.eval_independent(pop, input, num_threads)
+</code></pre>
+
+<h4>Value</h4>
+
+<p>Named list: updated <code>pop</code>, <code>rej_lambda</code> and
+<code>rej_overruns</code> vectors (length = number of particles evaluated).
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-eval_particles"><code>.eval_particles</code> <span class="ref-title">Dispatch particle evaluation to the appropriate mode</span></h3>
+<h4>Description</h4>
+
+<p>Dispatch particle evaluation to the appropriate mode
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.eval_particles(pop, input, num_threads)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-eval_shared"><code>.eval_shared</code> <span class="ref-title">Evaluate particles using the shared (pooled) tree estimator (Mode 2)</span></h3>
+<h4>Description</h4>
+
+<p>Simulates fresh trees for every particle, pools them into a single set,
+and cross-evaluates: for each particle <span class="reqn">\(\theta_j\)</span>, computes
+</p>
+<p style="text-align: center;"><span class="reqn">\[\hat{f}(\theta_j) = \log\text{mean}\exp\bigl(
+  \text{logf}(z_i, \theta_j) - \log q(z_i, \theta_j)\bigr)\]</span>
+</p>
+
+<p>where both numerator and denominator are evaluated at the target particle
+<span class="reqn">\(\theta_j\)</span>.  The trees <span class="reqn">\(z_i\)</span> may have been simulated at any
+particle; what matters for IS correctness is that the proposal density
+<span class="reqn">\(q\)</span> is evaluated at the same <span class="reqn">\(\theta_j\)</span> used for <span class="reqn">\(p\)</span>.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.eval_shared(pop, input, num_threads)
+</code></pre>
+
+<h4>Details</h4>
+
+<p>Tree caches are cleared between iterations (see <code>.resample_particles</code>
+with <code>clear_cache = TRUE</code>), so the pool contains only the current
+iteration's trees.
+</p>
+
+<h4>Value</h4>
+
+<p>Named list: updated <code>pop</code>, <code>rej_lambda</code>,
+<code>rej_overruns</code>, <code>n_simulated</code>.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-extract_brts"><code>.extract_brts</code> <span class="ref-title">Branching times, and the topology the covariates need</span></h3>
+<h4>Description</h4>
+
+<p>Returns the branching times in the crown-first (decreasing) order the C++
+layer expects, carrying the per-node <code>"parent_tip_start"</code> attribute
+when the input was a tree rather than a bare numeric vector.  Read it with
+<code>.pts()</code> and hand it to <code>augment_trees()</code> / <code>em_cpp()</code>.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.extract_brts(tree)
+</code></pre>
+
+<h4>Details</h4>
+
+<p>The attribute has one entry per node: the tip start of the lineage that
+splits at that observed branching event, then <code>-1</code> for the terminal
+marker at the present, which is not an event.  It is <code>numeric(0)</code> for a
+numeric input, where no topology exists.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-fit_ess"><code>.fit_ess</code> <span class="ref-title">The effective sample size behind a fit&#x27;s log-likelihood</span></h3>
+<h4>Description</h4>
+
+<p>Wherever the fit recorded it: the MCEM drivers leave it in
+<code>details$final_IS</code>, the CEM driver in <code>details$best_IS</code>.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.fit_ess(f)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-fit_gap"><code>.fit_gap</code> <span class="ref-title">The amount by which a fit&#x27;s log-likelihood sits below the truth</span></h3>
+<h4>Description</h4>
+
+<p>Recomputed from the recorded effective sample size when the fit predates
+the field, so that an old fit still compares safely.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.fit_gap(f)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-fit_gap_heavy"><code>.fit_gap_heavy</code> <span class="ref-title">Whether a fit&#x27;s draw is heavy enough that its gap is unquantified</span></h3>
+<h4>Description</h4>
+
+<p>Whether a fit's draw is heavy enough that its gap is unquantified
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.fit_gap_heavy(f)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-init_population"><code>.init_population</code> <span class="ref-title">Initialise the particle population</span></h3>
+<h4>Description</h4>
+
+<p>Returns a list with four parallel components of length <code>num_points</code>:
+</p>
+
+<dl>
+<dt><code>pars</code></dt><dd><p>Data frame of parameter vectors.</p>
+</dd>
+<dt><code>fhat</code></dt><dd><p>Numeric; <code>NA</code> = needs evaluation.</p>
+</dd>
+<dt><code>log_q</code></dt><dd><p>List; per-particle vector of <code>log q(z | obs, theta)</code>
+for cached trees. <code>NULL</code> = no trees cached.</p>
+</dd>
+<dt><code>trees</code></dt><dd><p>List; per-particle list of raw augmented-tree data
+frames (C++ format for <code>loglikelihood()</code>). <code>NULL</code> = not cached.</p>
+</dd>
+</dl>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.init_population(num_points, lower_bound, upper_bound)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-is_fhat"><code>.is_fhat</code> <span class="ref-title">IS log-likelihood estimate (with optional bias correction)</span></h3>
+<h4>Description</h4>
+
+<p>Two estimators are available:
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.is_fhat(logf, log_q, bias_correct = FALSE, K = 2L, n_zero_weight = 0L)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id=".is_fhat_:_logf">logf</code></td>
+<td>
+<p>Numeric vector of <code>log p(obs, z | theta)</code> for valid trees.</p>
+</td></tr>
+<tr><td><code id=".is_fhat_:_log_q">log_q</code></td>
+<td>
+<p>Numeric vector of <code>log q(z | obs, theta)</code> for valid trees.</p>
+</td></tr>
+<tr><td><code id=".is_fhat_:_bias_correct">bias_correct</code></td>
+<td>
+<p>Logical; use moment-based bias correction (default <code>FALSE</code>).</p>
+</td></tr>
+<tr><td><code id=".is_fhat_:_K">K</code></td>
+<td>
+<p>Integer truncation order for the moment series (default <code>2</code>).</p>
+</td></tr>
+<tr><td><code id=".is_fhat_:_n_zero_weight">n_zero_weight</code></td>
+<td>
+<p>Integer; number of completed augmentations that had
+zero IS weight.  These contribute <code>w = 0</code> to the IS sum and inflate
+the denominator accordingly (default <code>0</code>).</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Details</h4>
+
+<p><strong>Default</strong> (<code>bias_correct = FALSE</code>): the standard log-sum-exp
+estimator <span class="reqn">\(\log\bar{L} = \log\!\left(\frac{1}{n}\sum_i L_i\right)\)</span>,
+computed in numerically stable form.  <span class="reqn">\(\bar{L}\)</span> is an unbiased estimator
+of <span class="reqn">\(p(\mathrm{obs}\mid\theta)\)</span>, but <span class="reqn">\(\log\bar{L}\)</span> slightly
+underestimates <span class="reqn">\(\log p\)</span> (Jensen's inequality).
+</p>
+<p><strong>Bias-corrected</strong> (<code>bias_correct = TRUE</code>): uses the exact identity
+</p>
+<p style="text-align: center;"><span class="reqn">\[\log\bar{L} = \hat\ell + \log\!\left(1 + \sum_{k=2}^{\infty}
+  \frac{m_k}{k!}\right), \qquad
+  m_k = \frac{1}{n}\sum_i(\log L_i - \hat\ell)^k\]</span>
+</p>
+
+<p>truncated at order <code>K</code> (default 2).  The K=2 approximation is
+<span class="reqn">\(\hat\ell + \log(1 + m_2/2)\)</span>, equivalent to the log-normal correction
+<span class="reqn">\(\mu + \sigma^2/2\)</span>.  With the full series (<span class="reqn">\(K\to\infty\)</span>) the two
+estimators are identical; the truncation is the approximation.
+</p>
+<p>Trees that hit computational limits (<code>max_missing</code>, <code>max_lambda</code>)
+are discarded entirely &ndash; they are simulator failures, not IS samples.
+Trees that completed augmentation but have zero IS weight (<code>w = 0</code>
+because <code>lambda = 0</code> under the current parameters) are legitimate IS
+samples and are included in the denominator via <code>n_zero_weight</code>.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-is_summary"><code>.is_summary</code> <span class="ref-title">The importance-sampling summary of one draw: the estimate and the ESS</span></h3>
+<h4>Description</h4>
+
+<p>One denominator for both proposals.  Three kinds of draw carry weight zero
+and all three belong in it: a draw whose log-weight is <code>-Inf</code> because
+the model gives its tree probability zero; a draw the proposal rejected for
+a reason that depends on the parameters &ndash; a missing lineage still alive at
+the present under complete sampling, whose density under <span class="reqn">\(f\)</span> is zero;
+and nothing else.  A draw rejected for a reason that does not depend on the
+parameters, an overrun of the missing-lineage budget, is not a sample and
+stays out.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.is_summary(lw, n_zero_weight = 0L, n_rejected = 0L)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id=".is_summary_:_lw">lw</code></td>
+<td>
+<p>Log-weights of the completed draws.</p>
+</td></tr>
+<tr><td><code id=".is_summary_:_n_zero_weight">n_zero_weight</code></td>
+<td>
+<p>Completed draws whose weight is zero.</p>
+</td></tr>
+<tr><td><code id=".is_summary_:_n_rejected">n_rejected</code></td>
+<td>
+<p>Draws rejected for a parameter-dependent reason.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Details</h4>
+
+<p>The two proposals reached this denominator by different routes &ndash; the
+thinning path through <code>n_zero_weight</code>, the conditional path through a
+separate acceptance factor &ndash; and the difference between the two routes is
+the size of the effect they are used to measure.
+</p>
+
+<h4>Value</h4>
+
+<p>A list: <code>fhat</code>, <code>ess</code>, <code>n_finite</code>, <code>n_den</code>.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-jensen_gap"><code>.jensen_gap</code> <span class="ref-title">The downward bias of log(mean(w)), from the effective sample size</span></h3>
+<h4>Description</h4>
+
+<p><span class="reqn">\(\widehat\ell = \log(\frac1N \sum_i w_i)\)</span> estimates <span class="reqn">\(\log E[w]\)</span>,
+and a log of a mean is not the mean of a log: by Jensen's inequality
+<span class="reqn">\(E[\widehat\ell] \le \log E[w]\)</span>, always downward, never up.  The
+EM objective is unaffected &ndash; it is an expectation of a log, and the
+M-step averages <span class="reqn">\(\log f\)</span> directly (<code>src/M_step.cpp</code>) &ndash; but the
+log-likelihood a fit reports is exactly this estimator, and so is the
+<code>AIC</code> built from it.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.jensen_gap(ess, n)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id=".jensen_gap_:_ess">ess</code></td>
+<td>
+<p>Effective sample size of the draw.</p>
+</td></tr>
+<tr><td><code id=".jensen_gap_:_n">n</code></td>
+<td>
+<p>Number of draws the estimator averaged over.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Details</h4>
+
+<p>The delta method gives the bias as <span class="reqn">\(-\mathrm{Var}(w)/(2N E[w]^2)\)</span>,
+which in terms of the effective sample size <span class="reqn">\(n_{\mathrm{eff}} =
+N/(1+\mathrm{CV}^2)\)</span> is <span class="reqn">\(-\frac12(1/n_{\mathrm{eff}} - 1/N)\)</span>: a
+quantity already on record for every fit.
+</p>
+<p>It is an indicator of size, not a bound in either direction, and its
+error runs the wrong way where the quantity matters.  Measured on
+log-normal weights with <span class="reqn">\(N = 200\)</span>, as the ratio of what this returns
+to the true bias: 4.9 at <span class="reqn">\(n_{\mathrm{eff}} = 188\)</span>, 2.0 at 157, 0.90
+at 82, 0.75 at 36, 0.46 at 17, 0.27 at 9, 0.16 at 6.  It overstates only
+where the bias is negligible anyway (below <span class="reqn">\(2\times10^{-4}\)</span>), and
+<em>understates</em> once the weights are heavy &ndash; by a factor of six at
+<span class="reqn">\(n_{\mathrm{eff}} = 6\)</span>, where the true bias is half a nat.
+<code>heavy</code> marks that regime, <span class="reqn">\(n_{\mathrm{eff}} &lt; N/10\)</span>, which is
+where the ratio first falls below one half.  A caller deciding anything
+on the size of the gap must treat a heavy draw as unquantified rather
+than as the number returned.
+</p>
+
+<h4>Value</h4>
+
+<p>A list: <code>gap</code> (a non-negative magnitude, the amount by which
+the reported log-likelihood sits <em>below</em> the truth) and
+<code>heavy</code> (<code>TRUE</code> when <code>gap</code> understates it).
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-mcem_bdi"><code>.mcem_bdi</code> <span class="ref-title">MCEM with BDI augmentation.</span></h3>
+<h4>Description</h4>
+
+<p>Drop-in replacement for .mcem_dynamic_fresh(). Uses BDI exact sampling
+for the E-step and m_cpp() for the M-step.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.mcem_bdi(
+  brts,
+  pars,
+  sample_size,
+  max_missing,
+  lower_bound,
+  upper_bound,
+  max_iter,
+  xtol,
+  tol = 0.01,
+  patience,
+  num_threads,
+  verbose = FALSE,
+  conditional = NULL,
+  model = c(0L, 0L, 0L),
+  link = 0L,
+  max_time = NULL,
+  rho = 1,
+  stop_rule = c("rel_change", "mc_error"),
+  mc_batches = 5L,
+  mc_z = 1,
+  mc_grow = 1.5,
+  max_draws = NULL,
+  mesh = NULL,
+  damping = "auto"
+)
+</code></pre>
+
+<h4>Details</h4>
+
+<p>Under CR: zero-variance IS, so every E-step gives the same fhat regardless
+of the augmented trees.  Convergence depends only on the M-step.
+</p>
+<p>Stopping rule.  With theta_k the M-step output of iteration k,
+</p>
+<p style="text-align: center;"><span class="reqn">\[\delta_k = \max_j |\theta_k[j] - \theta_{k-1}[j]| / \max(|\theta_{k-1}[j]|, \epsilon)\]</span>
+</p>
+
+<p>(<code>.rel_change</code>) with <span class="reqn">\(\epsilon\)</span> from <code>.rel_floor</code>, and the
+run stops as &quot;converged&quot; once <span class="reqn">\(\delta_k &lt; tol\)</span> for <code>patience</code>
+consecutive iterations.  The scale is the parameter itself, not the
+search box, so the same fit stops at the same point whatever bounds the
+user passes; the floor carries the units of the parameters, so it also
+stops at the same point when the tree is measured in another unit of
+time.  An iteration whose
+M-step returned its starting point unchanged carries no information about
+stability and resets the streak.  The trace also records the absolute
+step <code>abs_step</code> and <code>drift</code>, the same relative displacement
+measured over the last <code>patience</code> iterations: under pure Monte Carlo
+noise <code>drift</code> is of the order of <code>sqrt(patience)</code> steps, under a
+deterministic EM drift it is <code>patience</code> steps.
+</p>
+<p>The reported likelihood is a separate E-step at the final iterate, so
+<code>fhat</code>, ESS, <code>final_IS</code> and <code>loglik_var</code> all describe
+<code>pars</code>; that E-step is the last row of <code>mcem</code> (<code>m_step =
+FALSE</code>, no step columns) and is not counted in <code>iterations</code>.  When
+that E-step fails and the final iterate is not the last one whose E-step
+succeeded, <code>pars</code> falls back to that iterate and the E-step is run
+there: a theta the sampler cannot evaluate is not returned as an
+estimate.
+</p>
+<p>Draw counts come from the E-step, which drops non-finite draws before
+returning: <code>n_valid</code> is the number of completed draws and the fhat
+denominator, <code>num_trees</code> the finite subset handed to the M-step, and
+<code>n_nonfinite</code> the difference.  <code>rejected</code> and
+<code>rejected_max_missing</code> are the two rejection channels.
+</p>
+<p>Eight E-step failures end the run with <code>stop_reason =
+"e_step_failure"</code> whether or not they are consecutive, so an M-step that
+keeps proposing an iterate the sampler cannot evaluate does not alternate
+to <code>max_iter</code>.
+</p>
+
+<h4>Value</h4>
+
+<p>A list: <code>mcem</code> (trace, one row per iteration plus the final
+E-step), <code>pars</code>, <code>iterations</code> (number of completed E+M
+iterations), <code>stop_reason</code>, <code>loglik</code> (fhat at <code>pars</code>,
+<code>NA</code> when the final E-step failed), <code>loglik_var</code>,
+<code>final_IS</code>, <code>n_failed</code> (E- or M-step failures).
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-mcem_dynamic_fresh"><code>.mcem_dynamic_fresh</code> <span class="ref-title">MCEM with thinning augmentation.</span></h3>
+<h4>Description</h4>
+
+<p>E-step and M-step of one iteration are a single <code>em_cpp()</code> call: the
+augmented trees are drawn by the thinning sampler, up to <code>maxN</code>
+attempts per E-step.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.mcem_dynamic_fresh(
+  brts,
+  pars,
+  sample_size,
+  maxN,
+  max_missing,
+  lower_bound,
+  upper_bound,
+  max_iter,
+  xtol,
+  tol = 0.01,
+  patience = 3L,
+  num_threads,
+  verbose = FALSE,
+  conditional = NULL,
+  model = c(0L, 0L, 0L),
+  link = 0L,
+  max_time = NULL,
+  rho = 1,
+  rel_floor = 0.01,
+  stop_rule = c("rel_change", "mc_error"),
+  mc_batches = 5L,
+  mc_z = 1,
+  mc_grow = 1.5,
+  max_draws = NULL
+)
+</code></pre>
+
+<h4>Details</h4>
+
+<p>Stopping rule, the same statistic <code>.mcem_bdi</code> uses.  With theta_k the
+M-step output of iteration k,
+</p>
+<p style="text-align: center;"><span class="reqn">\[\delta_k = \max_j |\theta_k[j] - \theta_{k-1}[j]| / \max(|\theta_{k-1}[j]|, \epsilon)\]</span>
+</p>
+
+<p>and the run stops as &quot;converged&quot; once <span class="reqn">\(\delta_k &lt; tol\)</span> for
+<code>patience</code> consecutive iterations.  The search box does not enter, so
+the same fit stops at the same point whatever bounds the user passes.  The
+floor <span class="reqn">\(\epsilon\)</span> comes from <code>.rel_floor(brts, link, rel_floor)</code>
+and carries the units of the parameters (<code>rel_floor / crown_age</code> for
+the rate-valued links, <code>rel_floor</code> for the log-rates of the
+exponential link), so the statistic is unchanged when the tree and the
+rates are expressed in another unit of time.  An iteration whose M-step
+returned its starting point unchanged carries no information about
+stability and resets the streak (trace column <code>m_moved</code>).  The trace
+also records the absolute step <code>abs_step</code> and <code>drift</code>, the same
+relative displacement measured over the last <code>patience</code> iterations.
+</p>
+<p>Trace.  Row k of <code>mcem</code> pairs theta_k with the E-step value
+fhat(theta_{k-1}) it was computed from, and with the rejection counters
+of that E-step.  The likelihood of the returned point is a separate E-step
+at the final iterate, appended as the last row (<code>m_step = FALSE</code>, step
+columns <code>NA</code>); only that row is evaluated at <code>pars</code>, and it is
+not counted in <code>iterations</code>.  It is attempted whenever at least one
+iteration succeeded, including after a <code>"e_step_failure"</code> or
+<code>"time_budget"</code> stop, and may itself fail, in which case there is no
+such row and <code>loglik</code>, <code>loglik_var</code> and <code>final_IS</code> report
+nothing rather than the previous iterate's values.
+</p>
+<p>Rejection columns.  <code>rejected_errors</code> (unhandled exception),
+<code>rejected_overruns</code> (<code>max_missing</code> exceeded),
+<code>rejected_lambda</code> (<code>max_lambda</code> exceeded) and
+<code>rejected_nonfinite</code> (log weight <code>+Inf</code> or <code>NaN</code>) are the
+four disjoint ways a draw is discarded; <code>n_rejected</code> is their sum, the
+quantity <code>final_IS$n_rejected</code> reports, and <code>rejected</code> is that
+same total under the name the BDI trace uses.  <code>rejected_zero_weights</code>
+is counted apart: those draws completed, have weight zero and stay in the
+<code>fhat</code> denominator.
+</p>
+
+<h4>Value</h4>
+
+<p>A list: <code>mcem</code> (trace, one row per completed iteration plus the
+final E-step), <code>pars</code>, <code>iterations</code> (number of completed E+M
+iterations, not loop passes and not <code>nrow(mcem)</code>), <code>n_failed</code>
+(E-step failures over the whole run), <code>stop_reason</code>,
+<code>final_estep</code> (did the final E-step at <code>pars</code> succeed),
+<code>maxN</code> (the ratcheted attempt cap: doubled on every E-step failure
+up to 50000, never reset after a success), <code>loglik</code> (fhat at
+<code>pars</code>, <code>NA</code> when the final E-step failed), <code>loglik_var</code>,
+<code>final_IS</code>.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-mcem_iter_rows"><code>.mcem_iter_rows</code> <span class="ref-title">Trace rows that are MCEM iterations</span></h3>
+<h4>Description</h4>
+
+<p>Both drivers append the final E-step at the parameters they return as a
+trace row.  That row is not an iteration: it carries no M-step and no step
+metrics.  <code>.mcem_bdi</code> flags it <code>m_step = FALSE</code> and
+<code>.mcem_dynamic_fresh</code> flags it <code>final_estep = TRUE</code>; both flags
+are read here, so that anything counting or plotting the trace reports K
+rows for a K-iteration fit.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.mcem_iter_rows(mcem_df)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id=".mcem_iter_rows_:_mcem_df">mcem_df</code></td>
+<td>
+<p>An MCEM trace data frame, or <code>NULL</code>.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>A logical vector over the rows of <code>mcem_df</code>.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-observed_parent_id"><code>.observed_parent_id</code> <span class="ref-title">The lineage that splits at each observed branching event</span></h3>
+<h4>Description</h4>
+
+<p>The ED covariate needs to know which lineage is which across events, which
+the tip start of <code>.observed_parent_tip_start</code> does not say.  Lineages
+are named as the C++ layer names them: the two crown lineages are
+<code>-2</code> (the one that splits first) and <code>-3</code>; the daughter born at
+the k-th observed branching event (forward-time order, 0-based) is lineage
+<code>k</code>.  Which child of a node continues the parent's lineage is fixed by
+a convention that any consistent rule would do for: the child whose subtree
+holds the lowest tip label continues, the other is the daughter.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.observed_parent_id(phy)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id=".observed_parent_id_:_phy">phy</code></td>
+<td>
+<p>A <code>phylo</code> object.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>Integer vector of length <code>Nnode(phy) - 1</code>, in forward-time
+order: the id of the lineage splitting at each event.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-observed_parent_tip_start"><code>.observed_parent_tip_start</code> <span class="ref-title">Tip start of the lineage that splits at each observed branching event</span></h3>
+<h4>Description</h4>
+
+<p>The covariates <span class="reqn">\(M\)</span> and <span class="reqn">\(D\)</span> are functions of the pendant ages of the
+alive lineages, and a lineage's pendant age is measured from the last time
+it became a tip &ndash; its <em>tip start</em>, which is reset every time it
+speciates.  For an observed branching event that is the forward time of the
+<strong>parent</strong> of the splitting node, and <code>0</code> for the two children of
+the crown.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.observed_parent_tip_start(phy)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id=".observed_parent_tip_start_:_phy">phy</code></td>
+<td>
+<p>A <code>phylo</code> object.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Details</h4>
+
+<p>Events are returned in forward-time order, the order the C++ layer builds
+the observed tree in, so the k-th entry belongs to the k-th observed node.
+A 2-tip tree has no non-crown internal node and returns
+<code>numeric(0)</code>.
+</p>
+
+<h4>Value</h4>
+
+<p>Numeric vector of length <code>Nnode(phy) - 1</code>.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-pid"><code>.pid</code> <span class="ref-title">The lineage ids carried by a branching-time vector, or integer(0).</span></h3>
+<h4>Description</h4>
+
+<p>The lineage ids carried by a branching-time vector, or <code>integer(0)</code>.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.pid(brts)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-pts"><code>.pts</code> <span class="ref-title">The parent tip starts carried by a branching-time vector</span></h3>
+<h4>Description</h4>
+
+<p><code>numeric(0)</code> when there are none, which is how the C++ layer is told
+that no topology is available.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.pts(brts)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-rel_change"><code>.rel_change</code> <span class="ref-title">Relative parameter change, the statistic both MCEM stopping rules use</span></h3>
+<h4>Description</h4>
+
+<p>The step in each coordinate is measured against that coordinate's own
+magnitude, with a floor so that a coordinate at or near zero is not
+measured against itself.  The floor carries the units of the parameter
+(see <code>.rel_floor</code>), so the statistic is unchanged when the tree and
+the rates are expressed in another unit of time.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.rel_change(new, old, floor_val)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id=".rel_change_:_new">new</code>, <code id=".rel_change_:_old">old</code></td>
+<td>
+<p>Parameter vectors of equal length.</p>
+</td></tr>
+<tr><td><code id=".rel_change_:_floor_val">floor_val</code></td>
+<td>
+<p>Floor of the denominator, from <code>.rel_floor</code>.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>The largest relative coordinate change.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-rel_floor"><code>.rel_floor</code> <span class="ref-title">Floor of the relative-change denominator</span></h3>
+<h4>Description</h4>
+
+<p>Under the linear and gaussian links the parameters are rates, of dimension
+1/time, and the only rate scale in the problem is the inverse crown age:
+the floor is <code>rel_floor / crown_age</code>, which rescales with the rates
+themselves.  Under the exponential link the parameters are log-rates, where
+an absolute step already is a relative change of the rate, so the floor is
+<code>rel_floor</code>.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.rel_floor(brts, link = 0L, rel_floor = 0.01)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id=".rel_floor_:_brts">brts</code></td>
+<td>
+<p>Branching times (crown age first, or any order).</p>
+</td></tr>
+<tr><td><code id=".rel_floor_:_link">link</code></td>
+<td>
+<p>Integer link code: 0 linear, 1 exponential, 2 gaussian.</p>
+</td></tr>
+<tr><td><code id=".rel_floor_:_rel_floor">rel_floor</code></td>
+<td>
+<p>Dimensionless floor. Default <code>1e-2</code>.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>A positive scalar.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-resample_particles"><code>.resample_particles</code> <span class="ref-title">Resample particle population</span></h3>
+<h4>Description</h4>
+
+<p>Selects the top <code>disc_prop</code> fraction of valid particles (elites) and
+fills the remaining slots with perturbed copies of elites.  All particles
+(including elites) have their <code>fhat</code> reset to <code>NA</code> so they are
+re-evaluated at the next iteration, preventing &quot;lucky particle&quot; lock-in.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.resample_particles(
+  pop,
+  num_points,
+  disc_prop,
+  lower_bound,
+  upper_bound,
+  sd_vec,
+  clear_cache = FALSE
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id=".resample_particles_:_clear_cache">clear_cache</code></td>
+<td>
+<p>Logical; if <code>TRUE</code>, discard all tree/log_q caches.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Details</h4>
+
+<p>When <code>clear_cache = FALSE</code> (Mode 1), elite tree/log_q caches are
+carried forward.  When <code>clear_cache = TRUE</code> (Mode 2), all caches are
+discarded so every particle simulates fresh trees at the next iteration.
+This prevents stale trees from unconverged early iterations from polluting
+the shared pool.
+</p>
+
+<h4>Value</h4>
+
+<p>Updated population list.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-resolve_control_aliases"><code>.resolve_control_aliases</code> <span class="ref-title">Resolve control-parameter aliases</span></h3>
+<h4>Description</h4>
+
+<p>Supports both old names (<code>num_points</code>, <code>sample_size</code>) and new
+names (<code>num_particles</code>, <code>num_trees</code>).  User-supplied values take
+precedence; if both old and new are present, the new name wins.
+Internally the code always reads the OLD names for backwards compatibility
+with <code>emphasis_cem</code> and the C++ layer.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.resolve_control_aliases(ctrl, method, user_ctrl = list())
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-simulate_particle"><code>.simulate_particle</code> <span class="ref-title">Draw augmented trees at a single particle (internal inference use only)</span></h3>
+<h4>Description</h4>
+
+<p>Calls <code><a href="#augment_trees">augment_trees</a></code> to sample <code>sample_size</code> augmented
+trees from the proposal <span class="reqn">\(q(z \mid \text{obs}, \theta)\)</span>.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.simulate_particle(
+  brts,
+  pars8,
+  model_bin,
+  link,
+  sample_size,
+  maxN,
+  max_missing,
+  max_lambda,
+  num_threads,
+  rho = 1
+)
+</code></pre>
+
+<h4>Details</h4>
+
+<p>Returns the raw <code>augment_trees</code> output: <code>logf</code>, <code>logg</code>,
+<code>trees</code>, and rejection counts for adaptive limit escalation.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="dot-validate_linear_init_pars"><code>.validate_linear_init_pars</code> <span class="ref-title">Validate init_pars for linear link models</span></h3>
+<h4>Description</h4>
+
+<p>For linear link, lambda = max(0, beta_0 + beta_X * X). If the slope is
+too negative, lambda becomes zero at observed covariate values, causing
+IS collapse. This clamps slopes so lambda stays positive at the maximum
+covariate value seen in the tree.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>.validate_linear_init_pars(
+  init_pars,
+  model_bin,
+  brts,
+  lower_bound,
+  upper_bound,
+  verbose = FALSE
+)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="ed_fair_proportion"><code>ed_fair_proportion</code> <span class="ref-title">Evolutionary distinctiveness of a lineage forest at a time</span></h3>
+<h4>Description</h4>
+
+<p>The fair-proportion routine the likelihood and the simulator share
+(<code>inst/include/ed_covariate.hpp</code>), exposed so that it can be checked
+against an independent computation on an <code>ape</code> tree.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>ed_fair_proportion(parent, birth, alive, t)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="ed_fair_proportion_:_parent">parent</code></td>
+<td>
+<p>Integer vector: for each lineage, the (1-based) index of the
+lineage it split from, or <code>0</code> for a crown lineage.</p>
+</td></tr>
+<tr><td><code id="ed_fair_proportion_:_birth">birth</code></td>
+<td>
+<p>Numeric vector: each lineage's birth time (forward).</p>
+</td></tr>
+<tr><td><code id="ed_fair_proportion_:_alive">alive</code></td>
+<td>
+<p>Logical vector: whether each lineage is alive on the segment
+being evaluated.</p>
+</td></tr>
+<tr><td><code id="ed_fair_proportion_:_t">t</code></td>
+<td>
+<p>The evaluation time.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>A data frame with one row per lineage: <code>c</code> and <code>ts</code> such
+that <code>ED(u) = c + (u - ts)</code> for <code>u</code> in the segment (<code>NA</code>
+for a lineage not alive), <code>ed</code> the value at <code>t</code>, and
+<code>n_desc</code> the alive lineages in its subtree.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="em_cpp"><code>em_cpp</code> <span class="ref-title">function to perform one step of the E-M algorithm</span></h3>
+<h4>Description</h4>
+
+<p>function to perform one step of the E-M algorithm
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>em_cpp(
+  brts,
+  init_pars,
+  sample_size,
+  maxN,
+  max_missing,
+  max_lambda,
+  lower_bound,
+  upper_bound,
+  xtol_rel,
+  num_threads,
+  copy_trees,
+  model = as.integer(c(0, 0, 0)),
+  link = 0L,
+  rho = 1,
+  rconditional = NULL,
+  parent_tip_start = as.numeric(c()),
+  seed = 0L,
+  parent_id = as.integer(c())
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="em_cpp_:_brts">brts</code></td>
+<td>
+<p>vector of branching times</p>
+</td></tr>
+<tr><td><code id="em_cpp_:_init_pars">init_pars</code></td>
+<td>
+<p>vector of initial parameter files</p>
+</td></tr>
+<tr><td><code id="em_cpp_:_sample_size">sample_size</code></td>
+<td>
+<p>number of samples</p>
+</td></tr>
+<tr><td><code id="em_cpp_:_maxN">maxN</code></td>
+<td>
+<p>maximum number of failed trees</p>
+</td></tr>
+<tr><td><code id="em_cpp_:_max_missing">max_missing</code></td>
+<td>
+<p>maximum number of species missing</p>
+</td></tr>
+<tr><td><code id="em_cpp_:_max_lambda">max_lambda</code></td>
+<td>
+<p>maximum speciation rate</p>
+</td></tr>
+<tr><td><code id="em_cpp_:_lower_bound">lower_bound</code></td>
+<td>
+<p>vector of lower bound values for optimization, should
+be equal in length to the vector of init_pars</p>
+</td></tr>
+<tr><td><code id="em_cpp_:_upper_bound">upper_bound</code></td>
+<td>
+<p>vector of upper bound values for optimization, should
+be equal in length to the vector of init_pars</p>
+</td></tr>
+<tr><td><code id="em_cpp_:_xtol_rel">xtol_rel</code></td>
+<td>
+<p>relative tolerance for optimization</p>
+</td></tr>
+<tr><td><code id="em_cpp_:_num_threads">num_threads</code></td>
+<td>
+<p>number of threads used.</p>
+</td></tr>
+<tr><td><code id="em_cpp_:_copy_trees">copy_trees</code></td>
+<td>
+<p>if set to true, the trees generated are returned as well</p>
+</td></tr>
+<tr><td><code id="em_cpp_:_model">model</code></td>
+<td>
+<p>integer vector of length 3: c(use_N, use_P, use_E)</p>
+</td></tr>
+<tr><td><code id="em_cpp_:_link">link</code></td>
+<td>
+<p>link function: 0 = linear (max(0,...)), 1 = exponential</p>
+</td></tr>
+<tr><td><code id="em_cpp_:_rho">rho</code></td>
+<td>
+<p>sampling fraction in (0, 1]</p>
+</td></tr>
+<tr><td><code id="em_cpp_:_rconditional">rconditional</code></td>
+<td>
+<p>R function that evaluates the GAM function.</p>
+</td></tr>
+<tr><td><code id="em_cpp_:_parent_tip_start">parent_tip_start</code></td>
+<td>
+<p>tip start of the lineage that splits at each
+observed branching event, in the same forward-time order as <code>brts</code>;
+empty (the default) when only branching times are available, in which case
+every observed lineage is recorded as dating from the crown and D = 0 at
+every observed event.</p>
+</td></tr>
+<tr><td><code id="em_cpp_:_seed">seed</code></td>
+<td>
+<p>positive integer seeding the C++ sampler; 0 (the default) draws
+one from R's generator, so set.seed() reaches the sampler whether or not a
+seed is passed.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>a list with the following components:
+</p>
+
+<dl>
+<dt>trees</dt><dd><p>list of trees</p>
+</dd>
+<dt>rejected</dt><dd><p>number of rejected trees</p>
+</dd>
+<dt>rejected_overruns</dt><dd><p>number of trees rejected due to too large size</p>
+</dd>
+<dt>rejected_lambda</dt><dd><p>number of trees rejected due to lambda errors</p>
+</dd>
+<dt>rejected_zero_weights</dt><dd><p>number of trees rejected due to zero weight (log weight -Inf)</p>
+</dd>
+<dt>rejected_nonfinite</dt><dd><p>number of trees rejected due to a +Inf or NaN log weight</p>
+</dd>
+<dt>num_trees</dt><dd><p>number of trees the E-step returned</p>
+</dd>
+<dt>estimates</dt><dd><p>vector of estimates</p>
+</dd>
+<dt>nlopt</dt><dd><p>nlopt status</p>
+</dd>
+<dt>fhat</dt><dd><p>vector of fhat values</p>
+</dd>
+<dt>time</dt><dd><p>time elapsed</p>
+</dd>
+<dt>weights</dt><dd><p>vector of weights</p>
+</dd>
+<dt>logf</dt><dd><p>vector of log p(obs, z_i | theta) for each valid tree</p>
+</dd>
+<dt>logg</dt><dd><p>vector of log q(z_i | obs, theta) for each valid tree</p>
+</dd>
+</dl>
+
+
+</section>
+<section class="ref">
+<h3 id="emphasis_cem"><code>emphasis_cem</code> <span class="ref-title">Monte Carlo Cross-Entropy Method for diversification models</span></h3>
+<h4>Description</h4>
+
+<p>Implements the Cross-Entropy Method (CEM) with an IS log-likelihood
+objective.  A population of parameter particles is evaluated via IS
+(<code>fhat</code>), the elite fraction is retained, and the remainder is
+refilled by perturbing elite copies.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>emphasis_cem(
+  brts,
+  max_iter,
+  num_points,
+  max_missing,
+  sd_vec,
+  lower_bound,
+  upper_bound,
+  maxN = 10L,
+  sample_size = 1L,
+  shared_trees = FALSE,
+  bias_correct = FALSE,
+  disc_prop = 0.5,
+  tol = 1e-04,
+  patience = 5L,
+  sd_decay = 0.85,
+  sd_min_frac = 0.01,
+  verbose = FALSE,
+  num_threads = 1L,
+  model = c(0L, 0L, 0L),
+  link = 0L,
+  cond_fun = NULL,
+  max_time = NULL,
+  rho = 1
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="emphasis_cem_:_brts">brts</code></td>
+<td>
+<p>Numeric vector of branching times.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_max_iter">max_iter</code></td>
+<td>
+<p>Maximum number of iterations (hard cap).</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_num_points">num_points</code></td>
+<td>
+<p>Population size.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_max_missing">max_missing</code></td>
+<td>
+<p>Max extinct lineages per augmentation.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_sd_vec">sd_vec</code></td>
+<td>
+<p>Initial perturbation SD per parameter (8-element).</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_lower_bound">lower_bound</code>, <code id="emphasis_cem_:_upper_bound">upper_bound</code></td>
+<td>
+<p>Search bounds (8-element).</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_maxN">maxN</code></td>
+<td>
+<p>Max augmentation attempts per particle. Default <code>10</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_sample_size">sample_size</code></td>
+<td>
+<p>Trees simulated per particle per evaluation. Default <code>1</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_shared_trees">shared_trees</code></td>
+<td>
+<p>If <code>TRUE</code>, use pooled-tree estimator (Mode 2).
+Default <code>FALSE</code> (independent, Mode 1).</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_bias_correct">bias_correct</code></td>
+<td>
+<p>If <code>TRUE</code>, apply moment-based bias correction to
+the IS log-likelihood. Default <code>FALSE</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_disc_prop">disc_prop</code></td>
+<td>
+<p>Elite fraction retained per iteration. Default <code>0.5</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_tol">tol</code></td>
+<td>
+<p>Minimum improvement in best <code>fhat</code> required to avoid
+incrementing the plateau counter.  Default <code>1e-4</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_patience">patience</code></td>
+<td>
+<p>Consecutive plateau iterations before early stopping.
+Default <code>5</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_sd_decay">sd_decay</code></td>
+<td>
+<p>Multiplicative factor applied to <code>sd_vec</code> when the
+best log-likelihood has not improved.  Default <code>0.85</code>.  Set to
+<code>NULL</code> to use the legacy linear annealing schedule.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_sd_min_frac">sd_min_frac</code></td>
+<td>
+<p>Minimum SD as a fraction of the initial <code>sd_vec</code>.
+Default <code>0.01</code> (1%).  SD will not decay below this floor.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_verbose">verbose</code></td>
+<td>
+<p>Print iteration summaries. Default <code>FALSE</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_num_threads">num_threads</code></td>
+<td>
+<p>Parallel threads. Default <code>1</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_model">model</code></td>
+<td>
+<p>Length-3 binary integer vector <code>c(use_N, use_M, use_D)</code>.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_link">link</code></td>
+<td>
+<p>Integer link code: <code>0</code> = linear, <code>1</code> = exponential.</p>
+</td></tr>
+<tr><td><code id="emphasis_cem_:_rho">rho</code></td>
+<td>
+<p>Sampling fraction (0, 1]. Default <code>1</code> (complete sampling).</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Details</h4>
+
+<p><strong>Adaptive SD annealing:</strong> The perturbation SD is decayed
+multiplicatively (factor <code>sd_decay</code>, default 0.85) only when the
+best log-likelihood has not improved by more than <code>tol</code> in the
+current iteration.  When the likelihood is still improving, the SD is
+held constant to maintain exploration.  A minimum SD floor
+(<code>sd_min_frac * initial_sd</code>, default 1% of initial) prevents
+complete collapse.  This replaces the former linear annealing schedule
+which coupled the SD decay to <code>max_iter</code> and could cause
+premature collapse on easy problems or insufficient exploration on
+hard ones.
+</p>
+<p><strong>Stopping rules</strong> (first triggered wins):
+</p>
+
+<ol>
+<li><p> Plateau: best <code>fhat</code> has not improved by more than <code>tol</code>
+for <code>patience</code> consecutive iterations <em>and</em> the SD has
+reached its floor &ndash; the population has both converged in likelihood
+and exhausted its perturbation budget.
+</p>
+</li>
+<li><p> Hard cap: <code>max_iter</code> iterations reached (safety limit).
+</p>
+</li></ol>
+
+<h4>Value</h4>
+
+<p>A list:
+</p>
+
+<dl>
+<dt><code>best_loglik</code></dt><dd><p>fhat of best particle per completed iteration
+(length = actual iterations run, <span class="reqn">\(\leq\)</span> <code>max_iter</code>).</p>
+</dd>
+<dt><code>best_pars</code></dt><dd><p>Parameter matrix, one row per iteration.</p>
+</dd>
+<dt><code>obtained_estim</code></dt><dd><p>Globally best parameter vector.</p>
+</dd>
+<dt><code>loglik_var</code></dt><dd><p>Bootstrap variance of <code>fhat</code> at best
+particle (<code>NA</code> if <code>sample_size = 1</code>).</p>
+</dd>
+<dt><code>converged</code></dt><dd><p>Character string naming the stopping rule that
+fired: <code>"annealing"</code>, <code>"plateau"</code>, or <code>"max_iter"</code>.</p>
+</dd>
+<dt><code>time</code></dt><dd><p>Elapsed <code>proc.time()</code>.</p>
+</dd>
+</dl>
+
+
+</section>
+<section class="ref">
+<h3 id="estimate_likelihood_surface"><code>estimate_likelihood_surface</code> <span class="ref-title">Estimate log-likelihood at a grid of parameter values via importance sampling</span></h3>
+<h4>Description</h4>
+
+<p>For each row of <code>pars_mat</code>, augments <code>sample_size</code> trees via IS
+and computes the IS log-likelihood estimate (fhat).  Returns a data frame
+ready for <code><a href="#train_likelihood_GAM">train_likelihood_GAM</a></code>.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>estimate_likelihood_surface(
+  tree,
+  pars_mat,
+  model = "cr",
+  sample_size = 200L,
+  link = "linear",
+  max_missing = 10000,
+  max_lambda = 500,
+  maxN = NULL,
+  num_threads = 1L,
+  bias_correct = FALSE,
+  verbose = TRUE,
+  max_time = NULL,
+  rho = 1
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="estimate_likelihood_surface_:_tree">tree</code></td>
+<td>
+<p>A <code>phylo</code> object, branching-time vector, or anything
+accepted by <code><a href="#estimate_rates">estimate_rates</a></code>.</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_pars_mat">pars_mat</code></td>
+<td>
+<p>Numeric matrix whose rows are compact parameter vectors
+(same layout as <code>pars</code> in <code><a href="#estimate_rates">estimate_rates</a></code>).</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_model">model</code></td>
+<td>
+<p>Model specification: <code>"cr"</code>, <code>"dd"</code>, <code>"d"</code>,
+<code>"nd"</code>, <code>"ed"</code>, <code>"ned"</code>, <code>"k"</code>, <code>"nk"</code>, or a
+binary integer vector (length 3 to 5).</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_sample_size">sample_size</code></td>
+<td>
+<p>Number of augmented trees per grid point (default 200).</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_link">link</code></td>
+<td>
+<p><code>"linear"</code>, <code>"exponential"</code>, or <code>"gaussian"</code>.</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_max_missing">max_missing</code></td>
+<td>
+<p>Maximum missing lineages per augmentation (default 1e4).</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_max_lambda">max_lambda</code></td>
+<td>
+<p>Maximum speciation rate (default 500).</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_maxN">maxN</code></td>
+<td>
+<p>Total augmentation attempts per grid point.  If <code>NULL</code>,
+set automatically.</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_num_threads">num_threads</code></td>
+<td>
+<p>Number of threads for the C++ E-step.</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_bias_correct">bias_correct</code></td>
+<td>
+<p>Logical; if <code>TRUE</code>, use the moment-based
+bias-corrected IS estimator (truncated at order <code>K</code>).
+Default <code>FALSE</code> uses the standard log-mean-exp estimator.</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_verbose">verbose</code></td>
+<td>
+<p>Print progress (default <code>TRUE</code>).</p>
+</td></tr>
+<tr><td><code id="estimate_likelihood_surface_:_rho">rho</code></td>
+<td>
+<p>Sampling fraction (0, 1]. Default <code>1</code> (complete sampling).</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>A data frame with columns for each parameter plus <code>fhat</code>
+(IS log-likelihood) and <code>n_trees</code> (number of valid trees obtained).
+Rows where IS failed have <code>fhat = NA</code>.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="estimate_rates_control"><code>estimate_rates_control</code> <span class="ref-title">Default control parameters for estimate_rates</span></h3>
+<h4>Description</h4>
+
+<p>Returns a list of default tuning parameters for <code><a href="#estimate_rates">estimate_rates</a></code>.
+Override individual elements and pass the modified list via the
+<code>control</code> argument.
+</p>
+<p>Shared parameters (all methods): <code>lower_bound</code> (required, no
+default), <code>upper_bound</code> (required, no default),
+<code>verbose</code> (default FALSE), <code>max_missing</code> (default 1e4),
+<code>num_threads</code> (default 1), <code>rho</code> (sampling fraction, a single
+number in <span class="reqn">\((0, 1]\)</span>; default 1 = complete sampling, and an
+out-of-range value is an error rather than being replaced by 1).
+</p>
+<p>MCEM-specific: <code>sampling</code> (default <code>"bdi"</code>, the
+birth-death-with-immigration sampler, which covers the cr and dd models
+on the linear and exponential links and cr on the gaussian link, at any
+<code>rho</code> in <span class="reqn">\((0, 1]\)</span>.  Under constant rates it draws from the exact
+conditional distribution, so its log-weights are constant and its
+effective sample size is the number of draws; under diversity dependence
+it is a mean-field approximation and the weights vary.
+<code>"dynamic_fresh"</code> is the thinning sampler, used for a D- or
+M-dependent model, for dd on the gaussian link, and whenever it is asked
+for.  A fallback is announced with a message naming the reason and the
+sampler that runs),
+<code>num_trees</code> (augmented trees per EM iteration, default 200;
+alias: <code>sample_size</code>), <code>max_iter</code> (iteration cap, default 200),
+<code>maxN</code> (max augmentation attempts per E-step, read by the thinning
+sampler only and ignored by BDI; under <code>"dynamic_fresh"</code> it must be
+at least <code>num_trees</code>; default NULL, and a non-finite value is treated
+as NULL, = <code>max(2000, 10 * num_trees)</code>),
+<code>xtol</code> (M-step optimiser tolerance, default 1e-3),
+<code>tol</code> (parameter-stability threshold: the largest relative parameter
+change <span class="reqn">\(\max_j |\theta_k[j] - \theta_{k-1}[j]| / \max(|\theta_{k-1}[j]|, c)\)</span>,
+where the floor <span class="reqn">\(c\)</span> is <code>tol / crown_age</code> for the rate-valued
+links and <code>tol</code> for the log-rates of the exponential link, so that
+the statistic does not change with the unit of time; the search box does
+not enter; default 1e-2, so every coordinate must move by less than 1% of
+its own magnitude, <code>patience</code> times in a row; on a 12-tip CR tree at
+<code>num_trees = 200</code> that statistic has median 0.02 and falls below 1e-2
+in about a fifth of iterations, so runs at these defaults commonly end at
+<code>max_iter</code>), <code>patience</code> (consecutive stable iterations
+required, default 3).
+</p>
+<p>CEM-specific: <code>max_iter</code> (default 20), <code>num_particles</code>
+(particles per iteration, default 50; alias: <code>num_points</code>),
+<code>num_trees</code> (trees per particle, default 1;
+alias: <code>sample_size</code>), <code>sd_vec</code> (NULL = (upper-lower)/4),
+<code>maxN</code> (default 10), <code>disc_prop</code> (default 0.5),
+<code>tol</code> (plateau threshold, default 1e-4), <code>patience</code>
+(default 5), <code>bias_correct</code> (default FALSE).
+</p>
+<p>GAM-specific: <code>grid_points</code> (per-parameter resolution, default 20),
+<code>sample_size</code> (IS trees per grid point, default 200),
+<code>maxN</code> (NULL = auto), <code>max_lambda</code> (default 500),
+<code>spline_type</code> (<code>"univariate"</code> or <code>"bivariate"</code>).
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>estimate_rates_control(method = c("mcem", "cem", "gam"), n_pars = 4)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="estimate_rates_control_:_method">method</code></td>
+<td>
+<p>Which method's defaults to return: <code>"mcem"</code>,
+<code>"cem"</code>, or <code>"gam"</code>.</p>
+</td></tr>
+<tr><td><code id="estimate_rates_control_:_n_pars">n_pars</code></td>
+<td>
+<p>Number of parameters (used to set the default <code>sd_vec</code>
+for CEM when <code>NULL</code>).</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>A named list of control parameters for the chosen method.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="eval_attachments"><code>eval_attachments</code> <span class="ref-title">What the proposal could attach an augmented lineage to</span></h3>
+<h4>Description</h4>
+
+<p>Replays an augmented tree through the forward sweep the thinning sampler
+carries, and reports at every augmented birth the lineages the proposal had
+to choose from, the labelled attachments they carry, and the parent that
+was recorded.  <code>candidates</code> must be the alive count <code>n</code> and
+<code>attachments</code> the <code>2 * tips + Ne</code> that
+<code>Model::sampling_prob</code> charges <code>-log</code> of; the two crown lineages
+carry no node, so they appear only here and in their reserved ids.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>eval_attachments(tree)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="eval_attachments_:_tree">tree</code></td>
+<td>
+<p>One augmented-tree data frame from <code><a href="#augment_trees">augment_trees</a></code>.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Details</h4>
+
+<p>The convention the replay runs under is the <code>clade</code> column, which
+<code><a href="#augment_trees">augment_trees</a></code> carries out with the tree; a data frame built
+without it is read under the legacy convention, as a bare branching-time
+tree has always been.  Nothing reported here separates the two: the alive
+set, the attachments and whether the recorded parent is among them are
+carried by the lineage ids and the event order, which both conventions
+share.
+</p>
+
+<h4>Value</h4>
+
+<p>A data frame with one row per augmented birth: <code>brts</code>,
+<code>n</code>, <code>candidates</code>, <code>attachments</code>, <code>parent_id</code> and
+<code>parent_alive</code>.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="eval_logf"><code>eval_logf</code> <span class="ref-title">Evaluate log p(obs, z | theta) and log q(z | obs, theta) for augmented trees</span></h3>
+<h4>Description</h4>
+
+<p>Given a list of augmented trees (produced by <code><a href="#augment_trees">augment_trees</a></code>)
+and a parameter vector, computes for each tree:
+</p>
+
+<ul>
+<li> <p><code>logf[i] = log p(obs, z_i | theta)</code> (model log-likelihood)
+</p>
+</li>
+<li> <p><code>logg[i] = log q(z_i | obs, theta)</code> (proposal log-probability)
+</p>
+</li></ul>
+
+<p>Both are evaluated at the supplied <code>pars</code>, regardless of which
+parameters were used to simulate the trees.  This is essential for
+shared-tree (Mode 2) evaluation where trees simulated at one particle
+are scored at another.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>eval_logf(pars, trees, model = as.integer(c(0, 0, 0)), link = 0L, rho = 1)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="eval_logf_:_pars">pars</code></td>
+<td>
+<p>Numeric vector of 8 model parameters.</p>
+</td></tr>
+<tr><td><code id="eval_logf_:_trees">trees</code></td>
+<td>
+<p>List of augmented-tree data frames (output of
+<code><a href="#augment_trees">augment_trees</a></code>).</p>
+</td></tr>
+<tr><td><code id="eval_logf_:_model">model</code></td>
+<td>
+<p>Integer vector <code>c(use_N, use_P, use_E)</code>.</p>
+</td></tr>
+<tr><td><code id="eval_logf_:_link">link</code></td>
+<td>
+<p>Link function: <code>0</code> = linear, <code>1</code> = exponential.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>A named list:
+</p>
+
+<dl>
+<dt>logf</dt><dd><p>Numeric vector of <code>log p(obs, z_i | theta)</code>.</p>
+</dd>
+<dt>logg</dt><dd><p>Numeric vector of <code>log q(z_i | obs, theta)</code>.</p>
+</dd>
+</dl>
+
+
+</section>
+<section class="ref">
+<h3 id="eval_nh_rate"><code>eval_nh_rate</code> <span class="ref-title">The pendant PD and thinning rate the sampler sees at arbitrary times</span></h3>
+<h4>Description</h4>
+
+<p><code>Model::pendant_pd_at</code> reads P off the node that governs the segment a
+candidate time falls in; <code>Model::nh_rate</code> is the intensity of the
+sampler's birth process there.  This exposes both, so a test can hold P
+against an independent recomputation from the augmented tree and against
+<code>pd + n * (t - brts)</code> of the governing node, and can scan the intensity
+over a segment to check that its value at the segment start dominates it.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>eval_nh_rate(
+  pars,
+  tree,
+  times,
+  model = as.integer(c(0, 0, 0)),
+  link = 0L,
+  rho = 1
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="eval_nh_rate_:_pars">pars</code></td>
+<td>
+<p>Numeric vector of 8 model parameters.</p>
+</td></tr>
+<tr><td><code id="eval_nh_rate_:_tree">tree</code></td>
+<td>
+<p>One augmented-tree data frame.</p>
+</td></tr>
+<tr><td><code id="eval_nh_rate_:_times">times</code></td>
+<td>
+<p>Numeric vector of times at which to evaluate.</p>
+</td></tr>
+<tr><td><code id="eval_nh_rate_:_model">model</code></td>
+<td>
+<p>Integer vector <code>c(use_N, use_M, use_D)</code>.</p>
+</td></tr>
+<tr><td><code id="eval_nh_rate_:_link">link</code></td>
+<td>
+<p>Link function: 0 = linear, 1 = exponential, 2 = gaussian.</p>
+</td></tr>
+<tr><td><code id="eval_nh_rate_:_rho">rho</code></td>
+<td>
+<p>Sampling fraction.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>A named list with <code>pd</code> (the pendant PD used) and <code>nh</code>
+(the non-homogeneous thinning rate) at each time.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="eval_pendant_sweep"><code>eval_pendant_sweep</code> <span class="ref-title">Replay the forward pendant sweep over an augmented tree</span></h3>
+<h4>Description</h4>
+
+<p>One application of the sweep the thinning sampler carries forward: it
+rewrites <code>tip_start</code>, <code>focal_tip_start</code> and <code>pd</code> on every
+node from the event list alone.  With <code>parent_tip_start</code> supplied the
+sweep is driven by the observed topology, exactly as the closing pass of
+<code><a href="#augment_trees">augment_trees</a></code> is: the k-th observed node is given the k-th
+entry as the tip start of the lineage that splits there, and the tree is
+read under the topology convention.  With it empty the tree is replayed as
+it stands, under the convention its <code>clade</code> column records and with
+the <code>focal_tip_start</code> it already carries as the match key.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>eval_pendant_sweep(
+  tree,
+  parent_tip_start = as.numeric(c()),
+  parent_id = as.integer(c())
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="eval_pendant_sweep_:_tree">tree</code></td>
+<td>
+<p>One augmented-tree data frame from <code><a href="#augment_trees">augment_trees</a></code>.</p>
+</td></tr>
+<tr><td><code id="eval_pendant_sweep_:_parent_tip_start">parent_tip_start</code></td>
+<td>
+<p>The tip starts the augmentation was driven by, or
+<code>numeric(0)</code> to replay the tree as it stands.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Details</h4>
+
+<p>An augmented tree returned by <code><a href="#augment_trees">augment_trees</a></code> is a fixed point
+of the first form: the state the sampler carried is the tree that comes
+back.
+</p>
+
+<h4>Value</h4>
+
+<p>The same data frame with <code>tip_start</code>, <code>focal_tip_start</code>
+and <code>pd</code> rewritten by the sweep.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="find_MLE"><code>find_MLE</code> <span class="ref-title">Find MLE by optimizing a fitted likelihood GAM</span></h3>
+<h4>Description</h4>
+
+<p>Uses <code>optim</code> (L-BFGS-B) to maximize the GAM-predicted
+log-likelihood surface.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>find_MLE(gam_fit, lower_bound, upper_bound, start = NULL, par_names = NULL)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="find_MLE_:_gam_fit">gam_fit</code></td>
+<td>
+<p>A <code>gam</code> object returned by
+<code><a href="#train_likelihood_GAM">train_likelihood_GAM</a></code>.</p>
+</td></tr>
+<tr><td><code id="find_MLE_:_lower_bound">lower_bound</code></td>
+<td>
+<p>Numeric vector of lower bounds for each parameter.</p>
+</td></tr>
+<tr><td><code id="find_MLE_:_upper_bound">upper_bound</code></td>
+<td>
+<p>Numeric vector of upper bounds for each parameter.</p>
+</td></tr>
+<tr><td><code id="find_MLE_:_start">start</code></td>
+<td>
+<p>Optional numeric vector of starting values.  If <code>NULL</code>,
+the grid point with the highest predicted value is used.</p>
+</td></tr>
+<tr><td><code id="find_MLE_:_par_names">par_names</code></td>
+<td>
+<p>Character vector of parameter names matching the GAM
+predictors.  If <code>NULL</code>, inferred from the GAM formula.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>A list with components:
+</p>
+
+<dl>
+<dt>pars</dt><dd><p>Named numeric vector of MLE estimates.</p>
+</dd>
+<dt>loglik</dt><dd><p>Predicted log-likelihood at the MLE.</p>
+</dd>
+<dt>convergence</dt><dd><p>Convergence code from <code>optim</code> (0 = success).</p>
+</dd>
+<dt>optim</dt><dd><p>Full <code>optim</code> output.</p>
+</dd>
+</dl>
+
+
+</section>
+<section class="ref">
+<h3 id="lineage_table_cpp"><code>lineage_table_cpp</code> <span class="ref-title">The per-lineage design an augmented tree&#x27;s likelihood is built on</span></h3>
+<h4>Description</h4>
+
+<p>One row per lineage alive on each segment between consecutive events:
+the segment, the lineage (index and id), whether that lineage's event ends
+the segment (0 none, 1 speciation, 2 extinction), the segment's bounds,
+N, M, the lineage's pendant start (so D = (t - ts) - M) and its ED at the
+segment start (ED grows at slope one within the segment).
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>lineage_table_cpp(tree)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="lineage_table_cpp_:_tree">tree</code></td>
+<td>
+<p>One augmented-tree data frame with the topology (ids).</p>
+</td></tr>
+</table>
+</div>
+
+
+</section>
+<section class="ref">
+<h3 id="m_cpp"><code>m_cpp</code> <span class="ref-title">function to perform one step of the E-M algorithm</span></h3>
+<h4>Description</h4>
+
+<p>function to perform one step of the E-M algorithm
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>m_cpp(
+  e_step,
+  init_pars,
+  plugin,
+  lower_bound,
+  upper_bound,
+  xtol_rel,
+  num_threads,
+  model = as.integer(c(0, 0, 0)),
+  link = 0L,
+  rho = 1,
+  rconditional = NULL
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="m_cpp_:_e_step">e_step</code></td>
+<td>
+<p>result of e_step function, as a list</p>
+</td></tr>
+<tr><td><code id="m_cpp_:_init_pars">init_pars</code></td>
+<td>
+<p>vector of initial parameter values</p>
+</td></tr>
+<tr><td><code id="m_cpp_:_plugin">plugin</code></td>
+<td>
+<p>string indicating plugin used, currently available: 'rpd1' and
+'rpd5c'</p>
+</td></tr>
+<tr><td><code id="m_cpp_:_lower_bound">lower_bound</code></td>
+<td>
+<p>vector of lower bound values for optimization, should
+be equal in length to the vector of init_pars</p>
+</td></tr>
+<tr><td><code id="m_cpp_:_upper_bound">upper_bound</code></td>
+<td>
+<p>vector of upper bound values for optimization, should
+be equal in length to the vector of init_pars</p>
+</td></tr>
+<tr><td><code id="m_cpp_:_xtol_rel">xtol_rel</code></td>
+<td>
+<p>relative tolerance for optimization</p>
+</td></tr>
+<tr><td><code id="m_cpp_:_num_threads">num_threads</code></td>
+<td>
+<p>number of threads used.</p>
+</td></tr>
+<tr><td><code id="m_cpp_:_model">model</code></td>
+<td>
+<p>integer vector of length 3: c(use_N, use_P, use_E)</p>
+</td></tr>
+<tr><td><code id="m_cpp_:_link">link</code></td>
+<td>
+<p>link function: 0 = linear (max(0,...)), 1 = exponential</p>
+</td></tr>
+<tr><td><code id="m_cpp_:_rconditional">rconditional</code></td>
+<td>
+<p>R function that evaluates the GAM function.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>list with the following entries:
+</p>
+
+<dl>
+<dt>estimates</dt><dd><p>vector of estimates</p>
+</dd>
+<dt>nlopt</dt><dd><p>nlopt status</p>
+</dd>
+<dt>time</dt><dd><p>used computation time</p>
+</dd>
+</dl>
+
+
+</section>
+<section class="ref">
+<h3 id="prune_to_extant"><code>prune_to_extant</code> <span class="ref-title">Prune extinct tips from a phylogenetic tree</span></h3>
+<h4>Description</h4>
+
+<p>Drops tips that did not survive to the present (i.e. tips whose root-to-tip
+distance is shorter than the maximum, within a small numerical tolerance).
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>prune_to_extant(phy, tol = 1e-08)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="prune_to_extant_:_phy">phy</code></td>
+<td>
+<p>A <code>phylo</code> object, possibly containing extinct lineages.</p>
+</td></tr>
+<tr><td><code id="prune_to_extant_:_tol">tol</code></td>
+<td>
+<p>Tolerance for deciding whether a tip is at the present.
+Default <code>1e-8</code>.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>A <code>phylo</code> object with only extant tips retained.
+</p>
+
+<h4>Examples</h4>
+
+<pre><code class='language-R'>## Not run: 
+sim &lt;- simulate_tree(c(0.1, 0.5, -0.02, 0.01), max_t = 5, model = "dd")
+extant &lt;- prune_to_extant(sim$tas)
+
+## End(Not run)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="select_diversification_model"><code>select_diversification_model</code> <span class="ref-title">Fit and compare the single-covariate diversification models</span></h3>
+<h4>Description</h4>
+
+<p>Fits the two 4-parameter single-covariate models &ndash; diversity dependence
+(DD, covariate N) and age-imbalance dependence (D, covariate D = E - M) &ndash;
+to the same tree using a two-stage MCDE -&gt; MCEM workflow, then ranks them by
+AIC and computes AIC weights.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>select_diversification_model(
+  tree,
+  lower_bound = c(0.1, -0.5, 0, -0.5),
+  upper_bound = c(3, 0.5, 1, 0.5),
+  link = "linear",
+  control = list(),
+  verbose = FALSE
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="select_diversification_model_:_tree">tree</code></td>
+<td>
+<p>Ultrametric tree. Accepts a <code>phylo</code> object, a
+<code><a href="#simulate_tree">simulate_tree</a></code> result, or a numeric branching-time vector.</p>
+</td></tr>
+<tr><td><code id="select_diversification_model_:_lower_bound">lower_bound</code></td>
+<td>
+<p>Length-4 numeric vector of lower parameter bounds:
+<code>c(beta_0, beta_X, gamma_0, gamma_X)</code>. Default
+<code>c(0.1, -0.5, 0, -0.5)</code>.</p>
+</td></tr>
+<tr><td><code id="select_diversification_model_:_upper_bound">upper_bound</code></td>
+<td>
+<p>Length-4 numeric vector of upper parameter bounds.
+Default <code>c(3, 0.5, 1, 0.5)</code>.</p>
+</td></tr>
+<tr><td><code id="select_diversification_model_:_link">link</code></td>
+<td>
+<p>Link function: <code>"linear"</code> (default),
+<code>"exponential"</code>, or <code>"gaussian"</code>.</p>
+</td></tr>
+<tr><td><code id="select_diversification_model_:_control">control</code></td>
+<td>
+<p>Named list with optional sub-lists <code>cem</code> and
+<code>mcem</code> to override tuning defaults for each stage. Bounds and
+verbose are taken from the outer arguments; no need to repeat them here.
+Example: <code>list(cem = list(max_iter = 20, num_particles = 50),
+                    mcem = list(num_trees = 300, tol = 0.05))</code>.</p>
+</td></tr>
+<tr><td><code id="select_diversification_model_:_verbose">verbose</code></td>
+<td>
+<p>Print progress messages. Default <code>FALSE</code>.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Details</h4>
+
+<p>Both models share the same parameter layout:
+<code>c(beta_0, beta_X, gamma_0, gamma_X)</code>, so a single pair of bounds
+applies to both.
+</p>
+
+<h4>Value</h4>
+
+<p>A list of class <code>"model_selection"</code> with:
+</p>
+
+<dl>
+<dt><code>summary</code></dt><dd><p>Data frame with columns <code>model</code>,
+<code>n_pars</code>, <code>loglik</code>, <code>AIC</code>, <code>delta_AIC</code>,
+<code>AICw</code>, sorted by AIC.</p>
+</dd>
+<dt><code>best_model</code></dt><dd><p>Name of the best-supported model
+(<code>"dd"</code> or <code>"d"</code>).</p>
+</dd>
+<dt><code>best_pars</code></dt><dd><p>Named parameter estimates of the best model.</p>
+</dd>
+<dt><code>fits</code></dt><dd><p>Named list of the <code>emphasis_fit</code>
+objects (<code>$dd</code>, <code>$d</code>).</p>
+</dd>
+</dl>
+
+<h4>Examples</h4>
+
+<pre><code class='language-R'>## Not run: 
+set.seed(42)
+sim &lt;- simulate_tree(pars = c(0.8, -0.02, 0.2, 0), model = "dd", max_t = 8)
+sel &lt;- select_diversification_model(sim,
+  lower_bound = c(0.1, -0.5, 0, -0.5),
+  upper_bound = c(3,    0.5, 1,  0.5))
+sel
+sel$best_model   # "dd"
+sel$best_pars
+
+## End(Not run)
+</code></pre>
+
+
+</section>
+<section class="ref">
+<h3 id="simulate_div_tree_cpp"><code>simulate_div_tree_cpp</code> <span class="ref-title">Simulate a single phylogenetic tree under the general diversification model</span></h3>
+<h4>Description</h4>
+
+<p>Simulate a single phylogenetic tree under the general diversification model
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>simulate_div_tree_cpp(
+  pars,
+  model,
+  max_t,
+  max_N,
+  max_tries,
+  link = 0L,
+  seed = 0L
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="simulate_div_tree_cpp_:_pars">pars</code></td>
+<td>
+<p>Numeric vector of length 8:
+<code>c(beta_0, beta_N, beta_M, beta_D, gamma_0, gamma_N, gamma_M, gamma_D)</code>.
+Inactive parameters (those not selected by <code>model</code>) should be set to 0.</p>
+</td></tr>
+<tr><td><code id="simulate_div_tree_cpp_:_model">model</code></td>
+<td>
+<p>Integer vector of length 3: <code>c(use_N, use_P, use_E)</code> (each 0 or 1).</p>
+</td></tr>
+<tr><td><code id="simulate_div_tree_cpp_:_max_t">max_t</code></td>
+<td>
+<p>Crown age (forward simulation end time).</p>
+</td></tr>
+<tr><td><code id="simulate_div_tree_cpp_:_max_N">max_N</code></td>
+<td>
+<p>Maximum number of lineages before simulation is declared too large.</p>
+</td></tr>
+<tr><td><code id="simulate_div_tree_cpp_:_max_tries">max_tries</code></td>
+<td>
+<p>Maximum retries after extinction; an overflow is not retried.</p>
+</td></tr>
+<tr><td><code id="simulate_div_tree_cpp_:_link">link</code></td>
+<td>
+<p>Link function: 0 = linear (max(0,...)), 1 = exponential.</p>
+</td></tr>
+<tr><td><code id="simulate_div_tree_cpp_:_seed">seed</code></td>
+<td>
+<p>Positive integer seeding the simulator. <code>0</code> (the default)
+draws one from R's generator, so <code>set.seed()</code> reaches the simulator
+whether or not a seed is passed. Note that <code>max_tries</code> retries
+continue the same stream: a retry is a fresh tree, not the same one again.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>A named list with <code>Ltable</code> (4-column numeric matrix in DDD format)
+and <code>status</code> (one of <code>"done"</code>, <code>"extinct"</code>, <code>"too_large"</code>).
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="thinning_envelope_violations"><code>thinning_envelope_violations</code> <span class="ref-title">Count thinning candidates with acceptance probability above 1</span></h3>
+<h4>Description</h4>
+
+<p>The thinning sampler accepts a candidate speciation time with probability
+<code>nh(t) / lambda_max</code>. A value above 1 means the envelope
+<code>lambda_max</code> did not dominate the rate on that segment. The counter
+accumulates over every augmentation call in the session.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>thinning_envelope_violations(reset = FALSE)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="thinning_envelope_violations_:_reset">reset</code></td>
+<td>
+<p>Logical; zero the counter after reading it.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>Number of candidates with acceptance probability above 1 since the
+last reset.
+</p>
+
+
+</section>
+<section class="ref">
+<h3 id="train_likelihood_GAM"><code>train_likelihood_GAM</code> <span class="ref-title">Fit a GAM to the IS log-likelihood surface</span></h3>
+<h4>Description</h4>
+
+<p>Takes the output of <code><a href="#estimate_likelihood_surface">estimate_likelihood_surface</a></code> and fits a
+smooth GAM approximation to the log-likelihood as a function of the model
+parameters.
+</p>
+
+<h4>Usage</h4>
+
+<pre><code class='language-R'>train_likelihood_GAM(
+  surface,
+  par_names = NULL,
+  spline_type = c("univariate", "bivariate")
+)
+</code></pre>
+
+<h4>Arguments</h4>
+
+<div class="table-wrap">
+<table>
+<tr><td><code id="train_likelihood_GAM_:_surface">surface</code></td>
+<td>
+<p>Data frame returned by <code><a href="#estimate_likelihood_surface">estimate_likelihood_surface</a></code>.
+Rows with <code>fhat = NA</code> are dropped automatically.</p>
+</td></tr>
+<tr><td><code id="train_likelihood_GAM_:_par_names">par_names</code></td>
+<td>
+<p>Character vector of column names in <code>surface</code> to use
+as predictors.  If <code>NULL</code> (default), all columns except <code>fhat</code>
+and <code>n_trees</code> are used.</p>
+</td></tr>
+<tr><td><code id="train_likelihood_GAM_:_spline_type">spline_type</code></td>
+<td>
+<p><code>"univariate"</code> (default) or <code>"bivariate"</code>.
+See <code><a href="#train_GAM">train_GAM</a></code> for details.</p>
+</td></tr>
+</table>
+</div>
+
+<h4>Value</h4>
+
+<p>A <code>gam</code> object (Gaussian family) representing
+<span class="reqn">\(\hat\ell(\theta) \approx \log L(\theta \mid \text{data})\)</span>.
+</p>
+
+
+</section>
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

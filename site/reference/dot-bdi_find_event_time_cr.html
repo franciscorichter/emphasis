@@ -1,0 +1,16 @@
+<h3>Description</h3>
+
+<p>Given cumulative hazard H(s) = .bdi_integral_cr(t_cur, s, ...),
+find t* such that H(t*) = U where U ~ Exp(1).
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.bdi_find_event_time_cr(t_cur, U, n, k, lam0, mu0, tp, t_max, rho = 1)
+</code></pre>
+
+<h3>Value</h3>
+
+<p>Event time, or value &gt; t_max if no event before boundary.
+</p>
+

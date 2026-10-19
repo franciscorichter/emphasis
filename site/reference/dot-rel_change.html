@@ -1,0 +1,32 @@
+<h3>Description</h3>
+
+<p>The step in each coordinate is measured against that coordinate's own
+magnitude, with a floor so that a coordinate at or near zero is not
+measured against itself.  The floor carries the units of the parameter
+(see <code>.rel_floor</code>), so the statistic is unchanged when the tree and
+the rates are expressed in another unit of time.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.rel_change(new, old, floor_val)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id=".rel_change_:_new">new</code>, <code id=".rel_change_:_old">old</code></td>
+<td>
+<p>Parameter vectors of equal length.</p>
+</td></tr>
+<tr><td><code id=".rel_change_:_floor_val">floor_val</code></td>
+<td>
+<p>Floor of the denominator, from <code>.rel_floor</code>.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>The largest relative coordinate change.
+</p>
+

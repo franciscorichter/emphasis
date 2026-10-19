@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E14 — Do the package&#x27;s simulator and evesim produce the same trees? · emphasis</title>
+<meta name="description" content="E11 fits this package&#x27;s estimator to trees simulated by evesim (Qin, Valente &amp; Etienne 2025).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E14 — Do the package's simulator and <code>evesim</code> produce the same trees?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+<ol>
+<li><a href="#e14b--matched-conditioning">E14b — matched conditioning</a></li>
+</ol>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete, with E14b (the rerun under matched conditioning)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>not recorded (the build audit finds no surviving launch record for E7-E16)</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E14-simcheck.R</code> (the version in the repository is E14b's, with <code>max_tries = 0</code>); figures <code>sim/figures-study.R</code>, <code>sim/figures-e11e14.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E14/simcheck.csv</code> (681 rows), <code>results/E14b/simcheck.csv</code> (556 rows); completed trees only</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p><a href="E11.html">E11</a> fits this package's estimator to trees simulated by <code>evesim</code> (Qin, Valente &amp; Etienne 2025). That tests the estimator only if the two simulators agree; otherwise a disagreement could be the estimator, their simulator or the different metrics, with no way to separate them. <strong>E14 is a gate on E11 and ran first.</strong> At <span class="math inline">\(\beta\)</span><em><span class="math inline">\(\Phi\)</span> = <span class="math inline">\(\gamma\)</span></em><span class="math inline">\(\Phi\)</span> = 0 their rate reduces to <span class="math inline">\(\lambda\)</span> = max(<span class="math inline">\(\lambda\)</span>0 + <span class="math inline">\(\beta\)</span>N N, 0), <span class="math inline">\(\mu\)</span> = <span class="math inline">\(\mu\)</span>0 + <span class="math inline">\(\gamma\)</span>N N, which is this package's <code>dd</code> on the linear link, so the two must agree in distribution with no metric correspondence needed.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>arm</th>
+<th>rates (<span class="math inline">\(\lambda\)</span>0, <span class="math inline">\(\mu\)</span>0, <span class="math inline">\(\beta\)</span>N, <span class="math inline">\(\gamma\)</span>N)</th>
+<th>design's intent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code> (no diversity dependence)</td>
+<td>0.35, 0.10, 0, 0</td>
+<td>against theory: expected extant lineages 2e^{(<span class="math inline">\(\lambda\)</span>-<span class="math inline">\(\mu\)</span>)T}, and against each other</td>
+</tr>
+<tr>
+<td><code>dd</code> (diversity dependent)</td>
+<td>0.60, 0.10, -0.004, 0</td>
+<td>against each other, no closed form</td>
+</tr>
+<tr>
+<td><code>dd</code> + high turnover</td>
+<td>0.80, 0.40, -0.006, 0</td>
+<td>against each other where hidden lineages exist; the design also named incomplete sampling, the driver runs <span class="math inline">\(\rho\)</span> = 1</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>crown age</td>
+<td>15, two starting lineages in both simulators</td>
+</tr>
+<tr>
+<td>draws</td>
+<td>200 per arm per simulator; the CSVs hold the completed trees (37 to 181 per arm and simulator)</td>
+</tr>
+<tr>
+<td>statistics per tree</td>
+<td>extant tips, complete tips, <span class="math inline">\(\gamma\)</span> statistic, normalised Colless imbalance, crown-normalised median branching time</td>
+</tr>
+<tr>
+<td>conditioning</td>
+<td>E14: package default <code>max_tries</code>; E14b: <code>max_tries = 0</code> in <code>simulate_tree</code> and <code>retry = 1</code> in <code>evesim::edd_sim</code>, one draw each, both discarding a run in which a crown lineage dies out</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>Per statistic, a two-sample Kolmogorov-Smirnov test at the 1% level, Bonferroni-corrected across the five statistics (0.002); medians reported beside the p-values; a rejection with a negligible median difference is read as a convention difference to be named, not a defect. <strong>If the simulators disagree beyond that, <a href="E11.html">E11</a> is reported as uninterpretable.</strong></p>
+<h2 id="results">Results</h2>
+<p>KS p-values (medians emphasis vs evesim; recomputed in ledger A):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>arm</th>
+<th>statistic</th>
+<th>E14</th>
+<th>E14b</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code></td>
+<td>tips</td>
+<td>102 vs 85.5, p 0.32</td>
+<td>106.5 vs 85.5, p 0.34</td>
+</tr>
+<tr>
+<td><code>cr</code></td>
+<td><span class="math inline">\(\gamma\)</span></td>
+<td>0.92 vs 1.04, p 0.36</td>
+<td>0.90 vs 1.04, p 0.30</td>
+</tr>
+<tr>
+<td><code>cr</code></td>
+<td>Colless</td>
+<td>0.070 vs 0.076, p 0.40</td>
+<td>0.067 vs 0.076, p 0.145</td>
+</tr>
+<tr>
+<td><code>dd</code></td>
+<td>tips</td>
+<td>119 vs 121, p 0.185</td>
+<td>120 vs 121, p 0.62</td>
+</tr>
+<tr>
+<td><code>dd</code></td>
+<td>Colless</td>
+<td>0.064 vs 0.061, p 0.172</td>
+<td>0.064 vs 0.061, p 0.23</td>
+</tr>
+<tr>
+<td><code>dd</code> + high turnover</td>
+<td>tips</td>
+<td>62 vs 62, p 0.67</td>
+<td>61 vs 62, p 0.79</td>
+</tr>
+<tr>
+<td><code>dd</code> + high turnover</td>
+<td>median branching time</td>
+<td>0.156 vs 0.146, p 0.275</td>
+<td>0.158 vs 0.146, p 0.43</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>All 30 comparisons (15 per run) have p above 0.14; the smallest is 0.172 in E14 and 0.145 in E14b, against 0.002. The remaining rows (complete tips, <span class="math inline">\(\gamma\)</span> and branching time on <code>dd</code>, and so on) are in ledger A §1, all with p ≥ 0.19.</p>
+<p><strong>Completion rates.</strong> In E14 the package completed 157, 181 and 63 of 200 runs per arm against <code>evesim</code>'s 104, 139 and 37: the completed trees agreed in distribution but the two discarded different shares of runs, which the adversarial review listed as an open item.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E14-simcheck.png" alt="Cumulative distributions of the \gamma statistic, Colless imbalance and median branching time from the two simulators, three arms, E14 and E14b pooled" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Each panel overlays the empirical CDF from <code>emphasis</code> (dark) and <code>evesim</code> (red) for one statistic in one arm. The curves cross and track each other in every panel; no KS test rejects.</figcaption>
+</figure>
+<h3 id="e14b--matched-conditioning">E14b — matched conditioning</h3>
+<p>The cause of the completion mismatch: <code>simulate_tree</code> counts <code>max_tries</code> as attempts <em>after</em> the first, so its default of 1 draws twice and completes 1 - (1 - 0.52)<span class="math inline">\(^{2}\)</span> = 0.77 of constant-rate runs where one draw completes 0.52, the closed-form probability that both crown lineages leave descendants. E14b reran the three arms with one draw on each side. Completion rates then match: 108 against 104, 132 against 139, 36 against 37 of 200; on the constant-rate arm both sit near 0.52. All fifteen KS comparisons again have p above 0.002 (smallest 0.145, Colless under <code>cr</code>).</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>The rule is <strong>met</strong> in both runs: no rejection in 30 comparisons, and after matching the conditioning (E14b) the completion rates agree too. <a href="E11.html">E11</a> is therefore interpretable as a test of the estimator. Limits: the check covers <code>cr</code> and <code>dd</code> only, the models the two simulators share, at complete sampling; it says nothing about either simulator's ED models. For those the methods text records a separate internal check (frozen-rate against thinning draws under <code>ned</code>, KS p 0.28 to 0.93; under <code>ed</code> alone at <a href="E24.html">E24</a>'s effect the frozen-rate draw gives clades 30% larger), whose data were not located under <code>results/</code>. The finding about <code>max_tries</code> is a property of the package's simulator: a comparison of completion rates with it has to set <code>max_tries = 0</code>.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E11.html">E11</a> — the estimator on <code>evesim</code>'s trees, which E14 gates.</li>
+<li><a href="E24.html">E24b</a> — the <code>ed</code> arm rerun under the exact simulator, after the frozen-rate draw was found to give larger clades.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

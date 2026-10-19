@@ -1,0 +1,149 @@
+<h3>Description</h3>
+
+<p>Computes convergence, importance-sampling quality, and population-diversity
+diagnostics from the output of <code><a href="#emphasis_cem">emphasis_cem</a></code> or
+<code><a href="#estimate_rates">estimate_rates</a></code> (method <code>"cem"</code>).
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>diagnose_cem(
+  x,
+  plot = TRUE,
+  lower_bound = NULL,
+  upper_bound = NULL,
+  true_pars = NULL
+)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="diagnose_cem_:_x">x</code></td>
+<td>
+<p>An <code>emphasis_fit</code> object (from <code><a href="#estimate_rates">estimate_rates</a></code>
+with <code>method = "cem"</code>) or the raw list from <code><a href="#emphasis_cem">emphasis_cem</a></code>.</p>
+</td></tr>
+<tr><td><code id="diagnose_cem_:_plot">plot</code></td>
+<td>
+<p>Logical; if <code>TRUE</code> (default), produce diagnostic plots.</p>
+</td></tr>
+<tr><td><code id="diagnose_cem_:_lower_bound">lower_bound</code>, <code id="diagnose_cem_:_upper_bound">upper_bound</code></td>
+<td>
+<p>Optional numeric vectors of the same length as
+the parameter vector.  When provided, dashed horizontal lines are drawn at
+the lower (orange) and upper (purple) bounds in each parameter-trace panel,
+making it easy to see whether the estimate has converged away from the
+boundary.</p>
+</td></tr>
+<tr><td><code id="diagnose_cem_:_true_pars">true_pars</code></td>
+<td>
+<p>Optional named or unnamed numeric vector of true parameter
+values.  Useful in simulation studies where the generative parameters are
+known.  When provided, a red dashed line is added to each parameter-trace
+panel at the true value.  In real-data analyses this argument should be
+omitted (the true parameters are unknown).</p>
+</td></tr>
+</table>
+
+<h3>Details</h3>
+
+<p>The function works on the <code>details</code> component of an
+<code>emphasis_fit</code> object or directly on the list returned by
+<code>emphasis_cem</code>.  It requires that the fit was produced with the
+current version of the package (which stores <code>history</code>,
+<code>final_pop</code>, and <code>best_IS</code> in the output).
+</p>
+
+<h3>Convergence (<code>$convergence</code>)</h3>
+
+<p>A data frame with one row per iteration containing:
+</p>
+
+<dl>
+<dt><code>iteration</code></dt><dd><p>Iteration index.</p>
+</dd>
+<dt><code>best_loglik</code></dt><dd><p>IS log-likelihood of the best particle.</p>
+</dd>
+<dt><code>n_valid</code></dt><dd><p>Number of particles with a finite <code>fhat</code>.</p>
+</dd>
+<dt><code>rej_lambda</code></dt><dd><p>Trees rejected due to <code>max_lambda</code> exceedance.</p>
+</dd>
+<dt><code>rej_overruns</code></dt><dd><p>Trees rejected due to <code>max_missing</code>
+exceedance.</p>
+</dd>
+</dl>
+
+<h3>Population spread (<code>$population_spread</code>)</h3>
+
+<p>Per-iteration summary of the <code>fhat</code> distribution across all valid
+particles: median, interquartile range, and total range.  A narrowing
+range indicates population convergence.
+</p>
+
+<h3>IS quality (<code>$IS_quality</code>)</h3>
+
+<p>Importance-sampling diagnostics computed from the final evaluation of the
+globally best parameter vector (with <code>max(sample_size, n_boot, 1)</code>
+augmented trees):
+</p>
+
+<dl>
+<dt><code>ESS</code></dt><dd><p>Effective sample size:
+<span class="reqn">\((\sum w_i)^2 / \sum w_i^2\)</span>.</p>
+</dd>
+<dt><code>ESS_fraction</code></dt><dd><p>ESS as a fraction of <code>n_trees</code>.</p>
+</dd>
+<dt><code>mean_lw</code>, <code>sd_lw</code></dt><dd><p>Mean and SD of IS log-weights.</p>
+</dd>
+<dt><code>fhat</code></dt><dd><p>IS log-likelihood estimate.</p>
+</dd>
+<dt><code>n_trees</code>, <code>n_rejected</code></dt><dd><p>Trees simulated and rejected.</p>
+</dd>
+</dl>
+
+<h3>Final population (<code>$final_pop</code>)</h3>
+
+<p>The full particle population at the last completed iteration (before
+resampling), with columns for parameters and <code>fhat</code> per particle.
+Useful for inspecting the distribution of surviving particles.
+</p>
+
+<h3>Raw IS data (<code>$best_IS</code>)</h3>
+
+<p>The raw IS output for the best particle: <code>logf</code>, <code>log_q</code>,
+<code>lw</code> (log-weights), and <code>trees</code> (augmented tree data frames in
+C++ format).
+</p>
+
+<h3>Value</h3>
+
+<p>A list of class <code>"cem_diagnostics"</code> (invisibly) with components
+<code>convergence</code>, <code>population_spread</code>, <code>IS_quality</code>,
+<code>final_pop</code>, and <code>best_IS</code>.
+</p>
+
+<h3>Examples</h3>
+
+<pre><code class='language-R'>## Not run: 
+lb  &lt;- c(0.01, -0.5, 0, -0.5)
+ub  &lt;- c(2,     0.5, 1,  0.5)
+sim &lt;- simulate_tree(c(0.6, -0.05, 0.15, -0.03), max_t = 10, model = "d")
+fit &lt;- estimate_rates(sim, method = "cem", model = "d",
+  lower_bound = lb, upper_bound = ub,
+  control = list(max_iter = 50, num_points = 80, n_boot = 100))
+
+# Basic diagnostics -- bounds shown as dashed lines in parameter panels
+diag &lt;- diagnose_cem(fit, lower_bound = lb, upper_bound = ub)
+
+# Simulation study: also show the true generating parameters
+diag &lt;- diagnose_cem(fit, lower_bound = lb, upper_bound = ub,
+                     true_pars = c(0.6, -0.05, 0.15, -0.03))
+
+diag$IS_quality$ESS_fraction  # IS efficiency at the best particle
+head(diag$final_pop)          # last-iteration particle cloud
+diag$convergence              # per-iteration best fhat and rejection counts
+
+## End(Not run)
+</code></pre>
+

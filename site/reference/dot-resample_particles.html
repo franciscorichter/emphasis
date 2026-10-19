@@ -1,0 +1,44 @@
+<h3>Description</h3>
+
+<p>Selects the top <code>disc_prop</code> fraction of valid particles (elites) and
+fills the remaining slots with perturbed copies of elites.  All particles
+(including elites) have their <code>fhat</code> reset to <code>NA</code> so they are
+re-evaluated at the next iteration, preventing &quot;lucky particle&quot; lock-in.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.resample_particles(
+  pop,
+  num_points,
+  disc_prop,
+  lower_bound,
+  upper_bound,
+  sd_vec,
+  clear_cache = FALSE
+)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id=".resample_particles_:_clear_cache">clear_cache</code></td>
+<td>
+<p>Logical; if <code>TRUE</code>, discard all tree/log_q caches.</p>
+</td></tr>
+</table>
+
+<h3>Details</h3>
+
+<p>When <code>clear_cache = FALSE</code> (Mode 1), elite tree/log_q caches are
+carried forward.  When <code>clear_cache = TRUE</code> (Mode 2), all caches are
+discarded so every particle simulates fresh trees at the next iteration.
+This prevents stale trees from unconverged early iterations from polluting
+the shared pool.
+</p>
+
+<h3>Value</h3>
+
+<p>Updated population list.
+</p>
+

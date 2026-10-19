@@ -1,0 +1,85 @@
+<h3>Description</h3>
+
+<p>Ranks two or more fits from <code><a href="#estimate_rates">estimate_rates</a></code> by AIC. Each fit's
+log-likelihood is a log of a Monte Carlo mean, so it sits below the
+log-likelihood it estimates; how far below grows as that fit's own effective
+sample falls, and the amounts do not cancel between models. A model that is
+harder to sample is therefore penalised for being harder to sample, and the
+AIC difference between two fits can be smaller than the difference in their
+biases.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>compare_models(..., margin = 2)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="compare_models_:_...">...</code></td>
+<td>
+<p>Two or more <code>emphasis_fit</code> objects. Names become the row
+labels; unnamed arguments are labelled from the fitted model.</p>
+</td></tr>
+<tr><td><code id="compare_models_:_margin">margin</code></td>
+<td>
+<p>AIC units within which two models are not told apart.
+Default 2.</p>
+</td></tr>
+</table>
+
+<h3>Details</h3>
+
+<p>The returned table carries <code>ESS</code> and <code>loglik_gap</code> per fit and
+<code>AIC_swing</code>, twice the gap relative to the leader's, which is how much
+of the AIC difference the bias alone could account for.
+</p>
+<p><code>ranking_at_risk</code> names the models that could overtake the leader once
+both biases are corrected. A model qualifies only if its own gap is larger
+than the leader's &mdash; so that correcting both closes the distance &mdash; and
+then either the swing reaches its <code>delta_AIC</code> or its draw is heavy
+enough that the swing understates the gap. A warning is issued with it.
+</p>
+<p>Two things follow that a caller should not have to infer. The attribute is
+about the ORDER, not about precision: when the leader is itself the
+heavily-handicapped fit, correcting the biases only widens its lead, so
+nothing is named and nothing is wrong with that. And it covers bias, not
+variance. A fit can lead on a log-likelihood estimated from a handful of
+effective draws &mdash; measured: a winner with an effective sample of 6.5 of 300
+&mdash; and be named by nothing here, because its <em>expected</em> position is
+safe while its realised one is noisy. <code>loglik_se</code> and <code>ESS</code> are
+the columns for that, and they are in the table to be read.
+</p>
+<p>The row with the lowest AIC is not the model the table chooses. Among
+nested models the richer one has the lower AIC whenever its two extra
+parameters raise the log-likelihood by more than 2, which they do on a
+share of trees generated without them: with two extra parameters the
+likelihood-ratio statistic is chi-squared on two degrees of freedom under
+the null, so the richer model takes the minimum on about 13% of null
+trees, and with three richer models offered beside the null, on more.
+Measured, on 20 trees a cell from a diversity-dependent generator at 50 to
+200 tips: a lineage-level model had the minimum AIC on 2 to 7 of 20, and
+led by more than 2 AIC on 0 to 2 of 20 (E27). The <code>chosen</code> attribute
+is therefore the model with the fewest parameters among those within
+<code>margin</code> AIC units of the minimum, and <code>within_margin</code> marks
+those rows; the full ranking is kept so that the margin can be read.
+</p>
+<p>A warning names the chosen model when its own effective sample is below
+10 draws: its log-likelihood is then an estimate from a handful of
+histories and the margin it rests on is noise as much as evidence. The
+<code>ranking_at_risk</code> attribute covers the bias of unequal precision;
+this covers its variance.
+</p>
+
+<h3>Value</h3>
+
+<p>A <code>model_selection</code> data frame, one row per fit, with columns
+<code>model</code>, <code>n_pars</code>, <code>loglik</code>, <code>AIC</code>, <code>loglik_se</code>,
+<code>ESS</code>, <code>loglik_gap</code>, <code>gap_heavy</code>, <code>delta_AIC</code>,
+<code>AICw</code>, <code>AIC_swing</code> and <code>within_margin</code>, ordered by AIC,
+with attributes <code>chosen</code> (the most parsimonious model within
+<code>margin</code> of the minimum), <code>chosen_starved</code> (whether that
+model's effective sample is below 10) and <code>ranking_at_risk</code>.
+</p>
+

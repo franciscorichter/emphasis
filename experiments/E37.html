@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E37 — Does the pendant-age fit ever finish? · emphasis</title>
+<meta name="description" content="No nd fit of the study had met the stopping rule within 300 iterations: 0 of 39 in E30 at 100 tips, 1 of 20 in E31b at 200 tips, where 18 ended on the cap.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E37 — Does the pendant-age fit ever finish?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td><strong>stopped</strong> by hand on 2026-10-15 with 6 of 40 fits written: it maximises the <code>nd</code> likelihood before the D fix (emphasis <code>4e0b9dd</code>, <a href="E44.html">E44</a>), so its question is answered for the corrected model by the estimability study (E46, planned); its workers went to <a href="E45.html">E45</a></td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis <code>d3dee92</code></td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E19-pendant.R</code> <code>--out results/E37 --nd-sampling bdi --effects -0.35,0.35 --trees 20 --draws 600 --max-iter 1000 --max-time 216000</code>; no analysis script</td>
+</tr>
+<tr>
+<td>Data</td>
+<td>not in the repository: <code>results/E37/jobs/*.csv</code> (4 files at the snapshot the Results read; 6 by the stop, <code>results/E37/STOPPED.txt</code>), <code>design.rds</code>; no merged CSV</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>No <code>nd</code> fit of the study had met the stopping rule within 300 iterations: 0 of 39 in <a href="E30.html">E30</a> at 100 tips, 1 of 20 in <a href="E31.html">E31b</a> at 200 tips, where 18 ended on the cap. E30 lifted the coefficient from <a href="E19.html">E19b</a>'s 0.43 and 0.63 of its value to 0.67 and 0.80, without a fit finishing, so whether the shortfall is the budget or the model is still open. E37 gives the same trees 1000 iterations.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>trees</td>
+<td>E30's: <code>nd</code> at ±0.35, 100 tips, turnover 0.10, 20 a cell, by seed</td>
+<td>the same rows (tips, capacity, <span class="math inline">\(\beta_D = \pm0.0598\)</span>, <span class="math inline">\(D\)</span> scale 2.92) in the job files checked</td>
+</tr>
+<tr>
+<td>proposal</td>
+<td>surrogate (<code>bdi</code>) for <code>dd</code> and <code>nd</code></td>
+<td></td>
+</tr>
+<tr>
+<td>draws / link</td>
+<td>600 / linear</td>
+<td>as E30</td>
+</tr>
+<tr>
+<td><code>max_iter</code></td>
+<td>1000</td>
+<td>E30: 300</td>
+</tr>
+<tr>
+<td>clock</td>
+<td>60 hours per fit (<code>--max-time 216000</code> s)</td>
+<td>four times what 1000 iterations take</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The <code>dd</code> fits are deterministic in these files: on the four trees back, <code>aic_dd</code>, <code>ess_dd</code> and <code>beta_N_dd</code> equal <a href="E30.html">E30</a>'s to every digit, so the <code>dd</code> side is unchanged and only the <code>nd</code> fit has more iterations.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>(1) The share of <code>nd</code> fits that meet the stopping rule; if it is below one half, the <code>nd</code> fit is reported as not converging within 1000 iterations at 100 tips. (2) On the fits that finish, <a href="E19.html">E19</a>'s rule on <span class="math inline">\(\beta_D\)</span> (median ratio in <span class="math inline">\([0.75, 1.25]\)</span>, right sign on <span class="math inline">\(\ge 80\%\)</span>), beside <a href="E30.html">E30</a>'s values on the same trees at 300 iterations, so that the move between 300 and 1000 iterations is measured tree by tree. (3) Cells with fewer than 10 effective draws on more than half the fits are sampler-limited.</p>
+<h2 id="results">Results</h2>
+<p><strong>Unfinished: 4 of 40 fits.</strong> Read from the job files (read-only), paired with <a href="E30.html">E30</a>:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>tree</th>
+<th>ratio at 300 (E30)</th>
+<th>ESS</th>
+<th>stop</th>
+<th>ratio at 1000 (E37)</th>
+<th>ESS</th>
+<th>stop</th>
+<th>change</th>
+<th><code>nd</code> over <code>dd</code> (<span class="math inline">\(\Delta\)</span>AIC)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-0.35, k01</td>
+<td>0.668</td>
+<td>139.8</td>
+<td>clock</td>
+<td>0.697</td>
+<td>106.0</td>
+<td>cap (1000)</td>
+<td>+0.029</td>
+<td>14.0</td>
+</tr>
+<tr>
+<td>-0.35, k04</td>
+<td>0.665</td>
+<td>7.9</td>
+<td>cap (300)</td>
+<td>0.658</td>
+<td>38.8</td>
+<td>cap (1000)</td>
+<td>-0.007</td>
+<td>14.1</td>
+</tr>
+<tr>
+<td>+0.35, k01</td>
+<td>1.557</td>
+<td>8.9</td>
+<td>clock</td>
+<td>1.333</td>
+<td>1.6</td>
+<td>cap (1000)</td>
+<td>-0.224</td>
+<td>20.5</td>
+</tr>
+<tr>
+<td>+0.35, k04</td>
+<td>0.816</td>
+<td>15.7</td>
+<td>cap (300)</td>
+<td>0.777</td>
+<td>45.0</td>
+<td>cap (1000)</td>
+<td>-0.039</td>
+<td>16.7</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Ratio: fitted over generating <span class="math inline">\(\beta_D\)</span>. None of the four met the stopping rule; each ran its 1000 iterations. Sign right on all four.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E37-paired.png" alt="E37, the four fits back against E30" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Each blue line joins one tree's ratio at 300 iterations (<a href="E30.html">E30</a>) and at 1000 (E37), point size the effective sample; grey points are E30's 39 trees. Three of the four move by less than 0.04; the fourth, on 1.6 effective draws at 1000 iterations, moves from 1.56 to 1.33.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p><strong>Not evaluable</strong>: stopped at 6 of 40 fits, of which the 4 read here had not met the stopping rule. If the remaining 36 behaved as these four, rule (1) would report the <code>nd</code> fit as not converging within 1000 iterations at 100 tips; that is a projection from 4 fits, not a result. On these four trees, 700 more iterations moved <span class="math inline">\(\beta_D\)</span> by -0.04 to +0.03 of its value on the three with 39-106 effective draws, so the shortfall at -0.35 (0.66 and 0.70) did not close with the budget on these trees. The fourth is a single tree on 1.6 draws. The rate of progress (4 fits in about 23 hours on 8 workers) is recorded as observed.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E19.html">E19</a> — E19 and E19b, the 30-minute runs.</li>
+<li><a href="E30.html">E30</a> — the same trees at 300 iterations and a four-hour clock.</li>
+<li><a href="E31.html">E31</a> — <code>nd</code> at 200 tips: 1 of 20 finished at 300 iterations in E31b.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

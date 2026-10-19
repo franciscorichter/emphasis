@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E26 — forty-seven families under the whole workflow · emphasis</title>
+<meta name="description" content="E25 ran the ladder and the path on three bird families.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E26 — forty-seven families under the whole workflow</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete; for the 29 families inside the calibrated range superseded by <a href="E28.html">E28</a>; the table of record is the merged one, <code>results/E26merged/</code></td>
+</tr>
+<tr>
+<td>Package build</td>
+<td><code>3e596dd</code> (the lineage-table cap)</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E25-real.R</code> <code>--box auto</code>, <code>sim/E26-analysis.R</code>, figures <code>sim/figures-families.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E26/families.csv</code> (47 rows), <code>fits.csv</code>, <code>paths.csv</code>; merged table <code>results/E26merged/families.csv</code> (47 rows); <code>report/e26-numbers.tex</code>, <code>report/e26-table.tex</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p><a href="E25.html">E25</a> ran the ladder and the path on three bird families. The biology paper's closing analysis needs every family-level tree the study's size range covers: per family the chosen model, its margin and the coefficients, and across families the distribution of signs and effects.</p>
+<h2 id="design">Design</h2>
+<p><strong>Trees.</strong> Every Condamine et al. (2019) family tree in the phylo-species-atlas with 50 to 200 tips and <span class="math inline">\(\rho \ge 0.5\)</span> (<code>sim/data/atlas-candidates.csv</code>): 47 families, 33 bird, 10 mammal, 3 squamate (Chamaeleonidae, Phrynosomatidae, Varanidae), 1 amphibian (Eleutherodactylidae).</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>quantity</th>
+<th>range</th>
+<th>median</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>tips</td>
+<td>50-194</td>
+<td>88</td>
+</tr>
+<tr>
+<td>crown age (Ma)</td>
+<td>11.2-101.4</td>
+<td>34.7</td>
+</tr>
+<tr>
+<td><span class="math inline">\(\rho\)</span></td>
+<td>0.651-1.000</td>
+<td>0.918</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Tip edges extended to one present where the depths spread by at most 15% of the crown age (<a href="E5.html">E5</a>'s rule); a tree beyond it "is reported and not fitted".</p>
+<p><strong>Fits.</strong></p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>setting</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ladder</td>
+<td><code>estimate_rates(model = "all")</code>, exponential link, each family's <span class="math inline">\(\rho\)</span>: <code>cr</code> → <code>dd</code> → {<code>nd</code>, <code>ned</code>, <code>nk</code>}</td>
+</tr>
+<tr>
+<td>box</td>
+<td><code>auto_bounds()</code></td>
+</tr>
+<tr>
+<td>draws</td>
+<td>300</td>
+</tr>
+<tr>
+<td>iterations</td>
+<td>100</td>
+</tr>
+<tr>
+<td>clock</td>
+<td>30 min per fit (E23's setting at 100 tips)</td>
+</tr>
+<tr>
+<td>path</td>
+<td><code>covariate_path()</code> over <span class="math inline">\(N\)</span>, <span class="math inline">\(D\)</span>, ED, <span class="math inline">\(K\)</span> on the observed tree and on 3000 surrogate draws at the ladder's <code>dd</code> estimate</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Definitions</strong> (<code>sim/E26-analysis.R</code>): the winner is the lowest AIC; a family's verdict is "lineage-level" when the winner is <code>nd</code>, <code>ned</code> or <code>nk</code> and leads <code>dd</code> by more than 2, "diversity- dependent" when <code>dd</code> wins by more than 2, "constant rate" likewise for <code>cr</code>, otherwise "undecided"; a family is usable when its winner's fit has an effective sample of at least 10. Coefficients are given as <span class="math inline">\(\exp(\hat\beta_X\cdot\mathrm{sd}_X)\)</span>, the speciation-rate factor per standard deviation of the covariate over the family's tips.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>None: a comparative description read against the floors of <a href="E21.html">E21</a>-<a href="E24.html">E24</a>. A family whose chosen fit has an effective sample below 10 is reported and left out of every across-family statement. The design of <a href="E27.html">E27</a>, registered after E26 ran, adds that the count of supported families is restated beside the false-positive rate of the nearest E27 cell, and that no family is added or removed on E27's account.</p>
+<h2 id="results">Results</h2>
+<p>Two tables carry E26. The run itself (README row, <code>results/E26/families.csv</code>) and the merged table the biology paper reads (<code>results/E26merged/</code>: <a href="E28.html">E28</a>'s rows for the 29 families at <span class="math inline">\(\rho \ge 0.9\)</span>, E26's for the 18 below, marked †).</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>quantity</th>
+<th>E26 run (47)</th>
+<th>merged table (47)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>usable (winner ESS ≥ 10)</td>
+<td>37</td>
+<td>37</td>
+</tr>
+<tr>
+<td><code>dd</code> leads <code>cr</code> by &gt; 2</td>
+<td>32</td>
+<td>33</td>
+</tr>
+<tr>
+<td>lineage-level model supported, of the usable</td>
+<td>18 (<code>nk</code> 11, <code>ned</code> 7)</td>
+<td>21 (<code>nk</code> 12, <code>ned</code> 9)</td>
+</tr>
+<tr>
+<td><code>dd</code> / <code>cr</code> / undecided, of the usable</td>
+<td>not recorded</td>
+<td>11 / 0 / 5</td>
+</tr>
+<tr>
+<td><span class="math inline">\(\beta_K &gt; 0\)</span>, <code>nk</code> fits with ESS ≥ 10</td>
+<td>31 of 33</td>
+<td>30 of 31 (median factor 1.40 per sd, 0.78-2.74)</td>
+</tr>
+<tr>
+<td><span class="math inline">\(\beta_{ED} &lt; 0\)</span>, <code>ned</code> fits with ESS ≥ 10</td>
+<td>32 of 33</td>
+<td>30 of 32 (median factor 0.68, 0.33-1.08)</td>
+</tr>
+<tr>
+<td><span class="math inline">\(\beta_D &lt; 0\)</span>, <code>nd</code> fits with ESS ≥ 10</td>
+<td>not recorded</td>
+<td>19 of 25 (median factor 0.86)</td>
+</tr>
+<tr>
+<td>lineage-level fits meeting the stopping rule</td>
+<td>19 of 141</td>
+<td>24 of 141</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Further readings from the merged table (<code>report/e26-numbers.tex</code>):</p>
+<ul>
+<li>Sampler-limited (winner ESS &lt; 10): Acanthizidae, Alcedinidae, Chamaeleonidae, Eleutherodactylidae, Fringillidae, Hipposideridae, Phrynosomatidae, Phyllostomidae, Rhinolophidae, Scolopacidae. Four of them have large lineage-level leads that enter no count (Eleutherodactylidae <code>nk</code> 25.1 at ESS 2.6, Phrynosomatidae <code>nk</code> 22.3 at 5.5, Rhinolophidae <code>nk</code> 18.5 at 4.4, Phyllostomidae <code>ned</code> 14.2 at 1.1).</li>
+<li>In the E26 run the <code>nk</code> families have Pybus-Harvey <span class="math inline">\(\gamma\)</span> from -0.9 to -4.0 and the <code>ned</code> families from -4.6 to -7.7. In the merged table <span class="math inline">\(\gamma &lt; -1.645\)</span> on 38 of 47, and the rank correlation of <span class="math inline">\(\gamma\)</span> with the <code>dd</code>-over-<code>cr</code> lead is -0.89.</li>
+<li>Where both <code>nk</code> and <code>ned</code> fits keep 10 draws, <code>nk</code> has the lower AIC in 19 of 25 (median lead 3.6).</li>
+<li>Rank correlation of Colless imbalance with the log K factor over usable <code>nk</code> fits: 0.54 (p = 0.002); 0.32 among the 27 below normalised Colless 0.17.</li>
+<li>Fitted turnover at the crown below 0.05 in 41 of 47.</li>
+<li>The path on the observed tree keeps at least one lineage-level covariate in 38 of 47; it keeps ED in all 9 <code>ned</code>-chosen families and K in 4 of the 12 <code>nk</code>-chosen ones.</li>
+<li>Nearest <a href="E27.html">E27</a> null cell for the 21 supported families: 7 at 50 tips (a lineage-level model chosen on 1 of 20 null trees), 5 at the families' median (1 of 20), 5 at 100 tips (2 of 20), 4 at 200 tips (2 of 20); none of the 21 at <span class="math inline">\(\rho \le 0.835\)</span>.</li>
+<li>Wall-clock per family: median 2.5 h (0.5-4.2).</li>
+</ul>
+<figure id="figure-1">
+<img src="../assets/wiki/E26-verdict.png" alt="E26 verdict" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Per family, the AIC lead of <code>dd</code> over <code>cr</code> (left) and of the best lineage-level model over <code>dd</code> (right), merged table; dark: lead above 2, open: fewer than 10 effective draws. 21 families have a supported lineage-level model, K in 12 and ED in 9; none is a pendant-age model.</figcaption>
+</figure>
+<figure id="figure-2">
+<img src="../assets/wiki/E26-shape.png" alt="E26 shape" loading="lazy">
+<figcaption><strong>Figure 2.</strong> The K factor per standard deviation against the tree's Colless imbalance. The four most imbalanced trees (shaded band) all have K factors near 2 or above, among them the two largest (Leporidae 2.74, Pachycephalidae 2.69); below the band the rank correlation drops from 0.54 to 0.32. (The subtitle's "NA" is a missing label in the figure script, not a value.)</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p>No rule. On the merged table a lineage-level model is the supported choice in 21 of the 37 usable families, K in 12 and ED in 9; K raises speciation in 30 of 31 readable <code>nk</code> fits and ED lowers it in 30 of 32 <code>ned</code> fits. What it does not show: the coefficients come from fits of which 19 (E26) or 24 (merged) of 141 met the stopping rule, and <a href="E27.html">E27</a>'s cells put the fitted K coefficient at 0.65-0.76 of its generating value on fits stopped at 100 iterations, so the factors are read as attenuated. The extinction side is not read (41 of 47 at fitted turnover below 0.05). The signs and counts describe what the ladder chooses on these trees; <a href="E39.html">E39</a> later found that on unbalanced real trees K and ED share much of their ranking (ED-K median -0.44), which bears on how far a K choice and an ED choice are distinct statements.</p>
+<p>Recorded inconsistencies: the README's E26 row still carries the run's own counts (18, <code>nk</code> 11, <code>ned</code> 7), while <code>e26-numbers.tex</code> and the biology paper read the merged ones (21, 12, 9). Macropodidae (tip spread 19%) was fitted and appears in the merged table (<code>dd</code>, lead over <code>cr</code> 32.6), although the design says a tree beyond 15% is reported and not fitted; <code>read_family</code> in <code>sim/E26-analysis.R</code> has no refusal. <code>report/report.tex</code> calls the set "47 bird families"; the candidate file has 33 bird, 10 mammal, 3 squamate and 1 amphibian.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E25.html">E25</a> — the same workflow on three of these families.</li>
+<li><a href="E27.html">E27</a> — the ladder at the families' sizes, turnovers and sampling fractions; the calibration E26 is read against.</li>
+<li><a href="E28.html">E28</a> — the 29 families inside the calibrated range, refitted as the analysis of record.</li>
+<li><a href="E39.html">E39</a> — what the covariates share on these 47 trees.</li>
+<li><a href="E40.html">E40</a> — the same workflow on birds and mammals cut into clade-sized trees.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

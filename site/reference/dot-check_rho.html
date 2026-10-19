@@ -1,0 +1,33 @@
+<h3>Description</h3>
+
+<p><code>rho</code> is the fraction of extant species present in the tree, so it
+lives in <code>(0, 1]</code>.  The C++ layer (<code>model.hpp</code>) replaces any
+value outside that range by 1 and reports nothing, so a call made with
+<code>rho = 80</code> or <code>rho = -1</code> returns a complete-sampling fit under
+the label the user asked for (audit finding H79).  Every R entry point
+that accepts <code>rho</code> checks it here first.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.check_rho(rho, arg = "control$rho")
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id=".check_rho_:_rho">rho</code></td>
+<td>
+<p>The value supplied by the caller.</p>
+</td></tr>
+<tr><td><code id=".check_rho_:_arg">arg</code></td>
+<td>
+<p>Name to quote in the error message.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p><code>rho</code> as a length-1 double.
+</p>
+

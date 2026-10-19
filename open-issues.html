@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open issues · emphasis</title>
+<meta name="description" content="Decisions that wait on the author, defects in the package, places where the written record disagrees with the data, and what the repository does not record.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="index.html">emphasis</a>
+<ul>
+<li><a href="index.html">Overview</a></li>
+<li><a href="usage.html">Usage</a></li>
+<li><a href="reference.html">Reference</a></li>
+<li><a href="established.html">What is established</a></li>
+<li><a href="estimability.html">Estimability</a></li>
+<li><a href="real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="experiments/index.html">Experiments</a></li>
+<li><a href="glossary.html">Glossary</a></li>
+<li><a href="simulator.html">Simulator</a></li>
+<li><a href="D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>Open issues</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#decisions-for-the-author">Decisions for the author</a>
+</li>
+<li><a href="#package-defects">Package defects</a>
+</li>
+<li><a href="#where-the-written-record-disagrees-with-the-data">Where the written record disagrees with the data</a>
+</li>
+<li><a href="#not-recorded">Not recorded</a>
+</li>
+</ol>
+</nav>
+<p>Decisions that wait on the author, defects in the package, places where the written record disagrees with the data, and what the repository does not record. Each entry names the page that gives the evidence. In every disagreement below, the experiment pages follow the data files.</p>
+<h2 id="decisions-for-the-author">Decisions for the author</h2>
+<ul>
+<li><strong>Relaxation default.</strong> E10b's pre-set rule is met (a fixed ⅛ converges 107 of 139 diverging units at 1000 sweeps, <code>"auto"</code> 77), so the rule changes the default to ⅛; the package still ships <code>damping = "auto"</code>. <a href="experiments/E10.html">E10</a></li>
+<li><strong>The ED-aware thinning ordering.</strong> It fails rule C4 (ED-aware ≥ mean-field on 77% of trees against 95%) and remains the default thinning variant for ED and K models. <a href="experiments/E3.html">E3</a></li>
+<li><strong>Which family split to quote.</strong> For the 29 families of E28 the parsimonious choice gives <code>nd</code> 1, <code>ned</code> 8, <code>nk</code> 7 among the 18 lineage-level verdicts (plus <code>cr</code> on 2), the minimum AIC gives <code>ned</code> 8, <code>nk</code> 10; the merged-table counts (21: <code>nk</code> 12, <code>ned</code> 9) use the minimum-AIC winner. The record does not say which a paper quotes. <a href="experiments/E28.html">E28</a>, <a href="experiments/E26.html">E26</a></li>
+<li><strong>Whether relaxation is reported to the caller.</strong> Raised by E10's design; no decision is recorded. <a href="experiments/E10.html">E10</a></li>
+<li><strong>The supplement's reading of E35 (a).</strong> It calls the turnover-0.25 negative K slope "the first extinction slope recovered in the study"; by the pre-set rule the slope is "not identified" (positive arm sampler-limited). <a href="experiments/E35.html">E35</a></li>
+</ul>
+<h2 id="package-defects">Package defects</h2>
+<ul>
+<li><strong>A fit its clock cannot stop.</strong> The wall clock is read only between iterations, so a fit whose E-step never returns runs on: E30's <code>nd-em035-k03</code> ran 60 hours with a four-hour <code>max_time</code> and was stopped by hand. <a href="experiments/E30.html">E30</a></li>
+<li><strong>The likelihood read <span class="math inline">\(D\)</span> differently from the simulator on a segment (fixed).</strong> The likelihood held the clade mean pendant age <span class="math inline">\(M\)</span> at its segment-end value while the simulator held <span class="math inline">\(D\)</span> constant between events; emphasis <code>4e0b9dd</code> makes the likelihood hold <span class="math inline">\(D\)</span> constant too, and <a href="experiments/E44.html">E44</a> measures the effect on complete trees: before the change <code>d</code> returned <span class="math inline">\(\beta_D\)</span> at 0.70 and 1.46 of its value, after it 0.95 and 1.16. Every D experiment before <code>4e0b9dd</code> (<a href="experiments/E19.html">E19</a>, <a href="experiments/E30.html">E30</a>, <a href="experiments/E31.html">E31</a>, <a href="experiments/E37.html">E37</a>, <span class="math inline">\(D\)</span> on the path, <a href="experiments/E40.html">E40</a>'s <code>nd</code> fits) maximised the old likelihood.</li>
+<li><strong><code>simulate_tree</code>'s <code>max_tries</code>.</strong> It counts attempts after the first, so the default of 1 draws twice and completes 0.77 of constant-rate runs where one draw completes 0.52; comparisons of completion rates need <code>max_tries = 0</code>. <a href="experiments/E14.html">E14</a></li>
+<li><strong>Survival emulator label (fixed).</strong> Clades passing the lineage cap were labelled extinct; fixed in <code>d3dee92</code> (labelled survived, 2000 clades). <a href="experiments/E36.html">E36</a> (b) was not rerun after the fix. E34r (<a href="experiments/E34.html">E34</a>) confirms E34's verdict under it.</li>
+<li><strong>Raw-ED simulator (fixed).</strong> Before <code>f30a791</code> the forward simulator held rates fixed between events, giving <code>ed</code> clades 30% too large; E24b reruns <code>ed</code>. Trees drawn from the same seeds differ before and after <code>f30a791</code>, so E29/E31 are not E27's trees and E30 is not E19b's. <a href="experiments/E24.html">E24</a>, <a href="experiments/E29.html">E29</a>, <a href="experiments/E30.html">E30</a></li>
+<li><strong>Two figures print NA.</strong> <code>fig-clades-effects</code> prints "NA of 32 families" and an empty NA panel; <code>fig-clades-shape</code>'s subtitle carries an NA (a missing label in the figure script). <a href="experiments/E26.html">E26</a></li>
+<li><strong><code>compare_models()</code> against its own tie rule.</strong> On Meliphagidae it chose <code>nd</code> although <code>ned</code> has the lower AIC with the same number of parameters, which the tie rule in <code>R/inference.R</code> does not allow. <a href="experiments/E28.html">E28</a></li>
+<li><strong><code>E26-analysis.R</code> has no refusal for tip spread.</strong> Macropodidae (tip spread 19%) was fitted and appears in the merged table (<code>dd</code>, lead over <code>cr</code> 32.6), although the design refuses trees above 15%. <a href="experiments/E26.html">E26</a></li>
+</ul>
+<h2 id="where-the-written-record-disagrees-with-the-data">Where the written record disagrees with the data</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>page</th>
+<th>file</th>
+<th>what the file says</th>
+<th>what the data give</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="experiments/E1.html">E1</a></td>
+<td>supplement / paper</td>
+<td>MCEM "within a few points" of the exact MLE against the generating value</td>
+<td>median errors over trees differ more: at 20 tips and turnover 0.9 exact -47%, MCEM -31%</td>
+</tr>
+<tr>
+<td><a href="experiments/E4.html">E4</a></td>
+<td>record</td>
+<td>surrogate costs "3-10x" thinning</td>
+<td>4.7-7.0x (<code>cr</code>), 2.5-4.7x (<code>dd</code>)</td>
+</tr>
+<tr>
+<td><a href="experiments/E5.html">E5</a></td>
+<td>report</td>
+<td>"every one ending on <code>max_iter</code>"; "over five seeds the NED AIC moves by less than 0.6"; ED extinction slopes -0.008, -0.013, -0.008</td>
+<td>21 of 24 on <code>max_iter</code>; Corvidae moves 0.64; seed 1 gives -0.0056, -0.0108, -0.0077</td>
+</tr>
+<tr>
+<td><a href="experiments/E7.html">E7</a></td>
+<td>report</td>
+<td>thinning below 10 effective draws "in twelve, all of them plain DD"</td>
+<td>54 cells (12 <code>dd</code>, 32 <code>ned</code>, 10 <code>ed</code>)</td>
+</tr>
+<tr>
+<td><a href="experiments/E8.html">E8</a></td>
+<td><code>00-design.md</code>, driver defaults, supplement, <code>methods-study.tex</code></td>
+<td>draws equal 400 and unequal 100 vs 1600</td>
+<td>the files record 300/300 and 100/800; E8 ran <code>max_iter</code> 30 and E8b 100 on the same trees (from the stop records, stated nowhere); the E8b design heading has no body</td>
+</tr>
+<tr>
+<td><a href="experiments/E9.html">E9</a></td>
+<td>driver default</td>
+<td>2000 reference draws</td>
+<td>the traces carry 400 per iteration</td>
+</tr>
+<tr>
+<td><a href="experiments/E11.html">E11</a></td>
+<td>supplement data index</td>
+<td>E11 has no merged CSV</td>
+<td><code>results/E11/crosscheck.csv</code> exists (the index also wrongly lists E3's and E4's data as absent)</td>
+</tr>
+<tr>
+<td><a href="experiments/E12.html">E12</a></td>
+<td><code>methods-study.tex</code>, <code>paper.tex</code></td>
+<td>"a median 262 iterations at -0.35<span class="math inline">\(\lambda\)</span> … returns at 0.97 of its value"</td>
+<td>no source in E12b's files (no iteration column; 100-tip ratio 0.96; no fit converged)</td>
+</tr>
+<tr>
+<td><a href="experiments/E14.html">E14</a></td>
+<td>design; methods text</td>
+<td>third arm under incomplete sampling; an internal check of the ED simulator (KS p 0.28-0.93)</td>
+<td>the driver runs <span class="math inline">\(\rho\)</span> = 1; the internal check has no data under <code>results/</code></td>
+</tr>
+<tr>
+<td><a href="experiments/E15.html">E15</a></td>
+<td>design</td>
+<td>a draw-schedule arm</td>
+<td>no code and no data; 400-tip likelihood timings (0.07 s) fall below the 245-tip ones (1.3 s), unexplained</td>
+</tr>
+<tr>
+<td><a href="experiments/E16.html">E16</a></td>
+<td>supplement</td>
+<td>-0.15<span class="math inline">\(\lambda\)</span> ratio 1.06</td>
+<td>1.055</td>
+</tr>
+<tr>
+<td><a href="experiments/E19.html">E19</a></td>
+<td>supplement</td>
+<td>E19 zero-effect median <span class="math inline">\(\beta\)</span>_D -0.0005</td>
+<td>+0.0013</td>
+</tr>
+<tr>
+<td><a href="experiments/E21.html">E21</a></td>
+<td>supplement</td>
+<td>E21a median AIC difference at -0.15: 5.5</td>
+<td>3.5</td>
+</tr>
+<tr>
+<td><a href="experiments/E22.html">E22</a></td>
+<td>supplement; design</td>
+<td>50-tip trees 31-70 tips; <code>dd</code> "N enters first on 0.95-1.00"; paths over 2 h set aside</td>
+<td>31-73 tips; 0.85 at 100 tips; 5 of 60 paths at 400 tips took over 2 h (max 3.1 h) and the record does not say whether they were set aside</td>
+</tr>
+<tr>
+<td><a href="experiments/E24.html">E24</a></td>
+<td>ledger B</td>
+<td><code>d</code> at -0.35 extinction slope +0.26</td>
+<td>+0.026; <code>k</code> at +0.35 ratio 0.46 on 19 trees, 0.51 on all 20</td>
+</tr>
+<tr>
+<td><a href="experiments/E26.html">E26</a></td>
+<td>README; <code>report.tex</code></td>
+<td>18 lineage-level families (<code>nk</code> 11, <code>ned</code> 7); "47 bird families"</td>
+<td>merged table 21 (<code>nk</code> 12, <code>ned</code> 9); 33 bird, 10 mammal, 3 squamate, 1 amphibian</td>
+</tr>
+<tr>
+<td><a href="experiments/E27.html">E27</a></td>
+<td><code>cells.csv</code></td>
+<td><code>rule_b</code> TRUE for <code>nk</code> at <code>r75</code> and <code>r50</code></td>
+<td>those cells are sampler-limited and rule (c) excludes them</td>
+</tr>
+<tr>
+<td><a href="experiments/E28.html">E28</a></td>
+<td>README</td>
+<td>"a lineage-level model is the parsimonious choice in 18 (<code>nk</code> 7, <code>ned</code> 8, <code>nd</code> 1)"</td>
+<td>the split sums to 16; over 25 usable families <code>cr</code> 4, <code>dd</code> 5, <code>nd</code> 1, <code>ned</code> 8, <code>nk</code> 7; the readings differ on 5 families</td>
+</tr>
+<tr>
+<td><a href="experiments/E30.html">E30</a></td>
+<td>README (2026-10-14)</td>
+<td>all fits but one ended on the clock</td>
+<td>12 of 39 on the 300-iteration cap, 27 on the clock, none met the stopping rule; E30's trees are not E19b's (<span class="math inline">\(\beta\)</span>_D ±0.0598 against ±0.0619), so E30 is a second sample, not a paired rerun</td>
+</tr>
+<tr>
+<td><a href="experiments/E31.html">E31</a></td>
+<td>supplement, README</td>
+<td>iteration medians 128 (<code>nd</code>) and 66 (<code>ned</code>)</td>
+<td>191 and 83.5 in <code>ladder.csv</code>; E31b's <code>ned</code> row is clock-limited (3 of 20), its <code>nd</code> row (1 of 20) is not</td>
+</tr>
+<tr>
+<td><a href="experiments/E36.html">E36</a></td>
+<td>ledger C</td>
+<td>the tensor GAM and the network adequate at 5000 in E36 (a)</td>
+<td>no learner is adequate in any non-<code>cr</code> cell; the README row was rewritten on 2026-10-15</td>
+</tr>
+<tr>
+<td><a href="experiments/E42.html">E42</a></td>
+<td><code>00-design.md</code></td>
+<td>at E40's estimates where <span class="math inline">\(\rho\)</span> &lt; 1, the exact log-likelihood 0.01-0.17 above the reported one</td>
+<td>the reported value is 0.01-0.17 above the exact one (reported minus exact positive)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Also: <a href="experiments/E35.html">E35</a> (b) has finished (<span class="math inline">\(\rho\)</span> 0.82, 0.92, 1.00, 40 jobs each, last 2026-10-14 19:23) and is read by <code>sim/E35b-analysis.R</code> with its README row; <a href="experiments/E37.html">E37</a>'s <code>dd</code> fits equal E30's to every digit on the returned trees, so only the <code>nd</code> fit changes there.</p>
+<h2 id="not-recorded">Not recorded</h2>
+<ul>
+<li>Hosts and package builds of the early runs: E2, E7-E16, E19-E24 (E22 and E20 included); the 2026-10-02 build audit finds no surviving launch record for E7-E16. Per page: <a href="experiments/E7.html">E7</a>, <a href="experiments/E9.html">E9</a>, <a href="experiments/E11.html">E11</a>-<a href="experiments/E16.html">E16</a>, <a href="experiments/E19.html">E19</a>-<a href="experiments/E24.html">E24</a>.</li>
+<li>Exact run dates before <a href="experiments/E25.html">E25</a>; several pages date their runs by file times.</li>
+<li>The package build of <a href="experiments/E35.html">E35</a> (b), of <a href="experiments/E36.html">E36</a> (a) and E36c, and of <a href="experiments/E38.html">E38</a> and <a href="experiments/E39.html">E39</a>.</li>
+<li>The clock used by <a href="experiments/E12.html">E12</a> (driver default 3600 s; not in the CSV).</li>
+<li>Which seed or summary produced the ED extinction slopes in the report's E5 table (<a href="experiments/E5.html">E5</a>).</li>
+<li>The earlier E21a attempt in <code>results/E21/failed-linear-box/</code> (six job files; nothing beyond the name) (<a href="experiments/E21.html">E21</a>).</li>
+<li><a href="experiments/E10.html">E10</a>b's host and build; E31b's worker count (<a href="experiments/E31.html">E31</a>).</li>
+<li>The validation study's own per-cell verdict table for <a href="experiments/E1.html">E1</a> (not in the paper repository), and E1's per-tree data (in the package repository's <code>dev/validation</code>, not under <code>results/</code>).</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

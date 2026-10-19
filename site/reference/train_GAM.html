@@ -1,0 +1,71 @@
+<h3>Description</h3>
+
+<p>Fits a binomial GAM to estimate P(survival | parameters) from forward
+simulations run with <code>max_tries = 0</code>.  Each simulation row has a
+binary outcome: 1 if both crown lineages reached the present (<code>status</code>
+<code>"done"</code>) or the clade passed the lineage cap (<code>"too_large"</code>),
+0 if it went extinct.  A clade stopped at the cap has survived so far, and
+the conditional likelihood divides by the probability of survival; counting
+it as extinct teaches the GAM a survival near zero wherever clades grow
+fast, which then rewards the fit for moving there (E36c of the paper).
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>train_GAM(
+  simulations,
+  pars_mat,
+  model = "cr",
+  spline_type = c("univariate", "bivariate")
+)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="train_GAM_:_simulations">simulations</code></td>
+<td>
+<p>List of <code>simulate_tree()</code> outputs (one per row of
+<code>pars_mat</code>), produced with <code>max_tries = 0</code>.</p>
+</td></tr>
+<tr><td><code id="train_GAM_:_pars_mat">pars_mat</code></td>
+<td>
+<p>Numeric matrix whose rows are the parameter vectors used to
+generate <code>simulations</code>.  Column names are used as predictor names; if
+absent, names are auto-generated from <code>model</code>.</p>
+</td></tr>
+<tr><td><code id="train_GAM_:_model">model</code></td>
+<td>
+<p>String or binary integer vector (length 3 or 4) matching the
+model used in simulation.  Used only when <code>pars_mat</code> has no column names.
+Default <code>"cr"</code>.</p>
+</td></tr>
+<tr><td><code id="train_GAM_:_spline_type">spline_type</code></td>
+<td>
+<p><code>"univariate"</code> (default) fits independent smooth
+terms <code>s(x)</code> for each varying predictor.  <code>"bivariate"</code> fits
+tensor-product smooths <code>te(x, y)</code> for every pair of varying
+predictors, which can capture interaction effects.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>A <code>gam</code> object (binomial family) representing
+<span class="reqn">\(P(\text{survival} \mid \theta)\)</span>.
+</p>
+
+<h3>Examples</h3>
+
+<pre><code class='language-R'>## Not run: 
+set.seed(1)
+pars_mat &lt;- cbind(beta_0  = runif(200, 0.3, 1.2),
+                  gamma_0 = runif(200, 0.05, 0.5))
+sims &lt;- simulate_tree(pars = pars_mat, max_t = 8,
+                      model = "cr", max_tries = 0, useDDD = FALSE)
+gam_uni &lt;- train_GAM(sims, pars_mat, model = "cr")
+gam_biv &lt;- train_GAM(sims, pars_mat, model = "cr", spline_type = "bivariate")
+
+## End(Not run)
+</code></pre>
+

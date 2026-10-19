@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E12 — Where does the ED term become selectable? · emphasis</title>
+<meta name="description" content="E8 found \(\beta_{ED}\) estimable and AIC unwilling to select ned over dd, at one effect size (-0.15\(\lambda\)) and one tree size.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E12 — Where does the ED term become selectable?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#e12b--the--035lambda-row-with-300-iterations">E12b — the -0.35<span class="math inline">\(\lambda\)</span> row with 300 iterations</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete (E12: 300 trees, 297 fitted; E12b: 30 trees)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>not recorded per run (see Where)</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E12-power.R</code>; figures <code>fig-power</code> and <code>fig-s-ned-recovery</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E12/power.csv</code> (300 rows), <code>results/E12b/power.csv</code> (30 rows)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p><a href="E8.html">E8</a> found <span class="math inline">\(\beta_{ED}\)</span> estimable and AIC unwilling to select <code>ned</code> over <code>dd</code>, at one effect size (-0.15<span class="math inline">\(\lambda\)</span>) and one tree size. That was being stated as a boundary, but it is one point. E12 sweeps effect and size to find where selection starts to work, which turns a negative result into a statement about where the method has power.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>value</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>generator</td>
+<td><code>ned</code>, linear link</td>
+<td><span class="math inline">\(\lambda_s = \beta_0 + \beta_N N + \beta_{ED}\,\mathrm{ED}_s\)</span></td>
+</tr>
+<tr>
+<td>ED effect</td>
+<td>0, -0.05, -0.15, -0.35, -0.60 <span class="math inline">\(\lambda\)</span></td>
+<td><span class="math inline">\(\beta_{ED}\)</span> as a fraction of <span class="math inline">\(\beta_0 = 0.5\)</span> at one clade-mean unit of ED</td>
+</tr>
+<tr>
+<td>tips</td>
+<td>100, 200, 400</td>
+<td><span class="math inline">\(K\)</span> calibrated per cell to the target; crown 15</td>
+</tr>
+<tr>
+<td>turnover</td>
+<td>0.10</td>
+<td>fixed by <a href="E7.html">E7</a>: at 0.25 the strong cells fall below ESS 10 by 50 tips</td>
+</tr>
+<tr>
+<td>trees per cell</td>
+<td>20</td>
+<td>15 cells, 300 trees</td>
+</tr>
+<tr>
+<td>candidates</td>
+<td><code>dd</code> and <code>ned</code> only</td>
+<td>the question is whether the ED term pays for its two parameters</td>
+</tr>
+<tr>
+<td>draws</td>
+<td>800</td>
+<td>a 100-draw pilot left ESS 1.2-6.6 in the strong cells</td>
+</tr>
+<tr>
+<td>iterations</td>
+<td><code>max_iter</code> 100</td>
+<td></td>
+</tr>
+<tr>
+<td>clock</td>
+<td>driver default 3600 s; the run's value is not recorded in the CSV</td>
+<td></td>
+</tr>
+<tr>
+<td>proposal, box</td>
+<td>surrogate; <code>sim/box.R</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Generating <span class="math inline">\(\beta_{ED}\)</span> per cell (raw units): -0.06/-0.03/-0.02/-0.005 at 100 tips; -0.07/-0.04/-0.02/-0.01 at 200; -0.09/-0.06/-0.02/-0.01 at 400 (-0.60 to -0.05<span class="math inline">\(\lambda\)</span>). At 400 tips and -0.60<span class="math inline">\(\lambda\)</span> the capacity sits at the search ceiling (≈ 10000) and 3 of 20 trees could not be drawn ("no ned tree in [240, 640] tips in 400 attempts"); the 17 drawn have a median of 267 tips.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>Per cell, the fraction of trees with <span class="math inline">\(\mathrm{AIC}_{dd} - \mathrm{AIC}_{ned} &gt; 2\)</span>. The deliverable is the contour where that fraction reaches 0.8 (C3's rule) and the false-positive rate at effect 0, which must be <span class="math inline">\(\le 5\%\)</span> for the curve to mean anything. <strong>Any cell whose median effective sample is below 10 is reported with its selection rate but excluded from the contour</strong>, marked sampler-limited. A cell that produces no trees is reported as a cell with no answer, not dropped.</p>
+<h2 id="results">Results</h2>
+<p><strong>Selection</strong> (share of trees with <span class="math inline">\(\Delta\)</span>AIC &gt; 2):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>tips</th>
+<th>0 (FP)</th>
+<th>-0.05<span class="math inline">\(\lambda\)</span></th>
+<th>-0.15<span class="math inline">\(\lambda\)</span></th>
+<th>-0.35<span class="math inline">\(\lambda\)</span></th>
+<th>-0.60<span class="math inline">\(\lambda\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>100</td>
+<td>0.10</td>
+<td>0.05</td>
+<td>0.55</td>
+<td>0.75</td>
+<td>1.00</td>
+</tr>
+<tr>
+<td>200</td>
+<td>0.00</td>
+<td>0.00</td>
+<td>0.05</td>
+<td>0.70</td>
+<td>1.00</td>
+</tr>
+<tr>
+<td>400</td>
+<td>0.00</td>
+<td>0.00</td>
+<td>0.15</td>
+<td>0.75</td>
+<td>1.00 (17 trees, sampler-limited)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>False positives over the 60 null trees: 2 of 60 = 3.3%, within the 5% ceiling (2 of 20 at 100 tips).</p>
+<p><strong>Recovery</strong> of <span class="math inline">\(\beta_{ED}\)</span> (median fitted/generating; right-sign share; median ESS of 800; fits with ESS &lt; 10; stops converged/cap/clock):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>tips</th>
+<th>-0.60<span class="math inline">\(\lambda\)</span></th>
+<th>-0.35<span class="math inline">\(\lambda\)</span></th>
+<th>-0.15<span class="math inline">\(\lambda\)</span></th>
+<th>-0.05<span class="math inline">\(\lambda\)</span></th>
+<th>0 (median <span class="math inline">\(\hat\beta\)</span>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>100</td>
+<td>0.69; 1.00; 24.9; 4; 0/2/18</td>
+<td>0.865; 1.00; 61.5; 3; 0/5/15</td>
+<td>1.25; 0.95; 83.8; 0; 1/5/14</td>
+<td>0.34; 0.60; 131.9; 0; 0/8/12</td>
+<td>-0.0013; 133.9; 1; 1/12/7</td>
+</tr>
+<tr>
+<td>200</td>
+<td>0.40; 1.00; 20.9; 5; 0/0/20</td>
+<td>0.47; 1.00; 31.8; 5; 0/0/20</td>
+<td>0.92; 0.95; 24.8; 6; 0/0/20</td>
+<td>1.14; 0.80; 18.9; 7; 0/0/20</td>
+<td>-0.0005; 20.0; 6; 0/0/20</td>
+</tr>
+<tr>
+<td>400</td>
+<td>0.19; 1.00; 4.6; 14 of 17; 0/0/17 (<strong>sampler-limited</strong>)</td>
+<td>0.43; 1.00; 27.8; 3; 0/0/20</td>
+<td>0.94; 0.95; 51.2; 5; 0/0/20</td>
+<td>1.87; 0.90; 24.7; 5; 0/0/20</td>
+<td>-0.012; 32.8; 4; 0/0/20</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Every <code>ned</code> fit at 200 and 400 tips ended on its clock (120 of 120 at an effect, and every null fit); at 100 tips 35% to 90% did. <strong>Clock-limited</strong>: by the convention adopted later (clock ending more than a tenth of the fits), every cell of E12 is clock-limited, so every rate here is a floor. The supplement rounds 0.865 to 0.87; the figure prints 0.86.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E12-power.png" alt="E12 power" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Selection rate of <code>ned</code> over <code>dd</code> by effect size, one line per tree size. All three sizes cross 0.80 between -0.35<span class="math inline">\(\lambda\)</span> (0.70-0.75) and -0.60<span class="math inline">\(\lambda\)</span> (1.00); the open point at 400 tips, -0.60<span class="math inline">\(\lambda\)</span>, is sampler-limited and excluded from the contour.</figcaption>
+</figure>
+<figure id="figure-2">
+<img src="../assets/wiki/E12-recovery.png" alt="E12 recovery" loading="lazy">
+<figcaption><strong>Figure 2.</strong> Fitted against generating <span class="math inline">\(\beta_{ED}\)</span>, one fit per tree, with <a href="E16.html">E16</a>'s turnover-0.25 cell on the right. At 100 tips the cell medians (red diamonds) sit near the dashed identity line; at 200 and 400 tips the strong effects are attenuated toward zero while keeping their sign.</figcaption>
+</figure>
+<h2 id="e12b--the--035lambda-row-with-300-iterations">E12b — the -0.35<span class="math inline">\(\lambda\)</span> row with 300 iterations</h2>
+<p><code>results/E12b/power.csv</code>: E12's design at -0.35<span class="math inline">\(\lambda\)</span> only, 10 trees a size, 600 draws, <code>max_iter</code> 300, traces saved (no design entry of its own).</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>tips</th>
+<th>selection</th>
+<th>ratio</th>
+<th>sign</th>
+<th>median ESS of 600</th>
+<th>fits &lt; 10</th>
+<th>stops conv/cap/clock</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>100</td>
+<td>0.80</td>
+<td>0.96</td>
+<td>1.00</td>
+<td>26.4</td>
+<td>1</td>
+<td>0/5/5</td>
+</tr>
+<tr>
+<td>200</td>
+<td>0.90 (<strong>sampler-limited</strong>)</td>
+<td>0.67</td>
+<td>1.00</td>
+<td>6.1</td>
+<td>6</td>
+<td>0/0/10</td>
+</tr>
+<tr>
+<td>400</td>
+<td>0.80</td>
+<td>0.72</td>
+<td>1.00</td>
+<td>10.7</td>
+<td>5</td>
+<td>0/0/10</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>No E12b fit met the stopping rule. The supplement's "half the fits finished" at 100 tips means 5 of 10 reached the 300-iteration cap. A sentence in <code>methods-study.tex</code> and <code>paper.tex</code> ("where the fit is allowed to finish (a median 262 iterations at -0.35<span class="math inline">\(\lambda\)</span>) it returns at 0.97 of its value") has no source among E12b's files: <code>power.csv</code> has no iteration column, and its 100-tip ratio is 0.96 with no fit converged.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>By E12's rule the 0.80 contour lies <strong>between -0.35<span class="math inline">\(\lambda\)</span> and -0.60<span class="math inline">\(\lambda\)</span> at every size</strong> (0.70-0.75 at -0.35<span class="math inline">\(\lambda\)</span>, 1.00 at -0.60<span class="math inline">\(\lambda\)</span>), with false positives at 3.3%; the 400-tip -0.60<span class="math inline">\(\lambda\)</span> cell is excluded. Every rate is a floor: no fit at 200 or 400 tips finished, and an unfinished <code>ned</code> carries a worse AIC than it would reach. With 300 iterations (E12b) -0.35<span class="math inline">\(\lambda\)</span> reaches 0.80 at 100 and 400 tips (the 200-tip cell, 0.90, is sampler-limited). The coefficient keeps its sign (≥ 0.95 at |effect| ≥ 0.15 at every size) while its size is attenuated on unfinished fits — 0.69, 0.40 and 0.19 of the value at -0.60<span class="math inline">\(\lambda\)</span> from 100 to 400 tips — and comes back toward its value with more iterations (0.96, 0.67, 0.72 at -0.35<span class="math inline">\(\lambda\)</span> in E12b against 0.865, 0.47, 0.43). E12 does not measure turnover above 0.10 (<a href="E16.html">E16</a> does 0.25), sampling below 1, or a fit that converged.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E8.html">E8</a> — the single point (-0.15<span class="math inline">\(\lambda\)</span>, 100 tips, turnover 0.25) that E12 extends.</li>
+<li><a href="E16.html">E16</a> — the same grid at turnover 0.25, where the real clades sit.</li>
+<li><a href="E18.html">E18</a> — whether centring ED lifts the -0.15<span class="math inline">\(\lambda\)</span> selection rate.</li>
+<li><a href="E15.html">E15</a> — the cost of one <code>ned</code> iteration at E12's -0.35<span class="math inline">\(\lambda\)</span> design (77 s, 78 min, 5.1 h at 100, 200, 400 tips).</li>
+<li><a href="E29.html">E29</a> — <code>ned</code> at 200 tips on fits allowed to finish.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

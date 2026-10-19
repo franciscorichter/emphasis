@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E32 — the extinction side at 200 tips: a wider box, a generator with a driver, the exact estimators · emphasis</title>
+<meta name="description" content="E29 put the fitted extinction rate and its slopes on the limits of the search box at 200 tips, on finished fits as on the others.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E32 — the extinction side at 200 tips: a wider box, a generator with a driver, the exact estimators</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis <code>f30a791</code></td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E27-conditions.R</code> (<code>--widen-ext</code>, <code>--gamma-eff</code>); <code>sim/E32-exact.R</code>; <code>sim/E32-analysis.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E32/wide-pairs.csv</code> (20 rows), <code>results/E32/arms.csv</code> (6 rows), <code>results/E32/exact.csv</code> (40 rows); macros <code>report/e32-numbers.tex</code>, table <code>report/e32-table.tex</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p><a href="E29.html">E29</a> put the fitted extinction rate and its slopes on the limits of the search box at 200 tips, on finished fits as on the others. Two readings fit that: the box is too tight for a maximum that lies just outside it, or the tree does not bound extinction from below and the estimate goes wherever the box ends. And every generator so far had extinction slopes of zero, so nothing said whether a slope that exists is found. E32 tests both readings and adds an estimator with no augmentation.</p>
+<h2 id="design">Design</h2>
+<p>Common to all three parts: 200 tips, turnover 0.10, complete sampling, crown age 15, exponential link, unconditional likelihood, 300 draws, <code>max_iter</code> 300, ladder restricted to <code>cr</code>, <code>dd</code> and the generator's model.</p>
+<p><strong>Amendment, 2026-10-07, before any fit was read:</strong> the clock is 16 hours a fit, not four, because <a href="E31.html">E31</a>'s four-hour clock (24 workers on 16 cores) cut lineage-level fits to a quarter of their iterations. The two K-arm fits that had finished under the four-hour clock were discarded.</p>
+<p><strong>(a) A wider box.</strong> <a href="E29.html">E29</a>'s 20 <code>ned</code> trees refitted with the lower limits of the three extinction parameters moved outward: the intercept by 3 on the log-rate (a floor <span class="math inline">\(e^{-3}\)</span> lower), each slope to twice its lower limit. Upper limits and the speciation side as <code>auto_bounds()</code> gives them.</p>
+<p><strong>(b) A driver.</strong> Generators with an extinction slope on their own covariate, the intercept moved so that a lineage at the covariate's mean keeps the rate 0.05, the capacity recalibrated per arm:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>arm</th>
+<th>generator</th>
+<th>extinction slope</th>
+<th>box limit of that slope</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ED + / -</td>
+<td><code>ned</code></td>
+<td><span class="math inline">\(\pm\log 2\)</span> per mean ED = ±0.181 per unit</td>
+<td>0.40</td>
+</tr>
+<tr>
+<td>ED 0</td>
+<td>E29's fits</td>
+<td>0</td>
+<td>0.40</td>
+</tr>
+<tr>
+<td>K + / 0 / -</td>
+<td><code>nk</code></td>
+<td><span class="math inline">\(\pm\log 1.5\)</span> per SD of K = ±0.147 per split (0 in the zero arm)</td>
+<td>0.28</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>20 trees an arm. The generating slope sits at about half the box limit, so a fit on the limit is not within a quarter of it.</p>
+<p><strong>(c) The exact estimators.</strong> <code>DDD::bd_ML</code> (constant rates) and <code>DDD::dd_ML</code> (linear diversity dependence, constant extinction), both conditioned on survival of the crown (<code>cond = 1</code>), on <a href="E29.html">E29</a>'s 20 <code>ned</code> trees and <a href="E27.html">E27</a>'s 20 null (<code>dd</code>-generated) trees at 200 tips. Neither is the generating model of the <code>ned</code> trees.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<ol type="1">
+<li><em>Wide box</em>, per extinction parameter, over the trees whose <a href="E29.html">E29</a> fit had it on its lower limit: <strong>follows the box</strong> if on at least half the wide fit lies beyond the old limit by more than half the added width; <strong>stays</strong> if on at most a quarter. A median log-likelihood gain over E29 below 1 is reported as a flat likelihood. Follows and flat: "the tree does not bound extinction from below at this size, and the extinction side is reported as not identified whatever the box".</li>
+<li><em>Driver</em>, per covariate. <strong>Recovered:</strong> in both nonzero arms median fitted/generating in [0.75, 1.25], right sign on ≥ 80%, fewer than half the fits on a limit. <strong>Detected in sign only:</strong> right sign on ≥ 80% in both arms and the + and - interquartile ranges disjoint. <strong>Not identified</strong> otherwise, in particular if the three arms' medians are not ordered -, 0, +.</li>
+<li>An arm whose generator fit has fewer than 10 effective draws on more than half its trees is sampler-limited and left out of (2); an arm whose generator does not reach 200 tips within 15% is reported and not fitted.</li>
+<li><em>Exact:</em> no threshold; the shares within a factor of 2 of 0.05 and below 0.005, per estimator and tree set, beside E29's MCEM <code>cr</code> and <code>dd</code> fits.</li>
+</ol>
+<h2 id="results">Results</h2>
+<p><strong>(a) The estimates follow the box.</strong></p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>on the lower limit in E29</th>
+<th>wide fit beyond the old limit by &gt; half the added width</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>rate at the origin</td>
+<td>7</td>
+<td>7</td>
+</tr>
+<tr>
+<td>slope on N</td>
+<td>6</td>
+<td>5</td>
+</tr>
+<tr>
+<td>slope on ED</td>
+<td>13</td>
+<td>10</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The slope on ED has a median of -0.763 against a new limit of -0.80 (<a href="E29.html">E29</a>: -0.400 against -0.400); the rate a median of 0.00032, 156 times below 0.05 (E29: 0.0019). The log-likelihood gains a median 0.01 (quartiles -0.02 to 0.02) over E29's fit of the same tree. 7 of 20 fits finished, none below 10 effective draws; <span class="math inline">\(\beta_{ED}\)</span> returns at 0.71; <code>ned</code> chosen within 2 AIC on 4, <code>cr</code> on 10.</p>
+<p><strong>(b) A driver</strong> (<code>arms.csv</code>):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>arm</th>
+<th>trees</th>
+<th>generating slope</th>
+<th>fitted slope, median (quartiles)</th>
+<th>fitted/gen</th>
+<th>right sign</th>
+<th>on a limit</th>
+<th>ESS median (&lt; 10)</th>
+<th>finished</th>
+<th>generator chosen</th>
+<th><span class="math inline">\(\beta\)</span> ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ED +</td>
+<td>20</td>
+<td>+0.181</td>
+<td>-0.400 (-0.400, -0.395)</td>
+<td>-2.21</td>
+<td>2</td>
+<td>15</td>
+<td>283 (1)</td>
+<td>8</td>
+<td>5</td>
+<td>0.78</td>
+</tr>
+<tr>
+<td>ED 0 (E29)</td>
+<td>20</td>
+<td>0</td>
+<td>-0.400 (-0.400, -0.274)</td>
+<td>—</td>
+<td>—</td>
+<td>13</td>
+<td>247 (1)</td>
+<td>7</td>
+<td>4</td>
+<td>0.71</td>
+</tr>
+<tr>
+<td>ED -</td>
+<td>20</td>
+<td>-0.181</td>
+<td>-0.400 (-0.400, -0.346)</td>
+<td>2.21</td>
+<td>19</td>
+<td>11</td>
+<td>235 (1)</td>
+<td>6</td>
+<td>2</td>
+<td>0.74</td>
+</tr>
+<tr>
+<td>K +</td>
+<td>0</td>
+<td>+0.147</td>
+<td>not reachable: the clade passes the lineage cap at every capacity searched</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>K 0</td>
+<td>20</td>
+<td>0</td>
+<td>-0.028 (-0.099, -0.005)</td>
+<td>—</td>
+<td>—</td>
+<td>2</td>
+<td>10.5 (9)</td>
+<td>2</td>
+<td>19</td>
+<td>0.65</td>
+</tr>
+<tr>
+<td>K -</td>
+<td>20</td>
+<td>-0.147</td>
+<td>-0.053 (-0.268, -0.025)</td>
+<td>0.36</td>
+<td>18</td>
+<td>7</td>
+<td>20.2 (5)</td>
+<td>7</td>
+<td>20</td>
+<td>0.56</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Neither K arm is sampler-limited by rule (3) (9 and 5 of 20 below 10 draws), though the zero arm's median of 10.5 is at the threshold. In <code>arms.csv</code> the column <code>mu0_gen</code> is the intercept at covariate zero after centring (0.025, 0.05, 0.10 for the ED arms; 0.214 for K -), not 0.05.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E32-drivers.png" alt="Fitted against generating extinction slope" loading="lazy">
+<figcaption><strong>Figure 1.</strong> One point a tree, 200 tips. Left: the ED slope sits on the box's lower limit (dashed) in every arm whatever the generating value. Middle: the K slope at turnover 0.10, negative arm ordered below the zero arm at about a third of its size; the positive arm was not reachable. Right: the same K arms at turnover 0.25, which is <a href="E35.html">E35</a> (a).</figcaption>
+</figure>
+<p><strong>(c) The exact estimators</strong> (<code>exact.csv</code>):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>estimator, trees</th>
+<th>median <span class="math inline">\(\mu\)</span></th>
+<th>within 2x of 0.05</th>
+<th>below 0.005</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bd_ML</code>, <code>ned</code> trees</td>
+<td>0.0000</td>
+<td>3 of 20</td>
+<td>17</td>
+</tr>
+<tr>
+<td><code>bd_ML</code>, null trees</td>
+<td>0.0000</td>
+<td>0 of 20</td>
+<td>20</td>
+</tr>
+<tr>
+<td><code>dd_ML</code>, <code>ned</code> trees</td>
+<td>0.1575</td>
+<td>4 of 20</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>dd_ML</code>, null trees</td>
+<td>0.1220</td>
+<td>4 of 20</td>
+<td>1</td>
+</tr>
+<tr>
+<td>MCEM <code>cr</code> (E29), <code>ned</code> trees</td>
+<td>0.0161</td>
+<td>6</td>
+<td>6</td>
+</tr>
+<tr>
+<td>MCEM <code>dd</code> (E29) at present diversity, <code>ned</code> trees</td>
+<td>0.042</td>
+<td>6</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code>bd_ML</code> puts extinction at zero on 37 of 40 trees; the three exceptions are <code>ned</code> trees k02 (0.072), k11 (0.030) and k13 (0.056). <code>dd_ML</code> puts it at 3.2 and 2.4 times the generating value; on <code>ned</code> tree k02 it did not converge (<code>dd_conv = 1</code>, 54,548 s). <code>dd_ML</code> keeps extinction constant, while the MCEM <code>dd</code> fit lets it vary with N, so the two <code>dd</code> rows are not the same quantity.</p>
+<figure id="figure-2">
+<img src="../assets/wiki/E32-estimators-200.png" alt="Every estimator of the extinction rate on the 200-tip trees" loading="lazy">
+<figcaption><strong>Figure 2.</strong> One point a tree, log scale; band: 0.05 within a factor of 2. Circles: unconditioned; triangles: conditioned on survival (the conditioned MCEM fits are <a href="E34.html">E34</a>r's). No estimator, exact or MCEM, conditioned or not, lands in the band on more than 8 of 20 trees; the wide-box <code>ned</code> fit (bottom row) moves further down.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p>Not identified, by all three readings. (a) Follows and flat on all three parameters: the estimate goes where the box ends and the likelihood changes by 0.01 on the way, so the tree does not bound extinction from below at 200 tips and turnover 0.10. (b) The ED slope is not identified: the fit returns the lower limit whatever the generating slope, and the arms' medians are not ordered. The K slope is not identified by the rule because the positive arm is not reachable; the two arms that exist are ordered and show a negative slope recovered in sign at about a third of its size, with overlapping quartile ranges. (c) An exact likelihood with no augmentation puts extinction at zero on 37 of 40 trees, so the result is of the trees, not of MCEM. What E32 does not vary is turnover or size; <a href="E38.html">E38</a> maps those with the exact likelihood, and <a href="E35.html">E35</a> moves the K arms to turnover 0.25.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E29.html">E29</a> — the fits on the box limits that led here.</li>
+<li><a href="E33.html">E33</a> — the extinction path with the same drivers.</li>
+<li><a href="E34.html">E34</a> — the same exact estimators unconditioned, and MCEM conditioned on survival.</li>
+<li><a href="E35.html">E35</a> — the K arms at turnover 0.25.</li>
+<li><a href="E38.html">E38</a> — the exact profile likelihood by turnover and size.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

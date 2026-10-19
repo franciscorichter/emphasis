@@ -1,0 +1,47 @@
+<h3>Description</h3>
+
+<p>One denominator for both proposals.  Three kinds of draw carry weight zero
+and all three belong in it: a draw whose log-weight is <code>-Inf</code> because
+the model gives its tree probability zero; a draw the proposal rejected for
+a reason that depends on the parameters &ndash; a missing lineage still alive at
+the present under complete sampling, whose density under <span class="reqn">\(f\)</span> is zero;
+and nothing else.  A draw rejected for a reason that does not depend on the
+parameters, an overrun of the missing-lineage budget, is not a sample and
+stays out.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.is_summary(lw, n_zero_weight = 0L, n_rejected = 0L)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id=".is_summary_:_lw">lw</code></td>
+<td>
+<p>Log-weights of the completed draws.</p>
+</td></tr>
+<tr><td><code id=".is_summary_:_n_zero_weight">n_zero_weight</code></td>
+<td>
+<p>Completed draws whose weight is zero.</p>
+</td></tr>
+<tr><td><code id=".is_summary_:_n_rejected">n_rejected</code></td>
+<td>
+<p>Draws rejected for a parameter-dependent reason.</p>
+</td></tr>
+</table>
+
+<h3>Details</h3>
+
+<p>The two proposals reached this denominator by different routes &ndash; the
+thinning path through <code>n_zero_weight</code>, the conditional path through a
+separate acceptance factor &ndash; and the difference between the two routes is
+the size of the effect they are used to measure.
+</p>
+
+<h3>Value</h3>
+
+<p>A list: <code>fhat</code>, <code>ess</code>, <code>n_finite</code>, <code>n_den</code>.
+</p>
+

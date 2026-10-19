@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E30 — Was E19b&#x27;s short pendant-age coefficient the clock or the model? · emphasis</title>
+<meta name="description" content="No nd fit had run to its stopping rule: every one of E19 and E19b ended on its 30-minute clock, with \(\beta_D\) at 0.30-0.63 of its value on the thinning proposal and 0.43-1.06 on the surrogate.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E30 — Was E19b's short pendant-age coefficient the clock or the model?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete on 39 of 40 fits; clock-limited (27 of 39 <code>nd</code> fits ended on the four-hour clock, none met the stopping rule). One fit (<code>nd-em035-k03</code>) ran 60 hours with neither clock firing and was stopped by hand. Followed by <a href="E37.html">E37</a></td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis <code>f30a791</code></td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E19-pendant.R</code> <code>--nd-sampling bdi --effects -0.35,0.35</code> with <code>max_iter</code> 300 and a four-hour clock; no analysis script, numbers below read from the merged CSV</td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E30/pendant.csv</code> (39 rows), <code>results/E30/jobs/</code> (39 files), <code>results/E30/jobs-k03-stopped.txt</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>No <code>nd</code> fit had run to its stopping rule: every one of <a href="E19.html">E19</a> and E19b ended on its 30-minute clock, with <span class="math inline">\(\beta_D\)</span> at 0.30-0.63 of its value on the thinning proposal and 0.43-1.06 on the surrogate. E30 gives the same design three times the iterations and eight times the clock. The number it exists for, in the design's words, is "whether the 0.43 to 0.63 recovery of E19b was the clock or the model".</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>generator</td>
+<td><code>nd</code>, linear link</td>
+<td>as in E19</td>
+</tr>
+<tr>
+<td>effects</td>
+<td>±0.35 of <span class="math inline">\(\beta_0\)</span> at one <span class="math inline">\(D\)</span> scale unit</td>
+<td><span class="math inline">\(\beta_D = \pm0.0598\)</span> per time unit at a <span class="math inline">\(D\)</span> scale of 2.92</td>
+</tr>
+<tr>
+<td>tips</td>
+<td>100 (observed 83-112 at -0.35, 84-108 at +0.35)</td>
+<td>capacity 97.5 (-0.35) and 107.2 (+0.35)</td>
+</tr>
+<tr>
+<td>turnover / crown</td>
+<td>0.10 / 15</td>
+<td></td>
+</tr>
+<tr>
+<td>trees per cell</td>
+<td>20 (19 with a result at -0.35)</td>
+<td>seeds of E19b</td>
+</tr>
+<tr>
+<td>fits</td>
+<td><code>dd</code> and <code>nd</code>, both on the surrogate proposal</td>
+<td></td>
+</tr>
+<tr>
+<td>draws</td>
+<td>600</td>
+<td></td>
+</tr>
+<tr>
+<td><code>max_iter</code> / clock</td>
+<td>300 / 4 hours per fit (E19b: 100 / 30 minutes)</td>
+<td></td>
+</tr>
+<tr>
+<td>box</td>
+<td><code>sim/box.R</code>, as E19</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The design calls these "the same trees by seed" as <a href="E19.html">E19b</a>. They are not the same trees: the <code>f30a791</code> simulator draws different trees from E19b's seeds (the same effect the <a href="E31.html">E31</a> amendment records for <code>ned</code>), and the <span class="math inline">\(D\)</span> scale read from them is 2.92 against E19b's 2.83, so <span class="math inline">\(\beta_D\)</span> is ±0.0598 here and ±0.0619 there. E30 against E19b is a comparison of two samples of the same design, not a paired one.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p><a href="E19.html">E19</a>'s rule on <span class="math inline">\(\beta_D\)</span>: median ratio in <span class="math inline">\([0.75, 1.25]\)</span>, the right sign on <span class="math inline">\(\ge 80\%\)</span>, <code>nd</code> over <code>dd</code> by more than 2 AIC on <span class="math inline">\(\ge 80\%\)</span>, cells below 10 effective draws reported and excluded. Also reported: the share of <code>nd</code> fits that met the stopping rule, and the extinction slope <span class="math inline">\(\gamma_D\)</span> against its generating zero.</p>
+<h2 id="results">Results</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>effect</th>
+<th>trees</th>
+<th>ratio (q1-q3)</th>
+<th>sign</th>
+<th>ESS (min-max)</th>
+<th>&lt; 10</th>
+<th><code>nd</code> stops cap / clock</th>
+<th><code>nd</code> over <code>dd</code> by &gt; 2 (median <span class="math inline">\(\Delta\)</span>AIC)</th>
+<th><span class="math inline">\(\hat\gamma_D\)</span> median</th>
+<th><code>dd</code> stops</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-0.35</td>
+<td>19</td>
+<td>0.67 (0.60-0.81)</td>
+<td>19 / 19</td>
+<td>27.1 (3.2-595)</td>
+<td>4</td>
+<td>7 / 12</td>
+<td>19 / 19 (22.0)</td>
+<td>-0.0005</td>
+<td>19 converged</td>
+</tr>
+<tr>
+<td>+0.35</td>
+<td>20</td>
+<td>0.80 (0.70-0.98)</td>
+<td>20 / 20</td>
+<td>9.2 (1.1-39)</td>
+<td>12</td>
+<td>5 / 15</td>
+<td>20 / 20 (19.3)</td>
+<td>+0.0116</td>
+<td>20 converged</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>ESS: effective sample of the <code>nd</code> fit's last E-step, of 600. No <code>nd</code> fit met the stopping rule: 12 of 39 ended on the 300-iteration cap and 27 on the four-hour clock (the README row says "the rest ended on the clock"; the file has 12 on the cap). The +0.35 cell is <strong>sampler-limited</strong> (median ESS 9.2, 12 fits below 10); both cells are <strong>clock-limited</strong>. On the fits with at least 10 effective draws the median ratio is 0.63 (15 fits) at -0.35 and 0.89 (8 fits) at +0.35. Fits stopped by the cap and by the clock give similar ratios (0.67 and 0.71 at -0.35; 0.82 and 0.79 at +0.35). The extinction intercept <span class="math inline">\(\gamma_0\)</span> is fitted at exactly 0 on 14 of 19 fits at -0.35 and 8 of 20 at +0.35.</p>
+<p><strong>The fit that would not stop.</strong> Tree 3 of the -0.35 cell ran 60 hours on one fit while the other seven workers sat idle for the last day; neither its <code>dd</code> nor its <code>nd</code> <code>max_time</code> of four hours fired, so the time check does not reach wherever the fit was looping. It was killed by hand and recorded in <code>jobs-k03-stopped.txt</code> ("stopped by hand 2026-10-08 after 60 h on one fit, no result"). That is a package defect (a fit its budget cannot stop), separate from the model; the description comes from the session record cited in ledger A §7.3.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E30-ratio-ess.png" alt="E30, fitted over generating beta_D against the effective sample" loading="lazy">
+<figcaption><strong>Figure 1.</strong> One point per tree: the ratio against the <code>nd</code> fit's effective sample, shape and colour by how the fit ended. The cell medians (red) sit at 0.67 and 0.80, above <a href="E19.html">E19b</a>'s 0.43 and 0.63 (dotted, other trees); at +0.35 most fits are left of the 10-draw line, and the points spread from 0.42 to 1.56.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p><strong>Not met.</strong> At -0.35 the sign (19 of 19) and selection (19 of 19) halves are met and the ratio, 0.67, is outside <span class="math inline">\([0.75, 1.25]\)</span>. The +0.35 cell is sampler-limited and excluded by the rule; its ratio 0.80 and its selection 20 of 20 are reported only. 0 of 39 <code>nd</code> fits met the stopping rule. <span class="math inline">\(\gamma_D\)</span> stays near its generating zero at -0.35 (-0.0005) and is fitted at +0.0116 at +0.35, a fifth of the size of <span class="math inline">\(\beta_D\)</span>.</p>
+<p>With three times the iterations and eight times the clock the median ratio is 0.24 and 0.17 higher than <a href="E19.html">E19b</a>'s on a sample of the same design, but no fit reached its stopping rule, so the question E30 was registered for (the clock or the model) is not answered by it. That led to <a href="E37.html">E37</a>: the same trees, 1000 iterations and a 60-hour clock. What E30 does show is that the coefficient's sign and <code>nd</code>'s lead over <code>dd</code> are present on every tree at this effect, on fits that had not finished.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E19.html">E19</a> — E19 and E19b, the 30-minute runs whose shortfall E30 asks about.</li>
+<li><a href="E31.html">E31</a> — <code>nd</code> at 200 tips inside the ladder with 300 iterations: 0 of 20 finished (E31), 1 of 20 (E31b).</li>
+<li><a href="E37.html">E37</a> — E30's trees with 1000 iterations and a 60-hour clock.</li>
+<li><a href="E29.html">E29</a> — the <code>ned</code> counterpart at 200 tips, where 7 of 20 fits finished and the coefficient on them was 1.02.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

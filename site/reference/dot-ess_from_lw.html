@@ -1,0 +1,13 @@
+<h3>Description</h3>
+
+<p><span class="reqn">\(\text{ESS} = (\sum w_i)^2 / \sum w_i^2\)</span>, computed in log-space for
+numerical stability.  Measures IS efficiency: ESS close to <span class="reqn">\(n\)</span> means
+all trees contribute roughly equally; ESS close to 1 means one tree
+dominates.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.ess_from_lw(lw)
+</code></pre>
+

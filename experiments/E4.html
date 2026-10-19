@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E4 — What one E-step costs, by model, proposal and tree size · emphasis</title>
+<meta name="description" content="Claim C5: cost grows with the augmented tree, and the paper should give the wall-clock a user can expect by model, sampler and size.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E4 — What one E-step costs, by model, proposal and tree size</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td><code>a87de1c</code> (by the build audit; identical to a clean build except the random stream through both <code>ned</code> proposals)</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E4-cost.R</code>; figures by <code>sim/figures.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E4/cost.csv</code> (150 rows); <code>results/E4/cost-bED015.csv</code> (the <span class="math inline">\(\beta\)</span>_ED = -0.15 attempt, not the one quoted)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Claim C5: cost grows with the augmented tree, and the paper should give the wall-clock a user can expect by model, sampler and size. The fits of <a href="E1.html">E1</a>-<a href="E3.html">E3</a> mix hosts, workers and stopping, so a dedicated sweep measures one E-step under identical conditions.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>value</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>tips</td>
+<td>25, 50, 100, 200, 400, exactly (<code>TreeSim::sim.bd.taxa</code>)</td>
+<td></td>
+</tr>
+<tr>
+<td>trees</td>
+<td>5 per size</td>
+<td></td>
+</tr>
+<tr>
+<td>generating process</td>
+<td>constant rate, turnover 0.2, complete sampling</td>
+<td>the design said turnover 0; the driver uses 0.2 because a turnover of zero leaves nothing to augment</td>
+</tr>
+<tr>
+<td>rates for the E-step</td>
+<td><span class="math inline">\(\lambda\)</span>0 = log(n/2)/(T(1 - <span class="math inline">\(\varepsilon\)</span>)), <span class="math inline">\(\mu\)</span>0 = <span class="math inline">\(\varepsilon\)</span><span class="math inline">\(\lambda\)</span>0, T = 10</td>
+<td></td>
+</tr>
+<tr>
+<td>models / proposals</td>
+<td><code>cr</code>: surrogate and thinning; <code>dd</code>: surrogate and thinning (<span class="math inline">\(\beta\)</span>N = -<span class="math inline">\(\lambda\)</span>0/(4n)); <code>ned</code>: mean-field and ED-aware thinning (<span class="math inline">\(\beta\)</span>_ED = -0.05<span class="math inline">\(\lambda\)</span>0)</td>
+<td></td>
+</tr>
+<tr>
+<td>draws</td>
+<td>one E-step of 200</td>
+<td></td>
+</tr>
+<tr>
+<td>threads</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td>recorded</td>
+<td>seconds, ESS, median and maximum augmented-tree size</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>At <span class="math inline">\(\beta\)</span>_ED = -0.15<span class="math inline">\(\lambda\)</span>0 (<code>cost-bED015.csv</code>) the <code>ned</code> E-step failed on 25 of 50 runs ("maxN exceeded … zero weights": the linear link clips an observed event to rate zero on half the trees), so the sweep was rerun at -0.05.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>Descriptive: medians and 90th percentiles per (n, model, sampler). No threshold.</p>
+<h2 id="results">Results</h2>
+<p>Median seconds for one E-step of 200 draws (90th percentile in brackets):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>model / proposal</th>
+<th>25</th>
+<th>50</th>
+<th>100</th>
+<th>200</th>
+<th>400 tips</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code> surrogate</td>
+<td>0.30 (0.45)</td>
+<td>0.50 (0.59)</td>
+<td>0.90 (1.28)</td>
+<td>2.08 (2.12)</td>
+<td>3.95 (4.76)</td>
+</tr>
+<tr>
+<td><code>cr</code> thinning</td>
+<td>0.062 (0.074)</td>
+<td>0.080 (0.091)</td>
+<td>0.129 (0.178)</td>
+<td>0.343 (0.442)</td>
+<td>0.842 (1.43)</td>
+</tr>
+<tr>
+<td><code>dd</code> surrogate</td>
+<td>0.25 (0.31)</td>
+<td>0.36 (0.42)</td>
+<td>0.59 (0.66)</td>
+<td>1.03 (1.07)</td>
+<td>2.03 (2.16)</td>
+</tr>
+<tr>
+<td><code>dd</code> thinning</td>
+<td>0.059 (0.074)</td>
+<td>0.076 (0.085)</td>
+<td>0.143 (0.150)</td>
+<td>0.314 (0.418)</td>
+<td>0.818 (1.23)</td>
+</tr>
+<tr>
+<td><code>ned</code> ED-aware thinning</td>
+<td>0.073 (0.29)</td>
+<td>0.114 (0.13)</td>
+<td>0.264 (0.33)</td>
+<td>0.892 (0.98)</td>
+<td>3.02 (4.35)</td>
+</tr>
+<tr>
+<td><code>ned</code> mean-field thinning</td>
+<td>0.068 (0.17)</td>
+<td>0.098 (0.11)</td>
+<td>0.190 (0.24)</td>
+<td>0.594 (0.65)</td>
+<td>1.73 (2.51)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The augmented tree has a median 36-38 nodes at 25 tips and 581-627 at 400. The surrogate proposal costs 4.7-7.0 times the thinning one under <code>cr</code> and 2.5-4.7 times under <code>dd</code> at the same size; the ED-aware proposal 1.06-1.75 times the mean-field one. Two of 150 runs failed (<code>ned</code> at 25 tips, both thinning variants, "maxN exceeded").</p>
+<p>What the same E-step delivers (median ESS of 200 at 25-400 tips): <code>cr</code> surrogate 200 at every size, <code>cr</code> thinning 58, 31, 9.5, 2.5, 1.6; <code>dd</code> surrogate 182-185, <code>dd</code> thinning 64, 30, 10.1, 2.5, 1.2; <code>ned</code> ED-aware 115, 59, 29, 4.4, 2.5; <code>ned</code> mean-field 107, 61, 16.5, 4.2, 1.2.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E4-cost.png" alt="Seconds for one E-step of 200 draws against tips, six model and proposal pairs" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Medians over five trees, bars the range, both axes logarithmic, one thread. Every pair stays between 0.06 and 4 seconds from 25 to 400 tips; the surrogate proposal is the most expensive per E-step under <code>cr</code> and <code>dd</code>.</figcaption>
+</figure>
+<figure id="figure-2">
+<img src="../assets/wiki/E4-cost-ess.png" alt="Effective sample of 200 draws delivered by the same E-steps" loading="lazy">
+<figcaption><strong>Figure 2.</strong> The same E-steps read for their effective sample: the surrogate keeps its draws as the tree grows, every thinning variant falls below 10 by 200 tips.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p>Descriptive rule: <strong>met</strong> (the table is the deliverable). One E-step costs 0.06-4 seconds from 25 to 400 tips across the six pairs, single-threaded. The record's sentence that the surrogate proposal costs "3-10x" the thinning one does not match the data: the ratio is 4.7-7.0 under <code>cr</code> and 2.5-4.7 under <code>dd</code>. Read with the effective sample, the cheaper thinning E-step buys fewer than 10 usable draws from 100-200 tips, so per effective draw (seconds over median ESS, computed from the two tables above) the surrogate is the cheaper proposal under <code>cr</code> from 100 tips (0.0045 against 0.014 s) and the thinning one only at 25 tips (0.0011 against 0.0015 s). E4 does not give the cost of a whole fit: that is set by the number of iterations and, for lineage-level models, by the starting point (<a href="E15.html">E15</a>); per-fit costs are in <a href="S.html">S</a> and on the <a href="E15.html">E15</a> figure.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E1.html">E1</a>, <a href="E3.html">E3</a> — the fits and proposal sets whose timings E4 was meant to complement.</li>
+<li><a href="E15.html">E15</a> — where a whole <code>ned</code> iteration's time goes, and per-fit costs by size.</li>
+<li><a href="E6.html">E6</a>, <a href="E7.html">E7</a> — the effective sample of the two proposals over sampling fraction, size and turnover.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

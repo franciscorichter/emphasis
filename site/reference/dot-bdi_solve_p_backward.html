@@ -1,0 +1,25 @@
+<h3>Description</h3>
+
+<p>The ODE itself carries no sampling fraction; <code>rho</code> enters only as the
+terminal condition <code>p(tp) = rho</code>, which is the probability that a
+lineage alive at the present leaves a sampled descendant (itself).  That is
+the whole of the incomplete-sampling change on the backward side, and it
+reproduces the closed form of <code>.bdi_p_cr</code> under constant rates.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.bdi_solve_p_backward(
+  pars8,
+  model_bin,
+  link,
+  bt,
+  tp,
+  Nhat_fun,
+  Phat_fun,
+  Ehat_fun,
+  t_grid,
+  rho = 1
+)
+</code></pre>
+

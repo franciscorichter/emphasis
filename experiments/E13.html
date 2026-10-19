@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E13 — How long does MCEM take to settle, and how much does one iterate move? · emphasis</title>
+<meta name="description" content="Two experiments had measured non-settling as a side effect: 16% of E8&#x27;s fits converged inside 100 iterations, and E9&#x27;s reference failed to settle inside 400 iterations on 16 of 40 trees.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E13 — How long does MCEM take to settle, and how much does one iterate move?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete; the draws arm has 6 trees per cell, not the designed 10</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>not recorded</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E13-settling.R</code>, <code>sim/E13-rates.R</code>; figure <code>sim/figures-study.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E13/settling-traces.csv</code> (40 rows), <code>settling-draws.csv</code> (42), <code>settling-rates.csv</code> (42), <code>traces/*.rds</code> (42 traces of 401 iterations)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Two experiments had measured non-settling as a side effect: 16% of <a href="E8.html">E8</a>'s fits converged inside 100 iterations, and <a href="E9.html">E9</a>'s reference failed to settle inside 400 iterations on 16 of 40 trees. That conditions every other result, so E13 measures it directly. The design question: is settling slow in <em>iterations</em> or in <em>draws</em>? If more draws per iteration settle the trace in fewer iterations, the cost is Monte Carlo noise and a user should raise <code>num_trees</code>; if the iteration count does not move, the cost is the EM path and only patience helps.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>arm</th>
+<th>what</th>
+<th>trees</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>traces</td>
+<td>re-reads E9's 40 reference traces (400 iterations at 400 draws; <code>cr</code> and <code>dd</code> at 50 and 200 tips); no new compute</td>
+<td>10 per cell</td>
+</tr>
+<tr>
+<td>draws</td>
+<td>new reference-only fits (<code>rel_change</code>, tol = 0, never satisfied; 400 iterations) at 100, 400 and 1600 draws for <code>cr</code> and <code>dd</code>, plus <code>ned</code> at 400 draws</td>
+<td>designed 10 per cell; <strong>6 on disk</strong> (k = 1-6 in every cell)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter (draws arm)</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>tips</td>
+<td>about 100 (realised 61-156 <code>cr</code>, 78-100 <code>dd</code>, 71-116 <code>ned</code>)</td>
+</tr>
+<tr>
+<td>generating rates</td>
+<td><span class="math inline">\(\beta\)</span>0 = 0.5, turnover 0.25 (<span class="math inline">\(\gamma\)</span>0 = 0.125), crown age 15, capacity calibrated to 100 tips</td>
+</tr>
+<tr>
+<td><code>ned</code> effect</td>
+<td><span class="math inline">\(\beta\)</span>_ED = -0.15 <span class="math inline">\(\beta\)</span>0 at the clade's ED scale</td>
+</tr>
+<tr>
+<td>proposal, link, <span class="math inline">\(\rho\)</span></td>
+<td>surrogate, linear, 1</td>
+</tr>
+<tr>
+<td>clock</td>
+<td>21 600 s (driver default)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Settling criteria used: the <strong>iterate-scatter band</strong> (the first iteration from which the running mean stays within one iterate's scatter of the settled value); a <strong>relative tolerance</strong> of 1% and 2% of the settled value (introduced for the draws arm because a band from the iterates' own scatter tightens as draws grow, about fourfold from 100 to 1600 draws, so it is stricter exactly where the estimate is more precise); and, in the adversarial review, a <strong>plateau</strong> (every later iterate within 2%).</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>Descriptive: the median settling iteration and settling draw count per cell. The paper may then state whichever the data support, as the measured scaling: if settling iterations fall roughly as the draw count rises, the cost is noise; if not, it is the path.</p>
+<h2 id="results">Results</h2>
+<p><strong>Settling, draws arm</strong> (trees with a settling point, of 6; median iteration):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>cell</th>
+<th>iterate-scatter band</th>
+<th>within 1%</th>
+<th>within 2%</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code>, 100 draws</td>
+<td>4 (123)</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>cr</code>, 400</td>
+<td>2 (197, 241)</td>
+<td>3 (55, 202, 321)</td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>cr</code>, 1600</td>
+<td>1 (79)</td>
+<td>2 (61, 87)</td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>dd</code>, 100</td>
+<td>4 (168)</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>dd</code>, 400</td>
+<td>6 (231)</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>dd</code>, 1600</td>
+<td>1 (16)</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>ned</code>, 400</td>
+<td>5 (309)</td>
+<td>0</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Every fit ran to the 400-iteration cap, as designed. <strong>Traces arm</strong> (<a href="E9.html">E9</a>'s references, settle found of 10; median iteration; median cumulative draws): <code>cr</code> 200 tips 7 (143; 57 200), <code>cr</code> 50 tips 6 (264; 105 600), <code>dd</code> 200 tips 4 (191; 76 400), <code>dd</code> 50 tips 7 (116; 46 372). 16 of 40 references do not settle inside 400 iterations under any criterion. Under the plateau criterion 0 of 6 settle in every cell except <code>cr</code> at 1600 draws. An earlier reading that "<code>dd</code> settles at iteration 7" was withdrawn: the running mean fired mid-transient while the trace was still rising from 0.04 to 0.10.</p>
+<p><strong>The noise floor</strong>, which depends on no criterion. Standard deviation of the speciation-intercept iterate over the last 100 of 400 iterations, as % of its own mean, median over the 6 trees: <code>cr</code> 0.89 / 0.29 / 0.18% at 100 / 400 / 1600 draws; <code>dd</code> 1.73 / 0.88 / 0.47%; <code>ned</code> 1.36% at 400. A fourfold increase in draws divides it by 1.6 to 3.1. A second measure, the coefficient of variation of the rates at the clade's own diversity (<code>E13-rates.R</code>, report table):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>draws</th>
+<th>CV of <span class="math inline">\(\lambda\)</span>(N)</th>
+<th>CV of <span class="math inline">\(\mu\)</span>(N)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code></td>
+<td>100 / 400 / 1600</td>
+<td>0.9 / 0.3 / 0.2%</td>
+<td>6.7 / 3.0 / 1.9%</td>
+</tr>
+<tr>
+<td><code>dd</code></td>
+<td>100 / 400 / 1600</td>
+<td>3.0 / 1.8 / 1.0%</td>
+<td>5.4 / 2.7 / 1.4%</td>
+</tr>
+<tr>
+<td><code>ned</code></td>
+<td>400</td>
+<td>4.2%</td>
+<td>6.4%</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The two measures differ for <code>dd</code> (1.7 / 0.9 / 0.5% against 3.0 / 1.8 / 1.0%) because <span class="math inline">\(\lambda\)</span>(N) includes the <span class="math inline">\(\beta\)</span>N·N term. Extinction carries 2 to 7 times the noise of speciation.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E13-noise.png" alt="Speciation-rate iterate of six trees over the last 100 of 400 iterations, at 100, 400 and 1600 draws per E-step, constant rate and diversity-dependent" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Each line is one tree's iterate as a deviation from its own mean; the band is plus and minus the median standard deviation. The iterates never stop moving; sixteen times the draws narrows the band about fourfold (0.9 → 0.2% under <code>cr</code>, 1.7 → 0.5% under <code>dd</code>).</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p>Under the descriptive rule: the noise side is answered — per-iterate noise falls with the draws roughly as 1/√draws (1-7% across rates and models, extinction the larger), so the cost of a tight answer is noise and the lever is <code>num_trees</code>. The settling-iteration side is <strong>not answered as a scaling</strong>: the counts and medians above do not form a monotone series in the draws, and each criterion moves the answer by up to an order of magnitude, because each is either tighter than the per-iterate noise or fires mid-transient. An iterate does not settle on a point; any stopping rule tighter than the floor cannot fire, which is why the shipped <code>mc_error</code> rule compares the step with its own Monte Carlo error (<a href="E9.html">E9</a>), and a user taking the last iterate inherits this noise whatever the iteration count. The 6-tree cells make the medians coarse; the design's 10 were not run.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E9.html">E9</a> — the stopping rule; E13's traces arm re-reads its references.</li>
+<li><a href="E15.html">E15</a> — uses E13's 1/√draws to motivate a draw schedule.</li>
+<li><a href="S.html">S</a> — where extinction was found to be the harder parameter in the estimates as well.</li>
+<li><a href="E8.html">E8</a> — whose 16% converged fits were one origin of E13.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

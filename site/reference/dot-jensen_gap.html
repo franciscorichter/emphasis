@@ -1,0 +1,57 @@
+<h3>Description</h3>
+
+<p><span class="reqn">\(\widehat\ell = \log(\frac1N \sum_i w_i)\)</span> estimates <span class="reqn">\(\log E[w]\)</span>,
+and a log of a mean is not the mean of a log: by Jensen's inequality
+<span class="reqn">\(E[\widehat\ell] \le \log E[w]\)</span>, always downward, never up.  The
+EM objective is unaffected &ndash; it is an expectation of a log, and the
+M-step averages <span class="reqn">\(\log f\)</span> directly (<code>src/M_step.cpp</code>) &ndash; but the
+log-likelihood a fit reports is exactly this estimator, and so is the
+<code>AIC</code> built from it.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.jensen_gap(ess, n)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id=".jensen_gap_:_ess">ess</code></td>
+<td>
+<p>Effective sample size of the draw.</p>
+</td></tr>
+<tr><td><code id=".jensen_gap_:_n">n</code></td>
+<td>
+<p>Number of draws the estimator averaged over.</p>
+</td></tr>
+</table>
+
+<h3>Details</h3>
+
+<p>The delta method gives the bias as <span class="reqn">\(-\mathrm{Var}(w)/(2N E[w]^2)\)</span>,
+which in terms of the effective sample size <span class="reqn">\(n_{\mathrm{eff}} =
+N/(1+\mathrm{CV}^2)\)</span> is <span class="reqn">\(-\frac12(1/n_{\mathrm{eff}} - 1/N)\)</span>: a
+quantity already on record for every fit.
+</p>
+<p>It is an indicator of size, not a bound in either direction, and its
+error runs the wrong way where the quantity matters.  Measured on
+log-normal weights with <span class="reqn">\(N = 200\)</span>, as the ratio of what this returns
+to the true bias: 4.9 at <span class="reqn">\(n_{\mathrm{eff}} = 188\)</span>, 2.0 at 157, 0.90
+at 82, 0.75 at 36, 0.46 at 17, 0.27 at 9, 0.16 at 6.  It overstates only
+where the bias is negligible anyway (below <span class="reqn">\(2\times10^{-4}\)</span>), and
+<em>understates</em> once the weights are heavy &ndash; by a factor of six at
+<span class="reqn">\(n_{\mathrm{eff}} = 6\)</span>, where the true bias is half a nat.
+<code>heavy</code> marks that regime, <span class="reqn">\(n_{\mathrm{eff}} &lt; N/10\)</span>, which is
+where the ratio first falls below one half.  A caller deciding anything
+on the size of the gap must treat a heavy draw as unquantified rather
+than as the number returned.
+</p>
+
+<h3>Value</h3>
+
+<p>A list: <code>gap</code> (a non-negative magnitude, the amount by which
+the reported log-likelihood sits <em>below</em> the truth) and
+<code>heavy</code> (<code>TRUE</code> when <code>gap</code> understates it).
+</p>
+

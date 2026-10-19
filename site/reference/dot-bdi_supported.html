@@ -1,0 +1,78 @@
+<h3>Description</h3>
+
+<p>The sampler conditions on a rate that is a function of the lineage count
+alone: <code>.bdi_p_cr</code> and <code>.bdi_solve_p_backward</code> solve one survival
+probability <code>p(t)</code> shared by every lineage alive at <code>t</code>, and the
+aggregate Gillespie of <code>.bdi_augment_one</code> moves <code>n_alive</code> lineages
+with one pair of rates.  That is what an N-only model gives it.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.bdi_supported(model_bin, link, rho = 1)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id=".bdi_supported_:_model_bin">model_bin</code></td>
+<td>
+<p>Length-3 binary model vector <code>c(use_N, use_M, use_D)</code>.</p>
+</td></tr>
+<tr><td><code id=".bdi_supported_:_link">link</code></td>
+<td>
+<p>Integer link code: 0 linear, 1 exponential, 2 gaussian.</p>
+</td></tr>
+<tr><td><code id=".bdi_supported_:_rho">rho</code></td>
+<td>
+<p>Sampling fraction in <code>(0, 1]</code>. Default <code>1</code>.</p>
+</td></tr>
+</table>
+
+<h3>Details</h3>
+
+<p>A lineage-level model (D, <code>model_bin[3] != 0</code>, or ED,
+<code>model_bin[4] != 0</code>) gives each lineage its own rate, so no single
+<code>p(t)</code> is the model's.  The sampler then conditions on the rate of the
+clade's average lineage instead: an ED of <code>P-hat/N-hat</code>, which the
+mean-field iteration solves for, and a D of zero, since D is centred.  The
+proposal is exact for that surrogate model and the importance weights carry
+each lineage's departure from the average; the attachment of a birth is
+tilted by the parent's pendant age, where D and ED read the tree.  This is
+available on the linear and exponential links.  The M covariate
+(<code>model_bin[2]</code>) is not in scope: the sampler's own mean-field state
+would have to be closed on <code>P</code> as well as <code>N</code>, which is written
+but not gated.
+</p>
+<p>Under the <code>gaussian</code> link the rate is
+<code>beta_0 * exp(-(beta_N*N - 1)^2 / 2)</code>, still a function of <code>N</code>
+alone.  For <code>cr</code> the covariate part is zero and the rate is the
+constant <code>beta_0 * exp(-1/2)</code>, so constant rates on the gaussian link
+are the constant-rates case under a reparameterisation and are sampled
+exactly, as they are on the other two links.  For <code>dd</code> they are not:
+<code>lambda(N)</code> rises to a peak at <code>N = 1/beta_N</code> and falls after it,
+and the Picard iteration of <code><a href="#dot-bdi_iterate">.bdi_iterate</a></code> does not contract on
+the far side.  Measured on a 20-tip tree over a 4 x 8 x 4 grid in
+<code>(beta_0, beta_N, rho)</code> with a 200-sweep budget &ndash; more than three times
+what this function allows &ndash; it failed to reach <code>tol</code> in 36 of 128
+cells, with <code>delta</code> running to 104.  That is divergence, not slow
+convergence.  The failing region is not an interval that could be excluded:
+at <code>rho = 0.5, beta_0 = 1</code> the iteration converges at
+<code>beta_N = 0.08</code>, fails at 0.1, and converges again at 0.2, 0.3 and 0.5;
+and the whole pattern moves with <code>rho</code>.  Where it does converge it can
+take 164 sweeps.  <code>dd</code> on the gaussian link therefore stays on the
+thinning proposal.  The linear and exponential <code>dd</code> rates are monotone
+in <code>N</code> and reached the fixed point in every cell of the same sweep, in
+at most 27 iterations at <code>rho = 1</code>.  They are slower below it: an
+exponential <code>dd</code> cell needs 63 sweeps at <code>rho = 0.2</code>, and
+converging linear <code>dd</code> cells have needed 126 and 134, which is what
+sets the <code>rho &lt; 1</code> budget.
+</p>
+<p>Incomplete sampling is in scope for every model and link the gate otherwise
+accepts.  <code>p(t)</code> becomes the probability of leaving a <em>sampled</em>
+descendant (<code>.bdi_p_cr</code>, <code>.bdi_solve_p_backward</code>, both of which
+take <code>rho</code>), and <code>.bdi_to_tree_df</code> emits the <code>5e10</code> sentinel
+for a missing lineage still alive at the present, so the draws carry
+unsampled extant lineages and <code>N(t)</code> counts them.
+</p>
+

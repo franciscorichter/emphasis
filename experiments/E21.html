@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E21 — Is the ancestral-splits coefficient recovered, by fitting (E21a) and on the path (E21b)? · emphasis</title>
+<meta name="description" content="The covariate-space measurement (sim/covariates-space.R) found an axis the package did not read: \(K_s(t)\), the number of speciation events on the path from the crown to lineage \(s\), hidden splits counted, constant between events and one more on both daughters at a split.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E21 — Is the ancestral-splits coefficient recovered, by fitting (E21a) and on the path (E21b)?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete (E21a and E21b). E21a is clock-limited (93 of 100 <code>nk</code> fits ended on the clock); E21b's <code>nk</code> cell is sampler-limited</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>not recorded; <span class="math inline">\(K\)</span> entered the package as of emphasis 0.4</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td>E21a <code>sim/E21-ancestral.R</code>; E21b <code>sim/E20-path.R</code> with <code>--covariates N,D,ED,K</code>; figures <code>sim/figures-supplement.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E21/ancestral.csv</code> (E21a, 100 rows, all <code>ok</code>); <code>results/E21b/path.csv</code> (E21b, 100 rows); <code>results/E21b/design.rds</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>The covariate-space measurement (<code>sim/covariates-space.R</code>) found an axis the package did not read: <span class="math inline">\(K_s(t)\)</span>, the number of speciation events on the path from the crown to lineage <span class="math inline">\(s\)</span>, hidden splits counted, constant between events and one more on both daughters at a split. Its rank correlation with every covariate offered was at most 0.29 in magnitude on <code>dd</code> clades. It became a package covariate (models <code>k</code> and <code>nk</code>, formula term <code>K</code>):</p>
+<p><span class="math display">\[\lambda_s(t) = \exp\big(\beta_0 + \beta_N N(t) + \beta_K K_s(t)\big),\]</span></p>
+<p>with <span class="math inline">\(\mu\)</span> carrying <span class="math inline">\(\gamma_K\)</span> likewise. Under the exponential link a positive <span class="math inline">\(\beta_K\)</span> says a lineage whose ancestry has speciated often speciates more, the observable trace of an inherited rate. The simulator carries <span class="math inline">\(K\)</span> per lineage, the per-lineage likelihood reads it through the table path ED takes, the thinning proposal reads it, and the surrogate proposal refuses it (its mean field does not carry <span class="math inline">\(K\)</span>). E21 asks whether <span class="math inline">\(\beta_K\)</span> comes back by fitting (E21a) and whether the path of <a href="E20.html">E20</a> admits <span class="math inline">\(K\)</span> where it is and only there (E21b).</p>
+<h2 id="design">Design</h2>
+<p><strong>E21a (fitting).</strong></p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>generator</td>
+<td><code>nk</code>, exponential link</td>
+<td>ancestral splits with an <span class="math inline">\(N\)</span> term</td>
+</tr>
+<tr>
+<td>tips</td>
+<td>100 target; trees 61-123 (median 75) at -0.35, 67-151 elsewhere</td>
+<td>capacity recalibrated per cell</td>
+</tr>
+<tr>
+<td>turnover / crown</td>
+<td>0.10 / 15</td>
+<td></td>
+</tr>
+<tr>
+<td><span class="math inline">\(K\)</span> scale</td>
+<td>sd(K) = 2.72-2.77 splits</td>
+<td>spread of the alive lineages' split count at the present in <code>dd</code> clades of 100 tips</td>
+</tr>
+<tr>
+<td>effects</td>
+<td>0, ±0.15, ±0.35</td>
+<td><span class="math inline">\(\beta_K = \log(1 + e)/\mathrm{sd}(K)\)</span>: -0.156, -0.059, 0, +0.051, +0.109 per split</td>
+</tr>
+<tr>
+<td>trees per cell</td>
+<td>20</td>
+<td></td>
+</tr>
+<tr>
+<td>fit</td>
+<td>ladder <code>cr</code> → <code>dd</code> → <code>nk</code>, each started from the estimate of the model it nests, new coefficients at zero</td>
+<td><code>cr</code>, <code>dd</code> on the surrogate; <code>nk</code> on thinning</td>
+</tr>
+<tr>
+<td>draws / <code>max_iter</code> / clock</td>
+<td>300 / 100 / 30 minutes per fit</td>
+<td></td>
+</tr>
+<tr>
+<td>box</td>
+<td><code>sim/box.R</code>, exponential link, <span class="math inline">\(K\)</span> slots scaled by the observed spread of tip depth</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The nested start and 300 draws replace <a href="E19.html">E19</a>'s setting (box midpoint, 600 draws) after a measurement on a 99-tip <code>nk</code> tree: from the midpoint one <code>nk</code> iteration at 600 draws took over 20 minutes and the surrogate <code>dd</code> fit had an effective sample of 1 to 3 of 600. The -0.35 cell's capacity sits at the calibration's ceiling: the negative <span class="math inline">\(K\)</span> effect caps the clade near 60 tips whatever the capacity. <code>results/E21/failed-linear-box/</code> holds six job files of an earlier attempt; the record says nothing more about it than its name.</p>
+<p><strong>E21b (path).</strong> <a href="E20.html">E20</a> with <span class="math inline">\(K\)</span> offered to the path and an <code>nk</code> generator beside <code>cr</code>, <code>dd</code>, <code>nd</code>, <code>ned</code>: all under the exponential link at 100 tips, turnover 0.10, crown 15; <code>nd</code> and <code>ned</code> at <span class="math inline">\(\log 0.65\)</span> per scale unit, <code>nk</code> at <span class="math inline">\(+0.43\)</span> per scale unit of <span class="math inline">\(K\)</span> (<span class="math inline">\(\beta_K = +0.154\)</span> per split at a <span class="math inline">\(K\)</span> scale of 2.8). 20 trees a generator (70-140 tips for <code>nk</code>), 3000 draws at the generating parameters, the 150 of largest weight entering one dgLARS path over <span class="math inline">\(N, D, \mathrm{ED}, K\)</span> for each rate; BIC picks the set. <code>nk</code> draws come from the thinning proposal, the only one that admits <span class="math inline">\(K\)</span>; <code>nd</code> draws now from the surrogate. The <code>cr</code> and <code>dd</code> rows are E20's trees and draws.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p><strong>E21a.</strong> The <a href="E19.html">E19</a> rule on <span class="math inline">\(\beta_K\)</span>: at <span class="math inline">\(|e| = 0.35\)</span>, median <span class="math inline">\(\hat\beta_K/\beta_K \in [0.75, 1.25]\)</span>, the right sign on <span class="math inline">\(\ge 80\%\)</span>, <code>nk</code> over <code>dd</code> by <span class="math inline">\(&gt; 2\)</span> AIC on <span class="math inline">\(\ge 80\%\)</span>; false positives <span class="math inline">\(\le 5\%\)</span> at zero; cells with median <code>nk</code> effective sample below 10 reported and excluded from the selection statement.</p>
+<p><strong>E21b.</strong> The <a href="E20.html">E20</a> rule (the BIC set equals the generating set on <span class="math inline">\(\ge 80\%\)</span> of trees per generator; an absent covariate included on <span class="math inline">\(\le 10\%\)</span>; no extinction covariate on <span class="math inline">\(&gt; 10\%\)</span>), plus: <span class="math inline">\(K\)</span> in the BIC set on <span class="math inline">\(\ge 80\%\)</span> of <code>nk</code> trees and on <span class="math inline">\(\le 10\%\)</span> of trees from every other generator, for the speciation rate; cells with median effective sample below 10 excluded from the selection statement.</p>
+<h2 id="results">Results</h2>
+<p><strong>E21a.</strong></p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>effect</th>
+<th>ratio (q1-q3)</th>
+<th>sign</th>
+<th>ESS</th>
+<th>&lt; 10</th>
+<th><code>nk</code> over <code>dd</code> by &gt; 2</th>
+<th>median AIC(dd) - AIC(nk)</th>
+<th><code>nk</code> stops conv / cap / clock</th>
+<th><span class="math inline">\(\hat\gamma_K\)</span> median (gen 0)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-0.35</td>
+<td>0.95 (0.82-1.21)</td>
+<td>1.00</td>
+<td>32.3</td>
+<td>6</td>
+<td>0.15</td>
+<td>-1.8</td>
+<td>0 / 1 / 19</td>
+<td>-0.076</td>
+</tr>
+<tr>
+<td>-0.15</td>
+<td>0.83 (0.48-2.30)</td>
+<td>0.95</td>
+<td>40.8</td>
+<td>0</td>
+<td>0.10</td>
+<td>-3.5</td>
+<td>0 / 1 / 19</td>
+<td>-0.102</td>
+</tr>
+<tr>
+<td>0</td>
+<td><span class="math inline">\(\hat\beta_K\)</span> median -0.0048</td>
+<td>—</td>
+<td>36.8</td>
+<td>6</td>
+<td>FP 0.00</td>
+<td>-3.9</td>
+<td>0 / 1 / 19</td>
+<td>-0.148</td>
+</tr>
+<tr>
+<td>+0.15</td>
+<td>0.90 (0.02-1.60)</td>
+<td>0.80</td>
+<td>60.3</td>
+<td>2</td>
+<td>0.10</td>
+<td>-2.5</td>
+<td>1 / 1 / 18</td>
+<td>-0.093</td>
+</tr>
+<tr>
+<td>+0.35</td>
+<td>0.92 (0.83-1.03)</td>
+<td>0.95</td>
+<td>32.3</td>
+<td>6</td>
+<td>0.60</td>
+<td>+4.5</td>
+<td>1 / 1 / 18</td>
+<td>-0.058</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>ESS of 300 draws. 93 of the 100 <code>nk</code> fits ended on the 30-minute clock, 5 on the cap, 2 converged: every cell is <strong>clock-limited</strong>, so every selection rate is that of unfinished fits. The <code>dd</code> fits they start from converged on 74 of 100 (ESS 188-260). No cell is sampler-limited.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E21-k-recovery.png" alt="E21a, fitted against generating beta_K" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Fitted <span class="math inline">\(\beta_K\)</span> per tree against the generating value (dashed), coloured by whether <code>nk</code> beat <code>dd</code> by more than 2 AIC. The medians (red) sit on the generating values in every cell; only at +0.35 is <code>nk</code> chosen on more than a few trees (0.60).</figcaption>
+</figure>
+<p><strong>E21b.</strong> Share of trees with each covariate in the speciation BIC set, and the generating set chosen exactly:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>generator</th>
+<th>ESS</th>
+<th>exact set</th>
+<th><span class="math inline">\(N\)</span></th>
+<th><span class="math inline">\(D\)</span></th>
+<th>ED</th>
+<th><span class="math inline">\(K\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code></td>
+<td>3000</td>
+<td>0.90</td>
+<td>0.00</td>
+<td>0.10</td>
+<td>0.00</td>
+<td>0.00</td>
+</tr>
+<tr>
+<td><code>dd</code></td>
+<td>2424</td>
+<td>0.55</td>
+<td>0.85</td>
+<td>0.20</td>
+<td>0.10</td>
+<td>0.00</td>
+</tr>
+<tr>
+<td><code>nd</code></td>
+<td>478</td>
+<td>0.10</td>
+<td>0.95</td>
+<td>0.90</td>
+<td>0.85</td>
+<td>0.00</td>
+</tr>
+<tr>
+<td><code>ned</code></td>
+<td>5.4 (16 &lt; 10; s-l)</td>
+<td>0.15</td>
+<td>0.70</td>
+<td>0.60</td>
+<td>0.75</td>
+<td>0.05</td>
+</tr>
+<tr>
+<td><code>nk</code></td>
+<td>7.7 (11 &lt; 10; s-l)</td>
+<td>0.00</td>
+<td>0.95</td>
+<td>0.50</td>
+<td>1.00</td>
+<td>0.70</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>On <code>nk</code> trees the chosen sets are <span class="math inline">\(N + D + \mathrm{ED} + K\)</span> on 9, <span class="math inline">\(N + \mathrm{ED}\)</span> on 5, <span class="math inline">\(N + \mathrm{ED} + K\)</span> on 5, <span class="math inline">\(D + \mathrm{ED}\)</span> on 1; ED is the first covariate to enter on 14 of 20. Where <span class="math inline">\(K\)</span> is in the set its coefficient is a median 0.150 against the generating 0.154 (0.97 of its value, quartiles 0.64-1.10, right sign on every tree). Nothing enters the extinction path on any tree of any generator.</p>
+<figure id="figure-2">
+<img src="../assets/wiki/E21-path-k.png" alt="E21b, covariate inclusion on the path with K offered" loading="lazy">
+<figcaption><strong>Figure 2.</strong> How often each covariate is in the speciation BIC set, by generator. <span class="math inline">\(K\)</span> (rightmost bar of each panel) is absent on <code>cr</code>, <code>dd</code> and <code>nd</code> trees and on 1 of 20 <code>ned</code> trees; on <code>nk</code> trees it enters on 0.70, below ED, which enters on every tree. The <code>ned</code> and <code>nk</code> panels rest on median effective samples of 5 and 8.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p><strong>E21a: not met.</strong> The recovery half is met on both signs (0.95 and 0.92 at ∓0.35, right sign on 1.00 and 0.95), the false-positive half is met (0.00), and the selection half is not (<code>nk</code> over <code>dd</code> on 0.15 and 0.60 against 0.80). The coefficient is recovered and the likelihood gain does not pay for the two extra parameters on fits stopped at 30 minutes; the asymmetry between +0.35 (0.60) and -0.35 (0.15) goes with the clade's shape, a negative <span class="math inline">\(K\)</span> effect capping the clade near 60-75 tips. The supplement gives the median AIC difference at -0.15 as 5.5 in favour of <code>dd</code>; <code>results/E21/ancestral.csv</code> gives 3.5. The extinction slope <span class="math inline">\(\gamma_K\)</span>, generated at zero, is fitted at a median -0.06 to -0.15 per split in every cell including the null: on these unfinished fits the extinction side carries a negative <span class="math inline">\(K\)</span> slope the generator did not have.</p>
+<p><strong>E21b: not evaluable for <span class="math inline">\(K\)</span>'s inclusion; met for <span class="math inline">\(K\)</span>'s exclusion.</strong> The <code>nk</code> cell is sampler-limited (ESS 7.7), so <span class="math inline">\(K\)</span> on 0.70 of <code>nk</code> trees is reported and excluded. <span class="math inline">\(K\)</span> is admitted on at most 1 of 20 trees of any other generator, within the 0.10 ceiling, and the extinction path stays empty. The <a href="E20.html">E20</a> part of the rule fails as it did in E20 (<code>dd</code> exact on 0.55, <code>nd</code> on 0.10, absent covariates on up to 0.85). On <code>nk</code> trees ED enters first and on every tree: a speciation-rich ancestry is a low fair proportion, so on <span class="math inline">\(K\)</span>-shaped trees ED carries the <span class="math inline">\(K\)</span> signal with the opposite sign.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E19.html">E19</a> — the recovery rule E21a applies, and the box-midpoint setting it replaced.</li>
+<li><a href="E20.html">E20</a> — the path design E21b extends.</li>
+<li><a href="E23.html">E23</a> — <code>nk</code> inside the one-call ladder (7 of 10 at 100 tips).</li>
+<li><a href="E24.html">E24</a> — <code>k</code>, the ancestral-splits covariate without an <span class="math inline">\(N\)</span> term.</li>
+<li><a href="E27.html">E27</a> — <code>nk</code> in the ladder across eight conditions.</li>
+<li><a href="E22.html">E22</a> — the path at 50 to 400 tips.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

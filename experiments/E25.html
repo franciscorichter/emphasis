@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E25 — the three bird families under the whole workflow · emphasis</title>
+<meta name="description" content="E5 fitted Corvidae, Cotingidae and Icteridae with dd, ed and ned on the linear link, and E17 bootstrapped the ned-over-dd margins.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E25 — the three bird families under the whole workflow</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete (runs E25c and E25d); for these three families superseded as the record by <a href="E28.html">E28</a></td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>not recorded in the results; the restart followed the retry fix of the E23 amendment</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E25-real.R</code> (<code>--box study</code> for E25c, <code>--box auto</code> for E25d)</td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E25c/fits.csv</code>, <code>paths.csv</code> (study box); <code>results/E25d/fits.csv</code>, <code>paths.csv</code> (<code>auto_bounds()</code>); <code>results/E25/jobs/</code> (an earlier run, Cotingidae and Icteridae only)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p><a href="E5.html">E5</a> fitted Corvidae, Cotingidae and Icteridae with <code>dd</code>, <code>ed</code> and <code>ned</code> on the linear link, and <a href="E17.html">E17</a> bootstrapped the <code>ned</code>-over-<code>dd</code> margins. The biology paper ends on these three clades and needs the workflow a user runs, on the link every lineage-level experiment uses: the one-call ladder and the covariate path.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>setting</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>trees</td>
+<td>the same three, tip edges extended to one present as in E5</td>
+</tr>
+<tr>
+<td><span class="math inline">\(\rho\)</span></td>
+<td>0.968 (Corvidae), 1 (Cotingidae), 0.971 (Icteridae)</td>
+</tr>
+<tr>
+<td>ladder</td>
+<td><code>estimate_rates(model = "all")</code>, exponential link: <code>cr</code> → <code>dd</code> → {<code>nd</code>, <code>ned</code>, <code>nk</code>}, each started from the model it nests</td>
+</tr>
+<tr>
+<td>box</td>
+<td>E25c: the box of <code>sim/box.R</code> from the observed tree (the rule of every simulation experiment); E25d: <code>auto_bounds()</code></td>
+</tr>
+<tr>
+<td>draws</td>
+<td>300</td>
+</tr>
+<tr>
+<td>iterations</td>
+<td><code>max_iter</code> 100</td>
+</tr>
+<tr>
+<td>clock</td>
+<td>60 min per fit</td>
+</tr>
+<tr>
+<td>ranking</td>
+<td><code>compare_models()</code> (minimum AIC at this build)</td>
+</tr>
+<tr>
+<td>path</td>
+<td><code>covariate_path()</code> over <span class="math inline">\(N\)</span>, <span class="math inline">\(D\)</span>, ED, <span class="math inline">\(K\)</span> for speciation and extinction, once on the observed tree (exact) and once on 3000 surrogate draws at the ladder's <code>dd</code> estimate, the 150 of largest weight entering (the <a href="E20.html">E20</a> setting)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Recorded per family and model: AIC, log-likelihood, effective sample, gap, stop reason, proposal, iterations, coefficients; per family the winner, its margin, the ranking-at-risk flag, and both paths' entry orders and BIC and AIC sets.</p>
+<p>Why two boxes: on Corvidae (crown 30.5 Ma) <code>auto_bounds()</code> for <code>nd</code> ran more than five hours without finishing, because its per-lineage feasibility simulations at the explosive corners of the box ran to the lineage cap, each at quadratic cost. The forward simulator also retried clades that overflowed <code>max_lin</code> as if extinct; the retry fix (<a href="E23.html">E23</a> amendment) is why the run was restarted on 2026-10-01. E25c was run with the study box to get past it; E25d with <code>auto_bounds()</code> once the fix was in. The README's E25 row names <code>--box study</code>; the supplement's index points at <code>results/E25/jobs/</code>, which holds two families only.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>None. "An illustration, read against the floors of the simulation chapters"; every coefficient is reported with the effective sample and the stop reason of the fit it comes from.</p>
+<h2 id="results">Results</h2>
+<p>Ladder, E25d (<code>auto_bounds()</code>), with E25c in parentheses where it differs:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>family</th>
+<th>tips</th>
+<th>AIC <code>cr</code></th>
+<th><code>dd</code></th>
+<th><code>nd</code></th>
+<th><code>ned</code></th>
+<th><code>nk</code></th>
+<th>winner</th>
+<th>margin</th>
+<th>ESS of winner (of 300)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Corvidae</td>
+<td>120</td>
+<td>767.4</td>
+<td>757.3</td>
+<td>753.0</td>
+<td>739.4</td>
+<td><strong>727.4</strong></td>
+<td><code>nk</code></td>
+<td>12.0 (11.1)</td>
+<td>76 (84)</td>
+</tr>
+<tr>
+<td>Cotingidae</td>
+<td>65</td>
+<td>412.0</td>
+<td><strong>405.5</strong></td>
+<td>409.2</td>
+<td>409.5</td>
+<td>407.5</td>
+<td><code>dd</code></td>
+<td>2.0 (2.2)</td>
+<td>299</td>
+</tr>
+<tr>
+<td>Icteridae</td>
+<td>102</td>
+<td>535.1</td>
+<td>508.3</td>
+<td>516.7</td>
+<td><strong>503.4</strong></td>
+<td>510.0</td>
+<td><code>ned</code></td>
+<td>4.9 (5.1)</td>
+<td>109 (23)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Coefficients (E25d): Corvidae <code>nk</code> <span class="math inline">\(\beta_K = +0.148\)</span> per split, <code>ned</code> <span class="math inline">\(\beta_{ED} = -0.157\)</span> per ED unit; Icteridae <code>ned</code> <span class="math inline">\(\beta_{ED} = -0.236\)</span>; Cotingidae <code>nk</code> <span class="math inline">\(\beta_K = +0.077\)</span>. Stop reasons: Corvidae <code>nk</code> converged at 12 iterations (E25c: 85), <code>ned</code> at 33; Icteridae <code>ned</code> converged at 67 (E25c: on <code>max_iter</code>, ESS 23); every <code>nd</code> fit on <code>max_iter</code>, with ESS 71 (Corvidae), 101 (Cotingidae) and 6.5 (Icteridae, sampler-limited). The ranking-at-risk flag is false on all three. Ladder wall-clock: 4043, 1595 and 2621 s (Corvidae, Cotingidae, Icteridae) with <code>auto_bounds()</code>; 1787, 747 and 1994 s with the study box.</p>
+<p>Path (identical sets in E25c and E25d):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>family</th>
+<th>speciation, observed tree: entry order</th>
+<th>BIC set</th>
+<th>BIC set on 3000 draws (ESS of the draw set)</th>
+<th>extinction BIC set: observed / draws</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Corvidae</td>
+<td>D &gt; ED &gt; N &gt; K</td>
+<td>D+ED</td>
+<td>D+ED (2959)</td>
+<td>empty / empty</td>
+</tr>
+<tr>
+<td>Cotingidae</td>
+<td>N &gt; ED &gt; D &gt; K</td>
+<td>N</td>
+<td>N (2992)</td>
+<td>empty / empty</td>
+</tr>
+<tr>
+<td>Icteridae</td>
+<td>N &gt; ED &gt; D &gt; K</td>
+<td>N+ED</td>
+<td>N+ED (2867)</td>
+<td>empty / N</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The observed tree holds no extinction events, so the observed-tree extinction path is empty by construction.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E5-trees.png" alt="E25 trees" loading="lazy">
+<figcaption><strong>Figure 1.</strong> The three trees fitted here (the same as <a href="E5.html">E5</a>'s), tips shaded by ED. Corvidae's ED runs from 3.4 to 30.5 and its K from 0 to 21 splits; this is the tree on which the ladder names K and the path keeps D and ED.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p>No rule. On the exponential-link ladder the three families return three different answers: <code>nk</code> on Corvidae by 12.0 AIC over <code>ned</code>, <code>ned</code> on Icteridae by 4.9, and <code>dd</code> on Cotingidae by 2.0 over <code>nk</code>. Corvidae, the clade <a href="E5.html">E5</a> read as "a clean case for ED", is taken by the ancestral-splits model, while its path keeps D and ED, not K: the ladder and the path name different covariates on the same tree, the pattern <a href="E26.html">E26</a> then finds across families and <a href="E21.html">E21</a> predicts (K enters the path through ED with the sign reversed). The two boxes change no winner; they change Icteridae's <code>ned</code> fit from capped at ESS 23 to converged at ESS 109. Corvidae's <code>dd</code> rung ended on <code>max_iter</code> and Icteridae's <code>nd</code> is sampler-limited. The numbers the papers use for these families are <a href="E28.html">E28</a>'s, refitted at 300 iterations under the build that reports the parsimonious choice.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E5.html">E5</a> — the linear-link fits of the same trees.</li>
+<li><a href="E17.html">E17</a> — the bootstrap of <a href="E5.html">E5</a>'s margins.</li>
+<li><a href="E20.html">E20</a>, <a href="E21.html">E21</a> — the covariate path and the K covariate.</li>
+<li><a href="E23.html">E23</a> — the ladder as a whole; its amendment holds the retry fix.</li>
+<li><a href="E26.html">E26</a> — the same workflow on all 47 families.</li>
+<li><a href="E28.html">E28</a> — the analysis of record for these three and 26 other families.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

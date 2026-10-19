@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E36 — how well does the survival emulator do, and should a network replace the GAM? · emphasis</title>
+<meta name="description" content="Conditioning on survival (E34) rests on \(\hat P_{\text{tree}}(\theta)\), which auto_bounds() estimates from one simulated clade at each of 500 points of the box and a GAM additive on the logit scale (\(s(\beta_0) + s(\gamma_0) + \dots\), no interaction), while survival depends on the rates jointly.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E36 — how well does the survival emulator do, and should a network replace the GAM?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+<ol>
+<li><a href="#a-against-the-monte-carlo-reference">(a) Against the Monte Carlo reference</a></li>
+<li><a href="#b-downstream-on-e29s-trees">(b) Downstream on E29's trees</a></li>
+</ol>
+</li>
+<li><a href="#e36c--the-emulators-against-the-exact-survival-probability-the-label-defect">E36c — the emulators against the exact survival probability; the label defect</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>(a) and (b) ran to completion; no analysis script and no numbers file. (a)'s reference was mislabelled for <code>cr</code> (found by E36c). E36c complete</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>(b) emphasis <code>f30a791</code> (the package's survival GAM with the pre-<code>d3dee92</code> label); (a), E36c not recorded</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E36-emulator.R</code>; <code>sim/E36-downstream.R</code>; <code>sim/E36c-exact.R</code>, <code>sim/E36c-survival.cpp</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td>(a) <code>results/E36/cells/{ref,n200}-{cr,dd,ned,nk}.csv</code> (12 rows each) and <code>-test.csv</code> (200 points); merged as <code>results/E36/emulator.csv</code> (96 rows), not in the repository; (b) <code>results/E36/downstream.csv</code> (120 rows); E36c <code>results/E36c/summary.csv</code> (96 rows), <code>results/E36c/cells/*-pred.csv</code>, <code>*-truth.csv</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Conditioning on survival (<a href="E34.html">E34</a>) rests on <span class="math inline">\(\hat P_{\text{tree}}(\theta)\)</span>, which <code>auto_bounds()</code> estimates from one simulated clade at each of 500 points of the box and a GAM additive on the logit scale (<span class="math inline">\(s(\beta_0) + s(\gamma_0) + \dots\)</span>, no interaction), while survival depends on the rates jointly. E34 also left a gap: on <a href="E29.html">E29</a>'s trees the <code>cr</code> fit conditioned through that GAM put extinction at 0.028 where the exact conditioned likelihood puts it at zero. E36 measures the emulator and its effect downstream.</p>
+<h2 id="design">Design</h2>
+<p><strong>(a) Accuracy against a Monte Carlo reference.</strong></p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>setting</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>models x cells</td>
+<td><code>cr</code>, <code>dd</code>, <code>ned</code>, <code>nk</code> x <code>ref</code> (100 tips) and <code>n200</code> (200 tips) = 8 cells; one tree of the cell gives the box through <code>auto_bounds()</code></td>
+</tr>
+<tr>
+<td>test points</td>
+<td>200 held-out points of the box, survival measured by 400 clades each (binomial SE ≤ 0.025)</td>
+</tr>
+<tr>
+<td>training sets</td>
+<td>500, 2000, 5000 points with one clade each, nested</td>
+</tr>
+<tr>
+<td>learners</td>
+<td>additive GAM (the package's); GAM with tensor smooths on every pair; logistic regression on parameters, squares and products; <code>nnet</code>, one hidden layer of 8 units, weight decay by 5-fold CV</td>
+</tr>
+<tr>
+<td>read on</td>
+<td>test points with true survival ≥ 0.05: median and 90th percentile of <span class="math inline">\(\lvert\log\hat P - \log P\rvert\)</span>, log-loss, calibration slope, training time</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>(b) Downstream, where the exact answer exists.</strong> <a href="E29.html">E29</a>'s 20 <code>ned</code> trees fitted with <code>cr</code> by MCEM at E29's budget (300 draws, 300 iterations, 16-hour clock), conditioned through emulators trained on the tree's own box: an <strong>oracle</strong> (tensor GAM on 5000 points labelled with the exact crown survival <span class="math inline">\(p(0)^2\)</span> of the constant-rate process); the package's additive GAM on 500 clades; the tensor GAM on 500; the additive GAM on 5000; the network on 500; and the exact survival function itself, passed as a function. Beside them the exact conditioned MLE (<code>bd_ML</code>, <code>cond = 1</code>) and E29's unconditioned MCEM <code>cr</code> fit. The emulators other than the oracle and the function are trained with the label <code>status == "done"</code>, so a clade that passes the lineage cap counts as extinct (the label E36c later found defective).</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<ol type="1">
+<li>A learner at a training size is <strong>adequate</strong> in a cell if its median <span class="math inline">\(\lvert\log\hat P - \log P\rvert \le 0.1\)</span> and its 90th percentile ≤ 0.3 (<span class="math inline">\(\log\hat P\)</span> enters the objective with unit weight).</li>
+<li>The network <strong>replaces the GAM</strong> if at 500 points it is adequate in at least 6 of the 8 cells where the additive GAM is not, or its median error is below the additive GAM's by 30% or more in at least 6 of 8; the tensor GAM is read by the same rule.</li>
+<li>The package's training size is the smallest at which the recommended learner is adequate in all 8 cells; if none, the largest tested, reported as such.</li>
+<li>(b) An emulator is <strong>adequate downstream</strong> if its extinction rate is within 0.01 of the oracle's on ≥ 80% of trees; the oracle's distance from the exact conditioned MLE is reported as what MCEM adds.</li>
+<li>(b) If the oracle sits within 0.01 of the exact conditioned estimate on ≥ 80% of trees and the additive GAM on 500 does not, <a href="E34.html">E34</a>'s 0.028 is emulator error; if the oracle does not either, Monte Carlo error of the fit.</li>
+</ol>
+<h2 id="results">Results</h2>
+<h3 id="a-against-the-monte-carlo-reference">(a) Against the Monte Carlo reference</h3>
+<p><strong>The reference was mislabelled.</strong> E36 (a)'s 400-clade reference counted a clade that passed the lineage cap as extinct. Against the exact survival probability (E36c, below) its 90th-percentile log error is 13.8 for <code>cr</code> and 0.06 for <code>dd</code>. The <code>cr</code> cells of E36 (a) measured the wrong probability and their numbers are not quoted here. The <code>dd</code> cells are usable; the <code>ned</code> and <code>nk</code> cells have no exact reference and carry the same mislabel in an unknown share.</p>
+<p>On the six cells other than <code>cr</code> (<code>emulator.csv</code>; training survival share 0.25 to 0.33):</p>
+<ul>
+<li>No learner is adequate in any of them at any training size (500, 2000 or 5000).</li>
+<li>At 500 clades the additive GAM's 90th percentile is 1.03 / 1.63 (<code>dd</code>, 100 / 200 tips), 1.35 / 2.21 (<code>ned</code>), 0.84 / 1.72 (<code>nk</code>); the network's 0.56 / 0.54, 0.54 / 0.75, 0.80 / 0.68.</li>
+<li>Rule (2), second clause: the network's median error at 500 is below the additive GAM's by 38% to 65% in five of the six cells and by 13% in <code>n200</code>-<code>ned</code>. With the two <code>cr</code> cells unreadable the rule's 6-of-8 count cannot be formed as registered, so rule (2) is not evaluable; rule (3) is not either.</li>
+</ul>
+<p>The figure the status report drew from these files (<code>fig-status-emulator</code>) rests on the mislabelled reference and is not reproduced.</p>
+<h3 id="b-downstream-on-e29s-trees">(b) Downstream on E29's trees</h3>
+<p>Computed directly from <code>downstream.csv</code> (no analysis script exists); every fit converged with 300 effective draws.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>emulator</th>
+<th>median <span class="math inline">\(\hat{\mu}\)</span></th>
+<th>within 2x of 0.05</th>
+<th>within 0.01 of the oracle</th>
+<th>within 0.01 of the exact conditioned MLE</th>
+<th>median <span class="math inline">\(\lvert p_{\text{emul}} - p_{\text{exact}}\rvert\)</span> at the estimate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>oracle</td>
+<td>0.0225</td>
+<td>7 of 20</td>
+<td>20</td>
+<td>4</td>
+<td>0.000</td>
+</tr>
+<tr>
+<td>exact survival function</td>
+<td>0.0253</td>
+<td>7</td>
+<td>16</td>
+<td>5</td>
+<td>0</td>
+</tr>
+<tr>
+<td>additive GAM, 500 (package)</td>
+<td>0.0252</td>
+<td>7</td>
+<td>14</td>
+<td>5</td>
+<td>0.079</td>
+</tr>
+<tr>
+<td>additive GAM, 5000</td>
+<td>0.0226</td>
+<td>8</td>
+<td>14</td>
+<td>6</td>
+<td>0.049</td>
+</tr>
+<tr>
+<td>tensor GAM, 500</td>
+<td>0.0276</td>
+<td>7</td>
+<td>15</td>
+<td>5</td>
+<td>0.034</td>
+</tr>
+<tr>
+<td>network, 500</td>
+<td>0.0304</td>
+<td>8</td>
+<td>15</td>
+<td>5</td>
+<td>0.051</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The exact conditioned MLE is zero (median <span class="math inline">\(3\times 10^{-14}\)</span>; below 0.005 on 17 of 20); the unconditioned MCEM <code>cr</code> fit a median 0.0161 (6 of 20 in the band).</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E36-downstream.png" alt="cr extinction rate through each emulator" loading="lazy">
+<figcaption><strong>Figure 1.</strong> One point a tree. Every emulator, the exact function included, spreads the conditioned estimate from the floor of the box to above 0.1, with medians between 0.022 and 0.030; the exact conditioned MLE on the same trees is zero on 17.</figcaption>
+</figure>
+<p>Rule (4): no emulator reaches 80% (14 to 16 of 20). The exact survival function itself is within 0.01 of the oracle on only 16 of 20, so two conditioned MCEM fits with exact survival differ by more than 0.01 on a fifth of these trees: the threshold sits below the run-to-run spread and cannot separate emulators here. Rule (5): the oracle is within 0.01 of the exact conditioned estimate on 4 of 20, so by the design's wording <a href="E34.html">E34</a>'s 0.028 is <strong>Monte Carlo error of the fit</strong>, not emulator error. Part (b) was not rerun after <code>d3dee92</code>.</p>
+<h2 id="e36c--the-emulators-against-the-exact-survival-probability-the-label-defect">E36c — the emulators against the exact survival probability; the label defect</h2>
+<p><strong>Question.</strong> E36 (a)'s 400-clade reference carries its own error (about ±0.025 absolute, ±20% in log terms near 0.05). For <code>cr</code> and <code>dd</code> the probability that both crown lineages leave a descendant at T is computable exactly.</p>
+<p><strong>Design.</strong> For <code>cr</code> in closed form, <span class="math inline">\(p(0)^2\)</span> with <span class="math inline">\(p(0) = d/\big(d e^{-dT} + \lambda(1 - e^{-dT})\big)\)</span>, <span class="math inline">\(d = \lambda - \mu\)</span>. For <code>dd</code> from the master equation of the pair of crown subclade sizes <span class="math inline">\((n_1, n_2)\)</span> under <span class="math inline">\(\lambda(N), \mu(N)\)</span> exponential in <span class="math inline">\(N = n_1 + n_2\)</span>, fourth-order Runge-Kutta, the state space truncated at <span class="math inline">\(N_{hi}\)</span> with the escaping mass kept apart so the probability is bracketed; <span class="math inline">\(N_{hi}\)</span> raised 400 → 800 → 1600 until the bracket is within 1% of the probability, otherwise the point is left out. Checked before the run: with the N slopes at zero the solver reproduces the <code>cr</code> formula to six decimals on four points, and on <code>dd</code> points it falls inside the 95% interval of 20,000 simulated clades. The 200 test points of E36 (a) in <code>ref</code> and <code>n200</code>, for <code>cr</code> and <code>dd</code>; training sets 500, 2000, 5000; the four learners; two labels for training clades: <strong>A</strong>, the package's (a run that passes the lineage cap of <code>auto_bounds()</code>, 20 x tips, counts as extinct) and <strong>B</strong> (it counts as survived, as the conditional likelihood requires). Read on test points with exact P ≥ 0.05.</p>
+<p><strong>Pre-set rule.</strong> (1) E36's adequacy. (2) The package uses the learner, rule and smallest size adequate in all four cells; if none, the one with the smallest largest 90th percentile, reported as not adequate. (3) The error of E36 (a)'s reference against the exact value is reported per cell and E36 (a)'s <code>cr</code> and <code>dd</code> verdicts re-read. (4) If B is adequate where A is not, the package's label is reported as a defect of the emulator's target.</p>
+<p><strong>Results</strong> (<code>summary.csv</code>; log <code>results/E36c.log</code>):</p>
+<ul>
+<li>Exact value on all 200 points for <code>cr</code>; on 106 and 126 of 200 for <code>dd</code> at 100 and 200 tips (the rest grow past the truncation). Points with P ≥ 0.05 read: <code>cr</code> 121 / 125, <code>dd</code> 63 / 82.</li>
+<li>13% to 16% of training clades pass the cap (0.164, 0.151 for <code>cr</code>; 0.130, 0.129 for <code>dd</code>).</li>
+<li>Rule A, additive GAM at 500: 90th percentile 8.89 (<code>cr</code> 100 tips), 11.47 (<code>cr</code> 200), 1.05 (<code>dd</code> 100), 0.96 (<code>dd</code> 200). Under A no learner is adequate in more than one of the four cells at any size.</li>
+<li>Rule B, additive GAM at 500: 0.44, 0.31, 0.42, 0.20. At 2000 every learner but the tensor GAM is adequate in all four cells (largest 90th percentile 0.26 to 0.28: additive GAM 0.28, quadratic logistic 0.28, network 0.26); the tensor GAM fails <code>dd</code> at 100 tips (0.44). The network is adequate in three cells at 500 (fails <code>cr</code> 100 tips, 0.45).</li>
+<li>E36 (a)'s 400-clade reference against the exact value: 90th percentile 13.8 (<code>cr</code>, both cells), 0.061 and 0.058 (<code>dd</code>, 200 and 100 tips).</li>
+</ul>
+<figure id="figure-2">
+<img src="../assets/wiki/E36c-emulator-exact.png" alt="Emulator error against the exact survival probability" loading="lazy">
+<figcaption><strong>Figure 2.</strong> Top row, the package's label: the <code>cr</code> errors run from 3 to 13 whatever the learner or training size, and E36 (a)'s own reference (dashed) is off by 13.8 in the same cells. Bottom row, a clade past the cap counted as survived: every learner falls toward or inside the 0.3 band by 2000 clades.</figcaption>
+</figure>
+<p><strong>Conclusion (E36c).</strong> By rule (4) the package's label was a defect of the emulator's target: under A no learner is adequate in more than one cell, under B three learners are adequate in all four at 2000 clades. By rule (2) the additive GAM, label B, 2000 clades, is adequate in all four cells and is the smallest adequate size for the package's own learner. Emphasis <code>d3dee92</code> labels clades that pass the cap as survived and trains the GAM on 2000 clades (<code>R/gam.R</code>: <code>survived &lt;- ... s$status %in% c("done", "too_large")</code>). By rule (3), E36 (a)'s <code>cr</code> verdicts measured the wrong probability; its <code>dd</code> reference is within 0.06 of the exact value, so its <code>dd</code> reading (no learner adequate, all trained under label A) stands. <a href="E34.html">E34</a>r reruns E34 (b) under <code>d3dee92</code>.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>(a) As registered, not evaluable: the <code>cr</code> cells were scored against a mislabelled reference, so neither the 6-of-8 count of rule (2) nor rule (3) can be formed; on the six readable cells no learner is adequate at any size, and the network's median error is 38-65% below the additive GAM's in five. E36c replaces (a) for <code>cr</code> and <code>dd</code> and identifies the cause as the training label rather than the learner. (b) Rule (4): no emulator adequate downstream, but the threshold of 0.01 is below the Monte Carlo spread of a conditioned fit on these trees, which the exact survival function itself shows. Rule (5): <a href="E34.html">E34</a>'s 0.028 is Monte Carlo error of the fit, in a likelihood that is flat over [0, 0.1] on these trees (<a href="E32.html">E32</a> (a), <a href="E38.html">E38</a>). The conditioning machinery is not what keeps the extinction estimate from the generating value at 200 tips and turnover 0.10.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E34.html">E34</a> — the conditioned fits that raised the question; E34r reruns them with the corrected emulator.</li>
+<li><a href="E29.html">E29</a> — the trees part (b) fits.</li>
+<li><a href="E32.html">E32</a> — the exact <code>bd_ML</code> estimates part (b) compares against.</li>
+<li><a href="E38.html">E38</a> — why a conditioned <code>cr</code> estimate on these trees can sit anywhere in [0, 0.1].</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

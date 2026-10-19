@@ -1,0 +1,92 @@
+<h3>Description</h3>
+
+<p>Computes convergence and importance-sampling quality diagnostics from
+the output of <code><a href="#estimate_rates">estimate_rates</a></code> with <code>method = "mcem"</code>.
+</p>
+<p>Diagnostic plots include:
+</p>
+
+<dl>
+<dt>Log-likelihood trace</dt><dd><p>fhat vs. EM iteration, showing
+convergence of the sequence.</p>
+</dd>
+<dt>Parameter traces</dt><dd><p>Per-parameter estimates across iterations,
+with optional bound and true-value lines.</p>
+</dd>
+<dt>Parameter stability</dt><dd><p>Max relative parameter change (delta_max)
+vs.\ iteration; convergence is declared when this falls below tol
+for patience consecutive iterations.</p>
+</dd>
+<dt>IS weight histogram</dt><dd><p>Distribution of IS log-weights at the
+final iteration, annotated with ESS.</p>
+</dd>
+</dl>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>diagnose_mcem(x, plot = TRUE, lower_bound = NULL,
+              upper_bound = NULL, true_pars = NULL)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="diagnose_mcem_:_x">x</code></td>
+<td>
+<p>An <code>emphasis_fit</code> object (from <code><a href="#estimate_rates">estimate_rates</a></code>
+with <code>method = "mcem"</code>) or the raw list from the internal
+<code>.mcem_dynamic_fresh</code> function.</p>
+</td></tr>
+<tr><td><code id="diagnose_mcem_:_plot">plot</code></td>
+<td>
+<p>Logical; if <code>TRUE</code> (default), produce diagnostic plots.</p>
+</td></tr>
+<tr><td><code id="diagnose_mcem_:_lower_bound">lower_bound</code></td>
+<td>
+<p>Optional numeric vector of lower parameter bounds.
+Dashed orange lines are drawn at these values in parameter trace panels.</p>
+</td></tr>
+<tr><td><code id="diagnose_mcem_:_upper_bound">upper_bound</code></td>
+<td>
+<p>Optional numeric vector of upper parameter bounds.
+Dashed purple lines are drawn at these values in parameter trace panels.</p>
+</td></tr>
+<tr><td><code id="diagnose_mcem_:_true_pars">true_pars</code></td>
+<td>
+<p>Optional numeric vector of true parameter values
+(for simulation studies). Red dashed lines are drawn at these values.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>A list of class <code>"mcem_diagnostics"</code> (invisibly) with:
+</p>
+
+<dl>
+<dt><code>convergence</code></dt><dd><p>Data frame with per-iteration <code>fhat</code>,
+<code>delta_max</code> (max relative parameter change), <code>rejected</code>,
+<code>num_trees</code>, and <code>time</code>.</p>
+</dd>
+<dt><code>stop_reason</code></dt><dd><p>Why MCEM stopped: <code>"converged"</code>,
+<code>"max_iter"</code>, or <code>"e_step_failure"</code>.</p>
+</dd>
+<dt><code>IS_quality</code></dt><dd><p>List with ESS, mean/sd of log-weights,
+and bootstrap variance at the final iteration.</p>
+</dd>
+<dt><code>final_IS</code></dt><dd><p>Raw IS components (<code>logf</code>, <code>logg</code>,
+<code>lw</code>) from the final E-step.</p>
+</dd>
+</dl>
+
+<h3>Examples</h3>
+
+<pre><code class='language-R'>## Not run: 
+sim &lt;- simulate_tree(c(0.5, 0.1), max_t = 5, model = "cr")
+fit &lt;- estimate_rates(sim, method = "mcem", model = "cr",
+  control = list(lower_bound = c(0, 0), upper_bound = c(2, 1)))
+diagnose_mcem(fit, lower_bound = c(0, 0), upper_bound = c(2, 1))
+
+## End(Not run)
+</code></pre>
+

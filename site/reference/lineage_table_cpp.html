@@ -1,0 +1,23 @@
+<h3>Description</h3>
+
+<p>One row per lineage alive on each segment between consecutive events:
+the segment, the lineage (index and id), whether that lineage's event ends
+the segment (0 none, 1 speciation, 2 extinction), the segment's bounds,
+N, M, the lineage's pendant start (so D = (t - ts) - M) and its ED at the
+segment start (ED grows at slope one within the segment).
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>lineage_table_cpp(tree)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="lineage_table_cpp_:_tree">tree</code></td>
+<td>
+<p>One augmented-tree data frame with the topology (ids).</p>
+</td></tr>
+</table>
+

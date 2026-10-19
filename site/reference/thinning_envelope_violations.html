@@ -1,0 +1,28 @@
+<h3>Description</h3>
+
+<p>The thinning sampler accepts a candidate speciation time with probability
+<code>nh(t) / lambda_max</code>. A value above 1 means the envelope
+<code>lambda_max</code> did not dominate the rate on that segment. The counter
+accumulates over every augmentation call in the session.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>thinning_envelope_violations(reset = FALSE)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="thinning_envelope_violations_:_reset">reset</code></td>
+<td>
+<p>Logical; zero the counter after reading it.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>Number of candidates with acceptance probability above 1 since the
+last reset.
+</p>
+

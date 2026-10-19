@@ -1,0 +1,59 @@
+<h3>Description</h3>
+
+<p>Given a list of augmented trees (produced by <code><a href="#augment_trees">augment_trees</a></code>)
+and a parameter vector, computes for each tree:
+</p>
+
+<ul>
+<li> <p><code>logf[i] = log p(obs, z_i | theta)</code> (model log-likelihood)
+</p>
+</li>
+<li> <p><code>logg[i] = log q(z_i | obs, theta)</code> (proposal log-probability)
+</p>
+</li></ul>
+
+<p>Both are evaluated at the supplied <code>pars</code>, regardless of which
+parameters were used to simulate the trees.  This is essential for
+shared-tree (Mode 2) evaluation where trees simulated at one particle
+are scored at another.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>eval_logf(pars, trees, model = as.integer(c(0, 0, 0)), link = 0L, rho = 1)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="eval_logf_:_pars">pars</code></td>
+<td>
+<p>Numeric vector of 8 model parameters.</p>
+</td></tr>
+<tr><td><code id="eval_logf_:_trees">trees</code></td>
+<td>
+<p>List of augmented-tree data frames (output of
+<code><a href="#augment_trees">augment_trees</a></code>).</p>
+</td></tr>
+<tr><td><code id="eval_logf_:_model">model</code></td>
+<td>
+<p>Integer vector <code>c(use_N, use_P, use_E)</code>.</p>
+</td></tr>
+<tr><td><code id="eval_logf_:_link">link</code></td>
+<td>
+<p>Link function: <code>0</code> = linear, <code>1</code> = exponential.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>A named list:
+</p>
+
+<dl>
+<dt>logf</dt><dd><p>Numeric vector of <code>log p(obs, z_i | theta)</code>.</p>
+</dd>
+<dt>logg</dt><dd><p>Numeric vector of <code>log q(z_i | obs, theta)</code>.</p>
+</dd>
+</dl>
+

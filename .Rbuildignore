@@ -28,3 +28,6 @@
 ^scratch$
 ^Rplots\.pdf$
 ^LICENSE\.md$
+^site$
+^experiments$
+^[^/]+\.html$

@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E7 — The feasibility map: where is the surrogate proposal usable? · emphasis</title>
+<meta name="description" content="Nothing stated where the surrogate proposal is usable.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E7 — The feasibility map: where is the surrogate proposal usable?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete; 5 cells produced no tree and 1 cell only 2 of 10 (recorded as such)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>not recorded (by date <code>4f42b27</code>, or the build <a href="E18.html">E18</a> used)</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E7-feasibility.R</code>; figures <code>sim/figures-e6e10.R</code>, <code>sim/figures-study.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E7/feasibility.csv</code> (720 rows, 72 cells; 58 rows carry no tree), <code>results/E7/design.rds</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Nothing stated where the surrogate proposal is usable. The <code>ned</code> arm of the size study <a href="S.html">S</a> failed at 200 tips and above, and three probes gave three different reasons before the cause was isolated: at 416 tips and turnover 0.25 the proposal must invent some 600 hidden lineages, and the effective sample was 2.1 of 97 at the generating values with a converged mean field. E7 maps the effective sample of both proposals over size, turnover and ED effect, so that the boundary is a stated result.</p>
+<h2 id="design">Design</h2>
+<p>Three arms, because the models do not admit one grid: <code>dd</code> and <code>ned</code> carry an N term, so capacity is calibrated to land the clade on a target size; <code>ed</code> has no N term, so the ED coefficient is the axis and the tip count an outcome.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>arm</th>
+<th>axes</th>
+<th>cells</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dd</code></td>
+<td>tips ∈ {25, 50, 100, 200, 400} x turnover ∈ {0.1, 0.25, 0.5}</td>
+<td>15</td>
+</tr>
+<tr>
+<td><code>ned</code></td>
+<td>the same x ED effect ∈ {0, -0.15, -0.35}<span class="math inline">\(\lambda\)</span>0, capacity recalibrated per cell</td>
+<td>45</td>
+</tr>
+<tr>
+<td><code>ed</code></td>
+<td>ED effect ∈ {-0.05, -0.15, -0.35, -0.6}<span class="math inline">\(\lambda\)</span>0 x turnover, tips observed</td>
+<td>12</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>trees per cell</td>
+<td>10</td>
+</tr>
+<tr>
+<td>crown age, <span class="math inline">\(\beta\)</span>0</td>
+<td>15, 0.5</td>
+</tr>
+<tr>
+<td>ED effect scale</td>
+<td>fraction of <span class="math inline">\(\beta\)</span>0 at the clade's own ED scale (median total branch length per tip of a <code>dd</code> clade of that size)</td>
+</tr>
+<tr>
+<td>parameters</td>
+<td>the generating values; no fitting</td>
+</tr>
+<tr>
+<td>draws</td>
+<td>200, both proposals on the same trees</td>
+</tr>
+<tr>
+<td>sampling, link</td>
+<td><span class="math inline">\(\rho\)</span> = 1, linear</td>
+</tr>
+<tr>
+<td>comparable figure</td>
+<td>ESS per <em>requested</em> draw (thinning can fail to return a draw; the surrogate cannot)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>Readout: the contour where the median effective sample falls below <strong>10</strong>, per model and proposal, and the mean number of hidden lineages per draw. Deliverable: a figure a user reads before a fit, and the sentence <em>"the surrogate proposal is usable up to here"</em>.</p>
+<h2 id="results">Results</h2>
+<p><strong><code>dd</code></strong>: the surrogate's median ESS rises with size, 42 → 169 (turnover 0.10), 43 → 178 (0.25), 117 → 169 (0.50) from 25 to 400 tips; thinning falls from 31, 14 and 6.5 at 25 tips to 1.1-1.6 at 400.</p>
+<p><strong><code>ned</code></strong> (median ESS surrogate / thinning; bold where the surrogate is below 10):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>ED effect</th>
+<th>turnover</th>
+<th>25</th>
+<th>50</th>
+<th>100</th>
+<th>200</th>
+<th>400 tips</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>0.10</td>
+<td>32 / 15.5</td>
+<td>72 / 9.3</td>
+<td>92 / 5.0</td>
+<td>118 / 2.8</td>
+<td>156 / 2.2</td>
+</tr>
+<tr>
+<td>0</td>
+<td>0.25</td>
+<td>56 / 11.7</td>
+<td>84 / 7.7</td>
+<td>111 / 3.2</td>
+<td>137 / 1.6</td>
+<td>169 / 1.3</td>
+</tr>
+<tr>
+<td>0</td>
+<td>0.50</td>
+<td>139 / 7.0</td>
+<td>146 / 4.9</td>
+<td>165 / 2.1</td>
+<td>173 / 1.8</td>
+<td>168 / 1.2</td>
+</tr>
+<tr>
+<td>-0.15</td>
+<td>0.10</td>
+<td>38 / 55.5</td>
+<td>32 / 21.6</td>
+<td>41 / 10.2</td>
+<td>50 / 3.4</td>
+<td>59 / 1.9</td>
+</tr>
+<tr>
+<td>-0.15</td>
+<td>0.25</td>
+<td>14 / 30.2</td>
+<td>120 / 3.5</td>
+<td>57 / 2.8</td>
+<td>66 / 1.3</td>
+<td>28 / 1.5</td>
+</tr>
+<tr>
+<td>-0.15</td>
+<td>0.50</td>
+<td>63 / 8.6</td>
+<td>87 / 4.9</td>
+<td>37 / 3.5</td>
+<td>19 / 3.9</td>
+<td><strong>2.6</strong> / 2.0 (2 trees)</td>
+</tr>
+<tr>
+<td>-0.35</td>
+<td>0.10</td>
+<td>33 / 67.4</td>
+<td>25 / 34.2</td>
+<td>58 / 7.7</td>
+<td>29 / 3.3</td>
+<td>11.4 / 3.8</td>
+</tr>
+<tr>
+<td>-0.35</td>
+<td>0.25</td>
+<td>16 / 33.4</td>
+<td><strong>7.4</strong> / 8.4</td>
+<td>18 / 7.7</td>
+<td><strong>4.7</strong> / 3.3</td>
+<td>no tree</td>
+</tr>
+<tr>
+<td>-0.35</td>
+<td>0.50</td>
+<td><strong>9.3</strong> / 8.6</td>
+<td><strong>8.5</strong> / 5.3</td>
+<td>no tree</td>
+<td>no tree</td>
+<td>no tree</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong><code>ed</code></strong> (tips an outcome; median tips, ESS surrogate / thinning): at -0.05 the clades reach a median 1394, 928 and 106 tips (turnover 0.10, 0.25, 0.50) with surrogate ESS 155-186 and thinning 1.0-2.2; at -0.15, 1372, 622, 71 tips and 128, 88, 19.8 / 1.0-5.7; at -0.35, 538, 114, 25.5 tips and 38.2, 14.4, <strong>3.9</strong> / 1.2-3.2; at -0.60, 58 and 33.5 tips with <strong>3.4</strong> / 12.9 and 13.6 / 2.5; at -0.60 and turnover 0.50 no tree.</p>
+<p><strong>Counts over the 67 cells with trees:</strong> the surrogate falls below 10 in <strong>7</strong>, every one with an ED term (<code>ned</code> -0.35 at turnover 0.25 and 50 or 200 tips, at 0.50 and 25 or 50 tips; <code>ned</code> -0.15 / 0.50 / 400; <code>ed</code> -0.60 / 0.10; <code>ed</code> -0.35 / 0.50). Thinning falls below 10 in <strong>54</strong> (12 of the 15 <code>dd</code> cells, 32 <code>ned</code>, 10 <code>ed</code>). The surrogate keeps the larger sample in 15 of 15 <code>dd</code>, 35 of 40 <code>ned</code> and 10 of 11 <code>ed</code> cells; thinning is larger in <code>ned</code> at 25-50 tips with -0.35 at turnover 0.10 and 0.25 (67 vs 33, 34 vs 25, 33 vs 16, 8.4 vs 7.4), at 25 tips with -0.15 / 0.10 (55 vs 38), and in <code>ed</code> -0.60 / 0.10 (12.9 vs 3.4). Hidden lineages per draw grow from about 10 at 25 tips to 85-100 at 400 tips and turnover 0.10, and to 290-430 at 400 tips and turnover 0.50, for the surrogate; thinning invents 10-45% more at the large cells.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E7-proposals.png" alt="Median effective sample of both proposals over size, turnover and ED effect (a), and over sampling fraction (b)" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Panel (a) is E7: dark the surrogate, light the thinning proposal, dashed line 10 effective draws, crosses cells with no tree. The surrogate stays above 10 everywhere except under the -0.35 effect at turnover 0.25-0.50 and the -0.15 effect at 400 tips and turnover 0.50. Panel (b) is <a href="E6.html">E6</a>.</figcaption>
+</figure>
+<figure id="figure-2">
+<img src="../assets/wiki/E7-feasibility-ed.png" alt="ed clades: effective sample of the surrogate proposal against the tips reached, by ED effect" loading="lazy">
+<figcaption><strong>Figure 2.</strong> One point per <code>ed</code> tree. The four effect strengths separate into bands that size moves far less: -0.05 keeps the sample near 150-200 at any size, -0.60 leaves it below 10 on most trees.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p>Deliverable: <strong>produced</strong>. The surrogate proposal is usable (median ESS ≥ 10) on every <code>dd</code> cell at every size and turnover, and on <code>ned</code> and <code>ed</code> except under a strong negative ED effect (-0.35<span class="math inline">\(\lambda\)</span>0 or stronger) at turnover 0.25 and above, and at -0.15 with 400 tips and turnover 0.50; its ceiling is set by the ED effect and the turnover, not by tree size, and on <code>dd</code> it improves with size. The thinning proposal is below 10 in 54 of 67 cells. Two qualifications. These are effective samples at the generating values, without fitting, so they are best cases. And the record contains a contradiction now settled by the data: the report says thinning falls below 10 "in twelve, all of them plain DD", the paper says "in 54, twelve of them plain DD"; the data give 54.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="S.html">S</a> — its failed <code>ned</code> arm led to E7.</li>
+<li><a href="E6.html">E6</a> — the same proposals against the sampling fraction.</li>
+<li><a href="E3.html">E3</a> — the two thinning variants against each other.</li>
+<li><a href="E12.html">E12</a> — the power curve for the ED term, whose design used E7 to hold turnover at 0.10 and to set the threshold of 10 effective draws below which a cell is sampler-limited.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

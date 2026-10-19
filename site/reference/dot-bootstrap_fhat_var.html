@@ -1,0 +1,48 @@
+<h3>Description</h3>
+
+<p>Draws <code>B</code> bootstrap replicates (sampling with replacement from the IS
+log-weights <code>lw = logf - log_q</code>) and computes
+<span class="reqn">\(\hat\ell_{\rm BC,K}\)</span> for each replicate.  Returns the sample variance
+of the <code>B</code> estimates, which approximates
+<span class="reqn">\(\mathrm{Var}(\hat\ell_{\rm BC,K}(L))\)</span> due to Monte Carlo noise.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.bootstrap_fhat_var(logf, log_q, K = 2L, B = 200L)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id=".bootstrap_fhat_var_:_logf">logf</code></td>
+<td>
+<p>Numeric vector of <code>log p(obs, z | theta)</code> for valid trees.</p>
+</td></tr>
+<tr><td><code id=".bootstrap_fhat_var_:_log_q">log_q</code></td>
+<td>
+<p>Numeric vector of <code>log q(z | obs, theta)</code> for valid trees.</p>
+</td></tr>
+<tr><td><code id=".bootstrap_fhat_var_:_K">K</code></td>
+<td>
+<p>Moment truncation order (default <code>2</code>).</p>
+</td></tr>
+<tr><td><code id=".bootstrap_fhat_var_:_B">B</code></td>
+<td>
+<p>Number of bootstrap replicates (default <code>200</code>).</p>
+</td></tr>
+</table>
+
+<h3>Details</h3>
+
+<p>This variance is used downstream for AIC uncertainty quantification:
+<span class="reqn">\(\mathrm{Var}(\Delta\mathrm{AIC}) = 4[\mathrm{Var}(\hat\ell_1) +
+\mathrm{Var}(\hat\ell_2)]\)</span>, enabling a Gaussian test of equal AIC.
+</p>
+
+<h3>Value</h3>
+
+<p>Numeric scalar: estimated variance of the log-likelihood estimator.
+<code>NA</code> if fewer than 2 valid log-weights are available.
+</p>
+

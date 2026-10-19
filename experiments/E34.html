@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E34 — is the zero extinction of E29 and E32 an artefact of the unconditional likelihood? · emphasis</title>
+<meta name="description" content="Every fit up to E33 maximised the unconditional likelihood \(f(y\mid\theta)\), on trees that were kept only if both crown lineages reached the present (recorded 2026-10-09, before E34).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E34 — is the zero extinction of E29 and E32 an artefact of the unconditional likelihood?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#e34r--e34-b-with-the-corrected-survival-emulator">E34r — E34 (b) with the corrected survival emulator</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete; (b) rerun as E34r under the corrected survival emulator, same verdict</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>(b) emphasis <code>f30a791</code>; E34r emphasis <code>d3dee92</code></td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E34-conditioned.R</code>; <code>sim/E34-analysis.R</code>; <code>sim/E34r-analysis.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E34-exact-cond0.csv</code> (40 rows), <code>results/E34/{cells,pairs,conditioned}.csv</code>, <code>results/E34r/{cells,pairs,conditioned}.csv</code>; macros <code>report/e34-numbers.tex</code>, <code>report/e34r-numbers.tex</code>; tables <code>report/e34-table.tex</code>, <code>report/e34r-table.tex</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Every fit up to <a href="E33.html">E33</a> maximised the unconditional likelihood <span class="math inline">\(f(y\mid\theta)\)</span>, on trees that were kept only if both crown lineages reached the present (recorded 2026-10-09, before E34). Dividing by <span class="math inline">\(P(S\mid\theta)\)</span>, which falls as extinction rises, moves the extinction estimate up, so the unconditional estimate is biased toward zero relative to the conditional one. <a href="E29.html">E29</a> and <a href="E32.html">E32</a> put the extinction side on the lower limits of the box. E34 asks whether conditioning on survival is what was missing.</p>
+<h2 id="design">Design</h2>
+<p><strong>(a) The exact estimators, conditioned and not.</strong> <code>DDD::bd_ML</code> and <code>DDD::dd_ML</code> with <code>cond = 0</code> on the same 40 trees as <a href="E32.html">E32</a> (c) (<a href="E29.html">E29</a>'s 20 <code>ned</code> trees and <a href="E27.html">E27</a>'s 20 null trees at 200 tips), beside E32 (c)'s <code>cond = 1</code>. Descriptive.</p>
+<p><strong>(b) MCEM conditioned on survival.</strong> <code>estimate_rates(cond = &lt;survival GAM&gt;)</code>, which maximises <span class="math inline">\(\ell(\theta) - \log\hat P_{\text{tree}}(\theta)\)</span>, the GAM trained by <code>auto_bounds()</code> on 500 points of the rung's box with one simulated clade each.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>setting</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>trees</td>
+<td>E29's 20 <code>ned</code> trees; E27's 20 null (<code>dd</code>) trees, 200 tips, turnover 0.10, <span class="math inline">\(\mu\)</span> = 0.05, <span class="math inline">\(\rho\)</span> = 1</td>
+</tr>
+<tr>
+<td>ladder</td>
+<td><code>cr</code> → <code>dd</code> → <code>ned</code> on <code>ned</code> trees; <code>cr</code> → <code>dd</code> on null trees; each rung started from the previous conditional estimate</td>
+</tr>
+<tr>
+<td>budget</td>
+<td>300 draws, <code>max_iter</code> 300, 16-hour clock</td>
+</tr>
+<tr>
+<td>unconditional partners</td>
+<td>E29's fits (<code>ned</code> trees); E27's 200-tip fits at 100 iterations and a two-hour clock (null trees), paired by tree</td>
+</tr>
+<tr>
+<td>recorded per fit</td>
+<td>estimate, conditional log-likelihood, GAM survival probability at the conditional and unconditional estimates, effective sample, stop reason, box</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>On the <code>ned</code> fit of the <code>ned</code> trees:</p>
+<ol type="1">
+<li>rate at the origin within a factor of 2 of 0.05 on at least half the trees → "restored by conditioning";</li>
+<li>slope on ED within 0.1 per unit of zero on at least half → "restored";</li>
+<li>the share with an extinction parameter on a limit, beside <a href="E29.html">E29</a>'s 17 of 20;</li>
+<li>the speciation coefficient stays at a median 0.75 to 1.25 of its value;</li>
+<li>a fit whose GAM predicts survival below 0.01 at its estimate is outside the GAM's support and left out of (1) to (3).</li>
+</ol>
+<p>If (1) and (2) both hold, <a href="E29.html">E29</a> and <a href="E32.html">E32</a> are re-read as a bias of the unconditional likelihood; if neither, "conditioning is not the cause".</p>
+<h2 id="results">Results</h2>
+<p><strong>(a) Exact estimators</strong> (median <span class="math inline">\(\mu\)</span>; within 2x of 0.05; below 0.005):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>estimator, trees</th>
+<th><code>cond = 0</code></th>
+<th><code>cond = 1</code> (E32 c)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bd_ML</code>, <code>ned</code> trees</td>
+<td>0.0000; 0; 19</td>
+<td>0.0000; 3; 17</td>
+</tr>
+<tr>
+<td><code>bd_ML</code>, null trees</td>
+<td>0.0000; 0; 20</td>
+<td>0.0000; 0; 20</td>
+</tr>
+<tr>
+<td><code>dd_ML</code>, <code>ned</code> trees</td>
+<td>0.0304; 3; 9</td>
+<td>0.1575; 4; 1</td>
+</tr>
+<tr>
+<td><code>dd_ML</code>, null trees</td>
+<td>0.1145; 4; 5</td>
+<td>0.1220; 4; 1</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Conditioning moves <code>bd_ML</code> from zero on 39 of 40 trees to zero on 37, and moves <code>dd_ML</code> up; it does not bring either to the generating rate on more than 4 of 20 trees.</p>
+<p><strong>(b) MCEM conditioned</strong> (<code>results/E34/cells.csv</code>; unconditioned partner in parentheses; "in" = within 2x of 0.05 for a rate, within 0.1 of zero for a slope). The rate at present diversity is <span class="math inline">\(\mu_0 e^{\gamma_N n}\)</span>, without an ED term (<a href="E29.html">E29</a>'s version had one).</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>trees, fit</th>
+<th>outside support</th>
+<th>finished</th>
+<th>ESS</th>
+<th>rate at origin</th>
+<th>in</th>
+<th>rate at present N</th>
+<th>in</th>
+<th>slope on ED</th>
+<th>in</th>
+<th>on a limit</th>
+<th><span class="math inline">\(\hat P\)</span> surv</th>
+<th><span class="math inline">\(\beta_{ED}\)</span> ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ned</code>, <code>cr</code></td>
+<td>0</td>
+<td>20</td>
+<td>300</td>
+<td>0.0283 (0.0161)</td>
+<td>10 (6)</td>
+<td>same</td>
+<td>10 (6)</td>
+<td>—</td>
+<td>—</td>
+<td>3</td>
+<td>0.80 (0.87)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>ned</code>, <code>dd</code></td>
+<td>1</td>
+<td>20</td>
+<td>264</td>
+<td>0.0075 (0.0040)</td>
+<td>2 (1)</td>
+<td>0.0382 (0.0422)</td>
+<td>4 (6)</td>
+<td>—</td>
+<td>—</td>
+<td>4</td>
+<td>0.81 (0.91)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>ned</code>, <code>ned</code></td>
+<td>0</td>
+<td>6</td>
+<td>75</td>
+<td>0.0023 (0.0019)</td>
+<td>1 (0)</td>
+<td>0.0007 (0.0017)</td>
+<td>2 (3)</td>
+<td>+0.265 (-0.400)</td>
+<td>4 (2)</td>
+<td>14</td>
+<td>0.49 (0.96)</td>
+<td>0.80 (0.71)</td>
+</tr>
+<tr>
+<td>null, <code>cr</code></td>
+<td>0</td>
+<td>20</td>
+<td>300</td>
+<td>0.0016 (0.0016)</td>
+<td>3 (1)</td>
+<td>same</td>
+<td>3 (1)</td>
+<td>—</td>
+<td>—</td>
+<td>11</td>
+<td>0.92</td>
+<td>—</td>
+</tr>
+<tr>
+<td>null, <code>dd</code></td>
+<td>1</td>
+<td>19</td>
+<td>283</td>
+<td>0.0032 (0.0018)</td>
+<td>1 (0)</td>
+<td>0.0058 (0.0060)</td>
+<td>5 (3)</td>
+<td>—</td>
+<td>—</td>
+<td>11</td>
+<td>0.86</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Per tree (<code>pairs.csv</code>): the <code>ned</code> fit's slope on ED is on the lower limit on 2 trees and the upper on 6; 6 fits converged and 14 ran to 300 iterations; GAM survival at the conditioned <code>ned</code> estimate has quartiles 0.37 / 0.49 / 0.74, none below 0.01. The conditioned <code>cr</code> rate is above the unconditioned on 15 of 20 trees. Cost at 200 tips: survival GAM 45 minutes a rung for <code>ned</code>, conditioned <code>ned</code> fit 86 minutes (medians).</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E34-cr-conditioned.png" alt="The cr extinction rate per tree, unconditioned against conditioned" loading="lazy">
+<figcaption><strong>Figure 1.</strong> One point a tree. Above the diagonal conditioning raised the estimate; the horizontal grey band is the generating 0.05 within a factor of 2. Points spread up from the diagonal across the whole range rather than gathering at 0.05; on the same trees the exact conditioned estimate is zero on 17 of 20.</figcaption>
+</figure>
+<p>The estimates of every estimator, conditioned and not, side by side are in the second figure of <a href="E32.html">E32</a>.</p>
+<p><strong>Verdict.</strong> Rule (1): 1 of 20 (needs 10), not restored. Rule (2): 4 of 20, not restored. Rule (3): 14 of 20 on a limit (<a href="E29.html">E29</a>: 17). Rule (4): <span class="math inline">\(\beta_{ED}\)</span> at 0.80. Rule (5): no fit outside the support. By the rule: <strong>conditioning is not the cause</strong>. The one model it moves is <code>cr</code> (10 of 20 in the band against 6). The <code>ned</code> slope on ED leaves the lower limit for the upper one.</p>
+<h2 id="e34r--e34-b-with-the-corrected-survival-emulator">E34r — E34 (b) with the corrected survival emulator</h2>
+<p><a href="E36.html">E36</a>c found that the package's survival GAM labelled training clades that pass the lineage cap as extinct. Emphasis <code>d3dee92</code> labels them survived and trains the GAM on 2000 clades. E34r is E34 (b) unchanged in trees, budget, models and rules, run under <code>d3dee92</code> (<code>--out results/E34r</code>, 8 workers); if its verdict differed, the E34 record would be re-read under it.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>trees, fit</th>
+<th>outside</th>
+<th>finished</th>
+<th>ESS</th>
+<th>rate at origin</th>
+<th>in</th>
+<th>rate at present N</th>
+<th>in</th>
+<th>slope on ED</th>
+<th>in</th>
+<th>on a limit</th>
+<th><span class="math inline">\(\hat P\)</span> surv</th>
+<th><span class="math inline">\(\beta_{ED}\)</span> ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ned</code>, <code>cr</code></td>
+<td>0</td>
+<td>20</td>
+<td>300</td>
+<td>0.0272 (0.0161)</td>
+<td>8 (6)</td>
+<td>same</td>
+<td>8 (6)</td>
+<td>—</td>
+<td>—</td>
+<td>3</td>
+<td>0.84 (0.92)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>ned</code>, <code>dd</code></td>
+<td>0</td>
+<td>20</td>
+<td>264</td>
+<td>0.0104 (0.0040)</td>
+<td>5 (1)</td>
+<td>0.0637 (0.0422)</td>
+<td>7 (6)</td>
+<td>—</td>
+<td>—</td>
+<td>2</td>
+<td>0.93 (0.96)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>ned</code>, <code>ned</code></td>
+<td>0</td>
+<td>9</td>
+<td>176</td>
+<td>0.0023 (0.0019)</td>
+<td>0 (0)</td>
+<td>0.0003 (0.0017)</td>
+<td>5 (3)</td>
+<td>-0.255 (-0.400)</td>
+<td>2 (2)</td>
+<td>12</td>
+<td>0.99 (0.99)</td>
+<td>0.72 (0.71)</td>
+</tr>
+<tr>
+<td>null, <code>cr</code></td>
+<td>0</td>
+<td>20</td>
+<td>300</td>
+<td>0.0016 (0.0016)</td>
+<td>1 (1)</td>
+<td>same</td>
+<td>1 (1)</td>
+<td>—</td>
+<td>—</td>
+<td>12</td>
+<td>0.98</td>
+<td>—</td>
+</tr>
+<tr>
+<td>null, <code>dd</code></td>
+<td>0</td>
+<td>18</td>
+<td>282</td>
+<td>0.0025 (0.0018)</td>
+<td>1 (0)</td>
+<td>0.0199 (0.0060)</td>
+<td>7 (3)</td>
+<td>—</td>
+<td>—</td>
+<td>6</td>
+<td>0.99</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Per tree: the <code>ned</code> slope on ED on the lower limit on 9 trees and the upper on 2; 9 converged, 11 ran to 300 iterations, 2 fits below 10 effective draws; GAM survival at the conditioned <code>ned</code> estimate 0.90 / 0.99 / 0.995 (quartiles). The conditioned <code>cr</code> rate is above the unconditioned on 17 of 20. The survival GAM, now on 2000 clades, takes 153 minutes a rung for <code>ned</code>; the conditioned <code>ned</code> fit 101 minutes.</p>
+<p>Same verdict: rule (1) 0 of 20, rule (2) 2 of 20; conditioning is not the cause. Survival at the conditioned estimates is 0.84 to 0.99, where the old and the new emulator agree. What changed: the <code>cr</code> rate 0.0283 → 0.0272 (10 → 8 of 20 in the band); the <code>dd</code> rate at present diversity 0.038 → 0.064; the emulator's survival at the conditioned <code>ned</code> estimate 0.49 → 0.99 (the old emulator under-predicted survival where the fit sat), and the ED slope returns to the lower limit more often (median +0.265 → -0.255).</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Not met for both rules in E34 and E34r: conditioning on survival is not the cause of the zero extinction of <a href="E29.html">E29</a> and <a href="E32.html">E32</a>. The exact estimators move up when conditioned, as they must, and stay at zero (<code>bd_ML</code>) or off by a factor of 2 to 3 (<code>dd_ML</code>) on most trees. The <code>cr</code> gain (6 → 10, or 8, of 20 in the band) is movement inside a likelihood that is flat over [0, 0.1] on these trees: <a href="E32.html">E32</a> (a) measured a gain of 0.01 log-likelihood units across the widened box, <a href="E38.html">E38</a> puts the median LR(0) at 0.45 at 200 tips and turnover 0.10, and <a href="E36.html">E36</a> (b) finds the conditioned <code>cr</code> fit through an exact survival function within 0.01 of the exact conditioned MLE on 5 of 20 trees. The location of a maximum in that range is not a measurement of extinction. E34 used the pre-<code>d3dee92</code> emulator; E34r shows the verdict does not depend on it.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E29.html">E29</a>, <a href="E32.html">E32</a> — the unconditional results E34 tests.</li>
+<li><a href="E36.html">E36</a> — the survival emulator against Monte Carlo and the exact survival probability; E36c found the label defect that E34r corrects.</li>
+<li><a href="E38.html">E38</a> — the exact profile likelihood, which explains why the conditioned <code>cr</code> rate wanders.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<h3>Description</h3>
+
+<p>Calls <code><a href="#augment_trees">augment_trees</a></code> to sample <code>sample_size</code> augmented
+trees from the proposal <span class="reqn">\(q(z \mid \text{obs}, \theta)\)</span>.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.simulate_particle(
+  brts,
+  pars8,
+  model_bin,
+  link,
+  sample_size,
+  maxN,
+  max_missing,
+  max_lambda,
+  num_threads,
+  rho = 1
+)
+</code></pre>
+
+<h3>Details</h3>
+
+<p>Returns the raw <code>augment_trees</code> output: <code>logf</code>, <code>logg</code>,
+<code>trees</code>, and rejection counts for adaptive limit escalation.
+</p>
+

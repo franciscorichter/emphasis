@@ -1,0 +1,43 @@
+<h3>Description</h3>
+
+<p>The fair-proportion routine the likelihood and the simulator share
+(<code>inst/include/ed_covariate.hpp</code>), exposed so that it can be checked
+against an independent computation on an <code>ape</code> tree.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>ed_fair_proportion(parent, birth, alive, t)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="ed_fair_proportion_:_parent">parent</code></td>
+<td>
+<p>Integer vector: for each lineage, the (1-based) index of the
+lineage it split from, or <code>0</code> for a crown lineage.</p>
+</td></tr>
+<tr><td><code id="ed_fair_proportion_:_birth">birth</code></td>
+<td>
+<p>Numeric vector: each lineage's birth time (forward).</p>
+</td></tr>
+<tr><td><code id="ed_fair_proportion_:_alive">alive</code></td>
+<td>
+<p>Logical vector: whether each lineage is alive on the segment
+being evaluated.</p>
+</td></tr>
+<tr><td><code id="ed_fair_proportion_:_t">t</code></td>
+<td>
+<p>The evaluation time.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>A data frame with one row per lineage: <code>c</code> and <code>ts</code> such
+that <code>ED(u) = c + (u - ts)</code> for <code>u</code> in the segment (<code>NA</code>
+for a lineage not alive), <code>ed</code> the value at <code>t</code>, and
+<code>n_desc</code> the alive lineages in its subtree.
+</p>
+

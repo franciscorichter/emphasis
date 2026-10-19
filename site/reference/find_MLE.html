@@ -1,0 +1,55 @@
+<h3>Description</h3>
+
+<p>Uses <code><a href="https://stat.ethz.ch/R-manual/R-patched/library/stats/html/optim.html">optim</a></code> (L-BFGS-B) to maximize the GAM-predicted
+log-likelihood surface.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>find_MLE(gam_fit, lower_bound, upper_bound, start = NULL, par_names = NULL)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="find_MLE_:_gam_fit">gam_fit</code></td>
+<td>
+<p>A <code>gam</code> object returned by
+<code><a href="#train_likelihood_GAM">train_likelihood_GAM</a></code>.</p>
+</td></tr>
+<tr><td><code id="find_MLE_:_lower_bound">lower_bound</code></td>
+<td>
+<p>Numeric vector of lower bounds for each parameter.</p>
+</td></tr>
+<tr><td><code id="find_MLE_:_upper_bound">upper_bound</code></td>
+<td>
+<p>Numeric vector of upper bounds for each parameter.</p>
+</td></tr>
+<tr><td><code id="find_MLE_:_start">start</code></td>
+<td>
+<p>Optional numeric vector of starting values.  If <code>NULL</code>,
+the grid point with the highest predicted value is used.</p>
+</td></tr>
+<tr><td><code id="find_MLE_:_par_names">par_names</code></td>
+<td>
+<p>Character vector of parameter names matching the GAM
+predictors.  If <code>NULL</code>, inferred from the GAM formula.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>A list with components:
+</p>
+
+<dl>
+<dt>pars</dt><dd><p>Named numeric vector of MLE estimates.</p>
+</dd>
+<dt>loglik</dt><dd><p>Predicted log-likelihood at the MLE.</p>
+</dd>
+<dt>convergence</dt><dd><p>Convergence code from <code>optim</code> (0 = success).</p>
+</dd>
+<dt>optim</dt><dd><p>Full <code>optim</code> output.</p>
+</dd>
+</dl>
+

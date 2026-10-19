@@ -1,0 +1,64 @@
+<h3>Description</h3>
+
+<p>Two estimators are available:
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.is_fhat(logf, log_q, bias_correct = FALSE, K = 2L, n_zero_weight = 0L)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id=".is_fhat_:_logf">logf</code></td>
+<td>
+<p>Numeric vector of <code>log p(obs, z | theta)</code> for valid trees.</p>
+</td></tr>
+<tr><td><code id=".is_fhat_:_log_q">log_q</code></td>
+<td>
+<p>Numeric vector of <code>log q(z | obs, theta)</code> for valid trees.</p>
+</td></tr>
+<tr><td><code id=".is_fhat_:_bias_correct">bias_correct</code></td>
+<td>
+<p>Logical; use moment-based bias correction (default <code>FALSE</code>).</p>
+</td></tr>
+<tr><td><code id=".is_fhat_:_K">K</code></td>
+<td>
+<p>Integer truncation order for the moment series (default <code>2</code>).</p>
+</td></tr>
+<tr><td><code id=".is_fhat_:_n_zero_weight">n_zero_weight</code></td>
+<td>
+<p>Integer; number of completed augmentations that had
+zero IS weight.  These contribute <code>w = 0</code> to the IS sum and inflate
+the denominator accordingly (default <code>0</code>).</p>
+</td></tr>
+</table>
+
+<h3>Details</h3>
+
+<p><strong>Default</strong> (<code>bias_correct = FALSE</code>): the standard log-sum-exp
+estimator <span class="reqn">\(\log\bar{L} = \log\!\left(\frac{1}{n}\sum_i L_i\right)\)</span>,
+computed in numerically stable form.  <span class="reqn">\(\bar{L}\)</span> is an unbiased estimator
+of <span class="reqn">\(p(\mathrm{obs}\mid\theta)\)</span>, but <span class="reqn">\(\log\bar{L}\)</span> slightly
+underestimates <span class="reqn">\(\log p\)</span> (Jensen's inequality).
+</p>
+<p><strong>Bias-corrected</strong> (<code>bias_correct = TRUE</code>): uses the exact identity
+</p>
+<p style="text-align: center;"><span class="reqn">\[\log\bar{L} = \hat\ell + \log\!\left(1 + \sum_{k=2}^{\infty}
+  \frac{m_k}{k!}\right), \qquad
+  m_k = \frac{1}{n}\sum_i(\log L_i - \hat\ell)^k\]</span>
+</p>
+
+<p>truncated at order <code>K</code> (default 2).  The K=2 approximation is
+<span class="reqn">\(\hat\ell + \log(1 + m_2/2)\)</span>, equivalent to the log-normal correction
+<span class="reqn">\(\mu + \sigma^2/2\)</span>.  With the full series (<span class="reqn">\(K\to\infty\)</span>) the two
+estimators are identical; the truncation is the approximation.
+</p>
+<p>Trees that hit computational limits (<code>max_missing</code>, <code>max_lambda</code>)
+are discarded entirely &ndash; they are simulator failures, not IS samples.
+Trees that completed augmentation but have zero IS weight (<code>w = 0</code>
+because <code>lambda = 0</code> under the current parameters) are legitimate IS
+samples and are included in the denominator via <code>n_zero_weight</code>.
+</p>
+

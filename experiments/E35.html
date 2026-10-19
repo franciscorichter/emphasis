@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E35 — an extinction driver where the tree holds more extinction; a misstated sampling fraction · emphasis</title>
+<meta name="description" content="(a) E32 found the one extinction signal of the study on the nk generator: a negative slope on K returned in sign at a third of its size on trees at turnover 0.10, where E34 (a) shows an exact likelihood sees no extinction at all.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E35 — an extinction driver where the tree holds more extinction; a misstated sampling fraction</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+<ol>
+<li><a href="#a-k-driver-at-turnover-025">(a) K driver at turnover 0.25</a></li>
+<li><a href="#b-a-misstated-sampling-fraction">(b) A misstated sampling fraction</a></li>
+</ol>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>(a) complete; (b) complete: all three fractions written (<code>rho100</code> last, 2026-10-14 19:23) and read by <code>sim/E35b-analysis.R</code>; the reading below is computed directly from the three <code>ladder.csv</code> files</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>(a) emphasis <code>f30a791</code>; (b) not recorded in the results</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E27-conditions.R</code> (<code>--cells t25big --gens nk --gamma-eff ...</code> for (a); <code>--fit-rho</code> for (b)); <code>sim/E35b-analysis.R</code> for (b); no analysis script for (a)</td>
+</tr>
+<tr>
+<td>Data</td>
+<td>(a) <code>results/E35/{k-neg,k-zero,k-pos}/ladder.csv</code> (60 rows each), <code>calibration.csv</code>, logs; (b) <code>results/E35/{rho082,rho092,rho100}/ladder.csv</code> (200 rows each), logs</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p><strong>(a)</strong> <a href="E32.html">E32</a> found the one extinction signal of the study on the <code>nk</code> generator: a negative slope on K returned in sign at a third of its size on trees at turnover 0.10, where <a href="E34.html">E34</a> (a) shows an exact likelihood sees no extinction at all. E35 (a) repeats the K arms where the trees hold more extinction, at turnover 0.25.</p>
+<p><strong>(b)</strong> <span class="math inline">\(\rho\)</span> is a known input of every fit, and the families of the biology paper are fitted at their own <span class="math inline">\(\rho\)</span> (median 0.92). E35 (b) asks what a user pays for getting it wrong by 0.1.</p>
+<h2 id="design">Design</h2>
+<p><strong>(a) A K driver at turnover 0.25</strong> (new cell <code>t25big</code>):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>setting</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>generator</td>
+<td><code>nk</code>, speciation slope on K <span class="math inline">\(-\log 0.65\)</span> per SD of K = +0.124 per split</td>
+</tr>
+<tr>
+<td>extinction slope on K</td>
+<td><span class="math inline">\(-\log 1.5\)</span>, 0, <span class="math inline">\(+\log 1.5\)</span> per SD of K = -0.1165, 0, +0.1165 per split</td>
+</tr>
+<tr>
+<td>extinction intercept</td>
+<td>centred so a lineage at the mean K has the cell's rate, 0.125 (turnover 0.25)</td>
+</tr>
+<tr>
+<td>capacity</td>
+<td>calibrated per arm: 65 (-), 79 (0), 99 (+)</td>
+</tr>
+<tr>
+<td>tips / crown / <span class="math inline">\(\rho\)</span></td>
+<td>200 / 15 / 1</td>
+</tr>
+<tr>
+<td>trees</td>
+<td>20 an arm</td>
+</tr>
+<tr>
+<td>ladder</td>
+<td><code>cr</code>, <code>dd</code>, <code>nk</code>; 300 draws, <code>max_iter</code> 300, 16-hour clock; unconditional likelihood</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>(b) A misstated sampling fraction:</strong></p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>setting</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>cell</td>
+<td>E27's <code>fam</code>: 88 tips target, turnover 0.10 (<span class="math inline">\(\mu\)</span> = 0.05), true <span class="math inline">\(\rho\)</span> = 0.92, crown 15</td>
+</tr>
+<tr>
+<td>generators</td>
+<td><code>dd</code> (capacity 158; <span class="math inline">\(\beta_N = -0.0146\)</span>) and <code>nk</code> (capacity 56; <span class="math inline">\(\beta_K = +0.164\)</span> per split), 20 trees each by E27's seeds; median 95.5 and 81 tips</td>
+</tr>
+<tr>
+<td>fits</td>
+<td>each tree through the full ladder (<code>cr</code>, <code>dd</code>, <code>nd</code>, <code>ned</code>, <code>nk</code>) three times, told <span class="math inline">\(\rho\)</span> = 0.82, 0.92, 1.00</td>
+</tr>
+<tr>
+<td>budget</td>
+<td>300 draws, <code>max_iter</code> 300, a four-hour clock, the same for the three fits of a tree</td>
+</tr>
+<tr>
+<td>reading</td>
+<td>within 2 AIC (fewest parameters within 2 of the minimum), paired by tree</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p><strong>(a)</strong> <a href="E32.html">E32</a>'s rule (2) on the K slope — <strong>recovered</strong> if in both signed arms median fitted/generating in [0.75, 1.25], right sign on ≥ 80% and fewer than half on a limit; <strong>detected in sign only</strong> if right sign on ≥ 80% in both and the + and - interquartile ranges disjoint; <strong>not identified</strong> otherwise — and rule (3): an arm with fewer than 10 effective draws on more than half its fits is sampler-limited and left out. Read beside E32's numbers at turnover 0.10.</p>
+<p><strong>(b)</strong></p>
+<ol type="1">
+<li><strong>Selection robust</strong> if the chosen model at a misstated <span class="math inline">\(\rho\)</span> equals the one at <span class="math inline">\(\rho\)</span> = 0.92 on ≥ 90% of trees, per generator and misstatement.</li>
+<li><strong>Estimation robust</strong> if the speciation coefficient at a misstated <span class="math inline">\(\rho\)</span> is within 0.75 to 1.25 of its value at 0.92 on ≥ 80% of the trees where the fit keeps 10 effective draws (<span class="math inline">\(\beta_N\)</span> on <code>dd</code> trees, <span class="math inline">\(\beta_K\)</span> on <code>nk</code> trees).</li>
+<li>The direction of change is reported: a <span class="math inline">\(\rho\)</span> told too low adds hidden lineages, which should raise the fitted extinction rate and lower <span class="math inline">\(\beta_N\)</span>.</li>
+<li>A cell with fewer than 10 effective draws on more than half its fits is sampler-limited and reported, not read.</li>
+</ol>
+<h2 id="results">Results</h2>
+<h3 id="a-k-driver-at-turnover-025">(a) K driver at turnover 0.25</h3>
+<p>Computed from the three <code>ladder.csv</code> (no merged table exists); the values match the supplement and the README.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>arm</th>
+<th>generating <span class="math inline">\(\gamma\)</span>_K</th>
+<th>fitted <span class="math inline">\(\gamma\)</span>_K, median (quartiles)</th>
+<th>fitted/gen</th>
+<th>right sign</th>
+<th>on a limit</th>
+<th>ESS median (&lt; 10)</th>
+<th>finished</th>
+<th><code>nk</code> chosen</th>
+<th><span class="math inline">\(\beta_K\)</span> ratio</th>
+<th>median tips</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>K -</td>
+<td>-0.1165</td>
+<td>-0.087 (-0.166, -0.018)</td>
+<td>0.75</td>
+<td>18 of 20</td>
+<td>5</td>
+<td>30.5 (4)</td>
+<td>5</td>
+<td>20</td>
+<td>0.88</td>
+<td>186</td>
+</tr>
+<tr>
+<td>K 0</td>
+<td>0</td>
+<td>+0.004 (-0.023, +0.028)</td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>13.8 (4)</td>
+<td>0</td>
+<td>18</td>
+<td>1.01</td>
+<td>223</td>
+</tr>
+<tr>
+<td>K +</td>
+<td>+0.1165</td>
+<td>+0.027 (-0.003, +0.062)</td>
+<td>0.23</td>
+<td>15 of 20</td>
+<td>1</td>
+<td>7.4 (12)</td>
+<td>0</td>
+<td>9</td>
+<td>0.75</td>
+<td>196.5</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>"On a limit" for the negative arm is the supplement's 5; counting within 1% of 0.28 (<a href="E32.html">E32</a>'s limit for this slope) gives 4, and 5 at |<span class="math inline">\(\gamma\)</span>_K| ≥ 0.26. The <code>t25big</code> box limit is not written in the ladder rows. The fitted intercept (median rate about 0.0016 in every arm) is the rate at K = 0, not at the mean K, and the design does not read it. At turnover 0.10 (<a href="E32.html">E32</a>) the negative slope returned at 0.36 of its size.</p>
+<p>The right-hand panel of the drivers figure on <a href="E32.html">E32</a> draws these three arms: the negative and zero arms sit on the identity line within their spread, and the positive arm sits low with 12 of its 20 fits marked as below 10 effective draws.</p>
+<h3 id="b-a-misstated-sampling-fraction">(b) A misstated sampling fraction</h3>
+<p>All 600 fits returned (40 trees x 5 models x 3 fractions, no errors). Generator fit, median effective draws (fits below 10): <code>dd</code> 216 / 258 / 254 (0 / 0 / 0) and <code>nk</code> 14.7 / 37.6 / 29.0 (4 / 4 / 5) at <span class="math inline">\(\rho\)</span> told 0.82 / 0.92 / 1.00, so no cell is sampler-limited. Fits that met the stopping rule: <code>dd</code> 15 / 16 / 17 of 20, <code>nk</code> 3 / 4 / 2. Median ladder time 8.2 / 5.9 / 4.6 hours.</p>
+<p><strong>Selection</strong> (chosen model the same as at 0.92):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>generator</th>
+<th>told 0.82</th>
+<th>told 1.00</th>
+<th>rule (≥ 90%)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dd</code></td>
+<td>19 of 20</td>
+<td>19 of 20</td>
+<td>robust</td>
+</tr>
+<tr>
+<td><code>nk</code></td>
+<td>20 of 20</td>
+<td>18 of 20</td>
+<td>robust (18 of 20 = 90%)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>At 0.92 the <code>dd</code> trees choose <code>dd</code> on 17, <code>cr</code> on 2, <code>nd</code> on 1; the <code>nk</code> trees choose <code>nk</code> on 13, <code>dd</code> on 4, <code>cr</code>, <code>nd</code> and <code>ned</code> on 1 each.</p>
+<p><strong>Estimation</strong> (speciation coefficient at the misstated <span class="math inline">\(\rho\)</span> over its value at 0.92, on trees whose generator fit keeps ≥ 10 effective draws at both fractions):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>generator, coefficient</th>
+<th>told 0.82: inside [0.75, 1.25]; median ratio (quartiles)</th>
+<th>told 1.00</th>
+<th>rule (≥ 80%)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dd</code>, <span class="math inline">\(\beta_N\)</span></td>
+<td>15 of 20 (75%); 0.81 (0.77, 0.83)</td>
+<td>18 of 20; 1.18 (1.15, 1.21)</td>
+<td>not robust at 0.82; robust at 1.00</td>
+</tr>
+<tr>
+<td><code>nk</code>, <span class="math inline">\(\beta_K\)</span></td>
+<td>12 of 13; 1.05 (1.00, 1.09)</td>
+<td>12 of 13; 0.92 (0.90, 0.97)</td>
+<td>robust at both</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Requiring 10 draws only at the misstated fraction gives 15 of 16 and 14 of 15 for <code>nk</code>; the <code>dd</code> counts do not change.</p>
+<p><strong>Direction.</strong> On <code>dd</code> trees the magnitude of <span class="math inline">\(\beta_N\)</span> follows the fraction told: at 0.82 it is smaller than at 0.92 on all 20 trees (median -0.0118 against -0.0147; generating -0.0146), at 1.00 larger on all 20 (-0.0173). The extinction side does not register the change: the <code>cr</code> fit's extinction rate is a median 0.0013 at all three fractions (generating 0.05), higher at 0.82 than at 0.92 on 8 of 20 <code>dd</code> trees and 4 of 20 <code>nk</code> trees; the <code>dd</code> fit's rate at present diversity is 0.032 / 0.029 / 0.029. The speciation rate of the <code>cr</code> fit falls as the fraction told rises (<code>dd</code> trees 0.185 / 0.174 / 0.166).</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E35-misstated-rho.png" alt="Speciation coefficient at a misstated sampling fraction" loading="lazy">
+<figcaption><strong>Figure 1.</strong> One point a tree, the coefficient at the misstated fraction over its value at the true 0.92. Told 0.82, every <code>dd</code> tree's <span class="math inline">\(\beta_N\)</span> shrinks and five leave the pre-set band; told 1.00 it grows on every tree but stays inside on 18. The <code>nk</code> coefficient moves about 5-8% either way.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p><strong>(a)</strong> By the rule the K slope is <strong>not identified</strong>: the positive arm is sampler-limited (12 of 20 fits below 10 draws) and rule (2) needs both signed arms. On the two arms the rule can read, the negative slope returns at 0.75 of its value with the right sign on 18 of 20, and the zero slope at +0.004, against 0.36 at turnover 0.10 in <a href="E32.html">E32</a>. This is the first extinction slope in the study returned near its size in one direction; the supplement calls it "the first extinction slope recovered in the study", which is stronger than the rule allows. At 200 tips and turnover 0.25 the exact constant-rate profile detects extinction on 20% of trees (<a href="E38.html">E38</a>).</p>
+<p><strong>(b)</strong> Selection is robust to a fraction off by 0.1 in either direction for both generators. Estimation is robust for <code>nk</code>, and for <code>dd</code> when told 1.00, but not when told 0.82: <span class="math inline">\(\beta_N\)</span> shrinks by a median 19% and 5 of 20 trees leave the band. The direction is the one the design predicted for <span class="math inline">\(\beta_N\)</span> only in the sense that its magnitude falls when <span class="math inline">\(\rho\)</span> is told too low; the extinction rate does not rise, because at turnover 0.10 and 88 tips it sits at about 0.0013 whatever the fraction (the region where <a href="E38.html">E38</a> finds no information on extinction). These numbers are computed directly from the three ladders; the README's E35 row carries the same counts, read by <code>sim/E35b-analysis.R</code> from the same files.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E32.html">E32</a> — the K arms at turnover 0.10.</li>
+<li><a href="E33.html">E33</a> — the extinction path with the same drivers.</li>
+<li><a href="E38.html">E38</a> — where turnover 0.25 at 200 tips sits on the exact information map.</li>
+<li><a href="E27.html">E27</a> — the <code>fam</code> cell and the ladder E35 (b) reuses.</li>
+<li><a href="E6.html">E6</a> — how the proposals degrade with the sampling fraction.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

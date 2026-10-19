@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E6 — Which proposal to use, against the sampling fraction · emphasis</title>
+<meta name="description" content="The package README said that the choice of proposal does not depend on the sampling fraction \(\rho\).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E6 — Which proposal to use, against the sampling fraction</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td><code>a87de1c</code> (by the build audit; identical to a clean build except the random stream through the <code>ned</code> proposals)</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E6-proposal-rho.R</code>; figures <code>sim/figures-e6e10.R</code>, <code>sim/figures-study.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E6/proposal-rho.csv</code> (200 rows, no errors), <code>results/E6/design.rds</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>The package README said that the choice of proposal does not depend on the sampling fraction <span class="math inline">\(\rho\)</span>. One measurement contradicted it: on a 45-tip ED tree at the generating values the surrogate proposal left an effective sample of 15.1, 1.1 and 1.8 at <span class="math inline">\(\rho\)</span> = 1, 0.6 and 0.3, against 22.0, 3.7 and 5.9 for the thinning proposal. Either the sentence was wrong or the tree was unrepresentative. E6 measures the ranking of the two proposals across <span class="math inline">\(\rho\)</span> for four models.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>value</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>models</td>
+<td><code>cr</code>, <code>dd</code>, <code>ed</code>, <code>ned</code></td>
+<td></td>
+</tr>
+<tr>
+<td><span class="math inline">\(\rho\)</span></td>
+<td>1, 0.8, 0.6, 0.4, 0.2</td>
+<td>the tree is simulated complete and then sampled at <span class="math inline">\(\rho\)</span></td>
+</tr>
+<tr>
+<td>trees</td>
+<td>10 per cell, about 100 tips at <span class="math inline">\(\rho\)</span> = 1</td>
+<td>capacity calibrated to land the clade near 100 tips at the crown age</td>
+</tr>
+<tr>
+<td>crown age</td>
+<td>15</td>
+<td></td>
+</tr>
+<tr>
+<td>rates</td>
+<td><span class="math inline">\(\beta\)</span>0 = 0.5, turnover 0.25 (<span class="math inline">\(\gamma\)</span>0 = 0.125)</td>
+<td></td>
+</tr>
+<tr>
+<td>ED effect</td>
+<td>-0.15 <span class="math inline">\(\beta\)</span>0 at the clade's own ED scale (<code>ed</code>, <code>ned</code>)</td>
+<td></td>
+</tr>
+<tr>
+<td>proposals</td>
+<td>surrogate and thinning, on the same trees</td>
+<td></td>
+</tr>
+<tr>
+<td>parameters</td>
+<td>the generating values; no fitting</td>
+<td></td>
+</tr>
+<tr>
+<td>draws</td>
+<td>200</td>
+<td></td>
+</tr>
+<tr>
+<td>link</td>
+<td>linear</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Because the trees are sampled after simulation, <span class="math inline">\(\rho\)</span> and tree size move together for <code>dd</code> and <code>ned</code> (median 92 → 22 tips and 109 → 26 tips from <span class="math inline">\(\rho\)</span> = 1 to 0.2).</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>Readout: median effective sample per cell, the <span class="math inline">\(\rho\)</span> at which the ranking crosses per model, and the paired ratio. <strong>Decision:</strong> either the README sentence is struck and replaced by the measured rule, or it is confirmed and the 45-tip case reported as an outlier.</p>
+<h2 id="results">Results</h2>
+<p>Medians over 10 trees:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th><span class="math inline">\(\rho\)</span> = 1</th>
+<th>0.8</th>
+<th>0.6</th>
+<th>0.4</th>
+<th>0.2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code> ESS surrogate / thinning</td>
+<td>200 / 2.12</td>
+<td>200 / 1.44</td>
+<td>200 / 1.02</td>
+<td>200 / 1.01</td>
+<td>200 / 1.47</td>
+</tr>
+<tr>
+<td><code>dd</code></td>
+<td>135 / 3.25</td>
+<td>131 / 2.66</td>
+<td>105 / 2.21</td>
+<td>78 / 3.89</td>
+<td>37 / 7.25</td>
+</tr>
+<tr>
+<td><code>ned</code></td>
+<td>85 / 2.09</td>
+<td>58 / 2.88</td>
+<td>21 / 2.08</td>
+<td>20 / 3.20</td>
+<td>16 / 4.38</td>
+</tr>
+<tr>
+<td><code>ed</code></td>
+<td>10.7 / 6.20</td>
+<td>7.4 / 3.97</td>
+<td><strong>2.35 / 6.20</strong></td>
+<td><strong>3.55 / 4.58</strong></td>
+<td><strong>2.54 / 7.60</strong></td>
+</tr>
+<tr>
+<td><code>ed</code>: trees on which the surrogate is larger</td>
+<td>6 of 10</td>
+<td>8</td>
+<td>2</td>
+<td>5</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The surrogate keeps the draw count on <code>cr</code> at every <span class="math inline">\(\rho\)</span> (it is the exact conditional law there) and leads by 94-198 times; it leads by 5-49 times on <code>dd</code> and by 41 down to 3.7 times on <code>ned</code>. Only <code>ed</code> crosses: the surrogate is ahead 1.9 times at <span class="math inline">\(\rho\)</span> = 0.8 and behind 2.6 times at <span class="math inline">\(\rho\)</span> = 0.6. Hidden lineages per draw (surrogate / thinning) are 42-155 / 86-504 under <code>cr</code> and 56-90 / 74-140 under <code>ed</code>. On <code>ed</code> both proposals are below 10 effective draws at every <span class="math inline">\(\rho\)</span> below 1.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E6-proposal-rho.png" alt="Ratio of the surrogate&#39;s effective sample to the thinning proposal&#39;s, against the sampling fraction, per model" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Above 1 the surrogate proposal keeps the larger effective sample. <code>cr</code>, <code>dd</code> and <code>ned</code> stay above 1 at every sampling fraction; only <code>ed</code> crosses, between <span class="math inline">\(\rho\)</span> = 0.8 and 0.6.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p>Decision under the rule: <strong>the README sentence is struck</strong> and replaced by the measured rule — the surrogate proposal is the default, and the exception is <code>ed</code> below <span class="math inline">\(\rho\)</span> ≈ 0.8. The 45-tip case that led to E6 is an <code>ed</code>-type outcome, not an outlier. Two limits: the samples are measured at the generating values without fitting, so they are best cases (early in a fit the parameters are wrong and the samples smaller); and <span class="math inline">\(\rho\)</span> is confounded with tree size in the <code>dd</code> and <code>ned</code> rows, so the fall of the surrogate's sample with <span class="math inline">\(\rho\)</span> there is not separated from the fall in tips.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E3.html">E3</a> — the two thinning variants against each other.</li>
+<li><a href="E7.html">E7</a> — the same two proposals over size, turnover and ED effect at <span class="math inline">\(\rho\)</span> = 1.</li>
+<li><a href="E4.html">E4</a> — what an E-step of each proposal costs.</li>
+<li><a href="E19.html">E19b</a> — the surrogate proposal tried for the pendant-age model <code>nd</code>.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

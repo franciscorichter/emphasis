@@ -1,0 +1,57 @@
+<h3>Description</h3>
+
+<p><code>Model::pendant_pd_at</code> reads P off the node that governs the segment a
+candidate time falls in; <code>Model::nh_rate</code> is the intensity of the
+sampler's birth process there.  This exposes both, so a test can hold P
+against an independent recomputation from the augmented tree and against
+<code>pd + n * (t - brts)</code> of the governing node, and can scan the intensity
+over a segment to check that its value at the segment start dominates it.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>eval_nh_rate(
+  pars,
+  tree,
+  times,
+  model = as.integer(c(0, 0, 0)),
+  link = 0L,
+  rho = 1
+)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="eval_nh_rate_:_pars">pars</code></td>
+<td>
+<p>Numeric vector of 8 model parameters.</p>
+</td></tr>
+<tr><td><code id="eval_nh_rate_:_tree">tree</code></td>
+<td>
+<p>One augmented-tree data frame.</p>
+</td></tr>
+<tr><td><code id="eval_nh_rate_:_times">times</code></td>
+<td>
+<p>Numeric vector of times at which to evaluate.</p>
+</td></tr>
+<tr><td><code id="eval_nh_rate_:_model">model</code></td>
+<td>
+<p>Integer vector <code>c(use_N, use_M, use_D)</code>.</p>
+</td></tr>
+<tr><td><code id="eval_nh_rate_:_link">link</code></td>
+<td>
+<p>Link function: 0 = linear, 1 = exponential, 2 = gaussian.</p>
+</td></tr>
+<tr><td><code id="eval_nh_rate_:_rho">rho</code></td>
+<td>
+<p>Sampling fraction.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>A named list with <code>pd</code> (the pendant PD used) and <code>nh</code>
+(the non-homogeneous thinning rate) at each time.
+</p>
+

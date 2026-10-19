@@ -1,0 +1,28 @@
+<h3>Description</h3>
+
+<p>Returns <code>NULL</code> when the sampler is available.  The reasons are ordered
+so that the first thing wrong with the call is the one reported.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.bdi_unsupported_reason(model_bin, link, rho = 1)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id=".bdi_unsupported_reason_:_model_bin">model_bin</code></td>
+<td>
+<p>Length-3 binary model vector <code>c(use_N, use_M, use_D)</code>.</p>
+</td></tr>
+<tr><td><code id=".bdi_unsupported_reason_:_link">link</code></td>
+<td>
+<p>Integer link code: 0 linear, 1 exponential, 2 gaussian.</p>
+</td></tr>
+<tr><td><code id=".bdi_unsupported_reason_:_rho">rho</code></td>
+<td>
+<p>Sampling fraction in <code>(0, 1]</code>. Default <code>1</code>.</p>
+</td></tr>
+</table>
+

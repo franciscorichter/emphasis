@@ -1,0 +1,38 @@
+<h3>Description</h3>
+
+<p>Tools for simulating phylogenetic trees, augmenting missing lineages, and fitting diversification models using Monte Carlo EM, Cross-Entropy Method, and importance sampling.
+</p>
+
+<h3>Details</h3>
+
+<p>The package revolves around four workflows:
+</p>
+
+<ul>
+<li> <p><strong>Simulation</strong>: 'simulate_tree()' for forward and conditional simulation.
+</p>
+</li>
+<li> <p><strong>Augmentation</strong>: <code>augment_trees()</code> draws IS-weighted augmented trees;
+<code>eval_logf()</code> scores pre-computed trees at any parameter point.
+</p>
+</li>
+<li> <p><strong>Estimation</strong>: 'estimate_rates()', 'emphasis_cem()' (CEM back-end).
+</p>
+</li>
+<li> <p><strong>Diagnostics</strong>: 'train_GAM()' plus plotting utilities.
+</p>
+</li></ul>
+
+<p>Heavy computations are delegated to C++ via 'Rcpp' / 'RcppParallel' for performance.
+</p>
+
+<h3>Examples</h3>
+
+<pre><code class='language-R'>  ## Not run: 
+    data(bird.orders, package = "ape")
+    result &lt;- emphasis(bird.orders, model = list(pars = c(0.1, 0.2, -0.1, 0)))
+    str(result)
+  
+## End(Not run)
+</code></pre>
+

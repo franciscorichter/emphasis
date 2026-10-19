@@ -1,0 +1,225 @@
+<h3>Description</h3>
+
+<p>Unified entry point for parameter inference under the general
+diversification model. Accepts a simulated or empirical tree, extracts
+branching times (pruning to extant tips if needed), and dispatches to
+the chosen optimisation back-end.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>estimate_rates(
+  tree,
+  method = c("mcem", "cem", "gam"),
+  model = "cr",
+  init_pars = NULL,
+  control = list(),
+  link = "linear",
+  cond = NULL
+)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="estimate_rates_:_tree">tree</code></td>
+<td>
+<p>One of:
+</p>
+
+<ul>
+<li><p> a <code>phylo</code> object (extant tips only recommended),
+</p>
+</li>
+<li><p> the list returned by <code><a href="#simulate_tree">simulate_tree</a></code> (<code>$tes</code> is
+used automatically, falling back to a pruned <code>$tas</code>), or
+</p>
+</li>
+<li><p> a numeric vector of branching times (crown-age ordering).
+</p>
+</li></ul>
+
+<p>The covariate <code>D</code> is a lineage's pendant age &ndash; measured from the
+last time that lineage became a tip &ndash; centred on the mean over the alive
+lineages, so it is a function of the topology and not of the branching
+times alone.  A <code>phylo</code> (or a <code>simulate_tree</code> result) carries
+it; a bare numeric vector does not, and every observed lineage is then
+recorded as dating from the crown, which leaves <code>D = 0</code> at every
+observed branching event.  Fit <code>"d"</code> or <code>"nd"</code> from a tree, not
+from branching times.</p>
+</td></tr>
+<tr><td><code id="estimate_rates_:_method">method</code></td>
+<td>
+<p>Optimisation method:
+</p>
+
+<dl>
+<dt><code>"mcem"</code></dt><dd><p>Monte Carlo Expectation-Maximisation (default).
+Iterates E- and M-steps until parameters stabilise (max relative
+change &lt; <code>tol</code> for <code>patience</code> consecutive iterations)
+or <code>max_iter</code> is reached. Requires <code>init_pars</code>.</p>
+</dd>
+<dt><code>"cem"</code></dt><dd><p>Monte Carlo Cross-Entropy Method. Initialises a
+particle population randomly within the bounds and evolves it until
+convergence (annealing exhausted, plateau, or <code>control$max_iter</code>
+reached). Does not need <code>init_pars</code>.</p>
+</dd>
+<dt><code>"gam"</code></dt><dd><p>GAM-based MLE. Evaluates the IS log-likelihood
+on a grid spanning the bounds, fits a smooth GAM surface, and
+optimises it via L-BFGS-B. One-shot (non-iterative); no
+<code>init_pars</code> needed. Requires the <span class="pkg">mgcv</span> package.</p>
+</dd>
+</dl>
+</td></tr>
+<tr><td><code id="estimate_rates_:_model">model</code></td>
+<td>
+<p>Model specification. Accepts:
+</p>
+
+<ul>
+<li><p> a formula such as <code>~ N</code>, <code>~ N + D</code>, <code>~ N + ED</code> or <code>~ N + K</code>,
+</p>
+</li>
+<li><p> a string shortcut (<code>"cr"</code>, <code>"dd"</code>, <code>"d"</code>,
+<code>"nd"</code>, <code>"ed"</code>, <code>"ned"</code>, <code>"edc"</code>, <code>"nedc"</code>,
+<code>"k"</code>, <code>"nk"</code>), or
+</p>
+</li>
+<li><p> an integer vector <code>c(use_N, use_M, use_D, use_ED, use_K)</code>
+(<code>use_M</code> is internal only and should be 0; a shorter vector is
+an earlier layout and is padded; <code>use_ED = 3</code> selects the
+centred covariate).
+</p>
+</li></ul>
+
+<p><code>model = "all"</code> fits the nested ladder <code>cr</code>, <code>dd</code>,
+<code>nd</code>, <code>ned</code>, <code>nk</code> (the last two need a <code>phylo</code> and
+are left out on the gaussian link), each started from the estimate of the
+model it nests, with each model's box from <code><a href="#auto_bounds">auto_bounds</a></code>
+unless <code>control$bounds</code> names one per model, and returns the fits
+with their <code><a href="#compare_models">compare_models</a></code> table and its <code>chosen</code>
+model, the fewest parameters within 2 AIC of the minimum (an
+<code>emphasis_fits</code> object); <code>control$models</code> restricts the
+ladder.
+Default <code>"cr"</code> (constant rate). <code>"nd"</code> (<code>~ N + D</code>) is
+diversity and age-imbalance; <code>"ned"</code> (<code>~ N + ED</code>) diversity and
+evolutionary distinctiveness, which needs a <code>phylo</code>. <code>"nedc"</code>
+(<code>~ N + EDc</code>) reads ED minus its mean over the lineages alive at the
+same time, a covariate with clade mean zero, so that <code>beta_ED</code>
+carries only the within-clade contrast and none of the clade-level level
+that <code>N</code> tracks. <code>"nk"</code> (<code>~ N + K</code>) is diversity and the
+number of speciation events on the path from the crown to the lineage,
+hidden splits counted; it needs a <code>phylo</code> and runs on the thinning
+sampler.</p>
+</td></tr>
+<tr><td><code id="estimate_rates_:_init_pars">init_pars</code></td>
+<td>
+<p>Starting parameter vector. Required for <code>"mcem"</code>;
+ignored for <code>"cem"</code>. If <code>NULL</code> with <code>"mcem"</code>, the
+midpoint of the bounds is used, with covariate slopes started at 0
+(linear link) so that lambda stays positive during the early E-steps.</p>
+</td></tr>
+<tr><td><code id="estimate_rates_:_control">control</code></td>
+<td>
+<p>Named list of tuning parameters. Must include
+<code>lower_bound</code> and <code>upper_bound</code>. Use
+<code><a href="#estimate_rates_control">estimate_rates_control</a></code> to inspect other defaults.
+Key entries:
+</p>
+
+<dl>
+<dt><code>lower_bound</code></dt><dd><p>Numeric vector of lower parameter bounds.
+Length must be <code>2 + 2*sum(model)</code>.
+Order: <code>c(beta_0, [beta_N], [beta_D],
+    gamma_0, [gamma_N], [gamma_D])</code> (D = age-imbalance covariate;
+M is internal only).</p>
+</dd>
+<dt><code>upper_bound</code></dt><dd><p>Numeric vector of upper parameter bounds
+(same order).</p>
+</dd>
+<dt><code>verbose</code></dt><dd><p>Print progress messages. Default <code>FALSE</code>.</p>
+</dd>
+</dl>
+</td></tr>
+<tr><td><code id="estimate_rates_:_link">link</code></td>
+<td>
+<p>Link function for rate computation: <code>"linear"</code> (default)
+uses <code>max(0, eta)</code>; <code>"exponential"</code> uses <code>exp(eta)</code>;
+<code>"gaussian"</code> uses <code>beta_0 * exp(-(eta_cov - 1)^2 / 2)</code>.</p>
+</td></tr>
+<tr><td><code id="estimate_rates_:_cond">cond</code></td>
+<td>
+<p>A survival emulator for conditioning on survival: a GAM from
+<code><a href="#train_GAM">train_GAM</a></code>, a <code>nnet</code> object, or a function of the parameter
+data frame (see <code><a href="#predict_survival">predict_survival</a></code>); <code>NULL</code> (default) for no
+conditioning. When provided, the
+log-likelihood is conditioned: <span class="reqn">\(\ell_{\rm cond} = \ell -
+\log\hat{P}_{\rm tree}(\theta)\)</span>.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>A list with class <code>"emphasis_fit"</code> containing:
+</p>
+
+<dl>
+<dt><code>pars</code></dt><dd><p>Named numeric vector of parameter estimates.</p>
+</dd>
+<dt><code>loglik</code></dt><dd><p>Final log-likelihood estimate. For MCEM this is
+the importance-sampling estimate at the returned parameters, and is
+<code>NA</code> when the E-step evaluating them failed.</p>
+</dd>
+<dt><code>loglik_var</code></dt><dd><p>Bootstrap variance of <code>loglik</code> due to
+Monte Carlo noise. Populated automatically when
+<code>control$num_trees &gt;= 2</code> (B = 200 replicates); <code>NA</code>
+when <code>num_trees = 1</code>.</p>
+</dd>
+<dt><code>n_pars</code></dt><dd><p>Number of free parameters (used for AIC):
+parameters with <code>lower_bound == upper_bound</code> are fixed and
+not counted.</p>
+</dd>
+<dt><code>AIC</code></dt><dd><p>Akaike Information Criterion: <code>-2 * loglik + 2 * n_pars</code>.</p>
+</dd>
+<dt><code>method</code></dt><dd><p>Method used (<code>"mcem"</code> or <code>"cem"</code>).</p>
+</dd>
+<dt><code>model</code></dt><dd><p>Resolved binary model vector.</p>
+</dd>
+<dt><code>rho</code></dt><dd><p>The sampling fraction the fit was computed at,
+after the control merge.</p>
+</dd>
+<dt><code>stop_reason</code></dt><dd><p>Why the MCEM run stopped (<code>"converged"</code>,
+<code>"max_iter"</code>, <code>"time_budget"</code>, <code>"e_step_failure"</code>,
+<code>"m_step_failure"</code>); <code>NA</code> for other methods.</p>
+</dd>
+<dt><code>iterations</code></dt><dd><p>Number of completed MCEM iterations
+(<code>0</code> when every E-step failed); <code>NA</code> for other methods.</p>
+</dd>
+<dt><code>n_failed</code></dt><dd><p>Number of E- or M-step failures over the MCEM
+run; <code>NA</code> for other methods.</p>
+</dd>
+<dt><code>details</code></dt><dd><p>Full output from the back-end function
+(<code>.mcem_dynamic_fresh</code> or <code>emphasis_cem</code>).</p>
+</dd>
+</dl>
+
+<h3>Examples</h3>
+
+<pre><code class='language-R'>## Not run: 
+set.seed(42)
+# Constant-rate model
+sim &lt;- simulate_tree(c(0.5, 0.1), max_t = 5, model = "cr")
+fit &lt;- estimate_rates(sim, method = "mcem", model = "cr",
+  control = list(lower_bound = c(0, 0), upper_bound = c(2, 1)))
+fit$pars
+
+# Diversity-dependent model
+sim_dd &lt;- simulate_tree(c(0.5, -0.005, 0.1, 0), max_t = 8, model = "dd")
+fit_dd &lt;- estimate_rates(sim_dd, method = "mcem", model = "dd",
+  control = list(lower_bound = c(0.1, -0.1, 0, -0.01),
+                 upper_bound = c(2, 0.01, 0.5, 0.01)))
+fit_dd$pars
+
+## End(Not run)
+</code></pre>
+

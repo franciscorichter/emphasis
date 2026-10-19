@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E18 — A centred ED covariate · emphasis</title>
+<meta name="description" content="Fair-proportion ED is not centred: \(\mathrm{ED}_s = \overline{\mathrm{ED}} + e_s\), and the clade mean \(\overline{\mathrm{ED}} = \mathrm{PD}/N\) is a clade-level quantity that \(N\) already tracks.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E18 — A centred ED covariate</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete (120 trees, all fitted)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>the build audit puts the libraries of E18-E23 at <code>edce33d</code> … <code>f5bf6f1</code>, identical to clean builds; the centred models are in emphasis <code>main</code> from <code>edce33d</code></td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E18-centred.R</code>; figures <code>fig-centred</code>, <code>fig-s-nedc-recovery</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E18/centred.csv</code> (120 rows)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Fair-proportion ED is not centred: <span class="math inline">\(\mathrm{ED}_s = \overline{\mathrm{ED}} + e_s\)</span>, and the clade mean <span class="math inline">\(\overline{\mathrm{ED}} = \mathrm{PD}/N\)</span> is a clade-level quantity that <span class="math inline">\(N\)</span> already tracks. <span class="math inline">\(D\)</span> is centred by construction; ED is not. On Icteridae (<a href="E5.html">E5</a>) <code>ed</code> alone loses to <code>dd</code> while <code>ned</code> beats both by 15-17 AIC. The hypothesis: <span class="math inline">\(\beta_{ED}\)</span> pays two AIC units to carry a component <span class="math inline">\(N\)</span> already carries, so a centred covariate <span class="math inline">\(\mathrm{ED}^*_s = \mathrm{ED}_s -
+\mathrm{PD}/N\)</span> (package models <code>edc</code>, <code>nedc</code>) would make the same contrast selectable where <a href="E12.html">E12</a> found selection at -0.15<span class="math inline">\(\lambda\)</span> of only 0.05-0.55.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>value</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>generators</td>
+<td><code>ned</code> (raw ED) and <code>nedc</code> (centred ED)</td>
+<td>the same <span class="math inline">\(\beta_{ED}\)</span>, so the per-lineage contrast is identical and only the clade-level shift differs</td>
+</tr>
+<tr>
+<td>ED effect</td>
+<td>0, -0.15, -0.35 <span class="math inline">\(\lambda\)</span></td>
+<td>linear link</td>
+</tr>
+<tr>
+<td>tips, turnover</td>
+<td>100, 0.10</td>
+<td><span class="math inline">\(K\)</span> recalibrated per generator</td>
+</tr>
+<tr>
+<td>trees per cell</td>
+<td>20</td>
+<td>6 cells, 120 trees</td>
+</tr>
+<tr>
+<td>candidates</td>
+<td><code>dd</code>, <code>ned</code>, <code>nedc</code></td>
+<td>every tree fitted with all three</td>
+</tr>
+<tr>
+<td>draws, iterations, clock</td>
+<td>600, <code>max_iter</code> 100, 50 minutes (3000 s)</td>
+<td></td>
+</tr>
+<tr>
+<td>proposal, box</td>
+<td>surrogate; <code>sim/box.R</code></td>
+<td>under the centred covariate the surrogate's mean-field lineage has <span class="math inline">\(\mathrm{ED}^* = 0\)</span>, so its rate is the <code>dd</code> rate</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p><code>00-design.md</code> §E18: selection at -0.15<span class="math inline">\(\lambda\)</span> rising from <a href="E12.html">E12</a>'s 0.05-0.55 to <strong><span class="math inline">\(\ge 0.5\)</span> under the centred fit</strong>, with <span class="math inline">\(\hat\beta_{ED^*}\)</span> recovered no worse than <span class="math inline">\(\hat\beta_{ED}\)</span>. If it does not move, the difficulty is power and not parametrisation, and the centred form is reported as an equivalent choice rather than a better one.</p>
+<h2 id="results">Results</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>generated</th>
+<th>effect</th>
+<th>fit</th>
+<th>ratio (q1-q3)</th>
+<th>sign</th>
+<th>median ESS of 600</th>
+<th>fits &lt; 10</th>
+<th>over <code>dd</code> by &gt; 2 AIC</th>
+<th>stops conv/cap/clock</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ned</td>
+<td>-0.35<span class="math inline">\(\lambda\)</span></td>
+<td>ned</td>
+<td>1.00 (0.82-1.13)</td>
+<td>1.00</td>
+<td>40.0</td>
+<td>3</td>
+<td>0.75</td>
+<td>0/1/19</td>
+</tr>
+<tr>
+<td>ned</td>
+<td>-0.35<span class="math inline">\(\lambda\)</span></td>
+<td>nedc</td>
+<td>0.88 (0.74-1.11)</td>
+<td>1.00</td>
+<td>41.2</td>
+<td>4</td>
+<td>0.75</td>
+<td>0/5/15</td>
+</tr>
+<tr>
+<td>nedc</td>
+<td>-0.35<span class="math inline">\(\lambda\)</span></td>
+<td>ned</td>
+<td>1.03 (0.84-1.20)</td>
+<td>1.00</td>
+<td>33.5</td>
+<td>1</td>
+<td>0.80</td>
+<td>0/1/19</td>
+</tr>
+<tr>
+<td>nedc</td>
+<td>-0.35<span class="math inline">\(\lambda\)</span></td>
+<td>nedc</td>
+<td>0.98 (0.85-1.13)</td>
+<td>1.00</td>
+<td>41.4</td>
+<td>2</td>
+<td>0.90</td>
+<td>0/3/17</td>
+</tr>
+<tr>
+<td>ned</td>
+<td>-0.15<span class="math inline">\(\lambda\)</span></td>
+<td>ned</td>
+<td>1.20 (0.81-1.51)</td>
+<td>0.90</td>
+<td>63.9</td>
+<td>2</td>
+<td>0.05</td>
+<td>0/2/18</td>
+</tr>
+<tr>
+<td>ned</td>
+<td>-0.15<span class="math inline">\(\lambda\)</span></td>
+<td>nedc</td>
+<td>1.16 (0.64-1.62)</td>
+<td>0.95</td>
+<td>53.1</td>
+<td>1</td>
+<td><strong>0.10</strong></td>
+<td>0/4/16</td>
+</tr>
+<tr>
+<td>nedc</td>
+<td>-0.15<span class="math inline">\(\lambda\)</span></td>
+<td>ned</td>
+<td>1.28 (0.65-1.83)</td>
+<td>0.90</td>
+<td>35.0</td>
+<td>2</td>
+<td>0.25</td>
+<td>0/2/18</td>
+</tr>
+<tr>
+<td>nedc</td>
+<td>-0.15<span class="math inline">\(\lambda\)</span></td>
+<td>nedc</td>
+<td>1.16 (0.71-1.83)</td>
+<td>0.90</td>
+<td>56.3</td>
+<td>1</td>
+<td><strong>0.20</strong></td>
+<td>0/3/17</td>
+</tr>
+<tr>
+<td>ned</td>
+<td>0</td>
+<td>ned / nedc</td>
+<td>median <span class="math inline">\(\hat\beta\)</span> -0.00084 / -0.0029</td>
+<td>—</td>
+<td>74.4 / 57.3</td>
+<td>1 / 3</td>
+<td>FP 0.00 / 0.00</td>
+<td>0/8/12, 0/15/5</td>
+</tr>
+<tr>
+<td>nedc</td>
+<td>0</td>
+<td>ned / nedc</td>
+<td>median <span class="math inline">\(\hat\beta\)</span> -0.0029 / -0.0048</td>
+<td>—</td>
+<td>124.1 / 80.5</td>
+<td>1 / 1</td>
+<td>FP 0.00 / 0.05</td>
+<td>1/10/9, 0/14/6</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>On the same tree, the centred fit's AIC is lower than the raw fit's by a median 0.73 and 0.89 (raw-generated trees, -0.35 and -0.15<span class="math inline">\(\lambda\)</span>) and 1.43 and 0.67 (centred-generated), and by +0.06 and -0.11 at zero (<code>delta_c_vs_raw</code>): the direction the hypothesis predicts, smaller than the 2 units that change a choice. No cell is sampler-limited; 75% to 95% of the fits at an effect ended on their clock, so the cells are clock-limited by the later convention.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E18-centred.png" alt="E18 selection and recovery" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Top: selection over <code>dd</code> by &gt; 2 AIC for the raw (gold) and centred (purple) fit, on trees generated each way; at -0.15<span class="math inline">\(\lambda\)</span> both stay at 0.05-0.25, below the dashed 0.5 of the rule. Bottom: median fitted over generating coefficient, 0.88 to 1.28 in every cell.</figcaption>
+</figure>
+<figure id="figure-2">
+<img src="../assets/wiki/E18-recovery.png" alt="E18 recovery per tree" loading="lazy">
+<figcaption><strong>Figure 2.</strong> The fitted coefficient of every tree against its generating value, by generator (columns) and fitted model (rows); black diamonds are cell medians. The two fits spread alike at each effect.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p><strong>Rule not met.</strong> Under the centred fit, selection at -0.15<span class="math inline">\(\lambda\)</span> is 0.10 on raw-generated trees and 0.20 on centred-generated trees, not <span class="math inline">\(\ge 0.5\)</span>. Recovery is no worse (0.88-1.16 for <code>nedc</code> against 1.00-1.28 for <code>ned</code>), and false positives stay at 0 to 1 of 20. The centring moves AIC by under one unit in the predicted direction, so the difficulty at -0.15<span class="math inline">\(\lambda\)</span> is power, not parametrisation, and <code>nedc</code> is an equivalent model, offered in the package but not the default. E18 measures only 100 tips, turnover 0.10, <span class="math inline">\(\rho\)</span> 1 and negative effects; the centred covariate without an <span class="math inline">\(N\)</span> term (<code>edc</code>) is measured in <a href="E24.html">E24</a>.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E12.html">E12</a> — the -0.15<span class="math inline">\(\lambda\)</span> selection rates (0.05-0.55) that E18 tried to lift.</li>
+<li><a href="E5.html">E5</a> — Icteridae, where <code>ed</code> alone loses to <code>dd</code> and <code>ned</code> wins.</li>
+<li><a href="E24.html">E24</a> — <code>edc</code> alone: the one single-covariate model that meets every half of its rule.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

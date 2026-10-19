@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E19 — Is the pendant-age coefficient recovered, and is nd selected over dd? · emphasis</title>
+<meta name="description" content="The pendant-age models have no exact likelihood, so nothing can separate the estimator&#x27;s error from the tree&#x27;s own sampling error.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E19 — Is the pendant-age coefficient recovered, and is <code>nd</code> selected over <code>dd</code>?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete (E19 and E19b); both clock-limited: every <code>nd</code> fit ended on its 30-minute clock. Followed by <a href="E30.html">E30</a> (300 iterations) and <a href="E37.html">E37</a> (1000 iterations)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>not recorded</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E19-pendant.R</code> (E19b: <code>--nd-sampling bdi --out results/E19b</code>); figures <code>sim/figures-supplement.R</code>, <code>sim/figures-e19b.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E19/pendant.csv</code>, <code>results/E19b/pendant.csv</code> (100 rows each, all <code>ok</code>)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>The pendant-age models have no exact likelihood, so nothing can separate the estimator's error from the tree's own sampling error. What can be measured is what <a href="E12.html">E12</a> measured for <code>ned</code>: recovery of the coefficient against its generating value and selection by AIC. E19 does that for <code>nd</code>,</p>
+<p><span class="math display">\[\lambda_s(t) = \beta_0 + \beta_N N(t) + \beta_D D_s(t), \qquad D_s(t) = E_s(t) - \bar E(t),\]</span></p>
+<p>where <span class="math inline">\(E_s(t)\)</span> is the time since lineage <span class="math inline">\(s\)</span> was born or last split and <span class="math inline">\(D\)</span> is centred on the mean over the lineages alive (linear link here; <span class="math inline">\(\mu\)</span> carries <span class="math inline">\(\gamma_0, \gamma_N, \gamma_D\)</span> likewise).</p>
+<p>E19's fits rested on median effective samples of 3-6 of 600 draws on the thinning proposal. E19b asks whether the surrogate proposal, which since the E19b build admits <span class="math inline">\(D\)</span> models, changes that: its mean-field lineage has <span class="math inline">\(D = 0\)</span>, so the mean field is the <code>dd</code> one, and <span class="math inline">\(\beta_D\)</span> enters only the attachment of hidden births, each candidate parent weighted by the model's rate at that instant.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>generator</td>
+<td><code>nd</code>, linear link</td>
+<td>pendant-age model with an <span class="math inline">\(N\)</span> term</td>
+</tr>
+<tr>
+<td>tips</td>
+<td>100 (observed 81-112)</td>
+<td>capacity recalibrated per cell (97.5 at -0.35, 107.2 elsewhere)</td>
+</tr>
+<tr>
+<td>turnover</td>
+<td>0.10</td>
+<td><span class="math inline">\(\gamma_0 / \beta_0\)</span> at <span class="math inline">\(N = 0\)</span>, <span class="math inline">\(\beta_0 = 0.5\)</span></td>
+</tr>
+<tr>
+<td>crown age</td>
+<td>15</td>
+<td></td>
+</tr>
+<tr>
+<td><span class="math inline">\(D\)</span> scale</td>
+<td>2.83</td>
+<td>sd of pendant age over lineages alive at the present in a <code>dd</code> clade of 100 tips</td>
+</tr>
+<tr>
+<td>effects</td>
+<td>0, ±0.15, ±0.35</td>
+<td><span class="math inline">\(\beta_D\)</span> as a fraction of <span class="math inline">\(\beta_0\)</span> at one <span class="math inline">\(D\)</span> scale unit: <span class="math inline">\(\beta_D = \pm0.0265, \pm0.0619\)</span> per time unit</td>
+</tr>
+<tr>
+<td>trees per cell</td>
+<td>20</td>
+<td>100 trees; E19b uses the same trees by seed</td>
+</tr>
+<tr>
+<td>fits</td>
+<td><code>dd</code> on the surrogate proposal; <code>nd</code> on thinning (E19) or the surrogate (E19b)</td>
+<td></td>
+</tr>
+<tr>
+<td>draws</td>
+<td>600</td>
+<td></td>
+</tr>
+<tr>
+<td><code>max_iter</code> / clock</td>
+<td>100 / 30 minutes per fit</td>
+<td></td>
+</tr>
+<tr>
+<td>box</td>
+<td><code>sim/box.R</code>, <span class="math inline">\(D\)</span> slots scaled by the observed spread of pendant ages</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Measured once before E19b, at the generating value on 12 <code>nd</code> trees of this design (600 draws): surrogate effective sample 2-439 against 1.3-15 for thinning, higher on 11 of 12. Both proposals lose draws to one event under the linear link: an observed split by an old lineage has rate zero unless a hidden split preceded it; thinning rejects such draws, the surrogate drops them.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p><strong>E19.</strong> At <span class="math inline">\(|\text{effect}| = 0.35\)</span>: median <span class="math inline">\(\hat\beta_D/\beta_D\)</span> in <span class="math inline">\([0.75, 1.25]\)</span> and the right sign on <span class="math inline">\(\ge 80\%\)</span> of trees, and <code>nd</code> over <code>dd</code> by <span class="math inline">\(&gt; 2\)</span> AIC on <span class="math inline">\(\ge 80\%\)</span>; false positives <span class="math inline">\(\le 5\%\)</span> at zero. Cells whose median <code>nd</code> effective sample is below 10 are reported and excluded from the selection statement. Recovery is reported at every effect whatever the selection says.</p>
+<p><strong>E19b.</strong> The E19 rule applied to E19b; and the surrogate is adopted as the default proposal for <span class="math inline">\(D\)</span> models if the median <code>nd</code> effective sample is above 10 in every cell where E19's was below it, with no cell whose recovery ratio or selection falls below E19's.</p>
+<h2 id="results">Results</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>effect</th>
+<th>E19 ratio (q1-q3)</th>
+<th>sign</th>
+<th>ESS</th>
+<th>&lt; 10</th>
+<th><code>nd</code> over <code>dd</code></th>
+<th>E19b ratio (q1-q3)</th>
+<th>sign</th>
+<th>ESS</th>
+<th>&lt; 10</th>
+<th><code>nd</code> over <code>dd</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-0.35</td>
+<td>0.30 (0.27-0.32)</td>
+<td>1.00</td>
+<td>5.5</td>
+<td>13</td>
+<td>0.75 (s-l)</td>
+<td>0.43 (0.37-0.48)</td>
+<td>1.00</td>
+<td>25.2</td>
+<td>2</td>
+<td>0.90</td>
+</tr>
+<tr>
+<td>-0.15</td>
+<td>0.56 (0.52-0.62)</td>
+<td>1.00</td>
+<td>5.9</td>
+<td>18</td>
+<td>0.40 (s-l)</td>
+<td>0.66 (0.54-0.74)</td>
+<td>0.95</td>
+<td>33.2</td>
+<td>0</td>
+<td>0.20</td>
+</tr>
+<tr>
+<td>0</td>
+<td><span class="math inline">\(\hat\beta_D\)</span> median +0.0013</td>
+<td>—</td>
+<td>5.2</td>
+<td>16</td>
+<td>FP 0.05 (s-l)</td>
+<td><span class="math inline">\(\hat\beta_D\)</span> median +0.011</td>
+<td>—</td>
+<td>24.2</td>
+<td>2</td>
+<td>FP 0.05</td>
+</tr>
+<tr>
+<td>+0.15</td>
+<td>0.63 (0.46-0.86)</td>
+<td>0.95</td>
+<td>2.8</td>
+<td>19</td>
+<td>0.50 (s-l)</td>
+<td>1.06 (0.86-1.53)</td>
+<td>0.95</td>
+<td>13.0</td>
+<td>7</td>
+<td>0.70</td>
+</tr>
+<tr>
+<td>+0.35</td>
+<td>0.47 (0.42-0.65)</td>
+<td>1.00</td>
+<td>4.5</td>
+<td>16</td>
+<td>1.00 (s-l)</td>
+<td>0.63 (0.54-0.77)</td>
+<td>1.00</td>
+<td>6.5</td>
+<td>15</td>
+<td>1.00 (s-l)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>ESS: median effective sample of the <code>nd</code> fit's last E-step, of 600. "&lt; 10": fits below 10. s-l: sampler-limited (median ESS &lt; 10). Every one of the 200 <code>nd</code> fits ended on its 30-minute clock (<code>stop_nd</code> = <code>time_budget</code> on 100 of 100 in both files), so every cell of both runs is <strong>clock-limited</strong>. The <code>dd</code> fits on the same trees had effective samples of 260-324. The extinction slope <span class="math inline">\(\gamma_D\)</span>, generated at zero, was fitted at a median +0.014 to +0.022 per time unit in E19 and -0.013 to +0.019 in E19b.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E19-nd-recovery.png" alt="E19 and E19b, fitted against generating beta_D" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Fitted <span class="math inline">\(\beta_D\)</span> against its generating value, one <code>nd</code> fit per tree, left on thinning (E19), right on the surrogate (E19b). Every cell median (red) lies between zero and the dashed identity line except E19b at +0.15: the sign comes back, the size does not, and on the thinning side almost every point is open (fewer than 10 effective draws).</figcaption>
+</figure>
+<figure id="figure-2">
+<img src="../assets/wiki/E19-proposals.png" alt="E19 and E19b, effective sample, recovery and selection by proposal" loading="lazy">
+<figcaption><strong>Figure 2.</strong> The three quantities of the rule, cell by cell, for the two proposals. The surrogate lifts the effective sample above 10 in four cells of five and raises the median ratio in all four nonzero cells; selection falls at -0.15 (0.40 to 0.20).</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p><strong>E19: not met.</strong> The ratio is 0.30 and 0.47 at ∓0.35, outside <span class="math inline">\([0.75, 1.25]\)</span>; the sign half is met (1.00 in both cells). Every cell is sampler-limited, so the selection half is not evaluable. <strong>E19b: not met.</strong> The ratio is 0.43 and 0.63 at ∓0.35; the sign half is met; selection is 0.90 at -0.35 (met) and not evaluable at +0.35 (sampler-limited); false positives 0.05, at the ceiling. <strong>Adoption rule: not met</strong>: the +0.35 cell stays at 6.5 effective draws and selection at -0.15 falls from 0.40 to 0.20, so thinning stays the default proposal for <span class="math inline">\(D\)</span> models and the surrogate is available on request (<code>--nd-sampling bdi</code>, <code>sampling = "bdi"</code>).</p>
+<p>What both runs show is that the sign of <span class="math inline">\(\beta_D\)</span> is recovered at every effect of ±0.15 and stronger, and its size in one cell only (+0.15 on the surrogate, 1.06). Because every <code>nd</code> fit was cut at 30 minutes, the shortfall in size cannot be assigned to the model or to the budget from these runs: that is the question <a href="E30.html">E30</a> was registered to answer. The supplement quotes E19's zero-effect median as -0.0005; <code>results/E19/pendant.csv</code> gives +0.0013. E19b's zero-effect median of +0.011 is 0.17 of the +0.35 coefficient.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E12.html">E12</a> — the same recovery-and-selection design for <code>ned</code>, whose sampler-limited rule E19 copies.</li>
+<li><a href="E20.html">E20</a> and <a href="E21.html">E21</a> (E21b) — <code>nd</code> trees on the covariate path: BIC picks <span class="math inline">\(N + D + \mathrm{ED}\)</span>, never <span class="math inline">\(N + D\)</span> alone, at 100 tips.</li>
+<li><a href="E23.html">E23</a> — <code>nd</code> inside the one-call ladder.</li>
+<li><a href="E24.html">E24</a> — <code>d</code>, the pendant-age covariate without an <span class="math inline">\(N\)</span> term.</li>
+<li><a href="E30.html">E30</a> — E19b's design at ±0.35 with 300 iterations and a four-hour clock.</li>
+<li><a href="E37.html">E37</a> — the same trees with 1000 iterations.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

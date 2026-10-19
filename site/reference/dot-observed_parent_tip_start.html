@@ -1,0 +1,37 @@
+<h3>Description</h3>
+
+<p>The covariates <span class="reqn">\(M\)</span> and <span class="reqn">\(D\)</span> are functions of the pendant ages of the
+alive lineages, and a lineage's pendant age is measured from the last time
+it became a tip &ndash; its <em>tip start</em>, which is reset every time it
+speciates.  For an observed branching event that is the forward time of the
+<strong>parent</strong> of the splitting node, and <code>0</code> for the two children of
+the crown.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.observed_parent_tip_start(phy)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id=".observed_parent_tip_start_:_phy">phy</code></td>
+<td>
+<p>A <code>phylo</code> object.</p>
+</td></tr>
+</table>
+
+<h3>Details</h3>
+
+<p>Events are returned in forward-time order, the order the C++ layer builds
+the observed tree in, so the k-th entry belongs to the k-th observed node.
+A 2-tip tree has no non-crown internal node and returns
+<code>numeric(0)</code>.
+</p>
+
+<h3>Value</h3>
+
+<p>Numeric vector of length <code>Nnode(phy) - 1</code>.
+</p>
+

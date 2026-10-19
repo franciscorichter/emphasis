@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estimability under the conditioned likelihood: the plan · emphasis</title>
+<meta name="description" content="The question.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="index.html">emphasis</a>
+<ul>
+<li><a href="index.html">Overview</a></li>
+<li><a href="usage.html">Usage</a></li>
+<li><a href="reference.html">Reference</a></li>
+<li><a href="established.html">What is established</a></li>
+<li><a href="estimability.html" aria-current="page">Estimability</a></li>
+<li><a href="real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="experiments/index.html">Experiments</a></li>
+<li><a href="glossary.html">Glossary</a></li>
+<li><a href="simulator.html">Simulator</a></li>
+<li><a href="D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>Estimability under the conditioned likelihood: the plan</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#status-board">Status board</a>
+</li>
+<li><a href="#why-the-existing-experiments-do-not-answer-it">Why the existing experiments do not answer it</a>
+</li>
+<li><a href="#phase-0--make-the-measurement-possible">Phase 0 — make the measurement possible</a>
+</li>
+<li><a href="#phase-1--cr-and-dd-against-the-exact-conditioned-mle-e45">Phase 1 — <code>cr</code> and <code>dd</code> against the exact conditioned MLE (E45)</a>
+</li>
+<li><a href="#phase-2--the-eight-lineage-level-models-e46">Phase 2 — the eight lineage-level models (E46)</a>
+</li>
+<li><a href="#phase-3--model-choice-e47-later">Phase 3 — model choice (E47, later)</a>
+</li>
+<li><a href="#order-and-dependencies">Order and dependencies</a>
+</li>
+<li><a href="#what-each-result-page-will-add">What each result page will add</a>
+</li>
+</ol>
+</nav>
+<p><strong>The question.</strong> For each model separately — <code>cr</code>, <code>dd</code>, <code>d</code>, <code>nd</code>, <code>ed</code>, <code>edc</code>, <code>ned</code>, <code>nedc</code>, <code>k</code>, <code>nk</code> — how well are its parameters estimated, and from how many tips is each estimate reliable, when the likelihood is the one conditioned on the survival of the clade.</p>
+<p>This page is the plan and its status board. Each step becomes an experiment page when it runs; the board below links them and is updated as results come in.</p>
+<h2 id="status-board">Status board</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>step</th>
+<th>what</th>
+<th>experiment</th>
+<th>status</th>
+<th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.1</td>
+<td>D defined one way in likelihood and simulator</td>
+<td>—</td>
+<td><strong>done</strong>: emphasis <code>4e0b9dd</code></td>
+<td>D constant between events in the likelihood</td>
+</tr>
+<tr>
+<td>0.2</td>
+<td>complete trees: the likelihood is the simulator's, for every model</td>
+<td><a href="experiments/E44.html">E44</a></td>
+<td>done</td>
+<td><code>d</code>/<code>nd</code> fixed by the D change; raw <code>ed</code> has no mismatch but a <span class="math inline">\(\beta_0\)</span>-<span class="math inline">\(\beta_{ED}\)</span> ridge per tree; <code>cr</code>, <code>dd</code>, <code>edc</code>, <code>nedc</code> pass</td>
+</tr>
+<tr>
+<td>0.3</td>
+<td>the conditioning factor: exact where possible, emulator validated elsewhere</td>
+<td><a href="experiments/E43.html">E43</a></td>
+<td>exact <code>cr</code>/<code>dd</code> functions done and checked against simulation; emulators trained 2026-10-17; the Monte Carlo reference <strong>running</strong> since 2026-10-17 (1287 of 1600 points at 2026-10-18)</td>
+<td>the exact functions match simulation of <span class="math inline">\(10^5\)</span> clades within 1 SE (<code>cr</code> <span class="math inline">\(\log P\)</span> -1.7222 against -1.7252, <code>dd</code> -1.9920 against -1.9993)</td>
+</tr>
+<tr>
+<td>0.4</td>
+<td>simulations conditioned on survival only</td>
+<td><a href="experiments/E43.html">E43</a> (a)</td>
+<td><strong>done</strong>: every generator calibrated to the median surviving size, no window</td>
+<td>targets some generators cannot reach are listed in E43's amendment</td>
+</tr>
+<tr>
+<td>0.5</td>
+<td>fits that finish, in boxes that do not bind</td>
+<td><a href="experiments/E41.html">E41</a></td>
+<td><strong>closed at the pilot</strong> (16 trees, 2026-10-19; the 154 trees beyond it are not run): the edge binds on 4 of 63 edge fits, the parsimonious choice unchanged on 16 of 16; the box stays</td>
+<td><code>nd</code> and <code>nk</code> do not meet the stopping rule within 1000 iterations on any of 32 fits (ESS 123 and 272 of 2400): sampler-limited on real trees, so E46 budgets draws, not iterations, for them</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>cr</code> and <code>dd</code>: conditioned MCEM against the exact conditioned MLE, 25-800 tips</td>
+<td><a href="experiments/E45.html">E45</a></td>
+<td><strong>running</strong> since 2026-10-16 (643 of 1720 fits at 2026-10-19, about 60 a day; the <code>dd</code> cells move to E43's host once its reference finishes)</td>
+<td><code>cr</code> 25-100 tips: MCEM at the exact maximum in every cell (median deficit -0.002 to -0.014); <span class="math inline">\(\lambda\)</span> reliable from 25 tips (0.40: from 100); <span class="math inline">\(\mu\)</span> not reliable up to 100 tips</td>
+</tr>
+<tr>
+<td>2</td>
+<td>the eight lineage-level models: accuracy by size, turnover and effect</td>
+<td>E46</td>
+<td>planned</td>
+<td></td>
+</tr>
+<tr>
+<td>3</td>
+<td>(later) model choice with the conditioned ladder</td>
+<td>E47</td>
+<td>not yet designed</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="why-the-existing-experiments-do-not-answer-it">Why the existing experiments do not answer it</h2>
+<ul>
+<li><strong>Unconditioned fits.</strong> Every estimation experiment maximised <span class="math inline">\(f(y \mid \theta)\)</span>; only <a href="experiments/E34.html">E34</a> and <a href="experiments/E36.html">E36</a> conditioned, and only to measure the difference.</li>
+<li><strong>The conditioning factor is validated only for <code>cr</code> and <code>dd</code>.</strong> <a href="experiments/E36.html">E36</a>c measured the emulator against the exact survival probability: 90th-percentile error in <span class="math inline">\(\log P\)</span> of 0.26-0.28 at 2000 training clades after the label fix. For the lineage-level models there is no exact value, and against 400-clade Monte Carlo references no learner met the adequacy rule (<a href="experiments/E36.html">E36</a> a). How much the emulator varies between trainings has never been measured.</li>
+<li><strong>Simulations conditioned on more than survival.</strong> Several designs kept a tree only if its size fell in a window (<a href="experiments/E27.html">E27</a>, <a href="experiments/E38.html">E38</a>); no likelihood carries that condition.</li>
+<li><strong>D was defined two ways (until emphasis <code>4e0b9dd</code>).</strong> The simulator held a lineage's centred pendant age <span class="math inline">\(D\)</span> constant between events, as its definition implies (<span class="math inline">\(D_s = E_s - M\)</span>, and both grow at unit rate); the likelihood held <span class="math inline">\(M\)</span> at its end-of-segment value, so <span class="math inline">\(D\)</span> grew within a segment. <code>d</code> and <code>nd</code> fits before the change therefore estimated a slightly different model from the one that generated the trees, a candidate explanation for <span class="math inline">\(\beta_D\)</span> returning at 0.43-0.82 of its value in every D experiment (<a href="experiments/E19.html">E19</a>, <a href="experiments/E30.html">E30</a>, <a href="experiments/E31.html">E31</a>, <a href="experiments/E37.html">E37</a>); <a href="experiments/E44.html">E44</a> measured the difference on complete trees.</li>
+<li><strong>Unfinished fits and binding boxes.</strong> Most lineage-level fits ended on their iteration cap or clock, and on real trees many parameters end on a box edge (<a href="experiments/E40.html">E40</a>, <a href="experiments/E41.html">E41</a>).</li>
+</ul>
+<h2 id="phase-0--make-the-measurement-possible">Phase 0 — make the measurement possible</h2>
+<p><strong>0.1 One definition of D (decision).</strong> Done: emphasis <code>4e0b9dd</code> makes the likelihood hold <span class="math inline">\(D\)</span> constant on a segment, as the simulator and the definition do; the model itself does not change. Verified by step 0.2 (<a href="experiments/E44.html">E44</a>).</p>
+<p><strong>0.2 The complete-data likelihood is the simulator's (E44).</strong> For each of the ten models, simulate complete trees (extinct lineages kept, <span class="math inline">\(\rho = 1\)</span>, 100 tips, 40 trees, effects <span class="math inline">\(\pm 0.35\)</span> per scale unit) and maximise the complete-data likelihood directly — no augmentation, no Monte Carlo. Rule: the median ratio of every coefficient to its generating value is in [0.9, 1.1] and the right sign holds on ≥ 95% of trees. Any model that fails has a likelihood-simulator mismatch, and is fixed before it enters Phase 2. Cost: minutes.</p>
+<p><strong>0.3 The conditioning factor (E43).</strong> <span class="math inline">\(P(S \mid \theta, T, \rho)\)</span> — the probability that both crown lineages leave a sampled descendant — does not depend on the observed tree, so one function per model, crown age and sampling fraction serves every fit.</p>
+<ul>
+<li><code>cr</code>: the closed form <span class="math inline">\(p(0)^2\)</span>; <code>dd</code>: the master equation on the two crown subclade sizes (<code>sim/E36c-survival.cpp</code>). Passed to <code>estimate_rates(cond = )</code> as functions: no emulator error.</li>
+<li>Lineage-level models: an emulator trained once per model on clades from the whole box, with capped clades counted as survived, at 2000, 5000 and 20000 training clades.</li>
+<li>Measured: (a) accuracy against a direct Monte Carlo estimate with 20000 clades at 200 points drawn near the estimates of the planned cells (unbiased, standard error known); (b) retraining variability — 20 trainings with different seeds, the spread of <span class="math inline">\(\log \hat P\)</span> and of its gradient at the same points; (c) for <code>cr</code>/<code>dd</code>, the emulator against the exact value at the same points.</li>
+<li>Rule: an emulator is adequate if, at the points, the 90th percentile of <span class="math inline">\(|\log \hat P - \log P|\)</span> is at most 0.05 and the retraining standard deviation of <span class="math inline">\(\log \hat P\)</span> is at most 0.02 — small against the conditioning term itself, which is -0.01 to -0.2 at the estimates seen so far (<a href="experiments/E34.html">E34</a>r). Otherwise the training size is raised; if 20000 clades do not suffice, the conditioned fit uses the Monte Carlo estimate at each M-step candidate instead (slower, unbiased).</li>
+</ul>
+<p><strong>0.4 Simulations conditioned on survival only.</strong> Every generator keeps a tree only if both crown lineages survive to <span class="math inline">\(T = 15\)</span>; no size window. The target size is reached by calibrating the generating parameters (the median tree size of the cell), and the realised sizes are reported and used as the covariate of every curve. The likelihood conditioned on survival is then the correct one for these trees.</p>
+<p><strong>0.5 Fits that finish, in boxes that do not bind.</strong> From <a href="experiments/E41.html">E41</a>: every fit runs under the <code>mc_error</code> rule with up to 1000 iterations, a clock at least four times the measured need, started from the nested model's estimate; a fit that ends on a box edge is refitted with that edge moved out, and a parameter that still follows the edge is reported as "not bounded by the tree" rather than read. A fit that does not finish is reported as unfinished and not read.</p>
+<h2 id="phase-1--cr-and-dd-against-the-exact-conditioned-mle-e45">Phase 1 — <code>cr</code> and <code>dd</code> against the exact conditioned MLE (E45)</h2>
+<p>The two models with an exact likelihood, so both questions can be answered: does MCEM reach the exact estimate, and how far is the exact estimate from the truth at each size.</p>
+<div class="table-wrap">
+<table>
+<tbody>
+<tr>
+<td>models</td>
+<td><code>cr</code>; <code>dd</code> on the exponential link (<span class="math inline">\(\lambda\)</span>, <span class="math inline">\(\mu\)</span> log-linear in <span class="math inline">\(N\)</span>)</td>
+</tr>
+<tr>
+<td>tips</td>
+<td>25, 50, 100, 200, 400, 800 (<code>dd</code> to 400)</td>
+</tr>
+<tr>
+<td>turnover at the crown</td>
+<td>0.10, 0.25, 0.40</td>
+</tr>
+<tr>
+<td><span class="math inline">\(\rho\)</span></td>
+<td>1, and 0.8 at 100 and 200 tips</td>
+</tr>
+<tr>
+<td>trees per cell</td>
+<td>40</td>
+</tr>
+<tr>
+<td>fits</td>
+<td>conditioned MCEM (exact survival function); exact conditioned MLE (<code>bd_ML</code> cond = 1; the replaced-rate <code>DDD</code> likelihood of <a href="experiments/E42.html">E42</a> with cond = 1)</td>
+</tr>
+<tr>
+<td>read</td>
+<td>per parameter: median ratio to the generating value, central 80% of the ratio, RMSE; the deficit <span class="math inline">\(\ell(\hat\theta_{MLE}) - \ell(\hat\theta_{MCEM})\)</span>; profile-likelihood 95% interval and its coverage</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Rule.</strong> MCEM agreement: the study's C1 (median deficit ≥ -0.5 nats, 90th percentile of <span class="math inline">\(|\Delta\ell| \le 2\)</span>). A parameter is <strong>reliable at a size</strong> when, in that cell, the median ratio is in [0.8, 1.25], the central 80% of ratios lies within [0.5, 2], and the 95% interval covers the generating value on ≥ 90% of trees. The answer is, per model, parameter and turnover, the smallest size from which the parameter is reliable.</p>
+<p>Cost: <code>cr</code> fits are seconds; <code>dd</code> exact maximisation minutes to an hour at 400 tips. About a day.</p>
+<h2 id="phase-2--the-eight-lineage-level-models-e46">Phase 2 — the eight lineage-level models (E46)</h2>
+<p>No exact likelihood exists, so the reference is the generating value.</p>
+<div class="table-wrap">
+<table>
+<tbody>
+<tr>
+<td>models</td>
+<td><code>d</code>, <code>ed</code>, <code>edc</code>, <code>k</code> (one covariate) and <code>nd</code>, <code>ned</code>, <code>nedc</code>, <code>nk</code> (<span class="math inline">\(N\)</span> plus one)</td>
+</tr>
+<tr>
+<td>tips</td>
+<td>50, 100, 200, 400 (400 only for models reliable at 200)</td>
+</tr>
+<tr>
+<td>turnover</td>
+<td>0.10 and 0.40</td>
+</tr>
+<tr>
+<td>effect on speciation</td>
+<td><span class="math inline">\(-0.35\)</span> and <span class="math inline">\(+0.35\)</span> per scale unit of the covariate (the study's unit)</td>
+</tr>
+<tr>
+<td>extinction</td>
+<td>constant in the main arm (its covariate slope generated at 0 and estimated); an extinction-driver arm at turnover 0.40 for <code>ned</code> and <code>nk</code></td>
+</tr>
+<tr>
+<td><span class="math inline">\(\rho\)</span></td>
+<td>1</td>
+</tr>
+<tr>
+<td>trees per cell</td>
+<td>30</td>
+</tr>
+<tr>
+<td>fit</td>
+<td>the generating model only (estimation, not selection), conditioned with the E43 factor, Phase 0.5's protocol</td>
+</tr>
+<tr>
+<td>read</td>
+<td>per parameter as in Phase 1, plus the sign rate for slopes; ESS and finish rate per cell</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Rule.</strong> As Phase 1, with two additions: a slope is reliable only if its sign is right on ≥ 95% of trees; a cell is read only if ≥ 80% of its fits finished and its median effective sample is ≥ 10 (otherwise it is reported as unfinished or sampler-limited, which is itself the answer for that size).</p>
+<p>Cost: 8 models x 4 sizes x 2 turnovers x 2 signs x 30 trees ≈ 3800 fits, fewer once the 400-tip cells are restricted. From <a href="experiments/E40.html">E40</a> and <a href="experiments/E29.html">E29</a>: a lineage-level fit takes about 15 minutes at 60 tips and 1-4 hours at 200. Estimate: 5-8 days, run size by size so the curves fill in from the small end.</p>
+<h2 id="phase-3--model-choice-e47-later">Phase 3 — model choice (E47, later)</h2>
+<p>Once Phase 2 says which parameters are reliable at which size: the conditioned ladder on the same trees and on null trees, read by the parsimony rule. Designed after Phase 2.</p>
+<h2 id="order-and-dependencies">Order and dependencies</h2>
+<p>0.1 (decision) → 0.2 (minutes) → 0.3 (a day) and 0.4 (calibration, hours) → Phase 1 (a day) → Phase 2 (5-8 days, size by size). Phase 0 ran (<a href="experiments/E44.html">E44</a>, <a href="experiments/E43.html">E43</a>) while <a href="experiments/E40.html">E40</a> finished; Phase 1 (<a href="experiments/E45.html">E45</a>) runs on the workers <a href="experiments/E37.html">E37</a> released on 2026-10-15.</p>
+<h2 id="what-each-result-page-will-add">What each result page will add</h2>
+<p>Each step's page follows the wiki's template (question, design, pre-set rule, results, conclusion). The summary that answers the question will be a table here, filled as results arrive:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>parameter</th>
+<th>reliable from (tips), turnover 0.10</th>
+<th>reliable from (tips), turnover 0.40</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code></td>
+<td><span class="math inline">\(\lambda\)</span>, <span class="math inline">\(\mu\)</span></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>dd</code></td>
+<td><span class="math inline">\(\beta_0, \beta_N, \gamma_0, \gamma_N\)</span></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>d</code> … <code>nk</code></td>
+<td>each coefficient</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

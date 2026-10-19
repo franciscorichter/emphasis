@@ -1,0 +1,99 @@
+<h3>Description</h3>
+
+<p>Instead of comparing nested models one pair at a time, this traces the
+differential-geometric LARS path of Augugliaro, Mineo and Wit (2013) over
+all the covariates a rate can read &mdash; <code>N</code>, <code>D</code> and <code>ED</code> &mdash;
+on the same augmented trees an M-step maximises over.  Under the
+exponential link the complete-data log-likelihood is a log-linear point
+process: one row per lineage and segment between consecutive events, with
+<code>N</code>, <code>D</code> and <code>K</code> at their values on the segment (each is
+constant between events), <code>ED</code> at the segment's midpoint, the
+segment's length as exposure, and
+a count of one when that lineage's own event ends the segment.  The
+speciation and extinction halves separate, so each rate gets its own path.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>covariate_path(
+  trees,
+  log_weights = NULL,
+  n_trees = 40L,
+  covariates = c("N", "D", "ED"),
+  rate = c("speciation", "extinction"),
+  criterion = c("BIC", "AIC"),
+  n_gamma = 60L
+)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="covariate_path_:_trees">trees</code></td>
+<td>
+<p>A list of augmented-tree data frames with the topology, as
+<code>augment_trees</code> returns them with parent ids, or a single
+<code>phylo</code> taken as fully observed.</p>
+</td></tr>
+<tr><td><code id="covariate_path_:_log_weights">log_weights</code></td>
+<td>
+<p>Optional log importance weights, one per tree; without
+them every tree weighs the same.</p>
+</td></tr>
+<tr><td><code id="covariate_path_:_n_trees">n_trees</code></td>
+<td>
+<p>How many trees to use: the <code>n_trees</code> of largest weight
+(the first <code>n_trees</code> without weights), renormalised.</p>
+</td></tr>
+<tr><td><code id="covariate_path_:_covariates">covariates</code></td>
+<td>
+<p>Which covariates to offer the path; any of <code>"N"</code>,
+<code>"D"</code>, <code>"ED"</code>, <code>"EDc"</code> (ED centred on the alive lineages),
+<code>"K"</code> (the number of speciation events on the path from the crown).</p>
+</td></tr>
+<tr><td><code id="covariate_path_:_rate">rate</code></td>
+<td>
+<p><code>"speciation"</code>, <code>"extinction"</code> or both.</p>
+</td></tr>
+<tr><td><code id="covariate_path_:_criterion">criterion</code></td>
+<td>
+<p><code>"BIC"</code> or <code>"AIC"</code> along the path.</p>
+</td></tr>
+<tr><td><code id="covariate_path_:_n_gamma">n_gamma</code></td>
+<td>
+<p>Number of points on the path.</p>
+</td></tr>
+</table>
+
+<h3>Details</h3>
+
+<p>The path is the curve on which the Rao score statistics of the active
+covariates are equal in size and the inactive ones smaller,
+<span class="reqn">\(|r_j(\beta)| = \gamma\)</span> for <span class="reqn">\(j\)</span> active, traced from the
+<span class="reqn">\(\gamma\)</span> at which the first covariate enters down to zero, with the
+intercept always free.  It is solved here on a grid of <span class="reqn">\(\gamma\)</span> by
+Newton steps rather than by <span class="pkg">dglars</span>'s predictor&ndash;corrector, because
+the point process needs a true exposure offset, which that package does
+not take; on a constant-exposure problem the two agree
+(<code>tests/testthat/test-lineage-table.R</code>).  The order of entry says
+which covariates the data ask for first; AIC and BIC along the path pick a
+point, with BIC's sample size the number of events.
+</p>
+<p>Importance weights enter the likelihood as row weights, one per tree and
+normalised to sum to one, so the objective is the expected complete-data
+log-likelihood of one tree &mdash; the M-step's Q function &mdash; and the sample
+size behind BIC is the weighted mean number of events per tree.
+</p>
+
+<h3>Value</h3>
+
+<p>A list with one element per rate: the path (a data frame with one
+row per <span class="reqn">\(\gamma\)</span>: the coefficients, the log-likelihood, the active
+set size, AIC and BIC), the entry order of the covariates (the
+<span class="reqn">\(\gamma\)</span> at which each enters), the coefficients and active set at
+the criterion's optimum, and the frame's size.  A rate with no event in
+the trees (the extinction rate of a fully observed tree) gets an empty
+path: <code>path</code> is <code>NULL</code>, <code>active</code> and <code>entry_order</code>
+are empty and <code>n_events</code> is 0.
+</p>
+

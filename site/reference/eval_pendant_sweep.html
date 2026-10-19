@@ -1,0 +1,49 @@
+<h3>Description</h3>
+
+<p>One application of the sweep the thinning sampler carries forward: it
+rewrites <code>tip_start</code>, <code>focal_tip_start</code> and <code>pd</code> on every
+node from the event list alone.  With <code>parent_tip_start</code> supplied the
+sweep is driven by the observed topology, exactly as the closing pass of
+<code><a href="#augment_trees">augment_trees</a></code> is: the k-th observed node is given the k-th
+entry as the tip start of the lineage that splits there, and the tree is
+read under the topology convention.  With it empty the tree is replayed as
+it stands, under the convention its <code>clade</code> column records and with
+the <code>focal_tip_start</code> it already carries as the match key.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>eval_pendant_sweep(
+  tree,
+  parent_tip_start = as.numeric(c()),
+  parent_id = as.integer(c())
+)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="eval_pendant_sweep_:_tree">tree</code></td>
+<td>
+<p>One augmented-tree data frame from <code><a href="#augment_trees">augment_trees</a></code>.</p>
+</td></tr>
+<tr><td><code id="eval_pendant_sweep_:_parent_tip_start">parent_tip_start</code></td>
+<td>
+<p>The tip starts the augmentation was driven by, or
+<code>numeric(0)</code> to replay the tree as it stands.</p>
+</td></tr>
+</table>
+
+<h3>Details</h3>
+
+<p>An augmented tree returned by <code><a href="#augment_trees">augment_trees</a></code> is a fixed point
+of the first form: the state the sampler carried is the tree that comes
+back.
+</p>
+
+<h3>Value</h3>
+
+<p>The same data frame with <code>tip_start</code>, <code>focal_tip_start</code>
+and <code>pd</code> rewritten by the sweep.
+</p>
+

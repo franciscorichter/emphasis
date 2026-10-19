@@ -1,0 +1,82 @@
+<h3>Description</h3>
+
+<p>Returns a list of default tuning parameters for <code><a href="#estimate_rates">estimate_rates</a></code>.
+Override individual elements and pass the modified list via the
+<code>control</code> argument.
+</p>
+<p>Shared parameters (all methods): <code>lower_bound</code> (required, no
+default), <code>upper_bound</code> (required, no default),
+<code>verbose</code> (default FALSE), <code>max_missing</code> (default 1e4),
+<code>num_threads</code> (default 1), <code>rho</code> (sampling fraction, a single
+number in <span class="reqn">\((0, 1]\)</span>; default 1 = complete sampling, and an
+out-of-range value is an error rather than being replaced by 1).
+</p>
+<p>MCEM-specific: <code>sampling</code> (default <code>"bdi"</code>, the
+birth-death-with-immigration sampler, which covers the cr and dd models
+on the linear and exponential links and cr on the gaussian link, at any
+<code>rho</code> in <span class="reqn">\((0, 1]\)</span>.  Under constant rates it draws from the exact
+conditional distribution, so its log-weights are constant and its
+effective sample size is the number of draws; under diversity dependence
+it is a mean-field approximation and the weights vary.
+<code>"dynamic_fresh"</code> is the thinning sampler, used for a D- or
+M-dependent model, for dd on the gaussian link, and whenever it is asked
+for.  A fallback is announced with a message naming the reason and the
+sampler that runs),
+<code>num_trees</code> (augmented trees per EM iteration, default 200;
+alias: <code>sample_size</code>), <code>max_iter</code> (iteration cap, default 200),
+<code>maxN</code> (max augmentation attempts per E-step, read by the thinning
+sampler only and ignored by BDI; under <code>"dynamic_fresh"</code> it must be
+at least <code>num_trees</code>; default NULL, and a non-finite value is treated
+as NULL, = <code>max(2000, 10 * num_trees)</code>),
+<code>xtol</code> (M-step optimiser tolerance, default 1e-3),
+<code>tol</code> (parameter-stability threshold: the largest relative parameter
+change <span class="reqn">\(\max_j |\theta_k[j] - \theta_{k-1}[j]| / \max(|\theta_{k-1}[j]|, c)\)</span>,
+where the floor <span class="reqn">\(c\)</span> is <code>tol / crown_age</code> for the rate-valued
+links and <code>tol</code> for the log-rates of the exponential link, so that
+the statistic does not change with the unit of time; the search box does
+not enter; default 1e-2, so every coordinate must move by less than 1% of
+its own magnitude, <code>patience</code> times in a row; on a 12-tip CR tree at
+<code>num_trees = 200</code> that statistic has median 0.02 and falls below 1e-2
+in about a fifth of iterations, so runs at these defaults commonly end at
+<code>max_iter</code>), <code>patience</code> (consecutive stable iterations
+required, default 3).
+</p>
+<p>CEM-specific: <code>max_iter</code> (default 20), <code>num_particles</code>
+(particles per iteration, default 50; alias: <code>num_points</code>),
+<code>num_trees</code> (trees per particle, default 1;
+alias: <code>sample_size</code>), <code>sd_vec</code> (NULL = (upper-lower)/4),
+<code>maxN</code> (default 10), <code>disc_prop</code> (default 0.5),
+<code>tol</code> (plateau threshold, default 1e-4), <code>patience</code>
+(default 5), <code>bias_correct</code> (default FALSE).
+</p>
+<p>GAM-specific: <code>grid_points</code> (per-parameter resolution, default 20),
+<code>sample_size</code> (IS trees per grid point, default 200),
+<code>maxN</code> (NULL = auto), <code>max_lambda</code> (default 500),
+<code>spline_type</code> (<code>"univariate"</code> or <code>"bivariate"</code>).
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>estimate_rates_control(method = c("mcem", "cem", "gam"), n_pars = 4)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="estimate_rates_control_:_method">method</code></td>
+<td>
+<p>Which method's defaults to return: <code>"mcem"</code>,
+<code>"cem"</code>, or <code>"gam"</code>.</p>
+</td></tr>
+<tr><td><code id="estimate_rates_control_:_n_pars">n_pars</code></td>
+<td>
+<p>Number of parameters (used to set the default <code>sd_vec</code>
+for CEM when <code>NULL</code>).</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>A named list of control parameters for the chosen method.
+</p>
+

@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E2 — Recovery and selection for the ED models · emphasis</title>
+<meta name="description" content="Claim C3 of the paper: for the evolutionary-distinctiveness models (ed, ned), \(\beta_{ED}\) is recovered and detected wherever the augmented tree stays small, and the boundary of that region is stated.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E2 — Recovery and selection for the ED models</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete for the main tier (24 cells); the paper tier (200 tips at <span class="math inline">\(\rho\)</span> 1; 100 tips at <span class="math inline">\(\rho\)</span> 0.4) was not run — no data on disk</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis <code>a38a9e8</code></td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td>the <code>ed-diversification</code> driver (§4 of its own <code>00-design.md</code>); cell table by <code>sim/E2-tables.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>manuscript/tables/E2-cells.csv</code> (24 cells). The per-tree fits live in the <code>ed-diversification</code> repository, not under <code>results/</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Claim C3 of the paper: for the evolutionary-distinctiveness models (<code>ed</code>, <code>ned</code>), <span class="math inline">\(\beta_{ED}\)</span> is recovered and detected wherever the augmented tree stays small, and the boundary of that region is stated. E2 is the first measurement of <code>ned</code> against its own generating value, with turnover and sampling fraction as the axes that were expected to break it. It is the starting point for <a href="E8.html">E8</a> (whether the AIC ranking can be trusted) and <a href="E12.html">E12</a> (at which effect size selection starts to work).</p>
+<h2 id="design">Design</h2>
+<p><code>ned</code> generator, linear link, <span class="math inline">\(\lambda_s = \beta_0 + \beta_N N + \beta_{ED}\,\mathrm{ED}_s\)</span>; the effect is stated as <span class="math inline">\(\beta_{ED}\,\overline{\mathrm{ED}}/\beta_0\)</span>, a fraction of the intercept <span class="math inline">\(\lambda_0\)</span> at one clade-mean unit of ED.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>value</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>tips <span class="math inline">\(n\)</span></td>
+<td>50, 100</td>
+<td>size of the observed tree</td>
+</tr>
+<tr>
+<td>sampling fraction <span class="math inline">\(\rho\)</span></td>
+<td>1, 0.7</td>
+<td>share of extant species in the tree</td>
+</tr>
+<tr>
+<td>turnover <span class="math inline">\(\varepsilon\)</span></td>
+<td>0, 0.5</td>
+<td><span class="math inline">\(\mu_0/\lambda_0\)</span></td>
+</tr>
+<tr>
+<td>ED effect</td>
+<td><span class="math inline">\(-0.15\)</span>, 0, <span class="math inline">\(+0.15\,\lambda_0\)</span></td>
+<td><span class="math inline">\(\beta_{ED}\)</span> between -0.33 and +0.09 in raw units, per cell</td>
+</tr>
+<tr>
+<td>trees per cell</td>
+<td>10</td>
+<td>24 cells, 240 trees</td>
+</tr>
+<tr>
+<td>candidates</td>
+<td><code>cr</code>, <code>dd</code>, <code>ed</code>, <code>ned</code></td>
+<td>each tree fitted with all four</td>
+</tr>
+<tr>
+<td>draws</td>
+<td><span class="math inline">\(N = 200\)</span></td>
+<td>plus a <code>ned</code> reference fit at <span class="math inline">\(N = 2000\)</span> on two trees per cell (not in the cell table)</td>
+</tr>
+<tr>
+<td>proposal</td>
+<td>the ED-aware thinning proposal of <code>a38a9e8</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>An estimate counts when the fit ended on its own or was stopped by its budget after at least 20 EM iterations (the <code>fits</code> column counts these).</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>Rule C3 (<code>00-design.md</code> §1), per cell with an effect: <code>ned</code> over <code>dd</code> by <span class="math inline">\(&gt; 2\)</span> AIC on <span class="math inline">\(\ge 80\%\)</span> of trees; <span class="math inline">\(\le 5\%\)</span> in the <span class="math inline">\(\beta_{ED} = 0\)</span> sibling cell; <span class="math inline">\(|\text{bias}| \le 0.25\)</span> SD (between-tree SD of <span class="math inline">\(\hat\beta_{ED}\)</span>). The paper was to report which cells pass and the effective sample at which they stop passing.</p>
+<h2 id="results">Results</h2>
+<p><strong>1 of 16 effect cells passes C3</strong>: 100 tips, <span class="math inline">\(\rho\)</span> 1, turnover 0, -0.15<span class="math inline">\(\lambda\)</span> (selection 0.90, sibling false positives 0.00, bias 0.21 SD, median ESS 200).</p>
+<p>Cells with an effect (from <code>E2-cells.csv</code>; "sel" = <code>ned</code> over <code>dd</code> by &gt; 2 AIC; "FP" = the same rate in the <span class="math inline">\(\beta\)</span> = 0 sibling; "budget" = share of fits stopped by the budget):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>tips</th>
+<th><span class="math inline">\(\rho\)</span></th>
+<th><span class="math inline">\(\varepsilon\)</span></th>
+<th>effect</th>
+<th>fits used</th>
+<th>sel</th>
+<th>FP (sibling)</th>
+<th>bias / SD</th>
+<th>median ESS</th>
+<th>budget</th>
+<th>C3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>100</td>
+<td>1</td>
+<td>0</td>
+<td>-0.15</td>
+<td>10</td>
+<td><strong>0.90</strong></td>
+<td>0.00</td>
+<td>0.21</td>
+<td>200</td>
+<td>0.3</td>
+<td><strong>pass</strong></td>
+</tr>
+<tr>
+<td>100</td>
+<td>1</td>
+<td>0</td>
+<td>+0.15</td>
+<td>10</td>
+<td>0.00</td>
+<td>0.00</td>
+<td>-0.00</td>
+<td>200</td>
+<td>0</td>
+<td>fail</td>
+</tr>
+<tr>
+<td>50</td>
+<td>1</td>
+<td>0</td>
+<td>-0.15</td>
+<td>10</td>
+<td>0.70</td>
+<td>0.10</td>
+<td>0.52</td>
+<td>200</td>
+<td>0</td>
+<td>fail</td>
+</tr>
+<tr>
+<td>50</td>
+<td>1</td>
+<td>0</td>
+<td>+0.15</td>
+<td>10</td>
+<td>0.40</td>
+<td>0.10</td>
+<td>0.23</td>
+<td>200</td>
+<td>0</td>
+<td>fail</td>
+</tr>
+<tr>
+<td>100</td>
+<td>0.7</td>
+<td>0</td>
+<td>-0.15</td>
+<td>10</td>
+<td>0.60</td>
+<td>0.14</td>
+<td>0.11</td>
+<td>11.9</td>
+<td>1.0</td>
+<td>fail</td>
+</tr>
+<tr>
+<td>100</td>
+<td>0.7</td>
+<td>0</td>
+<td>+0.15</td>
+<td>10</td>
+<td>0.00</td>
+<td>0.14</td>
+<td>-0.03</td>
+<td>2.1 (sampler-limited)</td>
+<td>1.0</td>
+<td>fail</td>
+</tr>
+<tr>
+<td>50</td>
+<td>0.7</td>
+<td>0</td>
+<td>-0.15</td>
+<td>9</td>
+<td>1.00</td>
+<td>0.20</td>
+<td>-0.48</td>
+<td>25.4</td>
+<td>0.3</td>
+<td>fail</td>
+</tr>
+<tr>
+<td>50</td>
+<td>0.7</td>
+<td>0</td>
+<td>+0.15</td>
+<td>10</td>
+<td>not computed</td>
+<td>0.20</td>
+<td>0.75</td>
+<td>1.9 (sampler-limited)</td>
+<td>0.7</td>
+<td>fail</td>
+</tr>
+<tr>
+<td>100</td>
+<td>1</td>
+<td>0.5</td>
+<td>-0.15</td>
+<td>4 of 10</td>
+<td>0.75</td>
+<td>0.10</td>
+<td>4.17</td>
+<td>2.9 (sampler-limited)</td>
+<td>0.1</td>
+<td>fail (6 fits failed)</td>
+</tr>
+<tr>
+<td>100</td>
+<td>1</td>
+<td>0.5</td>
+<td>+0.15</td>
+<td>10</td>
+<td>0.20</td>
+<td>0.10</td>
+<td>0.13</td>
+<td>6.4 (sampler-limited)</td>
+<td>0</td>
+<td>fail</td>
+</tr>
+<tr>
+<td>50</td>
+<td>1</td>
+<td>0.5</td>
+<td>-0.15</td>
+<td>9</td>
+<td>0.89</td>
+<td>0.50</td>
+<td>3.36</td>
+<td>12.6</td>
+<td>0.1</td>
+<td>fail</td>
+</tr>
+<tr>
+<td>50</td>
+<td>1</td>
+<td>0.5</td>
+<td>+0.15</td>
+<td>10</td>
+<td>0.80</td>
+<td>0.50</td>
+<td>-1.82</td>
+<td>2.9 (sampler-limited)</td>
+<td>0</td>
+<td>fail</td>
+</tr>
+<tr>
+<td>100</td>
+<td>0.7</td>
+<td>0.5</td>
+<td>-0.15</td>
+<td>9</td>
+<td>0.44</td>
+<td>0.30</td>
+<td>3.43</td>
+<td>2.1 (sampler-limited)</td>
+<td>0.4</td>
+<td>fail</td>
+</tr>
+<tr>
+<td>100</td>
+<td>0.7</td>
+<td>0.5</td>
+<td>+0.15</td>
+<td>10</td>
+<td>0.20</td>
+<td>0.30</td>
+<td>-1.03</td>
+<td>1.9 (sampler-limited)</td>
+<td>0</td>
+<td>fail</td>
+</tr>
+<tr>
+<td>50</td>
+<td>0.7</td>
+<td>0.5</td>
+<td>-0.15</td>
+<td>9</td>
+<td>0.89</td>
+<td>0.90</td>
+<td>4.43</td>
+<td>2.8 (sampler-limited)</td>
+<td>0.1</td>
+<td>fail</td>
+</tr>
+<tr>
+<td>50</td>
+<td>0.7</td>
+<td>0.5</td>
+<td>+0.15</td>
+<td>10</td>
+<td>0.30</td>
+<td>0.90</td>
+<td>-3.03</td>
+<td>3.3 (sampler-limited)</td>
+<td>0</td>
+<td>fail</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The <span class="math inline">\(\beta\)</span> = 0 cells at <span class="math inline">\(\rho\)</span> 0.7 have median ESS 4.8 (50 tips) and 2.0 (100 tips, 7 of 10 fits usable).</p>
+<p>By axis:</p>
+<ul>
+<li><strong>Turnover 0, <span class="math inline">\(\rho\)</span> 1.</strong> Every fit has an ESS of 200 of 200 and nearly every fit ended on its own. Bias is within 0.25 SD in 3 of 4 cells; the positive effect is not selected at 100 tips (0.00) and on 0.40 at 50.</li>
+<li><strong>Turnover 0, <span class="math inline">\(\rho\)</span> 0.7.</strong> The ESS falls to 12-25 at -0.15<span class="math inline">\(\lambda\)</span> and to 2 at zero and +0.15<span class="math inline">\(\lambda\)</span>; at 100 tips every fit ended on its budget.</li>
+<li><strong>Turnover 0.5.</strong> Bias is 1.0 to 4.4 SD in 7 of 8 effect cells, the median ESS 2 to 13, and the sibling cells select <code>ned</code> on 0.1 to 0.9 of trees with no effect, so no selection rate at this turnover can be read. 6 of 10 fits failed in the 100-tip, <span class="math inline">\(\rho\)</span> 1, -0.15<span class="math inline">\(\lambda\)</span> cell.</li>
+</ul>
+<figure id="figure-1">
+<img src="../assets/wiki/E2-recovery.png" alt="E2 recovery" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Estimated minus generating <span class="math inline">\(\beta_{ED}\)</span> for every tree, in units of the generating speciation rate, by size (rows), turnover and sampling fraction (columns). At turnover 0 and <span class="math inline">\(\rho\)</span> 1 the points are grey (ESS near 200) and centred on zero; at turnover 0.5 they are red (ESS of a few draws) and displaced against the effect: positive for the negative effect, negative for the positive one.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p>Rule C3 is met in 1 of 16 effect cells. Recovery holds at turnover 0 with complete sampling (bias within 0.25 SD in 3 of 4 cells, ESS 200), and selection at -0.15<span class="math inline">\(\lambda\)</span> reaches 0.80 only at 100 tips. At <span class="math inline">\(\rho\)</span> 0.7 the proposal's effective sample drops below 10 outside the -0.15<span class="math inline">\(\lambda\)</span> cells; at turnover 0.5 the estimates are biased by 1 to 4 SD and the null siblings select <code>ned</code> on up to 0.9 of trees, so turnover 0.5 is the boundary of the method, as the design said it would be measured. E2 does not measure the size boundary (200 tips) or the sampling boundary (<span class="math inline">\(\rho\)</span> 0.4): the paper tier was never run. It also keeps no <code>ed</code> recovery: <code>ed</code> was fitted as a candidate but only the <code>ned</code> table was kept, and the first <code>ed</code> recovery is <a href="E24.html">E24b</a>.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E8.html">E8</a> — the same model family at 100 tips and turnover 0.25: does Monte Carlo bias decide the ranking?</li>
+<li><a href="E12.html">E12</a> — E2 gave one selectable cell; E12 maps selection over effect and size.</li>
+<li><a href="E24.html">E24</a> — the first recovery of <code>ed</code> and <code>edc</code> alone (E24b for <code>ed</code>).</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

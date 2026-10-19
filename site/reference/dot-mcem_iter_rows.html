@@ -1,0 +1,29 @@
+<h3>Description</h3>
+
+<p>Both drivers append the final E-step at the parameters they return as a
+trace row.  That row is not an iteration: it carries no M-step and no step
+metrics.  <code>.mcem_bdi</code> flags it <code>m_step = FALSE</code> and
+<code>.mcem_dynamic_fresh</code> flags it <code>final_estep = TRUE</code>; both flags
+are read here, so that anything counting or plotting the trace reports K
+rows for a K-iteration fit.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.mcem_iter_rows(mcem_df)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id=".mcem_iter_rows_:_mcem_df">mcem_df</code></td>
+<td>
+<p>An MCEM trace data frame, or <code>NULL</code>.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>A logical vector over the rows of <code>mcem_df</code>.
+</p>
+

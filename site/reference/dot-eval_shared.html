@@ -1,0 +1,33 @@
+<h3>Description</h3>
+
+<p>Simulates fresh trees for every particle, pools them into a single set,
+and cross-evaluates: for each particle <span class="reqn">\(\theta_j\)</span>, computes
+</p>
+<p style="text-align: center;"><span class="reqn">\[\hat{f}(\theta_j) = \log\text{mean}\exp\bigl(
+  \text{logf}(z_i, \theta_j) - \log q(z_i, \theta_j)\bigr)\]</span>
+</p>
+
+<p>where both numerator and denominator are evaluated at the target particle
+<span class="reqn">\(\theta_j\)</span>.  The trees <span class="reqn">\(z_i\)</span> may have been simulated at any
+particle; what matters for IS correctness is that the proposal density
+<span class="reqn">\(q\)</span> is evaluated at the same <span class="reqn">\(\theta_j\)</span> used for <span class="reqn">\(p\)</span>.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.eval_shared(pop, input, num_threads)
+</code></pre>
+
+<h3>Details</h3>
+
+<p>Tree caches are cleared between iterations (see <code>.resample_particles</code>
+with <code>clear_cache = TRUE</code>), so the pool contains only the current
+iteration's trees.
+</p>
+
+<h3>Value</h3>
+
+<p>Named list: updated <code>pop</code>, <code>rej_lambda</code>,
+<code>rej_overruns</code>, <code>n_simulated</code>.
+</p>
+

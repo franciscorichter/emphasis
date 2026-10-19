@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E24 — The single-covariate models ed, edc, d, k · emphasis</title>
+<meta name="description" content="Four of the package&#x27;s ten models had no recovery measurement of any kind: ed, edc, d and k, a lineage-level covariate alone with no \(N\) term.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E24 — The single-covariate models <code>ed</code>, <code>edc</code>, <code>d</code>, <code>k</code></h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#e24b--ed-under-the-exact-simulator">E24b — <code>ed</code> under the exact simulator</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete (240 trees). The <code>ed</code> rows are superseded by E24b (below); the <code>edc</code>, <code>d</code> and <code>k</code> rows stand</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>E24 not recorded; E24b emphasis <code>f30a791</code></td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E24-single.R</code>; figure <code>fig-s-single-recovery</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E24/single.csv</code> (240 rows), <code>results/E24b/single.csv</code> (60 rows)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Four of the package's ten models had no recovery measurement of any kind: <code>ed</code>, <code>edc</code>, <code>d</code> and <code>k</code>, a lineage-level covariate alone with no <span class="math inline">\(N\)</span> term. <a href="E2.html">E2</a> fitted <code>ed</code> only as a candidate, and <a href="E8.html">E8</a> only as a rival. E24 applies the <a href="E21.html">E21</a> (E21a) design to each of the four.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>value</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>generators</td>
+<td><code>ed</code>, <code>edc</code>, <code>d</code>, <code>k</code></td>
+<td><span class="math inline">\(\lambda_s = \exp(\beta_0 + \beta_X X_s)\)</span>, exponential link</td>
+</tr>
+<tr>
+<td>effect <span class="math inline">\(e\)</span></td>
+<td>0, -0.35, +0.35</td>
+<td><span class="math inline">\(\beta_X = \log(1+e)/\mathrm{sd}(X)\)</span>: the rate one scale unit above the mean is <span class="math inline">\(1+e\)</span> times the rate at the mean</td>
+</tr>
+<tr>
+<td>scale <span class="math inline">\(\mathrm{sd}(X)\)</span></td>
+<td>spread of the covariate over lineages alive at the present in <code>cr</code> clades of 100 tips (<code>lineage_table()</code>)</td>
+<td>ED 1.22-1.41, centred ED 1.25, D 1.54-1.62, K 2.36-2.50</td>
+</tr>
+<tr>
+<td>tips, turnover, crown</td>
+<td>100 (trees 60-160), 0.10, 15</td>
+<td>the speciation intercept bisected per cell to a median of 100 tips</td>
+</tr>
+<tr>
+<td>trees per cell</td>
+<td>20</td>
+<td>12 cells, 240 trees</td>
+</tr>
+<tr>
+<td>fit</td>
+<td>the ladder <code>cr</code> → model, started from the <code>cr</code> estimate with the new coefficients at zero</td>
+<td></td>
+</tr>
+<tr>
+<td>proposal</td>
+<td>the package's choice: surrogate for <code>ed</code>, <code>edc</code>; thinning for <code>d</code>, <code>k</code></td>
+<td></td>
+</tr>
+<tr>
+<td>draws, iterations, clock</td>
+<td>300, <code>max_iter</code> 100, 30 minutes per fit</td>
+<td></td>
+</tr>
+<tr>
+<td>box</td>
+<td><code>sim/box.R</code> on the exponential link</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Generating coefficients per unit: <code>ed</code> (E24b) -0.307 and +0.246; <code>edc</code> -0.344 and +0.241; <code>d</code> -0.280 and +0.185; <code>k</code> -0.173 and +0.127. The extinction slope is generated at zero.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>The <a href="E19.html">E19</a> rule on <span class="math inline">\(\beta_X\)</span>, against <code>cr</code>: at <span class="math inline">\(|e| = 0.35\)</span>, median <span class="math inline">\(\hat\beta_X/\beta_X \in
+[0.75, 1.25]\)</span>, the right sign on <span class="math inline">\(\ge 80\%\)</span>, the model over <code>cr</code> by <span class="math inline">\(&gt; 2\)</span> AIC on <span class="math inline">\(\ge 80\%\)</span>; false positives <span class="math inline">\(\le 5\%\)</span> at zero; cells with median effective sample below 10 reported and excluded from the selection statement. A cell whose calibration finds no intercept that produces 100-tip clades is reported and not fitted (none was needed).</p>
+<h2 id="results">Results</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>effect</th>
+<th>ratio (q1-q3)</th>
+<th>sign</th>
+<th>median ESS of 300</th>
+<th>fits &lt; 10</th>
+<th>over <code>cr</code> by &gt; 2 AIC (median <span class="math inline">\(\Delta\)</span>AIC)</th>
+<th>stops conv/cap/clock</th>
+<th>fitted <span class="math inline">\(\gamma\)</span> per unit (gen 0)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>edc</code></td>
+<td>-0.35</td>
+<td><strong>0.96</strong> (0.87-1.14)</td>
+<td>1.00</td>
+<td>170</td>
+<td>0</td>
+<td><strong>0.95</strong> (18.9)</td>
+<td>0/13/7</td>
+<td>-0.105</td>
+</tr>
+<tr>
+<td><code>edc</code></td>
+<td>0</td>
+<td>median <span class="math inline">\(\hat\beta\)</span> +0.024</td>
+<td>—</td>
+<td>132</td>
+<td>—</td>
+<td><strong>FP 0.00</strong></td>
+<td>0/2/18</td>
+<td>-0.096</td>
+</tr>
+<tr>
+<td><code>edc</code></td>
+<td>+0.35</td>
+<td><strong>1.02</strong> (0.93-1.33)</td>
+<td>1.00</td>
+<td>118</td>
+<td>2</td>
+<td><strong>0.85</strong> (4.7)</td>
+<td>0/9/11</td>
+<td>+0.051</td>
+</tr>
+<tr>
+<td><code>d</code></td>
+<td>-0.35</td>
+<td>0.67 (0.60-0.83)</td>
+<td>1.00</td>
+<td>78.8</td>
+<td>1</td>
+<td>0.70 (6.2)</td>
+<td>1/17/2</td>
+<td>+0.026</td>
+</tr>
+<tr>
+<td><code>d</code></td>
+<td>0</td>
+<td>median <span class="math inline">\(\hat\beta\)</span> +0.08</td>
+<td>—</td>
+<td>28.2</td>
+<td>5</td>
+<td><strong>FP 0.15</strong></td>
+<td>0/9/11</td>
+<td>+0.36</td>
+</tr>
+<tr>
+<td><code>d</code></td>
+<td>+0.35</td>
+<td>1.01 (0.87-1.41)</td>
+<td>1.00</td>
+<td>29.5</td>
+<td>6</td>
+<td>0.85 (5.3)</td>
+<td>0/15/5</td>
+<td>+0.37</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>-0.35</td>
+<td>0.87 (0.72-1.06)</td>
+<td>1.00</td>
+<td>80.7</td>
+<td>1</td>
+<td>0.85 (6.9)</td>
+<td>0/6/14</td>
+<td>+0.102</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>0</td>
+<td>median <span class="math inline">\(\hat\beta\)</span> -0.015</td>
+<td>—</td>
+<td>87.4</td>
+<td>—</td>
+<td>FP 0.00</td>
+<td>0/3/17</td>
+<td>+0.104</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>+0.35</td>
+<td>0.46 on 19 / 0.51 on 20</td>
+<td>1.00</td>
+<td><strong>2.6</strong></td>
+<td>14 of 19</td>
+<td>0.53 (19 trees)</td>
+<td>0/3/17 (median 5 iterations)</td>
+<td>+0.002</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The <code>k</code> +0.35 cell is <strong>sampler-limited</strong> (median ESS 2.6). Its ratio is 0.46 in the README, the supplement and <code>fig-study-recovery</code> (19 trees with an AIC) and 0.51 over all 20 rows (one tree, k = 15, has a coefficient but no AIC or ESS after 5 iterations on its clock). The <span class="math inline">\(\gamma\)</span> for <code>edc</code> and <code>k</code> follow the effect order -0.35, 0, +0.35. Most cells are clock-limited by the later convention (more than a tenth of fits on the clock in every cell but <code>d</code> at -0.35).</p>
+<p>The superseded <code>ed</code> rows of E24 (old simulator): ratio 0.77 / 1.05, over <code>cr</code> 1.00 / 0.70, FP 0.10, ESS 246 / 157 / 113 (-0.35 / 0 / +0.35).</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E24-single.png" alt="E24 single-covariate models" loading="lazy">
+<figcaption><strong>Figure 1.</strong> The fitted coefficient of each tree against its generating value (dashed) for the four models alone; red bar = cell median; gold = the model beat <code>cr</code> by &gt; 2 AIC; open = ESS below 10. The <code>ed</code> panel shows E24b's trees (the figure caption names E24's file). <code>edc</code> sits on its dashed lines at both signs; <code>d</code> at -0.35 and <code>k</code> at +0.35 fall short.</figcaption>
+</figure>
+<h2 id="e24b--ed-under-the-exact-simulator">E24b — <code>ed</code> under the exact simulator</h2>
+<p>The forward simulator used for E24 held every lineage's rate fixed between events. Raw ED grows between events, so under a negative ED coefficient the simulator placed events early. From emphasis <code>f30a791</code> the waiting time is drawn by thinning against a bound on the hazard, which is exact. Measured on 400 surviving clades (<code>dev/simcheck_ed.R</code> in the package): on the <code>ned</code> generators of <a href="E23.html">E23</a> and <a href="E27.html">E27</a> the two simulators agree (KS <span class="math inline">\(p\)</span> 0.28-0.93 on tip count, <span class="math inline">\(\gamma\)</span>, Colless and branching times); on <code>ed</code> alone at E24's effect of -0.338 per unit the old simulator produced clades 30% larger (mean 25 against 19 tips, KS <span class="math inline">\(p &lt; 0.001\)</span>). E24's <code>ed</code> cells were therefore generated by a process the fitted model does not describe. E24b reruns the E24 design for <code>ed</code> only (effects 0, ±0.35, 20 trees a cell, <code>cr</code> → <code>ed</code>, surrogate, 300 draws, <code>max_iter</code> 100, 30 minutes, <code>sim/box.R</code>) under <code>f30a791</code>, with E24's rule.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>effect</th>
+<th>gen <span class="math inline">\(\beta_{ED}\)</span> (sd)</th>
+<th>ratio (q1-q3)</th>
+<th>sign</th>
+<th>median ESS</th>
+<th>fits &lt; 10</th>
+<th>over <code>cr</code> by &gt; 2 AIC (median <span class="math inline">\(\Delta\)</span>AIC)</th>
+<th>stops conv/cap/clock</th>
+<th>fitted <span class="math inline">\(\gamma_{ED}\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-0.35</td>
+<td>-0.307 (1.41)</td>
+<td><strong>0.85</strong> (0.79-0.92)</td>
+<td>1.00</td>
+<td>235</td>
+<td>0</td>
+<td><strong>1.00</strong> (20.3)</td>
+<td>17/0/3</td>
+<td>-0.634</td>
+</tr>
+<tr>
+<td>0</td>
+<td>0</td>
+<td>median <span class="math inline">\(\hat\beta\)</span> +0.022</td>
+<td>—</td>
+<td>214</td>
+<td>—</td>
+<td><strong>FP 0.00</strong></td>
+<td>2/7/11</td>
+<td>-0.251</td>
+</tr>
+<tr>
+<td>+0.35</td>
+<td>+0.246 (1.22)</td>
+<td><strong>1.10</strong> (0.85-1.30)</td>
+<td>1.00</td>
+<td>236</td>
+<td>2</td>
+<td>0.75 (5.5)</td>
+<td>8/0/12</td>
+<td>-0.730</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>27 of the 60 <code>ed</code> fits converged, 26 ended on the clock, 7 on the iteration cap. The extinction slope, generated at zero, is fitted at -0.25 to -0.73 per unit in every cell: the fit adds a brake on extinction the generator did not have.</p>
+<h2 id="conclusion">Conclusion</h2>
+<ul>
+<li><strong><code>edc</code> meets every half of the <a href="E19.html">E19</a> rule at both signs</strong>: ratio 0.96 and 1.02, right sign on every tree, selection 0.95 and 0.85, no false positive. It is the only one of the four that does.</li>
+<li><strong><code>ed</code> (E24b)</strong>: recovery met at both signs (0.85, 1.10); selection met at -0.35 (1.00) and not at +0.35 (0.75); false positives 0. On the old simulator's trees <code>ed</code> had a 0.10 false-positive rate; on exact trees it has none. The fitted extinction slope sits far from its generating zero in every cell.</li>
+<li><strong><code>d</code></strong>: recovery met at +0.35 only (0.67 at -0.35); selection not met (0.70, 0.85); false positives 0.15, three times the ceiling, with the extinction slope fitted at +0.36 and +0.37 (zero and +0.35 cells) where it was generated at zero (the supplement reads the false positives as the slope buying its two parameters).</li>
+<li><strong><code>k</code></strong>: -0.35 meets every half (0.87, sign 1.00, 0.85, FP 0.00); +0.35 is sampler-limited and not read.</li>
+</ul>
+<p>The difference between <code>ed</code> and <code>edc</code> on null trees is the clade-level part of raw ED: <span class="math inline">\(\mathrm{PD}/N\)</span> rises with the clade's age and falls with its diversity, a trend <code>ed</code> can fit on null trees and a covariate that sums to zero at every instant cannot. E24 measures only 100 tips, turnover 0.10 and complete sampling.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E18.html">E18</a> — <code>nedc</code> against <code>ned</code> with an <span class="math inline">\(N\)</span> term: an equivalent model at 100 tips.</li>
+<li><a href="E21.html">E21</a> — E21a, the design E24 copies, for <code>nk</code>.</li>
+<li><a href="E19.html">E19</a> — the rule E24 uses, first applied to <code>nd</code>.</li>
+<li><a href="E2.html">E2</a> — <code>ed</code> fitted only as a candidate there.</li>
+<li><a href="E23.html">E23</a>, <a href="E27.html">E27</a> — the <code>ned</code> generators on which the two simulators agree.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

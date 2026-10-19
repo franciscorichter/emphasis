@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E9 — Does the mc_error stopping rule stop where the estimate has settled? · emphasis</title>
+<meta name="description" content="stop_rule = &quot;mc_error&quot; (Booth &amp; Hobert 1999; Caffo et al.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E9 — Does the <code>mc_error</code> stopping rule stop where the estimate has settled?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete; the <code>dd</code> 200-tip rule arm is clock-limited (9 of 10 fits on the clock)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>not recorded</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E9-stopping-rule.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E9/stopping-rule.csv</code> (40 rows), <code>results/E9/traces/</code> (the 40 reference and rule traces), <code>results/E9/design.rds</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p><code>stop_rule = "mc_error"</code> (Booth &amp; Hobert 1999; Caffo et al. 2005) splits each E-step's draws into five batches, re-runs the M-step on each, measures the parameter step in units of the batch standard error, grows the draws by 1.5 while the step is inside the noise, and stops once the draws have reached their cap (8 times the initial number) and the step has stayed inside the noise for three iterations, returning the mean of the last three iterates. Nothing had checked that this is where the estimate has settled. It mattered because the <code>cr</code> arm of <a href="S.html">S</a> stopped its larger fits on <code>time_budget</code> (30 of 60 at 800 tips), so what the rule would have done there was unknown.</p>
+<h2 id="design">Design</h2>
+<p>Two arms per tree, both real runs.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>value</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>cells</td>
+<td><code>cr</code> and <code>dd</code> at n ∈ {50, 200} tips</td>
+<td>4 cells</td>
+</tr>
+<tr>
+<td>trees</td>
+<td>10 per cell</td>
+<td>40</td>
+</tr>
+<tr>
+<td>generating rates</td>
+<td><span class="math inline">\(\beta\)</span>0 = 0.5, turnover 0.25 (<span class="math inline">\(\gamma\)</span>0 = 0.125), crown age 15; <code>dd</code> capacity calibrated to the target size</td>
+<td></td>
+</tr>
+<tr>
+<td>proposal, link, <span class="math inline">\(\rho\)</span></td>
+<td>surrogate, linear, 1</td>
+<td></td>
+</tr>
+<tr>
+<td>rule arm</td>
+<td><code>mc_error</code> as shipped, 200 initial draws, <code>max_iter</code> 400 so that the rule and not the cap stops it; driver default clock 4 x 7200 s</td>
+<td></td>
+</tr>
+<tr>
+<td>reference arm</td>
+<td><code>rel_change</code> with <code>tol = 0</code> (never satisfied), 400 iterations at a fixed draw count; the driver default is 2000 draws, the traces carry <strong>400 draws per iteration</strong> (<code>ref_draws_total</code> = 160 400)</td>
+<td>the trajectory the rule is judged against</td>
+</tr>
+<tr>
+<td>comparison axis</td>
+<td>cumulative E-step draws</td>
+<td>the two arms consume draws at different rates</td>
+</tr>
+<tr>
+<td>settled estimate</td>
+<td>mean of the last 50 reference iterations; its Monte Carlo error their standard error</td>
+<td></td>
+</tr>
+<tr>
+<td>settling point</td>
+<td>the first iteration from which the running mean to the end stays inside that error for every fitted parameter</td>
+<td>only the slots the model fits are read</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>Readout, no threshold: where the rule stops against where the estimate settles, both in cumulative draws; the parameter error at the stop in units of the reference's Monte Carlo error; and <strong>whether the rule ever stops while the last few steps still share a sign</strong>, which noise does not produce.</p>
+<h2 id="results">Results</h2>
+<p>The rule arm ended <code>converged</code> on 10 of 10 (<code>cr</code> 50), 5 of 10 (<code>cr</code> 200), 10 of 10 (<code>dd</code> 50) and <strong>1 of 10 (<code>dd</code> 200; 9 on the clock)</strong>. The reference trace has a settling point on 24 of 40 trees; 16 of 40 do not settle inside 400 iterations. Trees where both can be read (settle point found and rule converged): <strong>17</strong> — <code>cr</code> 200: 3, <code>cr</code> 50: 6, <code>dd</code> 200: 1, <code>dd</code> 50: 7.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>on the 17 usable trees</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>rule stopped before the settle point</td>
+<td>1 (<code>dd</code> 50, tree 4: 105 944 against 107 993 draws)</td>
+</tr>
+<tr>
+<td>rule stopped while the last steps shared a sign</td>
+<td>0</td>
+</tr>
+<tr>
+<td>median |<span class="math inline">\(\hat{\theta}\)</span>_rule - <span class="math inline">\(\hat{\theta}\)</span>_ref|</td>
+<td>0.0076 on parameters of 0.3-0.5 (about 2%)</td>
+</tr>
+<tr>
+<td>median rule draws to stop / reference draws to settle</td>
+<td>6.9 (criterion-bound, see below)</td>
+</tr>
+<tr>
+<td>rule draws per fit, median over all 40</td>
+<td>409 000 (127 iterations), against the reference's 160 400</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The stricter flag (settled within the band on every parameter) holds on 8 of 40 trees; on those, the median maximum error is 0.48 reference standard errors.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E9-stopping.png" alt="Cumulative draws at the rule&#39;s stop against the reference&#39;s settling point, one point per tree" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Each point is a tree whose reference trace settles; filled points are trees on which the rule converged. All but one filled point lie above the line of equality, so the rule stopped after the reference had settled; the one just below it is <code>dd</code> 50, tree 4, at 0.98 of the reference's draws.</figcaption>
+</figure>
+<p>The adversarial review of <a href="E5.html">E5</a>-<a href="E14.html">E14</a> struck two derived numbers: the 6.9x multiplier and an "outside the band in 14 of 17" count both depend on the running-mean settling criterion, which <a href="E13.html">E13</a> showed can fire mid-transient, and on a band equal to one iterate's scatter. Against a plateau criterion there is mostly no settle point at all (0 to 2 of 10 per cell). Neither number is reported as a result.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Under the readout: the rule <strong>does not stop early</strong> — it never stopped while the trace was still moving systematically (0 of 17) and stopped before the settle point on 1 of 17, by 2% of the draws. It stops late, and its estimate lands about 0.008 (about 2%, one iterate's noise per <a href="E13.html">E13</a>) from where a 400-iteration reference lands. How late is criterion-bound and not stated as a number. Size dependence is not measured: only 4 of the 17 usable trees are at 200 tips, and at <code>dd</code> 200 the rule arm ended on its clock on 9 of 10 trees, so the rule's behaviour there is mostly unobserved. The rule is not the package default (<code>rel_change</code>, relative step below 10<span class="math inline">\(^{-2}\)</span> on three consecutive iterations), and of the study's drivers only <a href="S.html">S</a> and E9 use <code>mc_error</code>.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="S.html">S</a> — its <code>cr</code> fits on the clock at 800 tips motivated E9.</li>
+<li><a href="E13.html">E13</a> — re-reads E9's 40 reference traces and measures the per-iterate noise the rule compares its steps with.</li>
+<li><a href="E10.html">E10</a> — the other convergence question in the surrogate proposal, the mean-field relaxation.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

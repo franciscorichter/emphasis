@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E1 — Does MCEM reach the exact maximum-likelihood estimate under cr and dd? · emphasis</title>
+<meta name="description" content="Claims C1 and C2 of the paper: for the two models that have an exact likelihood, the constant-rate model cr (DDD::bd_ML, the Nee et al.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E1 — Does MCEM reach the exact maximum-likelihood estimate under <code>cr</code> and <code>dd</code>?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete (run 4 of the package's validation study)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis <code>a38a9e8</code> (run 4); run 3 on <code>7442be9</code> kept beside it as the state before the M-step repair</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>dev/validation/run.sh</code> in the package repository (<code>04-analyse.R --allow-mixed-builds</code>, <code>04b-init-table.R</code>); tables by <code>sim/E1-tables.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>manuscript/tables/E1-A.csv</code> (against the exact MLE), <code>E1-B.csv</code> (against the generating value), <code>E1-C.csv</code> (fixed-<span class="math inline">\(\theta\)</span> log-likelihood); per-tree data live in the package repository's <code>dev/validation</code> results, not under <code>results/</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Claims C1 and C2 of the paper: for the two models that have an exact likelihood, the constant-rate model <code>cr</code> (<code>DDD::bd_ML</code>, the Nee et al. likelihood of the reconstructed tree) and the diversity-dependent model <code>dd</code> (<code>DDD::dd_ML</code>, Etienne et al. 2012), does MCEM return the exact maximum-likelihood estimate of the same tree, and is the log-likelihood it reports the importance-sampling estimate at the returned iterate with no systematic offset? This is the only place in the study where the estimator can be checked against the quantity it targets rather than against the generating value; every model with a lineage-level covariate has no exact likelihood (<a href="../glossary.html">Glossary</a>).</p>
+<h2 id="design">Design</h2>
+<p>The validation study in <code>emphasis/dev/validation</code> (its own pre-registration dated 2026-09-13), run once more on the build under test.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>value</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code> cells</td>
+<td>n ∈ {20, 50, 100} tips x turnover <span class="math inline">\(\varepsilon\)</span> ∈ {0, 0.3, 0.6, 0.9}, plus n = 50, <span class="math inline">\(\varepsilon\)</span> = 0.5, <span class="math inline">\(\lambda\)</span>_gen = 0.1</td>
+<td>a time-scale cell</td>
+</tr>
+<tr>
+<td><code>dd</code> regimes</td>
+<td>A (<span class="math inline">\(\lambda\)</span>0, <span class="math inline">\(\mu\)</span>0, K) = (0.8, 0.1, 40), crown age 10; B (0.8, 0.2, 60), age 12; C (0.8, 0.4, 40), age 12</td>
+<td>draws accepted only when n ∈ [0.5K, min(1.2K, 80)]; median tips 42, 72, 36</td>
+</tr>
+<tr>
+<td>trees per cell</td>
+<td>20 at n = 20 and 50, 12 at n = 100, 10 per <code>dd</code> regime</td>
+<td>replicate fits per tree, so the <code>fits</code> column of E1-A is 60, 60, 36 and 20</td>
+</tr>
+<tr>
+<td>proposals</td>
+<td>surrogate ("exact" in the tables; <code>R/bdi.R</code>) and thinning</td>
+<td>under <code>cr</code> the surrogate is the model, so its weights are constant</td>
+</tr>
+<tr>
+<td>draws</td>
+<td>200 per E-step</td>
+<td></td>
+</tr>
+<tr>
+<td>start</td>
+<td>far start against MLE start</td>
+<td>separates path and stopping error</td>
+</tr>
+<tr>
+<td>reference</td>
+<td><code>bd_ML(cond = 0, soc = 2)</code> and <code>dd_ML(ddmodel = 1)</code></td>
+<td>the unconditioned crown likelihood, the surface emphasis maximises with <code>cond = NULL</code>; the constant between the two at <code>btorph = 1</code> is zero (max difference 1.6e-11 over 4 trees x 5 <span class="math inline">\(\theta\)</span>)</td>
+</tr>
+<tr>
+<td>mapping <code>dd</code></td>
+<td><span class="math inline">\(\beta\)</span>0 = <span class="math inline">\(\lambda\)</span>0, <span class="math inline">\(\beta\)</span>N = -(<span class="math inline">\(\lambda\)</span>0 - <span class="math inline">\(\mu\)</span>0)/K, <span class="math inline">\(\gamma\)</span>0 = <span class="math inline">\(\mu\)</span>0, <span class="math inline">\(\gamma\)</span>N = 0</td>
+<td>emphasis fits four parameters, <code>dd_ML</code> three; <code>dd_loglik</code> returns -Inf for <span class="math inline">\(\mu\)</span>0 ≥ <span class="math inline">\(\lambda\)</span>0</td>
+</tr>
+<tr>
+<td>fixed-<span class="math inline">\(\theta\)</span> arm (C2)</td>
+<td>the first 5 trees per cell (4 at n ≥ 100), reported log-likelihood against the exact one at the MLE</td>
+<td></td>
+</tr>
+<tr>
+<td>link</td>
+<td>linear</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The primary scalar per tree is the log-likelihood deficit <span class="math inline">\(\Delta\)</span><span class="math inline">\(\ell\)</span> = <span class="math inline">\(\ell\)</span>_exact(<span class="math inline">\(\hat{\theta}\)</span>) - <span class="math inline">\(\ell\)</span>_exact(<span class="math inline">\(\theta\)</span>_MLE) ≤ 0, in nats.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p><strong>C1:</strong> per cell and for both samplers, from a far start, median <span class="math inline">\(\Delta\)</span><span class="math inline">\(\ell\)</span> ≥ -0.5 nats and 90th percentile of |<span class="math inline">\(\Delta\)</span><span class="math inline">\(\ell\)</span>| ≤ 2 nats; |z_j| ≤ 1 at the median. <strong>C2:</strong> median |g(<span class="math inline">\(\theta\)</span>)| ≤ 0.1 nats at the MLE, where g is the reported minus the exact log-likelihood, and no slope in g along <span class="math inline">\(\mu\)</span> beyond its Monte Carlo error. The validation study carries its own stricter rules (median <span class="math inline">\(\Delta\)</span><span class="math inline">\(\ell\)</span> ≥ -0.1, 10th percentile ≥ -0.5, |bias| ≤ 0.1 SE and others); its per-cell verdict table is not in the paper repository.</p>
+<h2 id="results">Results</h2>
+<p><strong>Against the exact MLE (E1-A).</strong> 27 of the 30 cell x proposal rows pass both halves of C1 on <span class="math inline">\(\Delta\)</span><span class="math inline">\(\ell\)</span>.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>cell (tips / turnover)</th>
+<th>proposal</th>
+<th style="text-align: right;">fits</th>
+<th style="text-align: right;">median <span class="math inline">\(\Delta\)</span><span class="math inline">\(\ell\)</span></th>
+<th style="text-align: right;">90th pct |<span class="math inline">\(\Delta\)</span><span class="math inline">\(\ell\)</span>|</th>
+<th style="text-align: right;">median ESS of 200</th>
+<th>speciation / extinction error, % of the rate</th>
+<th style="text-align: right;">s per fit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>cr 20 / 0-0.6</td>
+<td>surrogate</td>
+<td style="text-align: right;">60 each</td>
+<td style="text-align: right;">0.000 to -0.001</td>
+<td style="text-align: right;">≤ 0.06</td>
+<td style="text-align: right;">200</td>
+<td>≤ 0.04</td>
+<td style="text-align: right;">24-62</td>
+</tr>
+<tr>
+<td>cr 20 / 0.9</td>
+<td>surrogate</td>
+<td style="text-align: right;">59</td>
+<td style="text-align: right;">-0.070</td>
+<td style="text-align: right;">0.26</td>
+<td style="text-align: right;">200</td>
+<td>+5.2 / +9.2</td>
+<td style="text-align: right;">71</td>
+</tr>
+<tr>
+<td>cr 20 / 0-0.9</td>
+<td>thinning</td>
+<td style="text-align: right;">60, 60, 60, 36</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">≤ 0.07</td>
+<td style="text-align: right;">200</td>
+<td>10<span class="math inline">\(^{-6}\)</span> of the rate</td>
+<td style="text-align: right;">4-11</td>
+</tr>
+<tr>
+<td>cr 50 / 0, 0.3</td>
+<td>surrogate</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">0.000, -0.021</td>
+<td style="text-align: right;">0.07, 0.19</td>
+<td style="text-align: right;">200</td>
+<td>up to +3.1 / +6.1</td>
+<td style="text-align: right;">82, 95</td>
+</tr>
+<tr>
+<td>cr 50 / 0.5 (<span class="math inline">\(\lambda\)</span> = 0.1)</td>
+<td>surrogate / thinning</td>
+<td style="text-align: right;">30 / 27</td>
+<td style="text-align: right;">-0.034 / -0.011</td>
+<td style="text-align: right;">0.14 / 0.49</td>
+<td style="text-align: right;">200 / 76</td>
+<td>+5.8 / +10.0; -1.9 / -3.8</td>
+<td style="text-align: right;">133 / 19</td>
+</tr>
+<tr>
+<td>cr 50 / 0.6</td>
+<td>surrogate / thinning</td>
+<td style="text-align: right;">60 / 48</td>
+<td style="text-align: right;">-0.060 / -0.032</td>
+<td style="text-align: right;">0.23 / 0.45</td>
+<td style="text-align: right;">200 / 31</td>
+<td>+5.9 / +10.5; -4.3 / -7.9</td>
+<td style="text-align: right;">118 / 16</td>
+</tr>
+<tr>
+<td>cr 50 / 0.9</td>
+<td>surrogate</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">-0.174</td>
+<td style="text-align: right;">0.43</td>
+<td style="text-align: right;">200</td>
+<td>+7.5 / +10.0</td>
+<td style="text-align: right;">108</td>
+</tr>
+<tr>
+<td>cr 100 / 0, 0.3</td>
+<td>surrogate / thinning</td>
+<td style="text-align: right;">36</td>
+<td style="text-align: right;">-0.067, -0.054 / 0.000</td>
+<td style="text-align: right;">0.30, 0.19 / 0.13, 0.16</td>
+<td style="text-align: right;">200</td>
+<td>+3.8 / +7.1-7.2; thinning 10<span class="math inline">\(^{-6}\)</span></td>
+<td style="text-align: right;">182-228 / 20-22</td>
+</tr>
+<tr>
+<td>cr 100 / 0.6</td>
+<td>surrogate</td>
+<td style="text-align: right;">36</td>
+<td style="text-align: right;">-0.138</td>
+<td style="text-align: right;">0.32</td>
+<td style="text-align: right;">200</td>
+<td>+6.3 / +9.7</td>
+<td style="text-align: right;">168</td>
+</tr>
+<tr>
+<td>cr 100 / 0.6</td>
+<td>thinning</td>
+<td style="text-align: right;">33</td>
+<td style="text-align: right;"><strong>-1.086</strong></td>
+<td style="text-align: right;"><strong>5.15</strong></td>
+<td style="text-align: right;"><strong>8.6</strong> (sampler-limited)</td>
+<td>-13.5 / -23.2</td>
+<td style="text-align: right;">430</td>
+</tr>
+<tr>
+<td>cr 100 / 0.9</td>
+<td>surrogate</td>
+<td style="text-align: right;">36</td>
+<td style="text-align: right;">-0.315</td>
+<td style="text-align: right;">0.96</td>
+<td style="text-align: right;">200</td>
+<td>-0.8 / -0.9</td>
+<td style="text-align: right;">215</td>
+</tr>
+<tr>
+<td>dd C (36 tips)</td>
+<td>surrogate / thinning</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">-0.206 / -0.331</td>
+<td style="text-align: right;">1.32 / 1.66</td>
+<td style="text-align: right;">53 / 200</td>
+<td>intercept -7.4 / <strong>-69.1</strong></td>
+<td style="text-align: right;">85 / 24</td>
+</tr>
+<tr>
+<td>dd A (42 tips)</td>
+<td>surrogate / thinning</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">-0.140 / -0.064</td>
+<td style="text-align: right;"><strong>5.09</strong> / 0.80</td>
+<td style="text-align: right;">61 / 23</td>
+<td>intercept 0.0 / -13.7</td>
+<td style="text-align: right;">201 / 25</td>
+</tr>
+<tr>
+<td>dd B (72 tips)</td>
+<td>surrogate / thinning</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">-0.066 / <strong>-1.018</strong></td>
+<td style="text-align: right;">0.59 / <strong>2.12</strong></td>
+<td style="text-align: right;">36 / 11</td>
+<td>intercept +2.2 / -39.0</td>
+<td style="text-align: right;">299 / 54</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The thinning proposal returned no usable fit at cr 50 / 0.9 and cr 100 / 0.9 (no row). The three failures of C1: <code>cr</code> 100 / 0.6 thinning (both halves; ESS 8.6, sampler-limited), <code>dd</code> B thinning (both halves; ESS 11), and <code>dd</code> A surrogate (90th percentile 5.09 on 20 fits). On <code>dd</code> C the thinning proposal passes the <span class="math inline">\(\Delta\)</span><span class="math inline">\(\ell\)</span> rule with its speciation intercept 69% below the exact estimate: the <code>dd</code> surface is flat along the intercept-slope-extinction trade, so the deficit and the parameter error disagree there.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E1-deficit.png" alt="Median and 90th-percentile nats lost against the exact MLE, per E1 cell and proposal" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Each row is a cell of E1; points left of the dashed line meet that half of rule C1. Crosses mark the three rows that fail: thinning at 100 tips and turnover 0.6, thinning on <code>dd</code> regime B, and the surrogate's 90th percentile on <code>dd</code> regime A. Values below 10<span class="math inline">\(^{-4}\)</span> nats are drawn at the left edge.</figcaption>
+</figure>
+<p><strong>Against the generating value (E1-B; median error over trees, % of the generating speciation rate).</strong> The exact MLE itself misses the generating rates by large amounts on small trees: at 20 tips and turnover 0.9 it is 47% below the speciation rate and 78.5% below the extinction rate (MCEM surrogate -31% / -59%, thinning -52% / -90%). In the other <code>cr</code> cells the exact MLE's median speciation error runs from -27% to +6% and MCEM's from -24% to +10%; these are medians over trees, so they differ by more than the per-tree differences of E1-A (e.g. 100 / 0.6: exact -10.8%, MCEM -0.7%). On the <code>dd</code> intercepts MCEM is at +4.0, +12.0 and +15.6% (C, A, B) where the exact MLE is at +5.8, +4.6 and +11.0%; thinning at -62, -14 and -22%.</p>
+<p><strong>The reported log-likelihood (E1-C, rule C2).</strong> Under <code>cr</code> the surrogate's reported log-likelihood equals the exact one to 10<span class="math inline">\(^{-12}\)</span> (median g between 0 and 3e-13). The thinning proposal's median g is ≤ 0.04 nats in every <code>cr</code> cell except 50 / 0.9 (0.86 on 3 trees), but its g has a slope along extinction beyond 2 SE in four cells (50 / 0, 50 / 0.5, 100 / 0, 100 / 0.3; 0.09 to 0.19 nats per SE of the extinction rate, z between -6.2 and 3.5). Under <code>dd</code> the surrogate's median g is 0.049, 0.004 and 0.046 on C, A, B, with a 90th percentile of 17.3 on C (8 trees) and a slope of 9.75 (SE 2.30) on B; thinning's median g is 0.435 (C) and 0.665 (B), above the 0.1 ceiling.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>C1 on the <span class="math inline">\(\Delta\)</span><span class="math inline">\(\ell\)</span> halves is <strong>met on 27 of 30 rows and not met on 3</strong>; its |z_j| ≤ 1 half is <strong>not evaluable</strong> from the paper repository (E1-A reports errors in % of the rate, not in SE units). C2 is <strong>met</strong> for the surrogate under <code>cr</code>, <strong>met at the median</strong> for the surrogate under <code>dd</code> with a slope beyond its error on regime B and a heavy 90th percentile on C, and <strong>not met</strong> for thinning on <code>dd</code> C and B and on <code>cr</code> 50 / 0.9. On the surrogate proposal MCEM gives up a median 0.00-0.07 nats at 20 and 50 tips and 0.05-0.32 nats at 100 tips, and its rates sit within 0.0-7.5% (speciation) and 0.0-10.5% (extinction) of the exact estimate. The thinning proposal coincides with the exact estimate to 10<span class="math inline">\(^{-6}\)</span> at turnover ≤ 0.3 and loses its effective sample as turnover and size grow, which is where its three failures sit. What E1 does not show: behaviour above 100 tips (that is <a href="S.html">S</a>), at a sampling fraction below one, on the exponential link, or for any model with a lineage-level covariate. Every fit maximised the unconditional likelihood on trees conditioned on survival (recorded 2026-10-09; the difference is measured in <a href="E34.html">E34</a>).</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E3.html">E3</a> — the proposals at fixed parameters; its <code>cr</code>/<code>dd</code> half is E1's fixed-<span class="math inline">\(\theta\)</span> arm (E1-C).</li>
+<li><a href="S.html">S</a> — the same comparison against the exact MLE from 25 to 800 tips.</li>
+<li><a href="E4.html">E4</a> — cost; E1's per-fit timings are its first source.</li>
+<li><a href="E6.html">E6</a>, <a href="E7.html">E7</a> — the effective sample of the two proposals away from the E1 cells.</li>
+<li><a href="E34.html">E34</a>, <a href="E38.html">E38</a> — later exact-reference measurements on the extinction side.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

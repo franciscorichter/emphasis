@@ -1,0 +1,23 @@
+<h3>Description</h3>
+
+<p>Returns a list with four parallel components of length <code>num_points</code>:
+</p>
+
+<dl>
+<dt><code>pars</code></dt><dd><p>Data frame of parameter vectors.</p>
+</dd>
+<dt><code>fhat</code></dt><dd><p>Numeric; <code>NA</code> = needs evaluation.</p>
+</dd>
+<dt><code>log_q</code></dt><dd><p>List; per-particle vector of <code>log q(z | obs, theta)</code>
+for cached trees. <code>NULL</code> = no trees cached.</p>
+</dd>
+<dt><code>trees</code></dt><dd><p>List; per-particle list of raw augmented-tree data
+frames (C++ format for <code>loglikelihood()</code>). <code>NULL</code> = not cached.</p>
+</dd>
+</dl>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.init_population(num_points, lower_bound, upper_bound)
+</code></pre>
+

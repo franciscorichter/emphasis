@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E23 — What does the one-call ladder estimate_rates(model = &quot;all&quot;) choose? · emphasis</title>
+<meta name="description" content="Every selection rate before E23 was a pairwise contest (E12, E19, E21) or a path (E20).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E23 — What does the one-call ladder <code>estimate_rates(model = "all")</code> choose?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete (second pass, after the 2026-10-01 retry fix). 100-tip arm cap-limited on the lineage-level rungs; 200-tip arm clock-limited on <code>nd</code>, <code>ned</code> and <code>nk</code>. Extended by <a href="E27.html">E27</a> (eight conditions, 20 trees) and <a href="E31.html">E31</a> (the pendant-edge pair at 200 tips)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>the commit after <code>4d6ef7f</code> (the <code>auto_bounds()</code> retry fix); hash not recorded</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E23-ladder.R</code>; figure <code>sim/figures-study.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E23/t100/ladder.csv</code> (250 rows = 50 trees x 5 models), <code>results/E23/t200/ladder.csv</code> (150 rows = 30 x 5); first pass in <code>results/E23/t*/pre-fix/</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Every selection rate before E23 was a pairwise contest (<a href="E12.html">E12</a>, <a href="E19.html">E19</a>, <a href="E21.html">E21</a>) or a path (<a href="E20.html">E20</a>). What a user runs is one call: <code>estimate_rates(phy, model = "all")</code> fits the ladder <code>cr</code> → <code>dd</code> → {<code>nd</code>, <code>ned</code>, <code>nk</code>}, each model started from the estimate of the model it nests with each model's box from <code>auto_bounds()</code>, and ranks them with <code>compare_models()</code>. E23 measures that call end to end, and its 200-tip arm is also a cost measurement of the ladder.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>generators</td>
+<td><code>cr</code>, <code>dd</code>, <code>nd</code>, <code>ned</code>, <code>nk</code>, exponential link</td>
+<td>the E20 generators</td>
+</tr>
+<tr>
+<td>effects</td>
+<td><code>nd</code>, <code>ned</code> at <span class="math inline">\(\log 0.65 = -0.43\)</span> per scale unit of <span class="math inline">\(D\)</span> or ED; <code>nk</code> at <span class="math inline">\(+0.43\)</span> per sd of <span class="math inline">\(K\)</span></td>
+<td>rate x 0.65 or x 1/0.65 at one scale unit</td>
+</tr>
+<tr>
+<td>generating coefficients</td>
+<td><span class="math inline">\(\beta_D\)</span> -0.155 / -0.174; <span class="math inline">\(\beta_{ED}\)</span> -0.0982 / -0.104; <span class="math inline">\(\beta_K\)</span> +0.154 / +0.159 (100 / 200 tips)</td>
+<td>per unit, from <code>design.rds</code></td>
+</tr>
+<tr>
+<td>tips</td>
+<td>100 (observed 60-153) and 200 (128-317)</td>
+<td>capacity recalibrated per size</td>
+</tr>
+<tr>
+<td>turnover / crown</td>
+<td>0.10 / 15</td>
+<td></td>
+</tr>
+<tr>
+<td>trees</td>
+<td>10 a generator at 100 tips, 6 at 200</td>
+<td>80 ladders</td>
+</tr>
+<tr>
+<td>draws / <code>max_iter</code></td>
+<td>300 / 100</td>
+<td></td>
+</tr>
+<tr>
+<td>clock</td>
+<td>30 minutes per fit at 100 tips, 60 at 200</td>
+<td></td>
+</tr>
+<tr>
+<td>box</td>
+<td><code>auto_bounds()</code> per model</td>
+<td></td>
+</tr>
+<tr>
+<td>reading</td>
+<td>the AIC winner (minimum AIC), as registered; the parsimonious reading (fewest parameters within 2 AIC) recomputed in ledger B and given beside it</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Amendment 2026-10-01.</strong> After 21 ladders (16 at 100 tips, 5 at 200) the workers had not finished a tree in eight hours. The time was in <code>auto_bounds()</code>: the forward simulator retried a clade that overflowed <code>max_lin</code> as if it had gone extinct, so a feasibility test at an exploding corner of a lineage-level box ran a hundred cap-sized simulations. The package now retries extinction only; on the stalled 100-tip <code>dd</code> tree the <code>nd</code> box takes 249 s instead of over 50 minutes unfinished. Both arms restarted from scratch; the first pass is kept under <code>pre-fix/</code> and not mixed in. On a 97-tip <code>nd</code> tree of the first pass the five <code>auto_bounds()</code> calls took 52, 61, 273, 964 and 361 s against fits of 50, 161, 753, 597 and 702 s: the box was 43% of the ladder.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>The winner is the generator on <span class="math inline">\(\ge 80\%\)</span> of trees for <code>cr</code> and <code>dd</code>; for the three lineage-level generators the winner is the generator or a superset of it on <span class="math inline">\(\ge 80\%\)</span>; a lineage-level model wins on <span class="math inline">\(\le 10\%\)</span> of <code>cr</code> and <code>dd</code> trees. Fits with an effective sample below 10 are reported and the rates they enter are marked sampler-limited.</p>
+<h2 id="results">Results</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>tips</th>
+<th>generator</th>
+<th>n</th>
+<th>generator chosen: min AIC / parsimony</th>
+<th>chosen, cr/dd/nd/ned/nk (min AIC)</th>
+<th>generator fit: ratio (q1-q3)</th>
+<th>ESS</th>
+<th>stops conv / cap / clock</th>
+<th>median margin</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>100</td>
+<td><code>cr</code></td>
+<td>10</td>
+<td>0.80 / 0.90</td>
+<td>8/1/0/0/1</td>
+<td>—</td>
+<td>300</td>
+<td>10 / 0 / 0</td>
+<td>1.5</td>
+</tr>
+<tr>
+<td>100</td>
+<td><code>dd</code></td>
+<td>10</td>
+<td>0.90 / 0.80</td>
+<td>1/9/0/0/0</td>
+<td><span class="math inline">\(\beta_N\)</span> 1.06 (0.88-1.13)</td>
+<td>271</td>
+<td>7 / 3 / 0</td>
+<td>2.7</td>
+</tr>
+<tr>
+<td>100</td>
+<td><code>nd</code></td>
+<td>10</td>
+<td>0.00 / 0.00</td>
+<td>0/7/0/2/1</td>
+<td>0.49 (0.40-0.75)</td>
+<td>81</td>
+<td>0 / 10 / 0</td>
+<td>1.8</td>
+</tr>
+<tr>
+<td>100</td>
+<td><code>ned</code></td>
+<td>10</td>
+<td>0.20 / 0.10</td>
+<td>2/5/0/2/1</td>
+<td>0.52 (-0.15-1.74), sign 0.70</td>
+<td>176 (1 &lt; 10)</td>
+<td>1 / 9 / 0</td>
+<td>2.8</td>
+</tr>
+<tr>
+<td>100</td>
+<td><code>nk</code></td>
+<td>10</td>
+<td>0.70 / 0.70</td>
+<td>0/2/0/1/7</td>
+<td>0.89 (0.63-1.02)</td>
+<td>48 (2 &lt; 10)</td>
+<td>1 / 9 / 0</td>
+<td>7.2</td>
+</tr>
+<tr>
+<td>200</td>
+<td><code>cr</code></td>
+<td>6</td>
+<td>0.67 / 0.83</td>
+<td>4/0/2/0/0</td>
+<td>—</td>
+<td>300</td>
+<td>6 / 0 / 0</td>
+<td>1.8</td>
+</tr>
+<tr>
+<td>200</td>
+<td><code>dd</code></td>
+<td>6</td>
+<td>0.83 / 0.83</td>
+<td>0/5/1/0/0</td>
+<td><span class="math inline">\(\beta_N\)</span> 0.85 (0.76-0.96)</td>
+<td>276</td>
+<td>5 / 1 / 0</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>200</td>
+<td><code>nd</code></td>
+<td>6</td>
+<td>0.67 / 0.67</td>
+<td>0/0/4/2/0</td>
+<td>0.77 (0.72-0.92)</td>
+<td>118</td>
+<td>0 / 1 / 5</td>
+<td>1.0</td>
+</tr>
+<tr>
+<td>200</td>
+<td><code>ned</code></td>
+<td>6</td>
+<td>0.50 / 0.50</td>
+<td>0/3/0/3/0</td>
+<td>1.04 (0.75-1.30)</td>
+<td>280</td>
+<td>1 / 3 / 2</td>
+<td>1.9</td>
+</tr>
+<tr>
+<td>200</td>
+<td><code>nk</code></td>
+<td>6</td>
+<td>0.67 / 0.67</td>
+<td>0/0/0/2/4</td>
+<td>0.74 (0.63-0.83)</td>
+<td>26 (1 &lt; 10)</td>
+<td>1 / 4 / 1</td>
+<td>10.1</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Ratio: the generator rung's fitted coefficient over its generating value; sign 1.00 unless shown. ESS of 300. Stops are those of the generator's own rung on its own trees; margin is the winner's AIC lead. Under the parsimonious reading the 100-tip <code>nd</code> trees go to <code>cr</code> 1, <code>dd</code> 7, <code>ned</code> 2, and the 200-tip <code>cr</code> trees to <code>cr</code> 5, <code>dd</code> 1.</p>
+<p>Across all trees: at 100 tips <code>nd</code> and <code>nk</code> rungs ended on the iteration cap on 43 and 48 of 50 (median ESS 75 and 77), <code>ned</code> on 33 with 11 converged (ESS 261); <code>cr</code> converged on 50 and <code>dd</code> on 38. At 200 tips the <code>nd</code> and <code>ned</code> rungs ended on the clock on 21 of 30 each and <code>nk</code> on 11, so the 200-tip arm is <strong>clock-limited</strong>. Where the generator was not chosen at 100 tips it sat a median 2.4 (<code>nd</code>), 4.2 (<code>ned</code>) and 3.1 (<code>nk</code>) AIC behind the winner. No cell is sampler-limited.</p>
+<p>Cost: a whole ladder took a median 47 minutes at 100 tips (38-85 by generator, at most 103) and 3.4 hours at 200 tips (3.1-3.9 by generator, 1.3-8.8 overall); log-log slope of ladder time on tips 1.79.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E23-ladder.png" alt="E23, the ladder&#39;s choice per tree" loading="lazy">
+<figcaption><strong>Figure 1.</strong> One mark per tree, filled where the minimum AIC fell on the generator, otherwise labelled with the model chosen. At 100 tips <code>cr</code>, <code>dd</code> and <code>nk</code> trees mostly return their generator and <code>nd</code> and <code>ned</code> trees mostly return <code>dd</code>; at 200 tips the <code>nd</code> trees return <code>nd</code> or <code>ned</code> and two <code>cr</code> and one <code>dd</code> tree return <code>nd</code>.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p><strong>100 tips: clade-level half met, lineage-level half not met.</strong> The generator wins on 0.80 of <code>cr</code> and 0.90 of <code>dd</code> trees and a lineage-level model on 1 of 20 null trees (0.05). No lineage-level generator reaches 0.80: <code>nk</code> 0.70, <code>ned</code> 0.20, <code>nd</code> 0.00 (<code>dd</code> on 7 of 10). The ladder offers no superset of any lineage-level model, so "generator or a superset" is the generator alone. <strong>200 tips: not met</strong> under the registered (minimum-AIC) reading: <code>cr</code> 0.67, and a lineage-level model, every time <code>nd</code>, wins on 3 of 12 null trees (0.25); under the parsimonious reading the null half holds (0 of 12, <code>cr</code> 0.83). The lineage-level generators reach 0.50-0.67, with the pendant-edge pair <code>nd</code> + <code>ned</code> chosen on all 6 <code>nd</code> trees. The 200-tip arm is clock-limited and every rate is a floor, on 6 trees a generator.</p>
+<p>What E23 shows at 100 tips is that one call recovers the clade-level answer and a <span class="math inline">\(K\)</span> effect of this size, and returns <code>dd</code> for most trees generated with either pendant-edge covariate at <span class="math inline">\(\log 0.65\)</span>; at 200 tips the lineage-level models separate from <code>dd</code> and the minimum-AIC reading admits <code>nd</code> on null trees. <a href="E27.html">E27</a> and <a href="E31.html">E31</a> repeat the ladder on 20 trees a cell; from emphasis <code>f30a791</code> on, <code>compare_models()</code> reports the parsimonious choice, which is the reading those runs use.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E20.html">E20</a> — the path, the other route; the generators E23 reuses.</li>
+<li><a href="E21.html">E21</a> — E21a, the first measurement of the nested start.</li>
+<li><a href="E24.html">E24</a> — ran beside E23's 200-tip arm.</li>
+<li><a href="E27.html">E27</a> — the ladder at eight conditions with 20 trees, read both ways.</li>
+<li><a href="E31.html">E31</a> — the pendant-edge pair at 200 tips on 20 trees, 300 iterations.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

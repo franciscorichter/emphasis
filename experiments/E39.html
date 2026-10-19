@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E39 — what the covariates share, tree by tree, on simulated and real trees · emphasis</title>
+<meta name="description" content="The covariate-overlap correlations of sim/covariates-space.R pool 30 trees and three times, so they are not what one fit sees: a fit reads one tree, and within one tree at one time the pendant age and \(D\) have the same ranks (\(D\) is the pendant age minus the clade mean).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E39 — what the covariates share, tree by tree, on simulated and real trees</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>not recorded (the scripts take <code>--lib</code>)</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/covariates-shared.R</code>, <code>sim/covariates-shared-shape.R</code>; the simulated clades from <code>sim/covariates-space.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E39/per-tree.csv</code> (642 rows), <code>summary.csv</code> (18 rows), <code>shape.csv</code> (77 rows); figure <code>manuscript/figures/fig-p-covariates</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>The covariate-overlap correlations of <code>sim/covariates-space.R</code> pool 30 trees and three times, so they are not what one fit sees: a fit reads one tree, and within one tree at one time the pendant age and <span class="math inline">\(D\)</span> have the same ranks (<span class="math inline">\(D\)</span> is the pendant age minus the clade mean). E39 computes each pair's correlation within a tree, and asks whether the overlaps the study measured on simulated trees are the ones a user's tree carries. It bears on <a href="E21.html">E21</a>'s finding that K and ED enter the path in place of each other, and on how <a href="E26.html">E26</a>/<a href="E28.html">E28</a>'s K and ED choices on real families are read.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>item</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>covariates</td>
+<td><span class="math inline">\(D\)</span> (pendant age about the clade mean), ED, the nearest-neighbour distance (NND), <span class="math inline">\(K\)</span> (splits from the crown)</td>
+</tr>
+<tr>
+<td>statistic</td>
+<td>Spearman correlation of each pair within a tree, over the lineages alive at <span class="math inline">\(T/2\)</span>, <span class="math inline">\(3T/4\)</span> and <span class="math inline">\(T\)</span>, pooled over the three times</td>
+</tr>
+<tr>
+<td>set 1</td>
+<td>the 30 <code>dd</code> clades of <code>covariates-space.R</code> (crown age 15, turnover 0.10 at the crown) as complete trees</td>
+</tr>
+<tr>
+<td>set 2</td>
+<td>the same 30 clades reconstructed (extinct lineages dropped)</td>
+</tr>
+<tr>
+<td>set 3</td>
+<td>the 47 deposited family trees of E26, read as the analysis of record reads them (tip edges extended to the deepest tip)</td>
+</tr>
+<tr>
+<td>shape</td>
+<td>normalised Colless index (Colless minus its Yule expectation, per tip; 0 = Yule balance) per tree, beside its ED-K and D-ED correlations</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The real trees are reconstructed trees, so the complete-tree correlations, which the model reads, are not observable on them; the simulated pair (complete, reconstructed) measures how far reconstruction moves each correlation.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>None (descriptive). The result is the distribution of each pair's within-tree correlation in each set, and whether the real trees lie inside the simulated reconstructed range.</p>
+<h2 id="results">Results</h2>
+<p>Median within-tree Spearman correlation (10th-90th percentile), <code>results/E39/summary.csv</code>:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>pair</th>
+<th>simulated, complete (30)</th>
+<th>simulated, reconstructed (30)</th>
+<th>47 family trees</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D-NND</td>
+<td>0.85 (0.79 to 0.90)</td>
+<td>0.88 (0.84 to 0.94)</td>
+<td>0.90 (0.78 to 0.99)</td>
+</tr>
+<tr>
+<td>ED-NND</td>
+<td>0.87 (0.80 to 0.89)</td>
+<td>0.87 (0.82 to 0.90)</td>
+<td>0.88 (0.81 to 0.94)</td>
+</tr>
+<tr>
+<td>D-ED</td>
+<td>0.57 (0.51 to 0.68)</td>
+<td>0.62 (0.58 to 0.73)</td>
+<td>0.74 (0.60 to 0.85)</td>
+</tr>
+<tr>
+<td>D-K</td>
+<td>-0.34 (-0.41 to -0.26)</td>
+<td>-0.35 (-0.44 to -0.27)</td>
+<td>-0.46 (-0.63 to -0.30)</td>
+</tr>
+<tr>
+<td>NND-K</td>
+<td>-0.16 (-0.22 to -0.06)</td>
+<td>-0.20 (-0.28 to -0.11)</td>
+<td>-0.31 (-0.52 to -0.13)</td>
+</tr>
+<tr>
+<td>ED-K</td>
+<td>-0.11 (-0.29 to -0.02)</td>
+<td>-0.18 (-0.32 to -0.10)</td>
+<td>-0.44 (-0.71 to -0.22)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>ED-K on the family trees ranges from -0.84 to -0.04; 33 of 47 are below -0.30, against a reconstructed simulated minimum of -0.60. Imbalance: normalised Colless median 1.43 on the family trees against -0.20 on the reconstructed simulated trees. Across the 47 family trees the rank correlation of imbalance with the ED-K correlation is -0.51 (p = 0.0004).</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E39-covariates.png" alt="E39 covariates" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Top: each pair's within-tree correlation, a dot per tree, in the three sets. Reconstruction moves the simulated correlations little (ED-K -0.11 to -0.18); the family trees sit further out on every pair involving K and on D-ED. Bottom: ED-K against imbalance; the real trees are less balanced, and the less balanced the tree, the more K moves against ED.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p>No rule. On simulated trees, complete or reconstructed, K is close to separate from ED within a tree (median -0.11 and -0.18), so the recovery and selection results for <code>ned</code> and <code>nk</code> were measured where the two covariates carry different information. On the deposited family trees they are not: median -0.44, as far as -0.84, and the tie grows with imbalance, which the family trees have and the simulated <code>dd</code> trees do not. The pairs not involving K move less (D-NND and ED-NND near 0.9 in all sets; D-ED 0.57, 0.62, 0.74). What it means for the real-tree analyses: on an unbalanced family tree a choice between <code>nk</code> and <code>ned</code> is a choice between two covariates that rank the lineages in partly the same order, so the K-versus-ED counts of <a href="E26.html">E26</a> and <a href="E28.html">E28</a> are not counts of distinct mechanisms. What it does not show: whether the simulation results would change on trees this unbalanced, which needs generators that produce such trees; and the model's complete-tree correlations on real trees, which are not observable.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E21.html">E21</a> — the K covariate, and the path entering K through ED.</li>
+<li><a href="E26.html">E26</a>, <a href="E28.html">E28</a> — the 47 and 29 family trees whose covariates are measured here.</li>
+<li><a href="E40.html">E40</a>, <a href="../real-phylogenies.html">Real phylogenies</a> — on the 170 class-tree clades and family trees the K factor rises with imbalance (rank correlation 0.53 over 124 read <code>nk</code> fits) and the ED factor falls (-0.57 over 145); the ED-K correlation is -0.38 on those trees under E39's definition.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

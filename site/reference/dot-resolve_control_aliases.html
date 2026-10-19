@@ -1,0 +1,14 @@
+<h3>Description</h3>
+
+<p>Supports both old names (<code>num_points</code>, <code>sample_size</code>) and new
+names (<code>num_particles</code>, <code>num_trees</code>).  User-supplied values take
+precedence; if both old and new are present, the new name wins.
+Internally the code always reads the OLD names for backwards compatibility
+with <code>emphasis_cem</code> and the C++ layer.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.resolve_control_aliases(ctrl, method, user_ctrl = list())
+</code></pre>
+

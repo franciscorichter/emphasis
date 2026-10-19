@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossary · emphasis</title>
+<meta name="description" content="Definitions follow the methods paper (report/paper2/s2-models.tex, s3-inference.tex) and ledger E (mathematics against code).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="index.html">emphasis</a>
+<ul>
+<li><a href="index.html">Overview</a></li>
+<li><a href="usage.html">Usage</a></li>
+<li><a href="reference.html">Reference</a></li>
+<li><a href="established.html">What is established</a></li>
+<li><a href="estimability.html">Estimability</a></li>
+<li><a href="real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="experiments/index.html">Experiments</a></li>
+<li><a href="glossary.html" aria-current="page">Glossary</a></li>
+<li><a href="simulator.html">Simulator</a></li>
+<li><a href="D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>Glossary</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#the-rates">The rates</a>
+</li>
+<li><a href="#the-models">The models</a>
+</li>
+<li><a href="#the-covariates">The covariates</a>
+</li>
+<li><a href="#links">Links</a>
+</li>
+<li><a href="#the-tree-and-its-parameters">The tree and its parameters</a>
+</li>
+<li><a href="#the-two-proposals">The two proposals</a>
+</li>
+<li><a href="#importance-sampling-and-its-diagnostics">Importance sampling and its diagnostics</a>
+</li>
+<li><a href="#fitting">Fitting</a>
+</li>
+<li><a href="#model-choice">Model choice</a>
+</li>
+<li><a href="#conditioning">Conditioning</a>
+</li>
+<li><a href="#markings">Markings</a>
+</li>
+<li><a href="#exact-references">Exact references</a>
+</li>
+</ol>
+</nav>
+<p>Definitions follow the methods paper (<code>report/paper2/s2-models.tex</code>, <code>s3-inference.tex</code>) and ledger E (mathematics against code). Time runs forward from the crown (<span class="math inline">\(t = 0\)</span>) to the present (<span class="math inline">\(T\)</span>); <span class="math inline">\(A(t)\)</span> is the set of lineages alive at <span class="math inline">\(t\)</span> on the complete tree.</p>
+<h2 id="the-rates">The rates</h2>
+<p><span class="math display">\[
+\lambda_s(t) = g\big(\beta_0 + \beta_N N(t) + \beta_D D_s(t) + \beta_{ED}\,\mathrm{ED}_s(t) + \beta_K K_s(t)\big),\qquad
+\mu_s(t) = g\big(\gamma_0 + \gamma_N N(t) + \gamma_D D_s(t) + \gamma_{ED}\,\mathrm{ED}_s(t) + \gamma_K K_s(t)\big)
+\]</span></p>
+<p>A model leaves some coefficients free and fixes the rest at zero. Every covariate a model uses enters both rates, so each adds two free parameters to the two intercepts.</p>
+<h2 id="the-models">The models</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>covariates (both rates)</th>
+<th>free parameters</th>
+<th>default proposal (alternative)</th>
+<th>exact reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code></td>
+<td>none</td>
+<td>2</td>
+<td>surrogate (thinning)</td>
+<td><code>DDD::bd_ML</code></td>
+</tr>
+<tr>
+<td><code>dd</code></td>
+<td><span class="math inline">\(N\)</span></td>
+<td>4</td>
+<td>surrogate (thinning)</td>
+<td><code>DDD::dd_ML</code> (linear link, constant <span class="math inline">\(\mu\)</span>)</td>
+</tr>
+<tr>
+<td><code>d</code></td>
+<td><span class="math inline">\(D\)</span></td>
+<td>4</td>
+<td>thinning (surrogate)</td>
+<td>none</td>
+</tr>
+<tr>
+<td><code>nd</code></td>
+<td><span class="math inline">\(N\)</span>, <span class="math inline">\(D\)</span></td>
+<td>6</td>
+<td>thinning (surrogate)</td>
+<td>none</td>
+</tr>
+<tr>
+<td><code>ed</code></td>
+<td>ED</td>
+<td>4</td>
+<td>surrogate (thinning)</td>
+<td>none</td>
+</tr>
+<tr>
+<td><code>edc</code></td>
+<td>centred ED</td>
+<td>4</td>
+<td>surrogate (thinning)</td>
+<td>none</td>
+</tr>
+<tr>
+<td><code>ned</code></td>
+<td><span class="math inline">\(N\)</span>, ED</td>
+<td>6</td>
+<td>surrogate (thinning)</td>
+<td>none</td>
+</tr>
+<tr>
+<td><code>nedc</code></td>
+<td><span class="math inline">\(N\)</span>, centred ED</td>
+<td>6</td>
+<td>surrogate (thinning)</td>
+<td>none</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td><span class="math inline">\(K\)</span></td>
+<td>4</td>
+<td>thinning (the surrogate refuses <span class="math inline">\(K\)</span>)</td>
+<td>none</td>
+</tr>
+<tr>
+<td><code>nk</code></td>
+<td><span class="math inline">\(N\)</span>, <span class="math inline">\(K\)</span></td>
+<td>6</td>
+<td>thinning (the surrogate refuses <span class="math inline">\(K\)</span>)</td>
+<td>none</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>"Lineage-level model": any model with <span class="math inline">\(D\)</span>, ED or <span class="math inline">\(K\)</span>; "clade-level": <code>cr</code> and <code>dd</code>.</p>
+<h2 id="the-covariates">The covariates</h2>
+<p>All are read on the complete tree (hidden lineages included).</p>
+<ul>
+<li><strong><span class="math inline">\(N(t)\)</span></strong>: the number of lineages alive, <span class="math inline">\(|A(t)|\)</span>.</li>
+<li><strong>Pendant age <span class="math inline">\(E_s(t)\)</span></strong>: the time since lineage <span class="math inline">\(s\)</span> was born or last split, <span class="math inline">\(E_s(t) = t - \tau_s(t)\)</span>; the pendant start <span class="math inline">\(\tau_s\)</span> restarts at every split, observed or hidden.</li>
+<li><strong><span class="math inline">\(D\)</span>, centred pendant age (age imbalance)</strong>: the pendant age minus its clade mean, <span class="math inline">\(D_s(t) = E_s(t) - M(t)\)</span> with <span class="math inline">\(M(t) = \frac{1}{N(t)}\sum_{s \in A(t)} E_s(t)\)</span>; the <span class="math inline">\(D_s\)</span> sum to zero.</li>
+<li><strong>ED, fair-proportion evolutionary distinctiveness</strong>: each branch's length shared among the lineages alive below it, <span class="math inline">\(\mathrm{ED}_s(t) = \sum_{b \succeq s} \ell_b(t)/n_b(t)\)</span>; the <span class="math inline">\(\mathrm{ED}_s\)</span> sum to Faith's phylogenetic diversity PD, so their clade mean is <span class="math inline">\(\mathrm{PD}/N\)</span>, a clade-level quantity.</li>
+<li><strong>Centred ED</strong> (<span class="math inline">\(\mathrm{ED}^c\)</span>, <code>edc</code>, <code>nedc</code>): <span class="math inline">\(\mathrm{ED}^c_s = \mathrm{ED}_s - \mathrm{PD}/N\)</span>, which sums to zero.</li>
+<li><strong><span class="math inline">\(K\)</span>, ancestral splits</strong>: the number of speciation events on the path from the crown to <span class="math inline">\(s\)</span>, hidden splits included; at a split both daughters carry one more than the parent.</li>
+<li><strong>NND</strong> (used in <a href="experiments/E39.html">E39</a> and, as <code>evesim</code>'s metric, in <a href="experiments/E11.html">E11</a>): distance to the nearest living relative; not a package covariate.</li>
+</ul>
+<p><strong>Effect scales.</strong> Simulation effects are stated per scale unit of the covariate: under the linear link as a fraction of <span class="math inline">\(\beta_0\)</span> at one clade-mean (ED) or one standard deviation (<span class="math inline">\(D\)</span>) unit (e.g. "-0.15<span class="math inline">\(\lambda\)</span>"); under the exponential link as <span class="math inline">\(\log(1+e)\)</span> per standard deviation (e.g. <span class="math inline">\(\log 0.65\)</span>, so the rate one unit above the mean is 0.65 times the rate at the mean). Real-tree coefficients are reported as the factor <span class="math inline">\(\exp(\hat\beta_X\,\mathrm{sd}_X)\)</span> per standard deviation.</p>
+<h2 id="links">Links</h2>
+<ul>
+<li><strong>Linear</strong>: <span class="math inline">\(g(\eta) = \max(0, \eta)\)</span>; a coefficient is a change in rate per unit of its covariate. An observed event at a rate truncated to zero gives a draw of zero weight.</li>
+<li><strong>Exponential</strong>: <span class="math inline">\(g(\eta) = e^\eta\)</span>; a coefficient is a change in log rate. Used by every ladder and real-data experiment from <a href="experiments/E20.html">E20</a> on.</li>
+<li><strong>Gaussian</strong>: rate <span class="math inline">\(\beta_0\exp\{-(\eta&#39;-1)^2/2\}\)</span>, peaking at <span class="math inline">\(\beta_0\)</span>; not available for ED and <span class="math inline">\(K\)</span>; appears only in <a href="experiments/E10.html">E10</a>.</li>
+</ul>
+<h2 id="the-tree-and-its-parameters">The tree and its parameters</h2>
+<ul>
+<li><strong><span class="math inline">\(\rho\)</span>, sampling fraction</strong>: each lineage alive at <span class="math inline">\(T\)</span> is in the tree independently with known probability <span class="math inline">\(\rho\)</span> (emphasis); <code>DDD</code> instead fixes the number missing (<a href="experiments/E42.html">E42</a>). Below <span class="math inline">\(\rho\)</span> = 1 some covariates of a fit are partly drawn.</li>
+<li><strong>Turnover <span class="math inline">\(\varepsilon\)</span></strong>: <span class="math inline">\(\mu/\lambda\)</span> of the generator (at <span class="math inline">\(N = 0\)</span> for <code>dd</code>-type generators), or of a fit read at the crown.</li>
+<li><strong>Crown age</strong>: the age of the first split, <span class="math inline">\(T\)</span>. Simulation generators use 15 throughout, except <a href="experiments/E17.html">E17</a> and the real trees.</li>
+<li><strong>Complete / reconstructed tree</strong>: the complete tree holds every lineage that arose; the reconstructed tree <span class="math inline">\(y\)</span> the sampled extant lineages and their ancestry. The hidden part <span class="math inline">\(z\)</span> is the difference; the likelihood is <span class="math inline">\(L(\theta) = \int f(y, z \mid \theta)\,dz\)</span>.</li>
+</ul>
+<h2 id="the-two-proposals">The two proposals</h2>
+<ul>
+<li><strong>Thinning</strong> (Richter et al. 2021): draws hidden births forward in time as a Poisson process of intensity <span class="math inline">\(N(t)\lambda_{seg}(1 - \rho e^{-\mu_{seg}(T - t)})\)</span> by thinning, with rates held per segment; parents drawn uniformly over attachments. For ED and <span class="math inline">\(K\)</span> models the default is the <strong>ED-aware</strong> variant, which reads per-lineage rates; the <strong>mean-field</strong> variant is offered.</li>
+<li><strong>Surrogate</strong> (<code>bdi</code>, formerly "BDI"): the exact conditional law of the hidden part under time-dependent rates, a birth-death process with immigration given <span class="math inline">\(p(t)\)</span>, the probability a lineage leaves a sampled descendant. Under <code>cr</code> it is the model's own conditional, so weights are constant and ESS equals the number of draws. Under other models its rates come from a mean field (expected hidden lineages and pendant length), solved as a fixed point by Picard sweeps.</li>
+<li><strong>Relaxation <span class="math inline">\(\omega\)</span></strong>: the sweep update <span class="math inline">\(x \leftarrow (1-\omega)x + \omega F(x)\)</span>. The shipped <code>"auto"</code> starts at 1 and halves on a growing residual, down to 1/64 (<a href="experiments/E10.html">E10</a>).</li>
+</ul>
+<h2 id="importance-sampling-and-its-diagnostics">Importance sampling and its diagnostics</h2>
+<ul>
+<li><strong>ESS, effective sample size</strong>: <span class="math inline">\((\sum_k w_k)^2/\sum_k w_k^2\)</span> over the importance weights <span class="math inline">\(w_k = f/q\)</span>; equals the number of draws when the weights are equal and falls toward 1 as one draw dominates.</li>
+<li><strong>Jensen gap</strong>: <span class="math inline">\(\log \hat L\)</span> is biased below <span class="math inline">\(\log L\)</span>; to second order by <span class="math inline">\(\tfrac12(1/\mathrm{ESS} - 1/K)\)</span>. A draw set with ESS &lt; K/10 is <strong>heavy</strong> and its gap not read as a size. The <strong>swing</strong> <span class="math inline">\(2(g_m - g_{best})\)</span> is how far correcting the gaps could move model <span class="math inline">\(m\)</span> toward the leader; <code>compare_models()</code> flags a ranking as at risk when the swing reaches the AIC difference (<a href="experiments/E8.html">E8</a>).</li>
+</ul>
+<h2 id="fitting">Fitting</h2>
+<ul>
+<li><strong>MCEM</strong>: each iteration draws hidden parts at the current iterate (E-step), weights them and maximises the weighted complete-data log-likelihood over the box (M-step, Subplex).</li>
+<li><strong><code>rel_change</code></strong> (default stopping rule): stop once the largest relative parameter step <span class="math inline">\(\delta_k &lt; 10^{-2}\)</span> on three consecutive iterations (floor <span class="math inline">\(10^{-2}\)</span>, or <span class="math inline">\(10^{-2}/T\)</span> on the linear link).</li>
+<li><strong><code>mc_error</code></strong> (offered): measures the step in units of its Monte Carlo standard error from five batches; a step under 1 SE counts as noise and multiplies the draws by 1.5 up to 8 times the initial number; three noise-sized steps at the cap end the run with the mean of the last three iterates (<a href="experiments/E9.html">E9</a>).</li>
+<li><strong>Caps</strong>: 200 iterations and 3600 s by default; the clock is read between iterations, so an iteration in progress is not interrupted (<a href="experiments/E30.html">E30</a>). Experiments set their own <code>max_iter</code> and clock.</li>
+<li><strong>The box</strong>: the parameter region the M-step searches.
+<ul>
+<li><strong>Study box</strong> (<code>sim/box.R</code>): computed from the observed tree alone, without simulation; with <span class="math inline">\(\lambda_0 = \log n/T\)</span>, intercepts in <span class="math inline">\([\lambda_0/5, 5\lambda_0]\)</span> (speciation) and <span class="math inline">\([0, 3\lambda_0]\)</span> (extinction), slopes within <span class="math inline">\(\pm 3\lambda_0/X\)</span> of zero at the covariate's observed scale <span class="math inline">\(X\)</span> (on the exponential link the logarithms of these, with extinction from <span class="math inline">\(\lambda_0/100\)</span>, and slopes within <span class="math inline">\(\pm 3/X\)</span>); start at the midpoint. Used by the pairwise, specificity, guard, noise and stopping experiments (E8, E11, E12, E16, E18, E19-E22, E24, E30, and E25c on real trees).</li>
+<li><strong><code>auto_bounds()</code></strong>: the package's box, the range of feasible points (forward simulations giving clades of <span class="math inline">\(0.1n\)</span> to <span class="math inline">\(10n\)</span> tips) widened by half, clamped to slope caps <span class="math inline">\(3/\text{scale}\)</span> and an extinction-intercept floor <span class="math inline">\(\log(0.1\hat r) - 3\)</span>, <span class="math inline">\(\hat r = \log(n/2)/T\)</span>. At 200 tips and crown age 15 this allows ±0.40 per unit of ED and extinction rates down to 0.0014-0.0017 (<a href="experiments/E29.html">E29</a>). Used by the ladder and family experiments (E23, E25d, E26-E29, E31-E35, E40).</li>
+</ul></li>
+</ul>
+<h2 id="model-choice">Model choice</h2>
+<ul>
+<li><strong>AIC</strong> <span class="math inline">\(= 2k - 2\hat\ell\)</span>, with <span class="math inline">\(\hat\ell\)</span> from a final E-step at the returned estimate.</li>
+<li><strong>Minimum AIC</strong>: the model with the lowest AIC.</li>
+<li><strong>Parsimony reading</strong>: the model with the fewest parameters among those within 2 AIC of the minimum; a nested model two parameters richer is then chosen only on a likelihood-ratio statistic above 6. <code>compare_models()</code> reports it from emphasis <code>f30a791</code> (<a href="experiments/E23.html">E23</a>, <a href="experiments/E27.html">E27</a>).</li>
+<li><strong>The ladder</strong>: <code>estimate_rates(model = "all")</code> fits <code>cr</code> → <code>dd</code> → {<code>nd</code>, <code>ned</code>, <code>nk</code>}, each rung started from the estimate of the model it nests, new coefficients at zero, each with its own <code>auto_bounds()</code> box.</li>
+<li><strong>The dgLARS path</strong>: <code>covariate_path()</code>, differential-geometric least angle regression (Augugliaro, Mineo &amp; Wit 2013) on the Poisson form of each rate's log-linear point process over the per-lineage segment table of one draw set; covariates enter in order of their Rao score; BIC picks the set. The study draws 3000 hidden parts and enters the 150 of largest weight (package default 40). On a reconstructed tree with no hidden lineages the extinction path is empty.</li>
+</ul>
+<h2 id="conditioning">Conditioning</h2>
+<ul>
+<li><strong>Unconditional likelihood</strong>: what every fit of the study maximised until <a href="experiments/E34.html">E34</a>, and every real-tree fit through <a href="experiments/E40.html">E40</a>, on trees kept only if both crown lineages survive; the conditioned fits are <a href="experiments/E34.html">E34</a>, <a href="experiments/E36.html">E36</a> (b) and <a href="experiments/E45.html">E45</a>.</li>
+<li><strong>Conditioned on survival</strong>: <span class="math inline">\(\ell_S(\theta) = \log L(\theta) - \log P(S \mid \theta)\)</span>, with <span class="math inline">\(S\)</span> the event that both crown lineages leave sampled descendants (<a href="experiments/E34.html">E34</a>).</li>
+<li><strong>Survival emulator</strong>: <span class="math inline">\(\hat P(\theta)\)</span>, an additive logistic GAM (<code>mgcv</code>) trained by <code>auto_bounds()</code> on Latin-hypercube points of the box with one simulated clade each. From <code>d3dee92</code>: 2000 clades, and a clade that passes the lineage cap counts as survived (before: 500, counted as extinct) (<a href="experiments/E36.html">E36</a>).</li>
+</ul>
+<h2 id="markings">Markings</h2>
+<ul>
+<li><strong>Sampler-limited</strong>: median ESS below 10 in a cell (some later designs: below 10 on more than half the fits). Reported, not read against the rule.</li>
+<li><strong>Clock-limited</strong>: the wall clock ended more than 10% of the fits (the convention fixed on 2026-10-07 after <a href="experiments/E31.html">E31</a>); the budget of a fit is its iteration cap, the clock a safety. Rates are floors.</li>
+<li><strong>Unfinished</strong>: fits that ran to their iteration cap without meeting the stopping rule.</li>
+</ul>
+<h2 id="exact-references">Exact references</h2>
+<ul>
+<li><strong><code>bd_ML</code></strong> (<code>DDD</code>): the Nee et al. (1994) likelihood of a reconstructed tree under constant rates; <code>cond = 0</code> unconditioned, <code>cond = 1</code> conditioned on crown survival; missing species as <code>missnumspec</code>.</li>
+<li><strong><code>dd_ML</code></strong> (<code>DDD</code>, Etienne et al. 2012): linear diversity dependence of speciation, <span class="math inline">\(\max\{0, \lambda_0 - (\lambda_0 - \mu_0)N/K\}\)</span>, with constant extinction; it is emphasis's linear-link <code>dd</code> on the subspace <span class="math inline">\(\beta_0 = \lambda_0\)</span>, <span class="math inline">\(\beta_N = -(\lambda_0-\mu_0)/K\)</span>, <span class="math inline">\(\gamma_0 = \mu_0\)</span>, <span class="math inline">\(\gamma_N = 0\)</span>. It returns the sentinel -1 outside its parameter space (<a href="experiments/E38.html">E38</a>). <a href="experiments/E42.html">E42</a> uses its master-equation likelihood with E40's exponential-link rates.</li>
+<li><strong><code>evesim</code></strong> (Qin, Valente &amp; Etienne 2025): an independent simulator, used as a cross-check (<a href="experiments/E14.html">E14</a>, <a href="experiments/E11.html">E11</a>).</li>
+<li><strong>Claims C1-C6</strong>: the paper's registered claims tested by <a href="experiments/E1.html">E1</a> (C1, C2), <a href="experiments/E2.html">E2</a> (C3), <a href="experiments/E3.html">E3</a> (C4), <a href="experiments/E4.html">E4</a> (C5) and <a href="experiments/E5.html">E5</a> (C6).</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<h3>Description</h3>
+
+<p>The proposal's aggregate rate already carries the clade mean of the
+covariate, so a lineage's own rate is that aggregate plus its own
+departure from the mean, <code>lam + beta * (c_s - mean(c))</code> &ndash; not
+<code>lam + beta * c_s</code>, which shifts every lineage instead of spreading
+them and leaves the mean in twice.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.attach_w(cov, lam, beta)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id=".attach_w_:_cov">cov</code></td>
+<td>
+<p>Per-lineage covariate values (here the pendant age).</p>
+</td></tr>
+<tr><td><code id=".attach_w_:_lam">lam</code></td>
+<td>
+<p>The aggregate rate the mean field supplies.</p>
+</td></tr>
+<tr><td><code id=".attach_w_:_beta">beta</code></td>
+<td>
+<p>The covariate's coefficient.</p>
+</td></tr>
+</table>
+
+<h3>Details</h3>
+
+<p>Weights are floored away from zero rather than at it.  A lineage the
+model gives a positive rate must stay reachable, or the proposal no
+longer covers the target and the estimate is biased rather than merely
+noisy.  The floor is a thousandth of the aggregate, which costs a
+bounded amount of weight variance and keeps the support.
+</p>
+
+<h3>Value</h3>
+
+<p>A positive weight per lineage, averaging <code>lam</code>.
+</p>
+

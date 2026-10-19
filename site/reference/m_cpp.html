@@ -1,0 +1,84 @@
+<h3>Description</h3>
+
+<p>function to perform one step of the E-M algorithm
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>m_cpp(
+  e_step,
+  init_pars,
+  plugin,
+  lower_bound,
+  upper_bound,
+  xtol_rel,
+  num_threads,
+  model = as.integer(c(0, 0, 0)),
+  link = 0L,
+  rho = 1,
+  rconditional = NULL
+)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="m_cpp_:_e_step">e_step</code></td>
+<td>
+<p>result of e_step function, as a list</p>
+</td></tr>
+<tr><td><code id="m_cpp_:_init_pars">init_pars</code></td>
+<td>
+<p>vector of initial parameter values</p>
+</td></tr>
+<tr><td><code id="m_cpp_:_plugin">plugin</code></td>
+<td>
+<p>string indicating plugin used, currently available: 'rpd1' and
+'rpd5c'</p>
+</td></tr>
+<tr><td><code id="m_cpp_:_lower_bound">lower_bound</code></td>
+<td>
+<p>vector of lower bound values for optimization, should
+be equal in length to the vector of init_pars</p>
+</td></tr>
+<tr><td><code id="m_cpp_:_upper_bound">upper_bound</code></td>
+<td>
+<p>vector of upper bound values for optimization, should
+be equal in length to the vector of init_pars</p>
+</td></tr>
+<tr><td><code id="m_cpp_:_xtol_rel">xtol_rel</code></td>
+<td>
+<p>relative tolerance for optimization</p>
+</td></tr>
+<tr><td><code id="m_cpp_:_num_threads">num_threads</code></td>
+<td>
+<p>number of threads used.</p>
+</td></tr>
+<tr><td><code id="m_cpp_:_model">model</code></td>
+<td>
+<p>integer vector of length 3: c(use_N, use_P, use_E)</p>
+</td></tr>
+<tr><td><code id="m_cpp_:_link">link</code></td>
+<td>
+<p>link function: 0 = linear (max(0,...)), 1 = exponential</p>
+</td></tr>
+<tr><td><code id="m_cpp_:_rconditional">rconditional</code></td>
+<td>
+<p>R function that evaluates the GAM function.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>list with the following entries:
+</p>
+
+<dl>
+<dt>estimates</dt><dd><p>vector of estimates</p>
+</dd>
+<dt>nlopt</dt><dd><p>nlopt status</p>
+</dd>
+<dt>time</dt><dd><p>used computation time</p>
+</dd>
+</dl>
+

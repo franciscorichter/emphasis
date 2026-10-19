@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E29 — on fits that finish at 200 tips, is the extinction side recovered? · emphasis</title>
+<meta name="description" content="Every lineage-level fit above 100 tips before E29 had ended on its iteration cap or its clock.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E29 — on fits that finish at 200 tips, is the extinction side recovered?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis <code>f30a791</code></td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E27-conditions.R</code> (<code>--cells n200 --gens ned --models cr,dd,ned --max-iter 300 --clock-scale 2</code>); <code>sim/E29-analysis.R</code>; figure <code>sim/figures-study.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E29/trees.csv</code> (20 rows, one per tree), <code>results/E29/limits.csv</code> (40 rows: every E27 cell read the same way), <code>results/E29/ladder.csv</code> (60 rows), <code>results/E29/calibration.csv</code>; macros <code>report/e29-numbers.tex</code>, table <code>report/e29-table.tex</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Every lineage-level fit above 100 tips before E29 had ended on its iteration cap or its clock. <a href="E27.html">E27</a> put the ED coefficient at 0.91 of its value and the extinction rate at about a thirtieth of its value on those unfinished fits. E29 asks what the budget was hiding: given three times the iterations, do the fits finish, and on the ones that do, does the extinction side (the rate and its slopes, generated at 0.05 and zero) come back?</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>setting</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>generator</td>
+<td><code>ned</code> (speciation depends on N and ED; extinction constant), E27's 200-tip cell and calibrated parameters (<code>results/E27/design.rds</code>)</td>
+</tr>
+<tr>
+<td>speciation effect on ED</td>
+<td><span class="math inline">\(\beta_{ED} = -0.112\)</span> per unit (<span class="math inline">\(\log 0.65\)</span> per mean ED of 3.84)</td>
+</tr>
+<tr>
+<td>extinction</td>
+<td>constant at <span class="math inline">\(\mu = 0.05\)</span> (turnover 0.10); extinction slopes zero</td>
+</tr>
+<tr>
+<td>sampling</td>
+<td>complete (<span class="math inline">\(\rho = 1\)</span>)</td>
+</tr>
+<tr>
+<td>crown age</td>
+<td>15</td>
+</tr>
+<tr>
+<td>trees</td>
+<td>20 (E27's seeds; median 200 tips)</td>
+</tr>
+<tr>
+<td>fits</td>
+<td>ladder <code>cr</code> → <code>dd</code> → <code>ned</code>, exponential link, unconditional likelihood</td>
+</tr>
+<tr>
+<td>draws / iterations / clock</td>
+<td>300 draws, <code>max_iter</code> 300, a four-hour clock per fit (E27: 100 iterations, two hours)</td>
+</tr>
+<tr>
+<td>stopping rule</td>
+<td>relative change below <span class="math inline">\(10^{-2}\)</span> over three iterations</td>
+</tr>
+<tr>
+<td>box</td>
+<td><code>auto_bounds()</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The box, at 200 tips and crown age 15: <code>auto_bounds()</code> lets a slope move the log-rate by 3 over its covariate's scale on the tree, so the extinction slope on ED is limited to <span class="math inline">\(\pm 0.40\)</span> per unit and the slope on N to <span class="math inline">\(\pm 0.015\)</span> per lineage; the extinction intercept may fall to <span class="math inline">\(\log(0.1\,\hat r) - 3\)</span> with <span class="math inline">\(\hat r = \log(n/2)/T\)</span>, a floor of 0.0014 to 0.0017 by tree. A parameter counts as on a limit within 1% of it (0.02 on the log-rate for the intercept).</p>
+<p>The trees are not <a href="E27.html">E27</a>'s tree for tree. The amendment of 2026-10-06 records that E27 drew its <code>ned</code> trees with the simulator before <code>f30a791</code>, and the same seeds under <code>f30a791</code> draw other trees (E27's twenty at 200 tips: median 233 tips; E29's: 200). E29 against E27 is two samples of 20 from one generator, not a paired comparison.</p>
+<p>Every fit maximises the unconditional likelihood on trees kept only if both crown lineages survive (the convention recorded before <a href="E34.html">E34</a>).</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<ul>
+<li>The <a href="E19.html">E19</a> rule on <span class="math inline">\(\beta_{ED}\)</span>: median fitted/generating in [0.75, 1.25], right sign on ≥ 80%.</li>
+<li>The share of <code>ned</code> fits that met the stopping rule.</li>
+<li>On finished fits: a median extinction rate within a factor of 2 of 0.05 is reported as recovered, and a median extinction slope within 0.1 per unit of zero as recovered; otherwise "the extinction side is not identified at 200 tips even on finished fits".</li>
+</ul>
+<h2 id="results">Results</h2>
+<p><strong>The budget.</strong> 7 of 20 <code>ned</code> fits met the stopping rule (1 of 20 in <a href="E27.html">E27</a>); 12 ran to 300 iterations and 1 to its clock. Median effective sample 247 of 300; one fit below 10 (tree 5, 5.3 draws, ended on the clock at 248 iterations). A three-model ladder took a median 2.1 hours.</p>
+<p><strong>The speciation side.</strong> <span class="math inline">\(\hat\beta_{ED}\)</span>/generating: median 0.71 over 20 trees (below 0.75); 1.02 on the 7 finished fits; right sign on 19 of 20. Chosen within 2 AIC: <code>ned</code> on 4, <code>dd</code> on 7, <code>cr</code> on 9 (<code>ned</code> at the minimum on 6).</p>
+<p><strong>The extinction side</strong> (<code>ned</code> fit, rate at the origin, i.e. at N = 0 and ED = 0):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>quantity</th>
+<th>all 20</th>
+<th>the 7 finished</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>rate at the origin, median</td>
+<td>0.0019 (26x below 0.05)</td>
+<td>0.0016 (31x below)</td>
+</tr>
+<tr>
+<td>within a factor of 2 of 0.05</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>rate on the floor of the box</td>
+<td>7</td>
+<td>5</td>
+</tr>
+<tr>
+<td>slope on ED, median</td>
+<td>-0.40 (the lower limit)</td>
+<td>-0.40</td>
+</tr>
+<tr>
+<td>slope on ED within 0.1 of zero</td>
+<td>2</td>
+<td>0</td>
+</tr>
+<tr>
+<td>slope on ED on its lower limit</td>
+<td>13</td>
+<td>7</td>
+</tr>
+<tr>
+<td>slope on N on a limit</td>
+<td>11 (6 lower, 5 upper)</td>
+<td>6 (lower)</td>
+</tr>
+<tr>
+<td>all three on the lower limit</td>
+<td>5</td>
+<td>5</td>
+</tr>
+<tr>
+<td>at least one extinction parameter on a limit</td>
+<td>17</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The rate the <code>ned</code> fit implies at the tree's present diversity for a lineage of the clade's mean ED is a median 0.01 of 0.05, within a factor of 2 on 1 tree. The <code>dd</code> fit of the same trees implies a median 0.84 of 0.05 at the present diversity (0.042), within a factor of 2 on 6.</p>
+<p><strong>Every cell of <a href="E27.html">E27</a>, read the same way</strong> (<code>limits.csv</code>): of 300 fits of <code>ned</code> and <code>nk</code> to their own trees (50 to 200 tips, turnover 0.10 to 0.40, <span class="math inline">\(\rho\)</span> 0.5 to 1), 17 met the stopping rule, 188 have at least one extinction parameter on a limit and 125 the rate on its floor; the median rate at the origin is 0.01 to 0.13 of the generating rate by cell. Generated at zero, the <code>ned</code> extinction slope has a median of -0.39, -0.29 and -0.32 per unit at 50, 100 and 200 tips; the <code>nk</code> slope -0.09 to +0.01 per split. Of 460 <code>dd</code> fits, 340 have a limit, 123 the rate on its floor and 212 the slope on N on its upper limit: in <code>dd</code> the intercept and the slope on N trade.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E29-extinction-box.png" alt="The extinction side of E29&#39;s ned fits against the box" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Panel a: the fitted extinction rate at the origin, one point a tree; no fit reaches the band around 0.05 and 7 sit on the floor. Panel b: the two extinction slopes as positions in the box; the fits that met the stopping rule (filled) are the ones in the lower corner, 6 of the 7 with both slopes on their lower limit.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p>Not met: the median rate is 26 times below 0.05 and the median slope on ED is on the lower limit of the box, on all fits and on the finished ones, so by the rule the extinction side is not identified at 200 tips even on finished fits. The stopping rule is met where the box holds the M-step: every finished fit has the ED slope on its limit. The extra budget does recover the speciation side on the fits that finish (1.02). What E29 cannot tell apart is whether the box is too tight for a maximum just outside it or the tree does not bound extinction from below; that is <a href="E32.html">E32</a> (a). The fits are unconditional; <a href="E34.html">E34</a> checks whether conditioning on survival changes the reading. The "rate at the origin" is the intercept at N = 0 and ED = 0, not the rate of a typical lineage; the rule reads it against 0.05 anyway, and the present-diversity rate is reported beside it.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E27.html">E27</a> — the cells and calibrations E29 reuses; its unfinished fits raised the question.</li>
+<li><a href="E32.html">E32</a> — wider box, a real extinction driver, and the exact estimators on these trees.</li>
+<li><a href="E34.html">E34</a> — the same trees under the likelihood conditioned on survival.</li>
+<li><a href="E31.html">E31</a> — refits E29's <code>ned</code> trees inside the full ladder.</li>
+<li><a href="E38.html">E38</a> — where 200 tips at turnover 0.10 sit on the exact information map.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

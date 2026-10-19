@@ -1,0 +1,37 @@
+<h3>Description</h3>
+
+<p>Under the linear and gaussian links the parameters are rates, of dimension
+1/time, and the only rate scale in the problem is the inverse crown age:
+the floor is <code>rel_floor / crown_age</code>, which rescales with the rates
+themselves.  Under the exponential link the parameters are log-rates, where
+an absolute step already is a relative change of the rate, so the floor is
+<code>rel_floor</code>.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.rel_floor(brts, link = 0L, rel_floor = 0.01)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id=".rel_floor_:_brts">brts</code></td>
+<td>
+<p>Branching times (crown age first, or any order).</p>
+</td></tr>
+<tr><td><code id=".rel_floor_:_link">link</code></td>
+<td>
+<p>Integer link code: 0 linear, 1 exponential, 2 gaussian.</p>
+</td></tr>
+<tr><td><code id=".rel_floor_:_rel_floor">rel_floor</code></td>
+<td>
+<p>Dimensionless floor. Default <code>1e-2</code>.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>A positive scalar.
+</p>
+

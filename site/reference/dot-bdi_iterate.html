@@ -1,0 +1,40 @@
+<h3>Description</h3>
+
+<p>Mean-field state: N̂(t) = k(t) + m̂(t), P̂(t) = P_obs(t) + P̂_miss(t),
+Ê(t) = P̂(t) / N̂(t).  All three enter the rate function; inactive
+covariates (pars8 slopes pinned to 0) make the extension transparent
+for CR/DD and activate PD/EP/mixed models.
+The sweep budget is 60 because the iteration slows as <code>rho</code> falls: the
+unsampled extant lineages raise <code>N̂</code>, which feeds back into the rates
+that produced them.  On the 20-tip DD tree at <code>K = 20</code> the fixed point
+is reached in 6 sweeps at <code>rho = 1</code>, 7 at 0.9, 14 at 0.5 and 27 at 0.2.
+The old budget of 20 therefore returned a non-converged mean field at small
+<code>rho</code> &ndash; <code>delta = 2.9e-3</code> against <code>tol = 1e-4</code> in that last
+case &ndash; and the loop still breaks on <code>tol</code>, so raising the cap cannot
+change a run that already converged.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.bdi_iterate(
+  pars8,
+  model_bin,
+  link,
+  bt,
+  tp,
+  max_iter = NULL,
+  tol = 1e-04,
+  n_grid = 500,
+  use_gaussian_closure = TRUE,
+  rho = 1,
+  pd_mode = c("pendant", "faith"),
+  damping = "auto"
+)
+</code></pre>
+
+<h3>Value</h3>
+
+<p>List with p_fun, Nhat_fun, Phat_fun, Ehat_fun, and the fixed-point
+diagnostics converged / delta / iterations.
+</p>
+

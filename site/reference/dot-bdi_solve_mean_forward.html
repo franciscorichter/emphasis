@@ -1,0 +1,35 @@
+<h3>Description</h3>
+
+<p>State: s = (m, P_miss) with
+dm/dt       = (lam_bdi - mu_bdi) * m + nu      (self-consistent BDI mean)
+dP_miss/dt  = m                                (mean-field: each alive
+missing lineage extends
+its pendant edge at rate 1)
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.bdi_solve_mean_forward(
+  pars8,
+  model_bin,
+  link,
+  bt,
+  tp,
+  p_fun,
+  Nhat_fun,
+  Phat_fun,
+  Ehat_fun,
+  t_grid
+)
+</code></pre>
+
+<h3>Details</h3>
+
+<p>Rates lam, mu are evaluated at (N̂, P̂, Ê) to support DD/PD/EP + mixed.
+</p>
+
+<h3>Value</h3>
+
+<p>list(m_vals, pm_vals) on t_grid.
+</p>
+

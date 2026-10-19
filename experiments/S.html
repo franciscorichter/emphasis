@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S — How many tips does the estimator need, against the exact MLE of the same tree? · emphasis</title>
+<meta name="description" content="E1 checks MCEM against the exact MLE only up to 100 tips.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>S — How many tips does the estimator need, against the exact MLE of the same tree?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete for <code>cr</code> and <code>dd</code>; the <code>ned</code> arm stopped (3 usable fits of 23, no merged table)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td><code>64edf63</code> and <code>a87de1c</code> (the two builds in the 2026-10-02 build audit, which found them identical to a clean build except for the <code>ned</code> thinning random stream; S's <code>cr</code> and <code>dd</code> arms do not use that proposal)</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/S-samplesize.R</code>, <code>sim/S-analyse.R</code>; figures <code>sim/figures-study.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/S/cr/fits.csv</code> (360 rows), <code>results/S/dd/fits.csv</code> (125 rows), summary <code>manuscript/tables/S-summary.csv</code>; <code>results/S/ned/jobs/</code> (23 files)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p><a href="E1.html">E1</a> checks MCEM against the exact MLE only up to 100 tips. S holds the generating parameters fixed and changes only the amount of data, 25 to 800 tips, so that the curve is a statement about sample size: how close MCEM gets to the exact estimate of the same tree, how close both get to the generating value, and at what size each reaches a usable accuracy. Its <code>ned</code> arm, which failed at 200 tips and above, is what led to the feasibility map <a href="E7.html">E7</a>; its <code>cr</code> fits ending on the clock at 800 tips led to <a href="E9.html">E9</a>.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th><code>cr</code></th>
+<th><code>dd</code></th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>tips</td>
+<td>25, 50, 100, 200, 400, 800</td>
+<td>25, 50, 100, 200, 400</td>
+<td>target size</td>
+</tr>
+<tr>
+<td>trees per size</td>
+<td>30</td>
+<td>25</td>
+<td></td>
+</tr>
+<tr>
+<td>tree draw</td>
+<td>exactly n tips, <code>TreeSim::sim.bd.taxa</code></td>
+<td>crown age calibrated per size (6.53, 6.53, 7.97, 8.38, 9.99) so the median lands on the target (realised medians 31, 51, 109, 191, 414)</td>
+<td></td>
+</tr>
+<tr>
+<td>rates</td>
+<td><span class="math inline">\(\lambda\)</span> = 0.5, <span class="math inline">\(\mu\)</span> = 0.2 (turnover 0.4)</td>
+<td><span class="math inline">\(\lambda\)</span>0 = 0.8, <span class="math inline">\(\mu\)</span>0 = 0.2, <span class="math inline">\(\gamma\)</span>N = 0, K = 2n so <span class="math inline">\(\beta\)</span>N = -0.3/n</td>
+<td>K tied to n so every tree sits at the same half of its capacity</td>
+</tr>
+<tr>
+<td>proposal</td>
+<td>surrogate</td>
+<td>surrogate</td>
+<td>the package's recommended setting</td>
+</tr>
+<tr>
+<td>draws</td>
+<td>grown by the <code>mc_error</code> rule from 200 to a cap of 1600 ("adaptive"); a second arm at 200 fixed</td>
+<td>grown, 200 to 1600</td>
+<td></td>
+</tr>
+<tr>
+<td>stopping rule</td>
+<td><code>mc_error</code></td>
+<td><code>mc_error</code></td>
+<td></td>
+</tr>
+<tr>
+<td>exact reference</td>
+<td><code>DDD::bd_ML</code> per tree</td>
+<td><code>DDD::dd_ML</code> per tree (three parameters, <span class="math inline">\(\mu\)</span> constant); one 50-tip reference returned the failure code and is dropped</td>
+<td></td>
+</tr>
+<tr>
+<td>link, sampling</td>
+<td>linear, <span class="math inline">\(\rho\)</span> = 1</td>
+<td>linear, <span class="math inline">\(\rho\)</span> = 1</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The two <code>dd</code> estimators do not maximise the same function (<code>dd_ML</code> holds <span class="math inline">\(\mu\)</span> constant, emphasis fits <span class="math inline">\(\gamma\)</span>N as well), so each is compared with the generating value rather than with the other.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>S has <strong>no design entry</strong> in <code>00-design.md</code> and no rule fixed before its data; its design is the driver header. The supplement and report read it against a working box: <strong>within 10% bias and 25% RMSE of the generating value</strong>, with bias and RMSE in % of the generating speciation rate. That box is used below, as a reading and not as a registered rule.</p>
+<h2 id="results">Results</h2>
+<p><strong><code>cr</code>, MCEM against the exact estimate.</strong> The central 80% range of (MCEM - exact) is 0.08-0.10 of the range of (exact - truth) for speciation at every size, and 0.26, 0.10, 0.10, 0.12, 0.10, 0.10 for extinction at 25-800 tips. MCEM sits slightly above the exact estimate: median +0.6, +0.9, +3.5, +3.2, +3.7, +3.2% of the speciation rate on speciation, +1.2, +1.5, +5.8, +5.4, +6.0, +5.1% on extinction.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/S-mle.png" alt="MCEM minus the exact MLE against the exact MLE minus the truth, constant rate, 25 to 800 tips" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Grey bars: the central 80% of the exact MLE's own error at each size; dark bars: the central 80% of MCEM minus the exact MLE on the same trees. The dark bar is a tenth or less of the grey one from 50 tips on, and offset to the right by 1-6% of the speciation rate.</figcaption>
+</figure>
+<p><strong><code>cr</code>, against the generating value</strong> (draws grown; % of the generating speciation rate):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">tips</th>
+<th>speciation bias / RMSE MCEM</th>
+<th>exact</th>
+<th>extinction bias / RMSE MCEM</th>
+<th>exact</th>
+<th style="text-align: right;">fits on the clock</th>
+<th style="text-align: right;">median s per fit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">25</td>
+<td>-10.4 / 25.0</td>
+<td>-12.3 / 25.4</td>
+<td>-27.8 / 33.1</td>
+<td>-31.2 / 35.0</td>
+<td style="text-align: right;">0 of 30</td>
+<td style="text-align: right;">225</td>
+</tr>
+<tr>
+<td style="text-align: right;">50</td>
+<td>-10.4 / 21.9</td>
+<td>-11.5 / 23.4</td>
+<td>-18.7 / 33.1</td>
+<td>-20.8 / 35.4</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">500</td>
+</tr>
+<tr>
+<td style="text-align: right;">100</td>
+<td>-1.8 / 13.7</td>
+<td>-5.0 / 15.1</td>
+<td>-3.4 / 19.9</td>
+<td>-8.8 / 22.5</td>
+<td style="text-align: right;"><strong>22</strong></td>
+<td style="text-align: right;">1875</td>
+</tr>
+<tr>
+<td style="text-align: right;">200</td>
+<td>-1.5 / 9.8</td>
+<td>-4.9 / 11.0</td>
+<td>-5.8 / 16.2</td>
+<td>-11.6 / 19.9</td>
+<td style="text-align: right;"><strong>24</strong></td>
+<td style="text-align: right;">3739</td>
+</tr>
+<tr>
+<td style="text-align: right;">400</td>
+<td>+2.9 / 11.3</td>
+<td>-0.6 / 11.2</td>
+<td>+1.6 / 12.6</td>
+<td>-4.1 / 13.9</td>
+<td style="text-align: right;"><strong>29</strong></td>
+<td style="text-align: right;">5672</td>
+</tr>
+<tr>
+<td style="text-align: right;">800</td>
+<td>+1.7 / 7.0</td>
+<td>-1.7 / 7.2</td>
+<td>+2.3 / 10.9</td>
+<td>-3.1 / 11.7</td>
+<td style="text-align: right;"><strong>30</strong></td>
+<td style="text-align: right;">5681</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The cells from 100 tips on are <strong>clock-limited</strong> (the clock ended 73-100% of fits). At 400 and 800 tips the draws reached 1013 and 675, not the cap of 1600. The exact estimate returns extinction at zero on 63% and 57% of trees at 25 and 50 tips, MCEM on 13% and 3%. With 200 draws held fixed the estimates drift upward from 100 tips: speciation bias +3.3, +4.3, +9.3, +8.4% and extinction +4.4, +3.3, +11.6, +12.6% at 100-800 tips, at 255-2371 s a fit.</p>
+<p><strong><code>dd</code></strong> (draws grown; median of fitted over generating, MCEM / exact):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">tips</th>
+<th>intercept</th>
+<th>slope</th>
+<th>extinction</th>
+<th>intercept bias / RMSE, MCEM vs exact</th>
+<th>stop: converged / max_iter / clock</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">25</td>
+<td>1.11 / 0.63</td>
+<td>1.37 / 0.27</td>
+<td>0.00 / 0.00</td>
+<td>+27.7 / 48.8 vs -33.1 / 36.5</td>
+<td>11 / 14 / 0</td>
+</tr>
+<tr>
+<td style="text-align: right;">50</td>
+<td>1.11 / 0.72</td>
+<td>1.11 / 0.45</td>
+<td>0.00 / 0.00</td>
+<td>+15.8 / 25.5 vs -28.5 / 57.5</td>
+<td>7 / 17 / 0</td>
+</tr>
+<tr>
+<td style="text-align: right;">100</td>
+<td>0.97 / 0.74</td>
+<td>0.99 / 0.68</td>
+<td>0.00 / 0.00</td>
+<td>-0.5 / 11.7 vs -11.9 / 41.7</td>
+<td>3 / 22 / 0</td>
+</tr>
+<tr>
+<td style="text-align: right;">200</td>
+<td>1.13 / 0.79</td>
+<td>1.22 / 0.53</td>
+<td>0.32 / 0.00</td>
+<td>+13.9 / 17.2 vs -6.2 / 34.2</td>
+<td>0 / 23 / 2</td>
+</tr>
+<tr>
+<td style="text-align: right;">400</td>
+<td>1.23 / 0.74</td>
+<td>1.58 / 0.44</td>
+<td>1.67 / 0.03</td>
+<td>+22.4 / 23.7 vs -17.5 / 26.9</td>
+<td>2 / 18 / <strong>5</strong> (clock-limited)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>MCEM returns extinction at exactly zero on 92, 76, 48, 12 and 0% of trees at 25-400 tips; the exact <code>dd_ML</code> on nearly every tree at every size. Extinction bias / RMSE is -24.9 / 24.9 (MCEM) against -24.0 / 24.2 (exact) at 25 tips, -4.9 / 20.7 against -12.8 / 23.2 at 200, +15.5 / 19.7 against -16.1 / 20.6 at 400. Most <code>dd</code> fits ended on the 100-iteration cap, so the 200- and 400-tip numbers are those of unfinished fits.</p>
+<figure id="figure-2">
+<img src="../assets/wiki/S-dd.png" alt="dd: relative error of the speciation intercept and of the diversity dependence, MCEM and exact MLE, by tree size" loading="lazy">
+<figcaption><strong>Figure 2.</strong> Each large dot is the median at one tree size. MCEM (dark, four parameters) errs high on both the intercept and the diversity dependence, the exact three-parameter MLE (grey) errs low; MCEM's median passes through the generating value at 100 tips.</figcaption>
+</figure>
+<p><strong><code>ned</code> arm.</strong> 23 job files at 100, 200 and 400 tips: 20 failed in their first E-step (<code>e_step_failure</code>, 0 iterations) and 3 ended on their clock after 31, 39 and 1 iterations, with <span class="math inline">\(\hat{\beta}\)</span>_ED at 0.80, 0.74 and 0.73 of the generating value on effective samples of 10.6, 10.5 and 19.2. Not a recovery measurement.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Read against the 10% / 25% box (not a registered rule): MCEM arrives at 100 tips for both <code>cr</code> rates and for the <code>dd</code> intercept and slope, and at 200 tips for the <code>dd</code> extinction rate; the exact <code>dd_ML</code> does not reach the box on the intercept at any size tested. MCEM is not worse than the exact estimate on any cell and has the smaller bias on most. Under <code>cr</code> MCEM lands on the exact estimate to a tenth of that estimate's own spread, offset upward by 1-6% of the speciation rate. What S does not show: the <code>cr</code> cells from 100 tips and the <code>dd</code> cell at 400 are clock-limited and the <code>dd</code> fits from 50 tips mostly ended on the iteration cap, so those are readings of unfinished fits; the <code>dd</code> intercept leaves the box again at 200 and 400 tips (+13.9 and +22.4% bias) on such fits. The fixed-draw arm shows the draw count must grow with the tree. S covers turnover 0.4 (<code>cr</code>) and 0.25 (<code>dd</code>) at complete sampling only.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E1.html">E1</a> — the same comparison at 20-100 tips over turnover 0-0.9.</li>
+<li><a href="E7.html">E7</a> — the feasibility map, built because S's <code>ned</code> arm failed from 200 tips.</li>
+<li><a href="E9.html">E9</a> — the stopping rule, examined because S's <code>cr</code> fits ended on the clock at 800 tips.</li>
+<li><a href="E4.html">E4</a>, <a href="E15.html">E15</a> — cost; S's per-fit times are on the cost figure.</li>
+<li><a href="E38.html">E38</a> — the exact profile likelihood of extinction by turnover and size.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

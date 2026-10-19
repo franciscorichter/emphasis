@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E27 — How does the one-call ladder behave at other sizes, turnovers and sampling fractions? · emphasis</title>
+<meta name="description" content="Seven of the ten models had their recovery measured at one point only: about 100 tips, turnover 0.10, complete sampling.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E27 — How does the one-call ladder behave at other sizes, turnovers and sampling fractions?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete: 460 ladders, 23 of 24 generator x cell pairs (<code>ned</code> at turnover 0.40 not calibrated). The <code>ned</code> rung is clock-limited in every cell and the <code>nk</code> rung in six of eight; <code>r75</code> and <code>r50</code> are sampler-limited for both lineage-level generators</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis <code>3e596dd</code> (the build of E26)</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E27-conditions.R</code>, <code>sim/E27-analysis.R</code>; figures <code>sim/figures-study.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E27/cells.csv</code> (per cell and generator), <code>ladder.csv</code> (2300 rows), <code>trees.csv</code>, <code>calibration.csv</code>, <code>calibration-table.csv</code>; <code>results/E27-t40/</code> (the amendment); tables <code>report/e27-table.tex</code>, <code>e27-numbers.tex</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Seven of the ten models had their recovery measured at one point only: about 100 tips, turnover 0.10, complete sampling. <a href="E23.html">E23</a> measured the ladder there and at 200 tips, on 10 and 6 trees a generator. The 47 families of <a href="E26.html">E26</a> run from 50 to 194 tips (median 88) at sampling fractions 0.65 to 1 (median 0.92), so most were fitted under conditions no simulation had visited. E27 moves one condition at a time away from the reference point and runs the ladder at each, to calibrate E26 as it was run.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>cell</th>
+<th>target tips</th>
+<th>turnover at <span class="math inline">\(N = 0\)</span></th>
+<th><span class="math inline">\(\rho\)</span></th>
+<th>clock per fit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ref</code></td>
+<td>100</td>
+<td>0.10</td>
+<td>1</td>
+<td>30 min</td>
+</tr>
+<tr>
+<td><code>n50</code></td>
+<td>50</td>
+<td>0.10</td>
+<td>1</td>
+<td>30 min</td>
+</tr>
+<tr>
+<td><code>n200</code></td>
+<td>200</td>
+<td>0.10</td>
+<td>1</td>
+<td>120 min</td>
+</tr>
+<tr>
+<td><code>t25</code></td>
+<td>100</td>
+<td>0.25</td>
+<td>1</td>
+<td>30 min</td>
+</tr>
+<tr>
+<td><code>t40</code></td>
+<td>100</td>
+<td>0.40</td>
+<td>1</td>
+<td>30 min</td>
+</tr>
+<tr>
+<td><code>r75</code></td>
+<td>100</td>
+<td>0.10</td>
+<td>0.75</td>
+<td>30 min</td>
+</tr>
+<tr>
+<td><code>r50</code></td>
+<td>100</td>
+<td>0.10</td>
+<td>0.50</td>
+<td>30 min</td>
+</tr>
+<tr>
+<td><code>fam</code></td>
+<td>88</td>
+<td>0.10</td>
+<td>0.92</td>
+<td>30 min</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>generators</td>
+<td><code>dd</code> (null), <code>ned</code> at <span class="math inline">\(\log 0.65\)</span> per scale unit of ED, <code>nk</code> at <span class="math inline">\(-\log 0.65\)</span> per scale unit of <span class="math inline">\(K\)</span></td>
+<td>exponential link, crown age 15</td>
+</tr>
+<tr>
+<td>generating coefficients</td>
+<td><span class="math inline">\(\beta_{ED}\)</span> -0.084 to -0.128 per unit by cell; <span class="math inline">\(\beta_K\)</span> +0.130 to +0.181 per split</td>
+<td><code>calibration-table.csv</code></td>
+</tr>
+<tr>
+<td>calibration</td>
+<td>capacity per cell and generator so that the median observed tree has the target size; 40 surviving clades per capacity, 80 for the chosen one</td>
+<td>scale units read per cell from complete <code>dd</code> clades</td>
+</tr>
+<tr>
+<td>sampling</td>
+<td>clade simulated complete, each extant species kept with probability <span class="math inline">\(\rho\)</span></td>
+<td>clade larger by <span class="math inline">\(1/\rho\)</span></td>
+</tr>
+<tr>
+<td>acceptance</td>
+<td>observed size within 0.6-1.6 of the target</td>
+<td></td>
+</tr>
+<tr>
+<td>trees</td>
+<td>20 a generator and cell</td>
+<td>480 designed</td>
+</tr>
+<tr>
+<td>fit</td>
+<td><code>estimate_rates(phy, model = "all", link = "exponential")</code> at the cell's <span class="math inline">\(\rho\)</span>: <code>cr</code> → <code>dd</code> → {<code>nd</code>, <code>ned</code>, <code>nk</code>}, nested starts, <code>auto_bounds()</code> boxes</td>
+<td></td>
+</tr>
+<tr>
+<td>draws / <code>max_iter</code></td>
+<td>300 / 100</td>
+<td>E23's and E26's budget, held fixed</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The 200-tip cell has the longer clock because <a href="E23.html">E23</a>'s 60 minutes ended 21 of 30 <code>nd</code> and <code>ned</code> rungs there before their cap.</p>
+<p><strong>Amendment 2026-10-05 (<code>t40</code>/<code>nk</code>).</strong> The <code>nk</code> generator at turnover 0.40 sat at a median of 128 tips at the smallest capacity the search allowed (0.3 of the target clade), a limit of the search and not of the model. The search was rerun for that pair with its lower end at 0.05 of the target clade (<code>--k-lo 0.05</code>, <code>results/E27-t40/</code>): capacity 29.4, median 113 tips, <span class="math inline">\(\beta_K\)</span> 0.130 per split (the first search gave capacity 30.1, median 127.5 tips, <span class="math inline">\(\beta_K\)</span> 0.136). Its 20 trees were fitted under E27's budget and enter the table as the <code>t40</code>/<code>nk</code> row; the rows of <code>results/E27/ladder.csv</code> for that pair are the amended run's. <code>ned</code> at turnover 0.40 reaches a median of 28 tips at the largest capacity tried (2490) and is not fitted (rule d).</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>Per cell: (a) on <code>dd</code> trees the winner is <code>dd</code> on <span class="math inline">\(\ge 80\%\)</span> and a lineage-level model on <span class="math inline">\(\le 10\%\)</span>; (b) on <code>ned</code> and <code>nk</code> trees the winner is the generator on <span class="math inline">\(\ge 80\%\)</span>, and the fitted coefficient of the generator's covariate has median <span class="math inline">\(\hat\beta/\beta \in [0.75, 1.25]\)</span> and the right sign on <span class="math inline">\(\ge 80\%\)</span>; (c) a cell and generator whose generator fit has a median effective sample below 10 is reported, marked sampler-limited and left out of the selection statement; (d) a pair the calibration cannot bring to the target size is reported and not fitted. A condition changes a rate when the cell differs from <code>ref</code> by at least 6 trees of 20. No family is added to or removed from <a href="E26.html">E26</a>'s counts on E27's account; each count is restated beside the false-positive rate of the nearest cell.</p>
+<h2 id="results">Results</h2>
+<p>Selection, counts of 20, read as the fewest parameters within 2 AIC (parsimony) / at the minimum AIC:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>cell</th>
+<th><code>dd</code> trees: <code>dd</code> chosen</th>
+<th>lineage-level on <code>dd</code> trees</th>
+<th>rule (a)</th>
+<th><code>ned</code> trees: <code>ned</code> chosen</th>
+<th><code>ned</code> trees go to (pars.) cr/dd/nd/ned/nk</th>
+<th><code>nk</code> trees: <code>nk</code> chosen</th>
+<th><code>nk</code> trees go to (pars.) cr/dd/nd/ned/nk</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ref</code></td>
+<td>16 / 13</td>
+<td>2 / 7</td>
+<td>met</td>
+<td>0 / 1</td>
+<td>4/16/0/0/0</td>
+<td>14 / 14</td>
+<td>0/4/0/2/14</td>
+</tr>
+<tr>
+<td><code>fam</code></td>
+<td>17 / 16</td>
+<td>1 / 2</td>
+<td>met</td>
+<td>1 / 2</td>
+<td>6/13/0/1/0</td>
+<td>13 / 15</td>
+<td>1/3/1/2/13</td>
+</tr>
+<tr>
+<td><code>r75</code></td>
+<td>15 / 15</td>
+<td>1 / 2</td>
+<td>not met (15)</td>
+<td>0 / 0 (s-l)</td>
+<td>4/16/0/0/0</td>
+<td>19 / 19 (s-l)</td>
+<td>0/1/0/0/19</td>
+</tr>
+<tr>
+<td><code>r50</code></td>
+<td>16 / 19</td>
+<td>0 / 0</td>
+<td>met</td>
+<td>0 / 0 (s-l)</td>
+<td>10/10/0/0/0</td>
+<td>18 / 18 (s-l)</td>
+<td>0/2/0/0/18</td>
+</tr>
+<tr>
+<td><code>t25</code></td>
+<td>8 / 11</td>
+<td>1 / 2</td>
+<td>not met (<code>cr</code> on 11)</td>
+<td>0 / 0</td>
+<td>16/4/0/0/0</td>
+<td>15 / 15</td>
+<td>0/4/0/1/15</td>
+</tr>
+<tr>
+<td><code>t40</code></td>
+<td>6 / 9</td>
+<td>2 / 2</td>
+<td>not met (<code>cr</code> on 12)</td>
+<td>not calibrated</td>
+<td>—</td>
+<td>15 / 15</td>
+<td>1/2/0/2/15</td>
+</tr>
+<tr>
+<td><code>n50</code></td>
+<td>14 / 11</td>
+<td>1 / 6</td>
+<td>not met (14)</td>
+<td>0 / 0</td>
+<td>4/16/0/0/0</td>
+<td>11 / 13</td>
+<td>0/8/0/1/11</td>
+</tr>
+<tr>
+<td><code>n200</code></td>
+<td>16 / 16</td>
+<td>2 / 3</td>
+<td>met</td>
+<td>2 / 3</td>
+<td>6/9/1/2/2</td>
+<td>13 / 13</td>
+<td>0/1/0/6/13</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Recovery of the generator's coefficient (ratio median and quartiles, right sign of 20, median ESS of 300, fits below 10, stops of the generator rung conv / cap / clock):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>cell</th>
+<th><code>ned</code>: ratio</th>
+<th>sign</th>
+<th>ESS</th>
+<th>&lt; 10</th>
+<th>stops</th>
+<th><code>nk</code>: ratio</th>
+<th>sign</th>
+<th>ESS</th>
+<th>&lt; 10</th>
+<th>stops</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ref</code></td>
+<td>0.97 (0.72-1.23)</td>
+<td>18</td>
+<td>221</td>
+<td>1</td>
+<td>1 / 0 / 19</td>
+<td>0.68 (0.55-0.78)</td>
+<td>20</td>
+<td>19.9</td>
+<td>6</td>
+<td>2 / 7 / 11</td>
+</tr>
+<tr>
+<td><code>fam</code></td>
+<td>0.72 (0.04-1.25)</td>
+<td>16</td>
+<td>35</td>
+<td>6</td>
+<td>0 / 0 / 20</td>
+<td>0.76 (0.67-0.96)</td>
+<td>19</td>
+<td>13.7</td>
+<td>9</td>
+<td>1 / 6 / 13</td>
+</tr>
+<tr>
+<td><code>r75</code></td>
+<td>1.56 (0.99-1.77)</td>
+<td>17</td>
+<td>2.9</td>
+<td>18</td>
+<td>0 / 0 / 20</td>
+<td>0.88 (0.74-1.01)</td>
+<td>20</td>
+<td>5.9</td>
+<td>15</td>
+<td>0 / 4 / 16</td>
+</tr>
+<tr>
+<td><code>r50</code></td>
+<td>1.00 (0.16-1.83)</td>
+<td>16</td>
+<td>3.4</td>
+<td>13</td>
+<td>0 / 0 / 20</td>
+<td>1.08 (0.88-1.22)</td>
+<td>20</td>
+<td>2.2</td>
+<td>20</td>
+<td>0 / 0 / 20</td>
+</tr>
+<tr>
+<td><code>t25</code></td>
+<td>0.98 (0.39-1.22)</td>
+<td>18</td>
+<td>50</td>
+<td>4</td>
+<td>1 / 1 / 18</td>
+<td>1.04 (0.88-1.14)</td>
+<td>19</td>
+<td>24.4</td>
+<td>4</td>
+<td>1 / 9 / 10</td>
+</tr>
+<tr>
+<td><code>t40</code></td>
+<td>—</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>1.30 (1.18-1.42)</td>
+<td>20</td>
+<td>30.8</td>
+<td>3</td>
+<td>1 / 19 / 0</td>
+</tr>
+<tr>
+<td><code>n50</code></td>
+<td>0.39 (-0.52-1.11)</td>
+<td>12</td>
+<td>167</td>
+<td>0</td>
+<td>6 / 5 / 9</td>
+<td>0.74 (0.54-1.02)</td>
+<td>18</td>
+<td>39.5</td>
+<td>6</td>
+<td>3 / 15 / 2</td>
+</tr>
+<tr>
+<td><code>n200</code></td>
+<td>0.91 (0.69-1.25)</td>
+<td>20</td>
+<td>106</td>
+<td>4</td>
+<td>1 / 1 / 18</td>
+<td>0.65 (0.58-0.71)</td>
+<td>20</td>
+<td>19.2</td>
+<td>5</td>
+<td>0 / 11 / 9</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The <code>ned</code> rung reached a median of 3 (<code>r50</code>) to 63 (<code>n50</code>) of its 100 iterations. By the clock rule added after <a href="E31.html">E31</a> (clock ended &gt; 10% of the generator's fits) the <code>ned</code> rung is <strong>clock-limited</strong> in all seven calibrated cells and the <code>nk</code> rung in all but <code>t40</code> and <code>n50</code>. <code>r75</code> and <code>r50</code> are <strong>sampler-limited</strong> for both lineage-level generators (<code>cells.csv</code> nonetheless marks <code>rule_b</code> TRUE for <code>nk</code> there; by rule (c) those cells are left out). On null trees the <code>dd</code> fit returns <span class="math inline">\(\beta_N\)</span> at 0.83-1.05 of its value in every cell but <code>t25</code> (0.45) and <code>t40</code> (-0.08, right sign on 9 of 20).</p>
+<p>A ladder took a median 75-88 minutes at 50 tips, 115-156 at 100 and 414-440 at 200 tips with 24 workers sharing 16 cores; the <code>t40</code>/<code>nk</code> ladders, on a second host, took a median 55.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E27-selection.png" alt="E27, selection by condition" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Trees of 20 on which the named model was chosen, by cell. Within 2 AIC (filled) a lineage-level model is chosen on at most 2 of 20 null trees in every cell; <code>nk</code> reaches 11-15 of its own trees where its fits keep their draws and <code>ned</code> at most 2, against the 16 the rule asks.</figcaption>
+</figure>
+<figure id="figure-2">
+<img src="../assets/wiki/E27-recovery.png" alt="E27, recovery by condition" loading="lazy">
+<figcaption><strong>Figure 2.</strong> Fitted over generating coefficient, one point per tree, with the median bar and the 0.75-1.25 band; red points rest on fewer than 10 effective draws. <code>ned</code> comes back at 0.91-0.98 at 100-200 tips and complete sampling, 0.39 at 50 tips; <code>nk</code> at 0.65-0.76 at 50-200 tips and 1.30 at turnover 0.40.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p><strong>Rule (a)</strong> is met at <code>ref</code>, <code>fam</code>, <code>r50</code> and <code>n200</code> and not at <code>r75</code> (15 of 20), <code>n50</code> (14), <code>t25</code> (8) and <code>t40</code> (6); the lineage-level ceiling holds in every cell under the parsimonious reading (0-2 of 20) and fails at <code>ref</code> and <code>n50</code> at the minimum (7 and 6). <strong>Rule (b)</strong>: the selection half is met nowhere (<code>ned</code> at most 2 of 20, <code>nk</code> 11-15 in the six cells read). The recovery half is met for <code>ned</code> at <code>ref</code>, <code>t25</code> and <code>n200</code> and for <code>nk</code> at <code>fam</code> and <code>t25</code>; not for <code>nk</code> at <code>ref</code>, <code>n50</code>, <code>n200</code> (0.65-0.74) or <code>t40</code> (1.30), nor for <code>ned</code> at <code>fam</code> (0.72) and <code>n50</code> (0.39). <strong>Rule (d)</strong>: <code>ned</code> at turnover 0.40 not fitted.</p>
+<p>Across cells, by the registered threshold of 6 trees of 20 from <code>ref</code> (parsimony counts): turnover 0.25 and 0.40 move the null trees from <code>dd</code> to <code>cr</code> (<code>dd</code> 16 → 8 and 6); turnover 0.25 and 50% sampling move the <code>ned</code> trees from <code>dd</code> to <code>cr</code> (<code>cr</code> 4 → 16 and 10). No condition changes the <code>nk</code> count by 6 or more (11-19 against 14). <code>ned</code> is estimable and not selectable under every condition; <code>nk</code> is chosen on most of its trees and below the 0.80 line. Every rate rests on fits mostly stopped by the clock at 100 iterations, so selection counts are floors; <a href="E29.html">E29</a> and <a href="E31.html">E31</a> refit the 200-tip cell with 300 iterations.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E23.html">E23</a> — the ladder at 100 and 200 tips, 10 and 6 trees a generator.</li>
+<li><a href="E26.html">E26</a> — the 47 families E27 calibrates; <a href="E28.html">E28</a> refits the 29 inside E27's range.</li>
+<li><a href="E29.html">E29</a> — the <code>ned</code> cell at 200 tips with 300 iterations (on trees drawn under <code>f30a791</code>, not E27's).</li>
+<li><a href="E31.html">E31</a> — the pendant-edge pair at 200 tips, reusing E27's null trees.</li>
+<li><a href="E35.html">E35</a> — an extinction driver at 200 tips and turnover 0.25 through E27's driver.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

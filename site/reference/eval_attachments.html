@@ -1,0 +1,43 @@
+<h3>Description</h3>
+
+<p>Replays an augmented tree through the forward sweep the thinning sampler
+carries, and reports at every augmented birth the lineages the proposal had
+to choose from, the labelled attachments they carry, and the parent that
+was recorded.  <code>candidates</code> must be the alive count <code>n</code> and
+<code>attachments</code> the <code>2 * tips + Ne</code> that
+<code>Model::sampling_prob</code> charges <code>-log</code> of; the two crown lineages
+carry no node, so they appear only here and in their reserved ids.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>eval_attachments(tree)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="eval_attachments_:_tree">tree</code></td>
+<td>
+<p>One augmented-tree data frame from <code><a href="#augment_trees">augment_trees</a></code>.</p>
+</td></tr>
+</table>
+
+<h3>Details</h3>
+
+<p>The convention the replay runs under is the <code>clade</code> column, which
+<code><a href="#augment_trees">augment_trees</a></code> carries out with the tree; a data frame built
+without it is read under the legacy convention, as a bare branching-time
+tree has always been.  Nothing reported here separates the two: the alive
+set, the attachments and whether the recorded parent is among them are
+carried by the lineage ids and the event order, which both conventions
+share.
+</p>
+
+<h3>Value</h3>
+
+<p>A data frame with one row per augmented birth: <code>brts</code>,
+<code>n</code>, <code>candidates</code>, <code>attachments</code>, <code>parent_id</code> and
+<code>parent_alive</code>.
+</p>
+

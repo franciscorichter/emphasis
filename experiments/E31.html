@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E31 — Can the ladder tell the pendant-age model from distinctiveness at 200 tips? · emphasis</title>
+<meta name="description" content="At 100 tips the ladder never named the pendant-age model on its own trees (E23, 0 of 10; E27 did not generate from it).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E31 — Can the ladder tell the pendant-age model from distinctiveness at 200 tips?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>E31 complete and clock-limited (the four-hour clock ended 14 of 20 <code>nd</code> and 16 of 20 <code>ned</code> fits); E31b, the same run with a 16-hour clock, complete (its <code>ned</code> row still clock-limited, 3 of 20)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis <code>f30a791</code></td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E27-conditions.R</code> <code>--cells n200 --gens dd,nd,ned --max-iter 300 --clock-scale 2</code> (E31b <code>--clock-scale 8</code>); <code>sim/E31-analysis.R</code>, <code>sim/E31b-analysis.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E31/</code> and <code>results/E31b/</code>: <code>cells.csv</code>, <code>ladder.csv</code> (300 rows each), <code>trees.csv</code>; <code>report/e31-numbers.tex</code>, <code>e31b-numbers.tex</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>At 100 tips the ladder never named the pendant-age model on its own trees (<a href="E23.html">E23</a>, 0 of 10; <a href="E27.html">E27</a> did not generate from it). At 200 tips E23 named it on 4 of 6 of its own trees, on 3 of 12 trees with no lineage-level effect, and where it was not named on its own trees it named <code>ned</code>. Six trees a generator was the whole evidence. E31 puts 20 trees from each of <code>nd</code> and <code>ned</code> and 20 null trees through the one-call ladder at a budget meant to let fits finish.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>generators</td>
+<td><code>nd</code> and <code>ned</code> at <span class="math inline">\(\log 0.65\)</span> per scale unit of <span class="math inline">\(D\)</span> or ED on speciation; <code>dd</code> as the null</td>
+<td>exponential link, crown 15, turnover 0.10, <span class="math inline">\(\rho = 1\)</span></td>
+</tr>
+<tr>
+<td>generating coefficients</td>
+<td><span class="math inline">\(\beta_D = -0.169\)</span> per time unit; <span class="math inline">\(\beta_{ED} = -0.112\)</span> per unit</td>
+<td><code>ladder.csv</code>, <code>beta_gen</code></td>
+</tr>
+<tr>
+<td>tips</td>
+<td>200 target; median 197 (<code>nd</code>), 200 (<code>ned</code>), 227 (<code>dd</code>); 120-293 overall</td>
+<td>E27's calibration</td>
+</tr>
+<tr>
+<td>trees</td>
+<td>20 a generator</td>
+<td><code>dd</code> trees are E27's tree for tree; <code>ned</code> trees are <a href="E29.html">E29</a>'s; <code>nd</code> calibrated from E27's <code>dd</code> entry and scales</td>
+</tr>
+<tr>
+<td>fit</td>
+<td><code>estimate_rates(model = "all")</code>: <code>cr</code> → <code>dd</code> → {<code>nd</code>, <code>ned</code>, <code>nk</code>}</td>
+<td></td>
+</tr>
+<tr>
+<td>draws / <code>max_iter</code></td>
+<td>300 / 300</td>
+<td></td>
+</tr>
+<tr>
+<td>clock</td>
+<td>E31: 4 hours per fit; E31b: 16 hours</td>
+<td></td>
+</tr>
+<tr>
+<td>reading</td>
+<td>fewest parameters within 2 AIC of the minimum</td>
+<td><code>compare_models()</code> at <code>f30a791</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Amendment 2026-10-06, before any E31 result was read.</strong> The <code>ned</code> trees of <a href="E29.html">E29</a> and E31 are not <a href="E27.html">E27</a>'s: E27 drew its trees with the simulator as it stood before <code>f30a791</code>, and the same seeds under <code>f30a791</code> draw different trees (median 233 tips for E27's twenty, 200 for E29's). E31's <code>ned</code> trees are E29's, so E31 repeats E29's <code>ned</code> fits inside the full ladder. The null trees are E27's.</p>
+<p><strong>E31b.</strong> E31's lineage-level fits ended on the four-hour clock at a fraction of their 300 iterations, so its question on finished fits was open. E31b is E31 unchanged in trees, seeds, calibration, models, draws and iterations, with the clock at 16 hours a fit, run after <a href="E32.html">E32</a>.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>Per generator: (a) on <code>nd</code> trees, <code>nd</code> chosen on <span class="math inline">\(\ge 80\%\)</span> (the <a href="E19.html">E19</a> rule); the share on which <code>ned</code> is chosen instead is reported as the confusion of the pair, and the pair together as what the ladder can name. (b) On null trees, a lineage-level model chosen on <span class="math inline">\(\le 10\%\)</span>, with <code>nd</code> counted separately. (c) <span class="math inline">\(\beta_D\)</span> on <code>nd</code> trees: median ratio in <span class="math inline">\([0.75, 1.25]\)</span>, the right sign on <span class="math inline">\(\ge 80\%\)</span>, and the share of <code>nd</code> fits that met the stopping rule. (d) A cell whose generator fit has fewer than 10 effective draws on more than half the trees is sampler-limited and left out of (a) and (b). E31b: E31's rules, read on E31b alone, with E31's counts beside them.</p>
+<h2 id="results">Results</h2>
+<p>Chosen within 2 AIC (at the minimum in parentheses), counts of 20:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>run</th>
+<th>trees</th>
+<th><code>cr</code></th>
+<th><code>dd</code></th>
+<th><code>nd</code></th>
+<th><code>ned</code></th>
+<th><code>nk</code></th>
+<th>pair <code>nd</code>+<code>ned</code></th>
+<th>lineage-level on null</th>
+<th>ESS</th>
+<th>&lt; 10</th>
+<th>generator fit finished / cap / clock</th>
+<th>hours a ladder (median)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E31</td>
+<td><code>dd</code></td>
+<td>2 (1)</td>
+<td>16 (16)</td>
+<td>1 (2)</td>
+<td>0 (0)</td>
+<td>1 (1)</td>
+<td>—</td>
+<td>2 (3)</td>
+<td>292</td>
+<td>0</td>
+<td>19 / 1 / 0</td>
+<td>13.6</td>
+</tr>
+<tr>
+<td>E31</td>
+<td><code>nd</code></td>
+<td>3 (3)</td>
+<td>7 (4)</td>
+<td><strong>5 (5)</strong></td>
+<td>5 (6)</td>
+<td>0 (2)</td>
+<td><strong>10</strong></td>
+<td>—</td>
+<td>62</td>
+<td>1</td>
+<td>0 / 6 / 14</td>
+<td>11.8</td>
+</tr>
+<tr>
+<td>E31</td>
+<td><code>ned</code></td>
+<td>10 (6)</td>
+<td>6 (7)</td>
+<td>0 (0)</td>
+<td><strong>3 (5)</strong></td>
+<td>1 (2)</td>
+<td>3</td>
+<td>—</td>
+<td>227</td>
+<td>1</td>
+<td>2 / 2 / 16</td>
+<td>13.3</td>
+</tr>
+<tr>
+<td>E31b</td>
+<td><code>dd</code></td>
+<td>2 (1)</td>
+<td>16 (15)</td>
+<td>1 (2)</td>
+<td>0 (1)</td>
+<td>1 (1)</td>
+<td>—</td>
+<td>2 (4)</td>
+<td>292</td>
+<td>0</td>
+<td>19 / 1 / 0</td>
+<td>34.4</td>
+</tr>
+<tr>
+<td>E31b</td>
+<td><code>nd</code></td>
+<td>3 (3)</td>
+<td>8 (4)</td>
+<td><strong>5 (6)</strong></td>
+<td>4 (5)</td>
+<td>0 (2)</td>
+<td><strong>9</strong></td>
+<td>—</td>
+<td>81</td>
+<td>1</td>
+<td>1 / 18 / 1</td>
+<td>19.9</td>
+</tr>
+<tr>
+<td>E31b</td>
+<td><code>ned</code></td>
+<td>10 (6)</td>
+<td>6 (6)</td>
+<td>0 (0)</td>
+<td><strong>3 (6)</strong></td>
+<td>1 (2)</td>
+<td>3</td>
+<td>—</td>
+<td>277</td>
+<td>2</td>
+<td>6 / 11 / 3</td>
+<td>27.4</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Coefficients of the generator's fit, fitted over generating: <span class="math inline">\(\beta_D\)</span> at 0.67 (quartiles 0.43-0.91) in E31 and 0.68 (0.43-0.95) in E31b, right sign on 20 of 20 in both; <span class="math inline">\(\beta_{ED}\)</span> at 0.71 (0.54-1.03 / 0.52-1.03), right sign on 19 of 20 in both. Where both pendant-edge fits exist, <code>nd</code> has the lower AIC of the two on 11 of 20 <code>nd</code> trees in both runs, and on 3 (E31) and 0 (E31b) of 20 <code>ned</code> trees.</p>
+<p><strong>The clock in E31.</strong> With 24 workers sharing 16 cores the four-hour clock bound before the iteration cap: the <code>nd</code> fit reached a median 191 iterations (162.5 on the 14 clocked fits) and the <code>ned</code> fit 83.5 (72.5 on the 16 clocked), from <code>results/E31/ladder.csv</code>. The supplement and the README state 128 and 66; the file gives the values here. <a href="E29.html">E29</a>'s <code>ned</code> fits of the same trees reached 300 iterations inside the same clock on another host. This run is what led to the design rule of 2026-10-07: the budget of a fit is its iteration cap, the clock is a safety set at four times what a fit needs on a loaded host, and a run on which the clock ended more than a tenth of the generator's fits is reported as clock-limited and not read against its rule. In E31b the <code>nd</code> and <code>ned</code> fits reached a median 300 iterations.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E31-chosen.png" alt="E31 and E31b, the model the ladder chooses by generator" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Counts of 20 trees per generator for the two clocks. The rows barely move: <code>nd</code> is chosen on 5 of its own trees in both, <code>ned</code> takes another 5 and 4, and on <code>ned</code> trees <code>cr</code> is chosen on 10 in both runs; the dashed line is the 16 trees the rule asks.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p>E31 is clock-limited and, by the rule added after it, not read against its rule; its counts stand as what the trees return at a fraction of the budget. <strong>E31b, read on its own: (a) not met</strong> (<code>nd</code> on 5 of 20, 0.25; confusion 0.20; the pair on 9 of 20, 0.45). <strong>(b) met</strong> (a lineage-level model on 2 of 20 null trees, <code>nd</code> on 1). <strong>(c) not met</strong> on the ratio (0.68), met on the sign (20 of 20); 1 of 20 <code>nd</code> fits met the stopping rule, 18 ended on 300 iterations. <strong>(d)</strong> no cell sampler-limited. In E31b the clock still ended 3 of 20 <code>ned</code> fits, more than a tenth, so the <code>ned</code> row is clock-limited; the <code>nd</code> row (1 of 20) is not.</p>
+<p>The counts and coefficients of E31 and E31b agree to within one tree and 0.01, so the pair is not separated at 200 tips whether the fits get a fraction of their iterations or all of them, and <code>nd</code> and <code>ned</code> divide the pendant-edge signal on <code>nd</code> trees about evenly. The <code>nd</code> coefficient stays at two-thirds of its value with 300 iterations reached; what longer runs do at 100 tips is <a href="E37.html">E37</a>'s question. The <code>ned</code> trees go to <code>cr</code> on 10 of 20 under the parsimonious reading, the same count with fits that finished more often in E31b (6 against 2).</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E23.html">E23</a> — the 6-tree result at 200 tips that E31 was registered to settle.</li>
+<li><a href="E27.html">E27</a> — the calibration, the null trees and the driver.</li>
+<li><a href="E29.html">E29</a> — the <code>ned</code> trees, fitted with <code>cr</code>, <code>dd</code>, <code>ned</code> only.</li>
+<li><a href="E30.html">E30</a> — the pendant-age fit at 100 tips with 300 iterations; <a href="E37.html">E37</a> with 1000.</li>
+<li><a href="E32.html">E32</a> — the run E31b followed, with the 16-hour clock from the same design rule.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

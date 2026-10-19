@@ -1,0 +1,26 @@
+<h3>Description</h3>
+
+<p>Only evaluates particles with <code>NA</code> fhat.  For each such particle
+<span class="reqn">\(\theta_i\)</span>, simulates <code>sample_size</code> trees from
+<span class="reqn">\(q(z \mid \text{obs}, \theta_i)\)</span> and computes:
+</p>
+<p style="text-align: center;"><span class="reqn">\[\hat{f}(\theta_i) = \log\text{mean}\exp(\text{logf}(z, \theta_i) -
+  \log q(z, \theta_i))\]</span>
+</p>
+
+<p>Elite particles with cached <code>fhat</code> are skipped entirely.  Their
+cached trees and <code>log_q</code> values are also stored for potential use
+by the shared evaluator if the mode is later switched.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.eval_independent(pop, input, num_threads)
+</code></pre>
+
+<h3>Value</h3>
+
+<p>Named list: updated <code>pop</code>, <code>rej_lambda</code> and
+<code>rej_overruns</code> vectors (length = number of particles evaluated).
+</p>
+

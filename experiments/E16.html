@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E16 — The power floor where the real clades live (turnover 0.25) · emphasis</title>
+<meta name="description" content="E12&#x27;s power floor was measured at turnover 0.10.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E16 — The power floor where the real clades live (turnover 0.25)</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete (75 trees, all fitted)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>not recorded</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E12-power.R</code> with <code>--turnover 0.25 --tips 100</code>; figure <code>fig-power-turnover</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E16/power.csv</code> (75 rows)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p><a href="E12.html">E12</a>'s power floor was measured at turnover 0.10. The three real clades of <a href="E5.html">E5</a> sit at turnover ≤ 0.3, and <a href="E8.html">E8</a>'s one cell at 0.25 found almost nothing at -0.15<span class="math inline">\(\lambda\)</span>. E16 runs E12's effect grid at turnover 0.25 to see where selection becomes possible at the turnover of the real clades, and whether Corvidae and Icteridae, whose fitted <code>ned</code> effects are -0.33<span class="math inline">\(\lambda\)</span> and -0.40<span class="math inline">\(\lambda\)</span>, fall on the selectable side.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>value</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>generator</td>
+<td><code>ned</code>, linear link</td>
+<td>as in E12</td>
+</tr>
+<tr>
+<td>ED effect</td>
+<td>0, -0.05, -0.15, -0.35, -0.60 <span class="math inline">\(\lambda\)</span></td>
+<td>fraction of <span class="math inline">\(\beta_0 = 0.5\)</span> at one clade-mean unit of ED</td>
+</tr>
+<tr>
+<td>tips</td>
+<td>100 only</td>
+<td>where fits complete</td>
+</tr>
+<tr>
+<td>turnover</td>
+<td>0.25</td>
+<td></td>
+</tr>
+<tr>
+<td>trees per cell</td>
+<td>15</td>
+<td>75 trees</td>
+</tr>
+<tr>
+<td>candidates</td>
+<td><code>dd</code>, <code>ned</code></td>
+<td></td>
+</tr>
+<tr>
+<td>draws, iterations</td>
+<td>600, <code>max_iter</code> 100</td>
+<td></td>
+</tr>
+<tr>
+<td>proposal, box</td>
+<td>surrogate; <code>sim/box.R</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Observed tips: median 83, 101, 97, 103 and 63 from effect 0 to -0.60<span class="math inline">\(\lambda\)</span>. At -0.60<span class="math inline">\(\lambda\)</span> the capacity was set at 2500 and the clades still came out at a median 63 tips: the effect caps the clade.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p><code>00-design.md</code> §E16: the 0.80 contour, and whether Corvidae (-0.33<span class="math inline">\(\lambda\)</span>) and Icteridae (-0.40<span class="math inline">\(\lambda\)</span>) fall on the selectable side of it. Cells with median effective sample below 10 are reported and excluded from the contour, as in <a href="E12.html">E12</a>.</p>
+<h2 id="results">Results</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>effect</th>
+<th>selection (<code>ned</code> over <code>dd</code> by &gt; 2 AIC)</th>
+<th>ratio <span class="math inline">\(\hat\beta/\beta\)</span></th>
+<th>right sign</th>
+<th>median ESS of 600</th>
+<th>fits &lt; 10</th>
+<th>stops conv/cap/clock</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><strong>FP 0.00</strong> (0 of 15)</td>
+<td>median <span class="math inline">\(\hat\beta\)</span> +0.0087</td>
+<td>—</td>
+<td>208.8</td>
+<td>0</td>
+<td>0/7/8</td>
+</tr>
+<tr>
+<td>-0.05<span class="math inline">\(\lambda\)</span></td>
+<td>0.00</td>
+<td>0.35</td>
+<td>0.73</td>
+<td>123.4</td>
+<td>1</td>
+<td>0/2/13</td>
+</tr>
+<tr>
+<td>-0.15<span class="math inline">\(\lambda\)</span></td>
+<td>0.20</td>
+<td>1.05</td>
+<td>0.73</td>
+<td>100.7</td>
+<td>1</td>
+<td>0/3/12</td>
+</tr>
+<tr>
+<td>-0.35<span class="math inline">\(\lambda\)</span></td>
+<td>0.67</td>
+<td>0.84</td>
+<td>1.00</td>
+<td>28.2</td>
+<td>1</td>
+<td>0/2/13</td>
+</tr>
+<tr>
+<td>-0.60<span class="math inline">\(\lambda\)</span></td>
+<td>1.00</td>
+<td>0.60</td>
+<td>1.00</td>
+<td>65.8</td>
+<td>3</td>
+<td>0/6/9</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>No cell is sampler-limited. No fit met the stopping rule; 53% to 87% of fits per cell ended on their clock, so the cells are clock-limited by the later convention and the rates are floors. The supplement quotes the -0.15<span class="math inline">\(\lambda\)</span> ratio as 1.06; the file gives 1.055.</p>
+<p>Beside <a href="E12.html">E12</a> at 100 tips and turnover 0.10 (0.05 / 0.55 / 0.75 / 1.00 from -0.05 to -0.60<span class="math inline">\(\lambda\)</span>), the selection rate at turnover 0.25 is lower at every effect below -0.60<span class="math inline">\(\lambda\)</span> (0.00 / 0.20 / 0.67 / 1.00).</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E16-power.png" alt="E16 power at two turnovers" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Selection of <code>ned</code> over <code>dd</code> at 100 tips, turnover 0.10 (<a href="E12.html">E12</a>, blue) and 0.25 (E16, red), with the three real clades' fitted effects as dotted verticals. At turnover 0.25 the line is at 0.67 at -0.35<span class="math inline">\(\lambda\)</span> and reaches 0.80 only at -0.60<span class="math inline">\(\lambda\)</span>; Corvidae (-0.33<span class="math inline">\(\lambda\)</span>) sits left of the -0.35<span class="math inline">\(\lambda\)</span> grid point.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p>At turnover 0.25 and 100 tips the 0.80 contour lies <strong>between -0.35<span class="math inline">\(\lambda\)</span> (0.67) and -0.60<span class="math inline">\(\lambda\)</span> (1.00)</strong>, as at turnover 0.10, with no false positive in 15 null trees. Corvidae (-0.33<span class="math inline">\(\lambda\)</span>) lies on the weaker side of -0.35<span class="math inline">\(\lambda\)</span>, where selection is 0.67, so it is not on the selectable side. Icteridae (-0.40<span class="math inline">\(\lambda\)</span>) lies between the two grid points, and the grid does not place it on either side. The coefficient is recovered at 0.84 and 1.05 of its value at -0.35 and -0.15<span class="math inline">\(\lambda\)</span>, and at 0.60 at -0.60<span class="math inline">\(\lambda\)</span>, where the effect also shrinks the clades to a median 63 tips. The rates are floors on unfinished fits; the real clades' own question was taken up by the parametric bootstrap (<a href="E17.html">E17</a>).</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E12.html">E12</a> — the same grid at turnover 0.10 and 100-400 tips.</li>
+<li><a href="E8.html">E8</a> — the turnover-0.25, -0.15<span class="math inline">\(\lambda\)</span> cell that motivated E16 (selection 0.00-0.05 there, 0.20 here).</li>
+<li><a href="E5.html">E5</a> — the three real clades whose effects are marked on the figure.</li>
+<li><a href="E17.html">E17</a> — parametric bootstrap of those clades.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

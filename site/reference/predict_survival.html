@@ -1,0 +1,32 @@
+<h3>Description</h3>
+
+<p>The emulator <code>estimate_rates(cond = )</code> conditions through.  A <code>gam</code> from
+<code><a href="#train_GAM">train_GAM</a></code> is the default; a <code>nnet</code> object, or a function that takes
+the parameter data frame and returns probabilities, is carried the same way.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>predict_survival(gam_fit, newpars)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="predict_survival_:_gam_fit">gam_fit</code></td>
+<td>
+<p>A <code>gam</code> object returned by <code><a href="#train_GAM">train_GAM</a></code>, a <code>nnet</code>
+object trained on the same columns, or a function of a parameter data frame.</p>
+</td></tr>
+<tr><td><code id="predict_survival_:_newpars">newpars</code></td>
+<td>
+<p>Numeric matrix or data frame of parameter values to predict
+at.  Column names must match those used in <code>train_GAM</code>.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>Numeric vector of predicted survival probabilities.
+</p>
+

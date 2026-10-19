@@ -1,0 +1,64 @@
+<h3>Description</h3>
+
+<p>Produces diagnostic plots and returns summary statistics from a
+<code><a href="#estimate_rates">estimate_rates</a></code> fit obtained with <code>method = "gam"</code>.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>diagnose_gam(x, plot = TRUE, true_pars = NULL)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="diagnose_gam_:_x">x</code></td>
+<td>
+<p>An <code>emphasis_fit</code> object from <code><a href="#estimate_rates">estimate_rates</a></code>
+with <code>method = "gam"</code>.</p>
+</td></tr>
+<tr><td><code id="diagnose_gam_:_plot">plot</code></td>
+<td>
+<p>Logical; if <code>TRUE</code> (default), produce diagnostic plots.</p>
+</td></tr>
+<tr><td><code id="diagnose_gam_:_true_pars">true_pars</code></td>
+<td>
+<p>Optional numeric vector of true parameter values
+(for simulation studies).</p>
+</td></tr>
+</table>
+
+<h3>Surface coverage (<code>$surface_summary</code>)</h3>
+
+<p>Summary of the IS log-likelihood grid: total grid points, number with
+finite fhat, fhat range, and mean trees per grid point.
+</p>
+
+<h3>GAM quality (<code>$gam_summary</code>)</h3>
+
+<p>Key statistics from the fitted GAM: deviance explained, GCV score,
+and effective degrees of freedom.
+</p>
+
+<h3>MLE (<code>$mle</code>)</h3>
+
+<p>The MLE parameter estimates and predicted log-likelihood at the optimum.
+</p>
+
+<h3>Value</h3>
+
+<p>A list of class <code>"gam_diagnostics"</code> (invisibly) with
+components <code>surface_summary</code>, <code>gam_summary</code>, and <code>mle</code>.
+</p>
+
+<h3>Examples</h3>
+
+<pre><code class='language-R'>## Not run: 
+sim &lt;- simulate_tree(c(0.5, 0.1), max_t = 5, model = "cr")
+fit &lt;- estimate_rates(sim, method = "gam", model = "cr",
+  control = list(lower_bound = c(0, 0), upper_bound = c(2, 1)))
+diagnose_gam(fit)
+
+## End(Not run)
+</code></pre>
+

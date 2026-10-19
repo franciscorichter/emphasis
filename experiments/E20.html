@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E20 — Selection along one dgLARS path over the covariates · emphasis</title>
+<meta name="description" content="Until E20, model choice was a set of pairwise AIC contests between nested models (E12, E18, E19).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E20 — Selection along one dgLARS path over the covariates</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete (100 trees, no errors). The second arm (path at the MCEM estimate) was not run here; it became <a href="E33.html">E33</a> (a)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>not recorded per run; the audit puts the four libraries in use at <code>373eec1</code> … <code>f0dff93</code>, identical to clean builds</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E20-path.R</code>; figures <code>fig-path-sets</code>, <code>fig-path-recovery</code> (<code>sim/figures-path.R</code>)</td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E20/path.csv</code> (100 rows), <code>results/E20/design.rds</code>, 15 saved paths in <code>results/E20/paths/</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Until E20, model choice was a set of pairwise AIC contests between nested models (<a href="E12.html">E12</a>, <a href="E18.html">E18</a>, <a href="E19.html">E19</a>). <code>covariate_path()</code> replaces them with one differential-geometric LARS path (Augugliaro, Mineo &amp; Wit 2013, <code>dglars</code>) over every covariate a rate can read — <span class="math inline">\(N\)</span>, <span class="math inline">\(D\)</span>, ED — on the Poisson-regression form of the log-linear point process that the M-step maximises, with the hidden lineages drawn by importance sampling. The order of entry says which covariates the data ask for first; BIC along the path picks a point. E20 asks whether that one path selects the generating set, measured apart from MCEM's convergence by drawing the hidden lineages at the <strong>generating</strong> parameters.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>value</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>generators</td>
+<td><code>cr</code>; <code>dd</code>; <code>nd</code>; <code>ned</code>; mixed <span class="math inline">\(N + D + \mathrm{ED}\)</span></td>
+<td>exponential link, 100 tips, turnover 0.10, crown 15</td>
+</tr>
+<tr>
+<td><code>nd</code> effect</td>
+<td><span class="math inline">\(\beta_D = \log 0.65\)</span> per unit of the <span class="math inline">\(D\)</span> scale</td>
+<td>-0.155 per unit at a <span class="math inline">\(D\)</span> scale of 2.77 (the sd of pendant age at the present in a <code>dd</code> clade)</td>
+</tr>
+<tr>
+<td><code>ned</code> effect</td>
+<td><span class="math inline">\(\beta_{ED} = \log 0.65\)</span> per unit of the ED scale</td>
+<td>-0.0982 per unit at an ED scale (<span class="math inline">\(\mathrm{PD}/N\)</span>) of 4.39</td>
+</tr>
+<tr>
+<td><code>dd</code></td>
+<td><span class="math inline">\(\beta_N = -0.0125\)</span></td>
+<td><span class="math inline">\(K\)</span> 184; recalibrated per generator</td>
+</tr>
+<tr>
+<td>mixed</td>
+<td>both <span class="math inline">\(\beta_D\)</span> and <span class="math inline">\(\beta_{ED}\)</span></td>
+<td></td>
+</tr>
+<tr>
+<td>trees</td>
+<td>20 per generator</td>
+<td>100 trees</td>
+</tr>
+<tr>
+<td>draws</td>
+<td>3000 at the generating parameters</td>
+<td>the 150 of largest weight enter the path with their weights</td>
+</tr>
+<tr>
+<td>proposal</td>
+<td>surrogate where the generator has no <span class="math inline">\(D\)</span> term (<code>cr</code>, <code>dd</code>, <code>ned</code>); thinning where it has (<code>nd</code>, mixed)</td>
+<td></td>
+</tr>
+<tr>
+<td>criterion</td>
+<td>BIC along the path, separately for speciation and extinction; AIC recorded beside it</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Recorded per tree: the first covariate to enter, the BIC set, whether it equals the generating set, each covariate's inclusion and coefficient, for both rates.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p><code>00-design.md</code> §E20: the BIC set equals the generating set on <span class="math inline">\(\ge 80\%\)</span> of trees for <code>cr</code>, <code>dd</code>, <code>nd</code> and <code>ned</code>; on the mixed generator both <span class="math inline">\(D\)</span> and ED are in the BIC set on <span class="math inline">\(\ge 80\%\)</span>; a covariate absent from the generator is included on <span class="math inline">\(\le 10\%\)</span> of trees; no extinction covariate (none generates extinction) on more than 10%. Cells with median ESS below 10 are reported and excluded from the selection statement. If the mixed generator fails while the single ones pass, <span class="math inline">\(D\)</span> and ED are reported as not separable at this size and effect. The second arm (path at the MCEM estimate) runs only if this one passes.</p>
+<h2 id="results">Results</h2>
+<p>Speciation path, 20 trees a generator:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>generator</th>
+<th>proposal</th>
+<th>median ESS of 3000</th>
+<th>&lt; 10</th>
+<th>exact set</th>
+<th>sets chosen (count)</th>
+<th><span class="math inline">\(N\)</span> / <span class="math inline">\(D\)</span> / ED included</th>
+<th>first to enter</th>
+<th>coefficient at the BIC point, where kept</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code></td>
+<td>surrogate</td>
+<td>3000</td>
+<td>0</td>
+<td><strong>0.90</strong></td>
+<td>∅ 18, <span class="math inline">\(D\)</span> 2</td>
+<td>0.00 / 0.10 / 0.00</td>
+<td><span class="math inline">\(D\)</span> 14, <span class="math inline">\(N\)</span> 4, ED 2</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>dd</code></td>
+<td>surrogate</td>
+<td>2424</td>
+<td>0</td>
+<td>0.55</td>
+<td><span class="math inline">\(N\)</span> 11, <span class="math inline">\(N{+}D\)</span> 4, ∅ 3, <span class="math inline">\(N{+}\)</span>ED 2</td>
+<td>0.85 / 0.20 / 0.10</td>
+<td><span class="math inline">\(N\)</span> 17, <span class="math inline">\(D\)</span> 3</td>
+<td><span class="math inline">\(N\)</span> at 0.85 of its value on 17 (q 0.72-0.90)</td>
+</tr>
+<tr>
+<td><code>nd</code></td>
+<td>thinning</td>
+<td>24.4</td>
+<td>5</td>
+<td><strong>0.00</strong></td>
+<td><span class="math inline">\(N{+}D{+}\)</span>ED 12, <span class="math inline">\(N{+}\)</span>ED 4, <span class="math inline">\(N\)</span> 2, ∅ 2</td>
+<td>0.90 / 0.60 / 0.80</td>
+<td><span class="math inline">\(D\)</span> 12, <span class="math inline">\(N\)</span> 8</td>
+<td><span class="math inline">\(D\)</span> at 0.40 on 12 (sign 0.83); spurious ED median -0.13 on 16</td>
+</tr>
+<tr>
+<td><code>ned</code></td>
+<td>surrogate</td>
+<td>5.4</td>
+<td>16</td>
+<td>0.20 (<strong>sampler-limited</strong>)</td>
+<td><span class="math inline">\(N{+}D{+}\)</span>ED 9, <span class="math inline">\(N{+}\)</span>ED 4, ∅ 3, <span class="math inline">\(D{+}\)</span>ED 2, <span class="math inline">\(N\)</span> 1, <span class="math inline">\(N{+}D\)</span> 1</td>
+<td>0.75 / 0.60 / 0.75</td>
+<td><span class="math inline">\(D\)</span> 10, <span class="math inline">\(N\)</span> 9, ED 1</td>
+<td>ED at 1.78 on 15 (q 0.90-2.74; sign 0.93); spurious <span class="math inline">\(D\)</span> median +0.04 on 12</td>
+</tr>
+<tr>
+<td>mixed</td>
+<td>thinning</td>
+<td>41.2</td>
+<td>0</td>
+<td>0.10</td>
+<td><span class="math inline">\(D\)</span> 16, <span class="math inline">\(N{+}D{+}\)</span>ED 2, <span class="math inline">\(D{+}\)</span>ED 1, ∅ 1</td>
+<td>0.10 / 0.95 / 0.15</td>
+<td><span class="math inline">\(D\)</span> 20</td>
+<td><span class="math inline">\(D\)</span> at 1.02 on 19 (q 0.82-1.14)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<ul>
+<li>The <strong>extinction path admits nothing</strong> on any tree of any generator.</li>
+<li>On the 15 saved paths AIC chooses the same set as BIC on 11 and is the looser of the two.</li>
+<li>The path costs a median 65-82 s per tree after the augmentation.</li>
+<li>"Exact set" for the mixed generator is <span class="math inline">\(N + D + \mathrm{ED}\)</span>; its rule is "both <span class="math inline">\(D\)</span> and ED in the set", met on 3 of 20 (0.15).</li>
+</ul>
+<figure id="figure-1">
+<img src="../assets/wiki/E20-sets.png" alt="E20 sets" loading="lazy">
+<figcaption><strong>Figure 1.</strong> The set BIC chooses for speciation (columns) against the generator (rows), 20 trees a row; red frames mark the generating set. <code>cr</code> and <code>dd</code> concentrate on their own cell (0.90, 0.55); on <code>nd</code>, <code>ned</code> and the mixed generator the choice spreads over sets containing <span class="math inline">\(D\)</span>, ED or both, and the mixed generator returns <span class="math inline">\(D\)</span> alone on 0.80.</figcaption>
+</figure>
+<figure id="figure-2">
+<img src="../assets/wiki/E20-coef.png" alt="E20 coefficients" loading="lazy">
+<figcaption><strong>Figure 2.</strong> The coefficient at the BIC point for each covariate (rows) and generator (columns); grey = left out (coefficient 0), red diamond = generating value. <span class="math inline">\(N\)</span> on <code>dd</code> and <span class="math inline">\(D\)</span> on the mixed generator sit on their diamonds; on <code>nd</code> the effect is split between <span class="math inline">\(D\)</span> and a spurious ED, and on <code>ned</code> ED overshoots beside a spurious <span class="math inline">\(D\)</span>.</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p><strong>Rule met for <code>cr</code> only.</strong> <code>dd</code>'s exact set is 0.55 (<span class="math inline">\(N\)</span> in the set on 0.85, <span class="math inline">\(D\)</span> falsely added on 0.20 against a 0.10 ceiling); <code>nd</code> never gets <span class="math inline">\(N + D\)</span>; <code>ned</code> gets <span class="math inline">\(N + \mathrm{ED}\)</span> on 0.20 on a sampler-limited cell (ESS 5.4); the mixed generator returns <span class="math inline">\(D\)</span> alone on 0.80 and both <span class="math inline">\(D\)</span> and ED on 0.15, so by the design's own reading <strong><span class="math inline">\(D\)</span> and ED are not separable at 100 tips and this effect</strong>. The reason is shared signal: both read the pendant edge (rank correlation 0.545 with each other, 0.85 and 0.83 with pendant age on <code>dd</code> clades, <code>covariate-correlations.csv</code>), and once one is in the set the other's score is close behind. So at 100 tips the path selects and estimates among the null and <span class="math inline">\(N\)</span> (<span class="math inline">\(N\)</span> at 0.85 of its value), and cannot apportion a lineage-level effect between <span class="math inline">\(D\)</span> and ED. The second arm was conditional on a pass and was therefore not run under E20; <a href="E33.html">E33</a> (a) ran it as its own experiment.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E12.html">E12</a>, <a href="E19.html">E19</a> — the pairwise contests the path was meant to replace.</li>
+<li><a href="E21.html">E21</a> — E21b, the same path with <span class="math inline">\(K\)</span> offered and an <code>nk</code> generator.</li>
+<li><a href="E22.html">E22</a> — the E20 design at 50, 200 and 400 tips.</li>
+<li><a href="E23.html">E23</a> — the one-call ladder, the other route to model choice.</li>
+<li><a href="E33.html">E33</a> — the path at a fitted estimate, and the extinction path with a driver.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

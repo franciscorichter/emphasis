@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E42 — the exact maximum-likelihood estimate on E40&#x27;s trees · emphasis</title>
+<meta name="description" content="Two of E40&#x27;s five models, cr and dd, have an exact likelihood, so on every E40 tree the Monte Carlo EM fit can be set against the exact maximum.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E42 — the exact maximum-likelihood estimate on E40's trees</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete on the 75 trees E40 had finished on 2026-10-15; amended before any deficit was read (boxed, odeint route)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td><code>f30a791</code></td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E42-exact.R</code> (the run); <code>sim/E42-allmodels.R</code> (the pre-registration probe); probes not in the repository: <code>sim/E42-reported.R</code>, <code>E42-offset.R</code>, <code>E42-convention.R</code>, <code>E42-crosscheck.R</code>, <code>E42-timing.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E42/exact.csv</code> (150 rows: per tree and model the exact and the E40 estimate, the deficit <code>dl</code>, <code>valid</code>, <code>on_box</code>); outside the repository, <code>results/E42/jobs/</code>, <code>results/E42-unboxed/</code> (the first run, not read) and the log <code>results/E42.log</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Two of <a href="E40.html">E40</a>'s five models, <code>cr</code> and <code>dd</code>, have an exact likelihood, so on every E40 tree the Monte Carlo EM fit can be set against the exact maximum. This is the study's claim C1 (MCEM reaches the exact MLE, tested on simulated trees in <a href="E1.html">E1</a>) carried to real trees, at E40's budget, with E40's link.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>exact likelihood</th>
+<th>maximisation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code></td>
+<td><code>DDD::bd_ML</code>, constant rates, unconditioned (<code>cond = 0</code>, as E40's fits are), <code>soc = 2</code>, <code>btorph = 1</code>, the unsampled species as <code>missnumspec</code> <span class="math inline">\(= \mathrm{round}(n/\rho - n)\)</span></td>
+<td><code>bd_ML</code></td>
+</tr>
+<tr>
+<td><code>dd</code></td>
+<td>E40's exponential-link <code>dd</code>, <span class="math inline">\(\lambda = e^{\beta_0 + \beta_N N}\)</span>, <span class="math inline">\(\mu = e^{\gamma_0 + \gamma_N N}\)</span>, all four free. <code>DDD</code> has no log-linear form, so its master-equation likelihood (<code>dd_loglik</code>, analytical) is used with its rate function <code>DDD:::lambdamu</code> replaced, for a new model code 9, by these rates</td>
+<td>Subplex (<code>nloptr::sbplx</code>, <code>xtol_rel</code> <span class="math inline">\(10^{-6}\)</span>, 800 evaluations) from E40's <code>dd</code> estimate and from the exact <code>cr</code> estimate with zero slopes</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The hidden-lineage count is truncated at <span class="math inline">\(n + m + 60\)</span> and the maximum checked at <span class="math inline">\(n + m + 100\)</span>. Checks recorded per tree: with both slopes at zero the replaced likelihood equals <code>bd_loglik</code>; the truncation check. Per tree and model: the exact estimate; the deficit <span class="math inline">\(\Delta\ell = \ell_{exact}(\hat\theta_{E40}) - \ell_{exact}(\hat\theta_{MLE}) \le 0\)</span>; each parameter's difference; and <span class="math inline">\(g\)</span>, the reported-minus-exact log-likelihood at <a href="E40.html">E40</a>'s estimate. Where <a href="E41.html">E41</a> continued a fit, its estimate is set against the same maximum.</p>
+<p><strong>Pre-registration check (complete).</strong> Before the design was registered, on the 31 <a href="E40.html">E40</a> trees then finished (<code>sim/E42-allmodels.R</code>, on each tree exactly as the fit read it, tip edges extended to the deepest tip), the exact log-likelihood at each E40 estimate was compared with the value E40 reported:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>trees</th>
+<th>exact against reported, at E40's own estimate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code></td>
+<td>complete trees (<span class="math inline">\(\rho = 1\)</span>)</td>
+<td>0.000</td>
+</tr>
+<tr>
+<td><code>dd</code></td>
+<td>complete trees (<span class="math inline">\(\rho = 1\)</span>)</td>
+<td>within 0.01</td>
+</tr>
+<tr>
+<td><code>cr</code>, <code>dd</code></td>
+<td><span class="math inline">\(\rho &lt; 1\)</span></td>
+<td>the reported value 0.01 to 0.17 above the exact one (reported minus exact positive)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Where <span class="math inline">\(\rho &lt; 1\)</span> the two codes model sampling differently: emphasis samples each species independently with probability <span class="math inline">\(\rho\)</span>, <code>DDD</code> fixes the number missing, so E40's reported log-likelihood sits 0.01 to 0.17 nats above <code>DDD</code>'s exact value on those trees. On complete trees the two sampling models coincide, and there the reported value is the exact likelihood. The probe printed its comparison to the console; no file of it is kept.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>The study's C1, per model and per set: median <span class="math inline">\(\Delta\ell \ge -0.5\)</span> nats and 90th percentile of <span class="math inline">\(|\Delta\ell| \le 2\)</span> nats; read separately for the complete trees (<span class="math inline">\(\rho = 1\)</span>, where the two sampling models coincide) and the rest. A pilot runs on one worker on the trees <a href="E40.html">E40</a> has finished; the rest once E40 ends.</p>
+<h2 id="results">Results</h2>
+<p>The first pilot maximised the replaced likelihood without bounds through <code>DDD</code>'s matrix-exponential route, which is unstable past about 110 hidden lineages: on Muscicapidae it returned a "maximum" of -22.6 (at <span class="math inline">\(\gamma_0 = -48.9\)</span>, <span class="math inline">\(\beta_N &gt; 0\)</span>) against -131.7 at E40's estimate. It is set aside (<code>results/E42-unboxed/</code>, not read), and the design was amended before any deficit was read: <code>DDD</code>'s <code>odeint</code> Runge-Kutta route (equal to <code>bd_loglik</code> with zero slopes at truncations 110, 150 and 250), a boxed maximisation, and a validity test on every maximum (stable when the truncation grows by 40, not below the value at E40's estimate).</p>
+<p>On the 75 trees E40 had finished (<code>results/E42/exact.csv</code>):</p>
+<p>| model | trees | deficit, median | 90th percentile of <span class="math inline">\(|\Delta\ell|\)</span> | worst | rule C1 | |---|---|---|---|---|---| | <code>cr</code>, <span class="math inline">\(\rho = 1\)</span> | 50 | -0.079 | 0.19 | -0.38 | met | | <code>cr</code>, <span class="math inline">\(\rho &lt; 1\)</span> | 25 | -0.056 | 0.17 | -0.27 | met | | <code>dd</code>, <span class="math inline">\(\rho = 1\)</span> | 48 (2 invalid not read) | -0.0045 | 0.011 | -0.093 | met | | <code>dd</code>, <span class="math inline">\(\rho &lt; 1\)</span> | 21 (4 invalid not read) | -0.0069 | 0.14 | -0.99 | met |</p>
+<p>Reported minus exact log-likelihood at E40's own estimates: a median 0.000 (<code>cr</code>) and 0.004 (<code>dd</code>) on complete trees. At the exact <code>dd</code> maximum the extinction slope on <span class="math inline">\(N\)</span> sits on its <span class="math inline">\(-3/n\)</span> cap on 61 of 69 valid trees (E40's own fits: 50), extinction at the present is a median <span class="math inline">\(2 \cdot 10^{-6}\)</span> against speciation 0.059, and the extinction intercept a median -10.0 against E40's -7.0; the exact <code>bd_ML</code> likewise puts extinction at zero.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p><strong>Met.</strong> On real family and clade trees of 50-130 tips, E40's Monte Carlo EM fits of <code>cr</code> and <code>dd</code> sit at the exact maximum: a median 0.005-0.08 nats below it, 90th percentile at most 0.19. Where E40's extinction parameters ended on a box edge, the exact maximum moves them further toward zero extinction for a median gain of 0.005 nats: the likelihood of these trees is flat toward zero extinction, and widening the box moves the number without improving the fit (see <a href="E41.html">E41</a>). Both are statements about the unconditioned likelihood E40 maximises; the conditioned comparison is Phase 1 of the <a href="../estimability.html">estimability plan</a>.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E40.html">E40</a> — the fits being checked.</li>
+<li><a href="E41.html">E41</a> — the continued fits, set against the same maximum.</li>
+<li><a href="E1.html">E1</a> — the exact-reference agreement on simulated trees (claim C1), whose rule this reuses.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E45 — cr and dd under the conditioned likelihood: MCEM against the exact estimate, by size and turnover · emphasis</title>
+<meta name="description" content="Phase 1 of the estimability plan.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E45 — <code>cr</code> and <code>dd</code> under the conditioned likelihood: MCEM against the exact estimate, by size and turnover</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td><strong>running</strong> (9 workers) since 2026-10-16; 643 of 1720 fits at 2026-10-19 10:05 (about 60 a day): the <code>cr</code> cells of 200 tips and more and every <code>dd</code> cell still running; the <code>dd</code> cells move to <a href="E43.html">E43</a>'s host once its reference finishes (decided 2026-10-19)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis <code>e1c2e82</code></td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E45-trees.R</code>, <code>sim/E45-fit.R</code>, <code>sim/E45-analysis.R</code>, <code>sim/survival-exact.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E45/</code> (generators, trees, one row per fit)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Phase 1 of the <a href="../estimability.html">estimability plan</a>. For the two models with an exact likelihood: does Monte Carlo EM conditioned on survival reach the exact conditioned maximum, and from how many tips is each parameter of the exact estimate reliable?</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<tbody>
+<tr>
+<td>models</td>
+<td><code>cr</code>; <code>dd</code> on the exponential link (<span class="math inline">\(\beta_N = \log\varepsilon / K\)</span>, <span class="math inline">\(\lambda_0 = 0.5\)</span>)</td>
+</tr>
+<tr>
+<td>trees</td>
+<td>crown age 15, kept if both crown lineages survive, no size window, generators calibrated to the median surviving size</td>
+</tr>
+<tr>
+<td>turnover</td>
+<td>0.10, 0.25, 0.40</td>
+</tr>
+<tr>
+<td>tips</td>
+<td>25, 50, 100, 200, 400, 800 (<code>cr</code>); 25-400 (<code>dd</code>); unreachable: <code>dd</code> at 0.40 with 400 tips, and at 0.40, <span class="math inline">\(\rho = 0.8\)</span>, 200 tips</td>
+</tr>
+<tr>
+<td><span class="math inline">\(\rho\)</span></td>
+<td>1; 0.8 at 100 and 200 tips</td>
+</tr>
+<tr>
+<td>trees per cell</td>
+<td>40</td>
+</tr>
+<tr>
+<td>fits</td>
+<td>MCEM conditioned through the exact survival functions (surrogate proposal, 300 draws, <code>mc_error</code>, at most 1000 iterations, eight-hour clock); the exact conditioned MLE (<code>bd_ML</code> cond = 1; the replaced-rate <code>DDD</code> likelihood minus the exact <span class="math inline">\(\log P(S)\)</span>); Wald intervals from the exact Hessian, profile intervals for <code>cr</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Checks before launch: <code>bd_ML(cond = 1)</code> equals the unconditioned exact likelihood minus <span class="math inline">\(\log P(S)\)</span> to <span class="math inline">\(4.6 \cdot 10^{-14}\)</span> on every <code>cr</code> fit; the MCEM <code>cr</code> likelihood equals the closed-form Bernoulli-sampling likelihood to <span class="math inline">\(10^{-9}\)</span>.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>(1) MCEM agreement: median deficit <span class="math inline">\(\ge -0.5\)</span> nats and 90th percentile of <span class="math inline">\(|\Delta\ell| \le 2\)</span> per cell. (2) A parameter is reliable at a size when the exact estimate's median ratio to the truth lies in [0.8, 1.25], its central 80% within [0.5, 2], and its 95% interval covers the truth on at least 90% of trees. At <span class="math inline">\(\rho = 0.8\)</span> rule (1) reads <code>cr</code> against the Bernoulli exact MLE (the two sampling models differ by 0.2-0.36 nats); <code>dd</code>'s <span class="math inline">\(\rho = 0.8\)</span> deficit is reported, not read.</p>
+<h2 id="results">Results</h2>
+<p>Provisional, <code>cr</code> only (twelve cells, 25-100 tips):</p>
+<p>| cell | trees | median deficit | 90th pct <span class="math inline">\(|\Delta\ell|\)</span> | rule 1 | |---|---|---|---|---| | 25 tips, turnover 0.10 / 0.25 / 0.40 | 40 each | -0.009 / -0.006 / -0.005 | 0.035 / 0.022 / 0.018 | met | | 50 tips, turnover 0.10 / 0.25 / 0.40 | 40 each | -0.009 / -0.003 / -0.003 | 0.032 / 0.026 / 0.010 | met | | 100 tips, turnover 0.10 / 0.25 / 0.40 | 40 / 40 / 33 | -0.012 / -0.004 / -0.002 | 0.027 / 0.026 / 0.007 | met | | 100 tips, <span class="math inline">\(\rho = 0.8\)</span>, turnover 0.10 / 0.25 / 0.40 | 40 each | -0.014 / -0.004 / -0.002 | 0.041 / 0.033 / 0.009 | met |</p>
+<p>Rule 2 so far: <span class="math inline">\(\lambda\)</span> reliable from 25 tips at turnover 0.10 and 0.25, and at 0.40 from 100 tips (it holds at 25, not at 50); <span class="math inline">\(\mu\)</span> not reliable at 25, 50 or 100 tips at any turnover, estimated at zero on many trees (Wald coverage 0.30-0.73 because a zero estimate has no Wald interval; profile coverage 0.95-1.00).</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Provisional: conditioned MCEM reaches the exact conditioned maximum in every cell read. Where the extinction rate becomes reliable is the open part.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="../estimability.html">Estimability</a>, <a href="E43.html">E43</a>, <a href="E42.html">E42</a>, <a href="E38.html">E38</a>, <a href="E1.html">E1</a>, <a href="S.html">S</a>.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

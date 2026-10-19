@@ -1,0 +1,27 @@
+<h3>Description</h3>
+
+<p>The parent recorded for a lineage born at <code>t</code> is the last observed
+branching at or before <code>t</code>.  A lineage born before the first observed
+branching has none, and <code>max(0L, ...)</code> makes it observed node 0, which
+is not yet born then; <code>.aug_to_Ltable</code> refuses that attachment
+rather than building a <code>tas</code> with a negative edge.  See the
+<code>.augment_tree_bdi</code> documentation for what that costs and what fixing
+it would take.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>.bdi_to_tree_df(
+  species,
+  bt,
+  tp,
+  unsampled = numeric(0),
+  obs_parent_id = NULL,
+  obs_focal_ts = NULL,
+  aug_id = NULL,
+  aug_par = NULL,
+  uns_id = NULL,
+  uns_par = NULL
+)
+</code></pre>
+

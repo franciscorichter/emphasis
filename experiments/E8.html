@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E8 — Can Monte Carlo bias change a model ranking? (unequal precision) · emphasis</title>
+<meta name="description" content="AIC is built from a log-likelihood that is the log of a Monte Carlo mean, so each model&#x27;s value is biased downward (Jensen&#x27;s inequality) by an amount that grows as its own effective sample falls.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E8 — Can Monte Carlo bias change a model ranking? (unequal precision)</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#e8b--is-the-ed-term-unfound-or-found-and-too-small-to-buy-its-penalty">E8b — is the ED term unfound, or found and too small to buy its penalty?</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete (E8 and E8b, 120 rankings each; E8b's coefficient arm, 20 fits)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>library <code>e8</code> at <code>4f42b27</code>; the audit found it identical to a clean build except for <code>ned</code> on the thinning proposal, which E8 does not use</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E8-unequal-precision.R</code>; coefficient arm <code>sim/E8b-edcoef.R</code>; figure <code>fig-study-guard</code> in <code>sim/figures-study.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E8/unequal-precision.csv</code>, <code>results/E8b/unequal-precision.csv</code> (120 rows each), <code>results/E8coef/edcoef.csv</code> (20 rows)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>AIC is built from a log-likelihood that is the log of a Monte Carlo mean, so each model's value is biased downward (Jensen's inequality) by an amount that grows as its own effective sample falls. The amounts do not cancel between models: the model that is harder to sample is penalised for being harder to sample. <code>compare_models()</code> carries each fit's effective sample and Jensen gap and flags a ranking when the gaps could reorder it, but that guard had been exercised only on constructed fits and two real ones. <a href="E2.html">E2</a> measured selection without making this asymmetry a factor. E8 asks whether the bias decides rankings in practice and whether the guard fires when it should.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>value</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>generators</td>
+<td><code>cr</code>, <code>dd</code>, <code>ned</code></td>
+<td>20 trees each, the same trees in E8 and E8b</td>
+</tr>
+<tr>
+<td>candidates</td>
+<td><code>cr</code>, <code>dd</code>, <code>ed</code>, <code>ned</code></td>
+<td>every tree fitted with all four, in both arms</td>
+</tr>
+<tr>
+<td>target tips</td>
+<td>100 (accepted 60-160)</td>
+<td>observed medians 106.5 (<code>cr</code>), 106.5 (<code>dd</code>), 136.5 (<code>ned</code>)</td>
+</tr>
+<tr>
+<td><span class="math inline">\(\lambda_0\)</span>, turnover, crown</td>
+<td>0.5, 0.25, 15</td>
+<td>turnover from the driver constant <code>TURN &lt;- 0.25</code>; not a CSV column</td>
+</tr>
+<tr>
+<td><code>ned</code> effect</td>
+<td><span class="math inline">\(-0.15\lambda\)</span></td>
+<td><span class="math inline">\(\beta_{ED} = -0.15\,\lambda_0/\overline{\mathrm{ED}}\)</span>, <span class="math inline">\(K\)</span> calibrated to 100 tips</td>
+</tr>
+<tr>
+<td>equal arm</td>
+<td>300 draws for every candidate</td>
+<td>the design said 400</td>
+</tr>
+<tr>
+<td>unequal arm</td>
+<td>generator 100 draws, every rival 800</td>
+<td>the design said 100 vs 1600; the files record 800</td>
+</tr>
+<tr>
+<td>iterations</td>
+<td>E8: <code>max_iter</code> 30; E8b: <code>max_iter</code> 100</td>
+<td>from the stop records and the <code>max_iter</code> column</td>
+</tr>
+<tr>
+<td>clock</td>
+<td>1800 s per fit</td>
+<td></td>
+</tr>
+<tr>
+<td>proposal, link</td>
+<td>surrogate (<code>bdi</code>), linear</td>
+<td></td>
+</tr>
+<tr>
+<td>box and start</td>
+<td>from the observed tree alone (<code>sim/box.R</code>)</td>
+<td><span class="math inline">\(\lambda_0 = \log n/T\)</span> sets the intercept range; covariate slots scaled by <span class="math inline">\(\lambda_0/n\)</span> and <span class="math inline">\(\lambda_0/\overline{\mathrm{ED}}\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The handicap in the unequal arm is aimed at the true model on purpose: that is the setting that can produce a flip, and a user cannot avoid it because they do not know which model is true. The box comes from the tree rather than from the generating values so that rival candidates, which have no generating values, are not boxed arbitrarily. Chosen model = minimum AIC of the four.</p>
+<p>The draw counts disagree between sources: <code>00-design.md</code> and the driver defaults give equal 400 and unequal 100 vs 1600; the files record <strong>300/300 and 100/800</strong> (<code>draws_gen</code>, <code>draws_rival</code>); <code>report/report.tex</code> says 100 vs 800; the supplement and <code>methods-study.tex</code> say 1600. The files are used here.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>Descriptive (<code>00-design.md</code> §E8). Readout: a <span class="math inline">\(2\times2\)</span> of (model chosen correctly / incorrectly) <span class="math inline">\(\times\)</span> (guard flagged / silent), per generating model and arm; and for every wrong choice, whether twice the gap difference covers the AIC margin, i.e. whether the gap alone could account for it. Decision: whether the guard's threshold is where it should be.</p>
+<h2 id="results">Results</h2>
+<p>Share of trees on which the generator is chosen, the chosen counts (<code>cr</code>/<code>dd</code>/<code>ed</code>/<code>ned</code>), and the median ESS of the generator's fit:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>run</th>
+<th>generator</th>
+<th>arm</th>
+<th>correct</th>
+<th>chosen cr/dd/ed/ned</th>
+<th>ESS of generator fit</th>
+<th>flagged</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E8</td>
+<td>cr</td>
+<td>equal</td>
+<td>0.85</td>
+<td>17/0/3/0</td>
+<td>300</td>
+<td>0</td>
+</tr>
+<tr>
+<td>E8</td>
+<td>cr</td>
+<td>unequal</td>
+<td>0.95</td>
+<td>19/0/1/0</td>
+<td>100</td>
+<td>0</td>
+</tr>
+<tr>
+<td>E8</td>
+<td>dd</td>
+<td>equal</td>
+<td>0.85</td>
+<td>2/17/0/1</td>
+<td>164</td>
+<td>0</td>
+</tr>
+<tr>
+<td>E8</td>
+<td>dd</td>
+<td>unequal</td>
+<td>0.85</td>
+<td>2/17/0/1</td>
+<td>51</td>
+<td>0</td>
+</tr>
+<tr>
+<td>E8</td>
+<td>ned</td>
+<td>equal</td>
+<td>0.05</td>
+<td>2/16/1/1</td>
+<td>35 (2 &lt; 10)</td>
+<td>0</td>
+</tr>
+<tr>
+<td>E8</td>
+<td>ned</td>
+<td>unequal</td>
+<td>0.05</td>
+<td>1/17/1/1</td>
+<td>27 (3 &lt; 10)</td>
+<td>0</td>
+</tr>
+<tr>
+<td>E8b</td>
+<td>cr</td>
+<td>equal</td>
+<td>0.90</td>
+<td>18/0/2/0</td>
+<td>300</td>
+<td>0</td>
+</tr>
+<tr>
+<td>E8b</td>
+<td>cr</td>
+<td>unequal</td>
+<td>0.90</td>
+<td>18/0/1/1</td>
+<td>100</td>
+<td>0</td>
+</tr>
+<tr>
+<td>E8b</td>
+<td>dd</td>
+<td>equal</td>
+<td>0.70</td>
+<td>5/14/0/1</td>
+<td>195</td>
+<td>0</td>
+</tr>
+<tr>
+<td>E8b</td>
+<td>dd</td>
+<td>unequal</td>
+<td>0.80</td>
+<td>4/16/0/0</td>
+<td>68</td>
+<td>0</td>
+</tr>
+<tr>
+<td>E8b</td>
+<td>ned</td>
+<td>equal</td>
+<td>0.05</td>
+<td>6/12/1/1</td>
+<td>53 (2 &lt; 10)</td>
+<td>0</td>
+</tr>
+<tr>
+<td>E8b</td>
+<td>ned</td>
+<td>unequal</td>
+<td>0.00</td>
+<td>5/14/1/0</td>
+<td>30 (1 &lt; 10)</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+</div>
+<ul>
+<li><strong>The guard flagged 0 of 240 rankings.</strong></li>
+<li>Wrong choices: 48 (E8) + 53 (E8b) = 101. On <strong>1 of 101</strong> does twice the gap difference reach the AIC margin: an E8 <code>ned</code> tree in the equal arm (tree 18) whose margin is 0.0026 AIC. The margins of wrong choices run from 0.003 to 8.4 AIC; twice the gap difference reaches at most 0.25 AIC, and is zero or negative (moves the ranking away from the generator) on 14 of 101.</li>
+<li>The package's own <code>swing</code> column, a different quantity, reaches the margin on 3 of 101 (maximum 0.98); the "1 of 101" uses the figure's definition, <span class="math inline">\(2(g_{gen} - g_{best})\)</span>.</li>
+<li>A wrong choice whose leader rests on fewer than 10 effective draws: 1 (E8) and 2 (E8b). The guard does not warn on variance.</li>
+<li>How the fits ended (480 per run): E8 283 on the 30-iteration cap, 172 on the clock, 25 converged; E8b 243 on the 100-iteration cap, 161 on the clock, 76 converged.</li>
+</ul>
+<figure id="figure-1">
+<img src="../assets/wiki/E8-guard.png" alt="E8 guard" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Each point is one of the 101 wrong choices: the AIC deficit of the generating model (x) against how far correcting the Jensen gaps would move the ranking toward it (y), log scales. Only points above the diagonal would be reversed; one is, with a deficit of 0.003 AIC. The bottom row holds the 14 corrections that are zero or move away from the generator.</figcaption>
+</figure>
+<h2 id="e8b--is-the-ed-term-unfound-or-found-and-too-small-to-buy-its-penalty">E8b — is the ED term unfound, or found and too small to buy its penalty?</h2>
+<p><code>00-design.md</code> has the heading for E8b and no body; its content is in the driver header of <code>sim/E8b-edcoef.R</code> and in the files. E8b has two parts.</p>
+<p><strong>The rerun at 100 iterations</strong> (<code>results/E8b/unequal-precision.csv</code>): the E8 design on the same trees (identical tip counts tree by tree) with <code>max_iter</code> 100 instead of 30. Its rows are in the table above. The correct-choice rates move by at most 0.15 (<code>dd</code> equal arm 0.85 → 0.70) and the <code>ned</code> rows stay at 0.00-0.05.</p>
+<p><strong>The coefficient arm</strong> (<code>results/E8coef/edcoef.csv</code>, called E8coef in ledger B). E8 lost <code>ned</code> to <code>dd</code> on 1 of 20 and then 0 of 20 trees, and records AIC, gap and ESS but not coefficients, so it could not tell an estimator that does not find the effect from one that finds it while AIC refuses the two extra parameters. E8b fits <code>ned</code> alone to E8's own <code>ned</code> trees (same seeds, same design, same box), 300 draws, <code>max_iter</code> 100, 1800 s clock, and records <span class="math inline">\(\hat\beta_{ED}\)</span>.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>quantity</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>median <span class="math inline">\(\hat\beta_{ED}\)</span> vs generating</td>
+<td>-0.0169 vs -0.0224 → <strong>ratio 0.75</strong> (quartiles 0.12 to 1.43)</td>
+</tr>
+<tr>
+<td>right sign</td>
+<td>15 of 20</td>
+</tr>
+<tr>
+<td>median ESS</td>
+<td>58.8 (1 fit below 10)</td>
+</tr>
+<tr>
+<td>stops</td>
+<td>5 on the iteration cap, 15 on the clock, 0 converged</td>
+</tr>
+<tr>
+<td>estimates at a box bound</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>No decision rule was registered for E8b.</p>
+<figure id="figure-2">
+<img src="../assets/wiki/E8-edcoef.png" alt="E8b coefficient" loading="lazy">
+<figcaption><strong>Figure 2.</strong> One <code>ned</code> fit per tree on E8's 20 <code>ned</code> trees: the fitted <span class="math inline">\(\beta_{ED}\)</span> against the generating -0.0224 (dark line). Shaded: within a factor of two of the generating value; 10 of 20 points fall in it and 5 are on the wrong side of zero.</figcaption>
+</figure>
+<p>E8b's reading: the coefficient is found, at 0.75 of its value with the right sign on 15 of 20 trees, on fits that mostly ended on their clock; <code>ned</code> loses to <code>dd</code> because a -0.15<span class="math inline">\(\lambda\)</span> effect at turnover 0.25 does not pay for two parameters at 100 tips, not because the estimator misses it. That is the question <a href="E12.html">E12</a> and <a href="E16.html">E16</a> take up.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Descriptive rule; the readout is complete. The Monte Carlo bias is measurable and does not decide these rankings: corrections are of order 0.01-0.25 AIC against deficits of order 1, and only a tie at 0.003 AIC would flip. The guard's silence on all 240 rankings is consistent with that. The unequal handicap did not lower the rate at which <code>cr</code> and <code>dd</code> were recovered. The <code>ned</code> rows measure something else: at turnover 0.25 an effect of -0.15<span class="math inline">\(\lambda\)</span> is below the power floor (<a href="E12.html">E12</a>, <a href="E16.html">E16</a>), so <code>dd</code> wins on 12 to 17 of 20 <code>ned</code> trees in every arm and those rows are not a test of the guard. What the guard does not cover is variance: leaders on fewer than 10 effective draws occur among wrong choices and pass without a warning.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E2.html">E2</a> — measured selection without unequal precision.</li>
+<li><a href="E12.html">E12</a> — E8's "estimable but not selected" at one effect and size, turned into a power map.</li>
+<li><a href="E16.html">E16</a> — <a href="E12.html">E12</a>'s grid at E8's turnover of 0.25.</li>
+<li><a href="E23.html">E23</a> and <a href="E27.html">E27</a> — the ranking read as the fewest parameters within 2 AIC (the reading <code>compare_models()</code> adopted at <code>f30a791</code>).</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

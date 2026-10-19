@@ -1,0 +1,43 @@
+<h3>Description</h3>
+
+<p>Takes the output of <code><a href="#estimate_likelihood_surface">estimate_likelihood_surface</a></code> and fits a
+smooth GAM approximation to the log-likelihood as a function of the model
+parameters.
+</p>
+
+<h3>Usage</h3>
+
+<pre><code class='language-R'>train_likelihood_GAM(
+  surface,
+  par_names = NULL,
+  spline_type = c("univariate", "bivariate")
+)
+</code></pre>
+
+<h3>Arguments</h3>
+
+<table>
+<tr><td><code id="train_likelihood_GAM_:_surface">surface</code></td>
+<td>
+<p>Data frame returned by <code><a href="#estimate_likelihood_surface">estimate_likelihood_surface</a></code>.
+Rows with <code>fhat = NA</code> are dropped automatically.</p>
+</td></tr>
+<tr><td><code id="train_likelihood_GAM_:_par_names">par_names</code></td>
+<td>
+<p>Character vector of column names in <code>surface</code> to use
+as predictors.  If <code>NULL</code> (default), all columns except <code>fhat</code>
+and <code>n_trees</code> are used.</p>
+</td></tr>
+<tr><td><code id="train_likelihood_GAM_:_spline_type">spline_type</code></td>
+<td>
+<p><code>"univariate"</code> (default) or <code>"bivariate"</code>.
+See <code><a href="#train_GAM">train_GAM</a></code> for details.</p>
+</td></tr>
+</table>
+
+<h3>Value</h3>
+
+<p>A <code>gam</code> object (Gaussian family) representing
+<span class="reqn">\(\hat\ell(\theta) \approx \log L(\theta \mid \text{data})\)</span>.
+</p>
+

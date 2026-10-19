@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E28 — the families inside the measured range, as the analysis of record · emphasis</title>
+<meta name="description" content="E27 fixed where the one-call ladder is calibrated: 50 to 200 tips, turnover at or below 0.25, a sampling fraction of about 0.9 or more, and the AIC table read as the fewest parameters within 2 AIC of the minimum.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E28 — the families inside the measured range, as the analysis of record</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete (finished 2026-10-05)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td><code>f30a791</code> (its <code>compare_models()</code> reports the parsimonious choice)</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E25-real.R</code> <code>--box auto</code>, <code>sim/E26-analysis.R</code> <code>--in results/E28 --tag e28</code>, <code>sim/E28-compare.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E28/families.csv</code> (29 rows), <code>compare.csv</code>, <code>fits.csv</code>, <code>paths.csv</code>, <code>fit-&lt;Family&gt;.rds</code> (29); <code>report/e28-numbers.tex</code>, <code>e28-compare.tex</code>, <code>e28-table.tex</code>; merged table <code>results/E26merged/families.csv</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p><a href="E27.html">E27</a> fixed where the one-call ladder is calibrated: 50 to 200 tips, turnover at or below 0.25, a sampling fraction of about 0.9 or more, and the AIC table read as the fewest parameters within 2 AIC of the minimum. Of <a href="E26.html">E26</a>'s 47 families, 29 lie inside that range. E26's lineage-level fits met the stopping rule on 19 of 141, and the coefficients of unfinished fits are attenuated (<a href="E12.html">E12b</a>, <a href="E27.html">E27</a>). E28 refits the 29 with a longer budget, under the build that reports the parsimonious choice, as the analysis of record for that range.</p>
+<h2 id="design">Design</h2>
+<p><strong>Trees.</strong> The 29 families of <a href="E26.html">E26</a> with <span class="math inline">\(\rho \ge 0.90\)</span>: 24 bird and 5 mammal families, 50 to 177 tips, <span class="math inline">\(\rho\)</span> 0.90 to 1.00.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>setting</th>
+<th>value</th>
+<th>change from E26</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ladder</td>
+<td><code>cr</code> → <code>dd</code> → {<code>nd</code>, <code>ned</code>, <code>nk</code>}, exponential link, each family's <span class="math inline">\(\rho\)</span></td>
+<td>—</td>
+</tr>
+<tr>
+<td>box</td>
+<td><code>auto_bounds()</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>draws</td>
+<td>300</td>
+<td>—</td>
+</tr>
+<tr>
+<td>iterations</td>
+<td>300</td>
+<td>100 in E26</td>
+</tr>
+<tr>
+<td>clock</td>
+<td>60 min per fit</td>
+<td>30 min in E26</td>
+</tr>
+<tr>
+<td>choice</td>
+<td>fewest parameters within 2 AIC of the minimum (<code>compare_models()</code>)</td>
+<td>minimum AIC in E26</td>
+</tr>
+<tr>
+<td>path</td>
+<td>on the observed tree and on 3000 surrogate draws, as E26</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Recorded per family: everything <a href="E26.html">E26</a> records, plus the chosen model.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>No decision rule; the calibration is <a href="E27.html">E27</a>'s, whose false-positive rate in the nearest cell is quoted with each count. Fixed before the run: for these 29 families E28 replaces <a href="E26.html">E26</a> in the biology paper (the chosen model, its margin and the coefficients are E28's), and E26's values are kept for the 18 families outside the range, marked as outside it. Reported beside the counts: the share of lineage-level fits that met the stopping rule, and the number of families whose chosen model differs between E26's minimum-AIC winner and E28's parsimonious choice. A family whose chosen fit has fewer than 10 effective draws is reported and left out of every across-family statement.</p>
+<h2 id="results">Results</h2>
+<p><strong>Choice.</strong> 25 of 29 families are usable (winner ESS ≥ 10); Acanthizidae, Hipposideridae, Phyllostomidae and Scolopacidae are not. Among the 25 (<code>compare.csv</code>, recounted):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>reading</th>
+<th><code>cr</code></th>
+<th><code>dd</code></th>
+<th><code>nd</code></th>
+<th><code>ned</code></th>
+<th><code>nk</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>parsimonious choice, all 25 usable</td>
+<td>4</td>
+<td>5</td>
+<td>1</td>
+<td>8</td>
+<td>7</td>
+</tr>
+<tr>
+<td>parsimonious choice, the 18 with a lineage-level verdict</td>
+<td>2</td>
+<td>—</td>
+<td>1</td>
+<td>8</td>
+<td>7</td>
+</tr>
+<tr>
+<td>minimum AIC, the 18 with a lineage-level verdict</td>
+<td>—</td>
+<td>—</td>
+<td>0</td>
+<td>8</td>
+<td>10</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The verdicts (minimum-AIC definition of <a href="E26.html">E26</a>) are lineage-level 18, diversity-dependent 5, undecided 2. The two readings differ on 5 usable families: Charadriidae, Falconidae and Nectariniidae (<code>nk</code> lowest, <code>cr</code> within 2), Meliphagidae (<code>ned</code> lowest, <code>nd</code> chosen) and Rhinocryptidae (<code>nk</code> lowest, <code>ned</code> chosen). The README's E28 row ("a lineage-level model is the parsimonious choice in 18 (<code>nk</code> 7, <code>ned</code> 8, <code>nd</code> 1)") adds 18 verdicts to a split that sums to 16; the other two are Falconidae and Nectariniidae, whose parsimonious choice is <code>cr</code>.</p>
+<p><strong>Against <a href="E26.html">E26</a> on the same 29.</strong> Where both runs are usable (21 families) the chosen model is the same on 19; the two that change are Bucerotidae (<code>cr</code> → <code>dd</code>) and Rhinocryptidae (<code>nk</code> → <code>ned</code>). The K factors agree within 2% (median 1.81 in both). Lineage-level fits meeting the stopping rule: 24 of 87, against 19 of 87 in E26. Families crossing the usability line: Laridae (ESS 8.6 → 12.4) and Anatidae (1.3 → 10.6) in; Acanthizidae (106 → 1.4), Hipposideridae (296 → 1.1), Phyllostomidae (16 → 1.1) and Scolopacidae (16 → 1.0) out.</p>
+<p><strong>Coefficients</strong> (E28 alone): <code>ned</code> fits with ESS ≥ 10 have <span class="math inline">\(\beta_{ED} &lt; 0\)</span> in 22 of 24, median factor 0.69 per sd (0.33-1.08), leading <code>dd</code> in 14; <code>nd</code> fits have <span class="math inline">\(\beta_D &lt; 0\)</span> in 15 of 19, median factor 0.86. Fitted turnover at the crown below 0.05 in 27 of 29; <span class="math inline">\(\gamma &lt; -1.645\)</span> in 24 of 29. Wall-clock per family: median 3.0 h (0.5-4.2).</p>
+<p><strong>The three families of <a href="E5.html">E5</a></strong> (E28 rows):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>family</th>
+<th>chosen</th>
+<th>AIC relative to <code>dd</code>: <code>cr</code> / <code>nd</code> / <code>ned</code> / <code>nk</code></th>
+<th>ESS and stop of the chosen fit</th>
+<th>path keeps</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Corvidae</td>
+<td><code>nk</code> (11.6 below <code>ned</code>)</td>
+<td>+10.1 / -4.2 / -18.3 / -29.9</td>
+<td>86, converged</td>
+<td>D+ED</td>
+</tr>
+<tr>
+<td>Icteridae</td>
+<td><code>ned</code></td>
+<td>+26.9 / +1.3 / -5.0 / +1.5</td>
+<td>106, clock</td>
+<td>N+ED</td>
+</tr>
+<tr>
+<td>Cotingidae</td>
+<td><code>dd</code></td>
+<td>+6.5 / +3.3 / +4.0 / +2.0</td>
+<td>300, converged</td>
+<td>N</td>
+</tr>
+</tbody>
+</table>
+</div>
+<figure id="figure-1">
+<img src="../assets/wiki/E28-families.png" alt="E28 families" loading="lazy">
+<figcaption><strong>Figure 1.</strong> The three bird families of the analysis of record: each tree's tips shaded by the chosen model's speciation rate (Cotingidae's <code>dd</code> gives every tip 0.058 per Myr), and below it each rung's AIC minus that of <code>dd</code>, the choice filled. Read the three columns as the three outcomes the ladder can return: a K model by 30 AIC, an ED model by 5, and the diversity-dependent null kept.</figcaption>
+</figure>
+<figure id="figure-2">
+<img src="../assets/wiki/E28-trees.png" alt="E28 trees" loading="lazy">
+<figcaption><strong>Figure 2.</strong> Four families with large supported lineage-level leads (merged table), every branch shaded by the speciation rate its model assigns. The fast lineages sit in young, densely split clades and the slow ones on long branches; the rate ranges from 0.03 to 6.1 times the family mean (Parulidae).</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p>No rule; the record is descriptive and the commitments were met: E28's rows replace <a href="E26.html">E26</a>'s for the 29 families in the merged table, with the stopping-rule share (24 of 87) and the reading change (5 of 25 usable families choose differently under the parsimonious rule than under the minimum AIC) reported. Doubling the budget moved few conclusions: the same choice on 19 of 21 comparable families and K factors within 2%, while 5 more lineage-level fits met the stopping rule and four families fell below 10 effective draws. 63 of 87 lineage-level fits still did not meet the rule, so the coefficients remain those of mostly unfinished fits, which <a href="E27.html">E27</a> measured as short of their generating value (0.65-0.76 for K at 100 iterations). Which of the two splits, 7/8/1 (parsimonious) or 10/8/0 (minimum AIC), a paper quotes is a choice the record leaves open; the merged-table counts (21; <code>nk</code> 12, <code>ned</code> 9) use the minimum-AIC winner.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E26.html">E26</a> — the 47-family run E28 replaces for these 29.</li>
+<li><a href="E27.html">E27</a> — the calibration that defines the range and the parsimonious reading.</li>
+<li><a href="E25.html">E25</a> — the three bird families under the earlier budget.</li>
+<li><a href="E39.html">E39</a> — what the covariates share on these trees.</li>
+<li><a href="E40.html">E40</a> — the same fits, at a 300-iteration budget and a four-hour clock, on many more trees.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

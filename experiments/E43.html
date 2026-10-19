@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E43 — the conditioning factor: exact where possible, an emulator validated elsewhere · emphasis</title>
+<meta name="description" content="The likelihood conditioned on survival needs \(P(S \mid \theta, T, \rho)\), the probability that both crown lineages leave a sampled descendant.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E43 — the conditioning factor: exact where possible, an emulator validated elsewhere</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>calibration done (2026-10-15); emulators trained (2000 and 5000 clades with 20 seeds, 20 000 with one) on 2026-10-17; the survival references <strong>running</strong>, 1287 of 1600 points at 2026-10-18 01:11</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis <code>e1c2e82</code> (with the D fix <code>4e0b9dd</code>)</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E43-calibrate.R</code>, <code>sim/E43-region.R</code>, <code>sim/E43-reference.R</code>, <code>sim/E43-emulate.R</code>, <code>sim/E43-analysis.R</code>, <code>sim/survival-exact.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E43/calibration.csv</code>, <code>calibration-scales.csv</code>, <code>points/</code>, <code>cost-survey.csv</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>The likelihood conditioned on survival needs <span class="math inline">\(P(S \mid \theta, T, \rho)\)</span>, the probability that both crown lineages leave a sampled descendant. It does not depend on the observed tree, so one function per model, crown age and sampling fraction serves every fit of a cell. Its accuracy was measured only for <code>cr</code> and <code>dd</code> over the whole box (<a href="E36.html">E36</a>c), and its variability between trainings never. Steps 0.3 and 0.4 of the <a href="../estimability.html">estimability plan</a>.</p>
+<h2 id="design">Design</h2>
+<p>(a) Generators for the estimability study, calibrated so the <strong>median size of surviving trees</strong> equals each target (50, 100, 200, 400), no size window: ten models, turnover 0.10 and 0.40, effects <span class="math inline">\(\pm 0.35\)</span>. (b) Per model, a box spanning the calibrated generating values, widened; 200 points in it. (c) At each point <span class="math inline">\(P(S)\)</span> by direct simulation (a clade reaching the lineage cap of 2000 counts as surviving); for <code>cr</code> and <code>dd</code> also the exact value. (d) The package's survival GAM trained on 2000, 5000 and 20 000 clades, and retrained with 20 seeds.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>An emulator is adequate if, at the 200 points, the 90th percentile of <span class="math inline">\(|\log\hat P - \log P_{ref}|\)</span> is at most 0.05 and the median retraining standard deviation of <span class="math inline">\(\log\hat P\)</span> at most 0.02; the smallest adequate size is used, else direct simulation. <code>cr</code> and <code>dd</code> use exact functions. Amendment before any reference run: a point's reference stops once the standard error of its <span class="math inline">\(\log P\)</span> is at most 0.01 (2000 to 20 000 clades), because 20 000 clades everywhere would take six days, mostly at points with <span class="math inline">\(P \approx 1\)</span>.</p>
+<h2 id="results">Results</h2>
+<p>So far: the calibration (<code>results/E43/calibration.csv</code>) and the trained emulators (2000 and 5000 clades with 20 seeds, 20 000 with one, 2026-10-17), whose accuracy waits on the Monte Carlo reference (1287 of 1600 points at 2026-10-18). Targets some generators cannot reach: <code>dd</code>, <code>nd</code>, <code>nedc</code> +0.35 at turnover 0.40 and 400 tips (the <span class="math inline">\(N\)</span> models keep <span class="math inline">\(\lambda_0 = 0.5\)</span> and stop at 250-290 tips); <code>ned</code> -0.35 at turnover 0.40, and at 0.10 and 400 tips; <code>nk</code> -0.35 from 100 tips at 0.10 and at every size at 0.40; <code>k</code> -0.35 at 0.40 (at most 14 tips). The exact survival functions match simulation of <span class="math inline">\(10^5\)</span> clades: <code>cr</code> <span class="math inline">\(\log P\)</span> -1.7222 against -1.7252 (SE 0.0068), <code>dd</code> -1.9920 against -1.9993 (SE 0.0080). The <code>dd</code> function was later reduced exactly to a chain on <span class="math inline">\(N\)</span> alone (100-1000 times faster; <a href="E45.html">E45</a>).</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Not yet evaluable. The unreachable targets constrain the design of the lineage-level study (E46).</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="../estimability.html">Estimability</a>, <a href="E36.html">E36</a>, <a href="E44.html">E44</a>, <a href="E45.html">E45</a>.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>

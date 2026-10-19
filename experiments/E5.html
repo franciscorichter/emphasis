@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E5 — does the workflow run end to end on real dated trees? · emphasis</title>
+<meta name="description" content="Claim C6 of the design: the workflow runs end to end on real dated trees and returns the diagnostics a user needs to judge a fit (AIC table, effective sample, agreement with an exact reference).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="../D.html">D</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E5 — does the workflow run end to end on real dated trees?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete; its fits are superseded for every reading of the three families by <a href="E25.html">E25</a> and <a href="E28.html">E28</a> (exponential link, the ladder, the parsimonious choice)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>not recorded per run; the design's build under test at registration (2026-09-18) was <code>a38a9e8</code></td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E5-atlas.R</code> (<code>--stage screen</code>, <code>--stage fit</code>), <code>sim/E5-tables.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E5/screen.csv</code> (47 rows), <code>chosen.csv</code> (3), <code>fits.csv</code> (24)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Claim C6 of the design: the workflow runs end to end on real dated trees and returns the diagnostics a user needs to judge a fit (AIC table, effective sample, agreement with an exact reference). Every earlier experiment was on simulated trees; E5 is the first contact with deposited phylogenies, and the first place an ED effect could be looked for on data.</p>
+<h2 id="design">Design</h2>
+<p><strong>Trees.</strong> The Condamine et al. (2019) family-level dated trees deposited in the phylo-species-atlas, with 50 to 200 tips and a sampling fraction <span class="math inline">\(\rho = \text{tips} / \text{the family&#39;s species count in the atlas&#39;s class tree}\)</span> of at least 0.5: 47 families (33 bird, 10 mammal, 3 squamate, 1 amphibian; <code>sim/data/atlas-candidates.csv</code>). The deposited tip depths spread by 2 to 19% of the crown age; every tip edge is extended to the deepest tip, and a tree whose spread exceeds 15% is refused (Macropodidae, 19%).</p>
+<p><strong>Stage 1, the screen.</strong> Every candidate fitted with <code>cr</code> (surrogate/BDI proposal, <span class="math inline">\(N = 200\)</span> draws) at its <span class="math inline">\(\rho\)</span>, with <code>DDD::bd_ML</code> (the missing species as <code>missnumspec</code>) as the exact reference.</p>
+<p><strong>Stage 2, the choice.</strong> Among the families that fitted, with turnover <span class="math inline">\(\hat\mu_0/\hat\lambda_0 \le 0.3\)</span> and tip spread <span class="math inline">\(\le 0.10\)</span>: one per size tercile, the lowest turnover, ties (most have <span class="math inline">\(\hat\mu_0 = 0\)</span>) broken by the highest <span class="math inline">\(\rho\)</span> and then the larger tree (<code>sim/E5-atlas.R</code> lines 111-114).</p>
+<p><strong>Stage 3, the fits.</strong></p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>setting</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>models</td>
+<td><code>dd</code>, <code>ed</code>, <code>ned</code> at <span class="math inline">\(N = 200\)</span>; <code>ned</code> with five seeds; <code>ned</code> at <span class="math inline">\(N = 2000\)</span></td>
+</tr>
+<tr>
+<td>link</td>
+<td>linear</td>
+</tr>
+<tr>
+<td>proposal</td>
+<td>thinning (<code>dynamic_fresh</code>)</td>
+</tr>
+<tr>
+<td>box</td>
+<td>anchored on the <code>cr</code> screen estimate</td>
+</tr>
+<tr>
+<td>iterations</td>
+<td><code>max_iter</code> 200</td>
+</tr>
+<tr>
+<td>clock</td>
+<td>1 h per fit at <span class="math inline">\(N = 200\)</span>, 4 h at <span class="math inline">\(N = 2000\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>Descriptive (claim C6): the AIC table, <span class="math inline">\(\hat\beta_{ED}\)</span> with the between-run spread of five seeds, the final effective sample, and the <span class="math inline">\(N = 2000\)</span> agreement. "The section is an illustration of the workflow and its diagnostics; it makes no biological claim, and says so."</p>
+<h2 id="results">Results</h2>
+<p><strong>Screen.</strong> 47 screened, 46 fitted (Macropodidae refused for its 19% tip spread). Every <code>cr</code> fit returned 200 effective draws of 200 (under <code>cr</code> the surrogate is the model), in 1 to 34 s. The MCEM log-likelihood is within 0.53 nats of <code>DDD::bd_ML</code> on every family (largest: Eleutherodactylidae 0.53, Echimyidae 0.42, Varanidae 0.40). <span class="math inline">\(\hat\mu_0 = 0\)</span> on 43 of 46; the three with non-zero turnover are Pipridae 0.112, Rhinolophidae 0.176, Procellariidae 0.220.</p>
+<p><strong>Chosen.</strong> Cotingidae (65 tips, <span class="math inline">\(\rho = 1\)</span>, crown 24.6 Ma), Icteridae (102, 0.971, 14.5 Ma), Corvidae (120, 0.968, 30.5 Ma), all at <span class="math inline">\(\hat\mu_0 = 0\)</span>.</p>
+<p><strong>Fits</strong> (<code>results/E5/fits.csv</code>):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>clade</th>
+<th>AIC <code>dd</code></th>
+<th>AIC <code>ed</code></th>
+<th>AIC <code>ned</code> (seed 1)</th>
+<th><code>ned</code> range over 5 seeds</th>
+<th>AIC(dd) - AIC(ned)</th>
+<th>AIC(dd) - AIC(ed)</th>
+<th>ESS <code>ned</code> (of 200)</th>
+<th>fitted ED effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Corvidae</td>
+<td>757.3</td>
+<td>743.5</td>
+<td>738.7</td>
+<td>738.7-739.4 (0.64)</td>
+<td>+18.6</td>
+<td>+13.8</td>
+<td>47-93</td>
+<td>-0.33<span class="math inline">\(\lambda\)</span></td>
+</tr>
+<tr>
+<td>Icteridae</td>
+<td>516.8</td>
+<td>519.2</td>
+<td>502.1</td>
+<td>502.1-502.4 (0.31)</td>
+<td>+14.7</td>
+<td>-2.4</td>
+<td>70-109</td>
+<td>-0.40<span class="math inline">\(\lambda\)</span></td>
+</tr>
+<tr>
+<td>Cotingidae</td>
+<td>407.7</td>
+<td>413.0</td>
+<td>410.3</td>
+<td>410.3 x5 (0.00)</td>
+<td>-2.7</td>
+<td>-5.3</td>
+<td>200 x5</td>
+<td>-0.21<span class="math inline">\(\lambda\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The fitted ED effect is <span class="math inline">\(\hat\beta_{ED}\cdot\overline{\mathrm{ED}}/\hat\beta_0\)</span>, the scale of <a href="E12.html">E12</a>. Stop reasons over the 24 fits: 21 on <code>max_iter</code> (200 iterations), 2 converged (the <code>ed</code> fits of Corvidae, at 174 iterations, and Icteridae, at 106), 1 on its clock (Corvidae <code>ned</code> at <span class="math inline">\(N = 2000\)</span>: 3 iterations in 17.5 h, AIC 743.5, ESS 978 of 2000). The <span class="math inline">\(N = 2000\)</span> fits give effects -0.238 (Corvidae, the 3-iteration fit), -0.397 (Icteridae), -0.212 (Cotingidae). On Cotingidae, at <span class="math inline">\(\rho = 1\)</span> and <span class="math inline">\(\hat\mu = 0\)</span>, the thinning proposal returns 200 of 200 and the five seeds give identical fits.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E5-clades.png" alt="E5 clades" loading="lazy">
+<figcaption><strong>Figure 1.</strong> The three clades' <code>ned</code>-over-<code>dd</code> margin against their fitted ED effect on <a href="E12.html">E12</a>'s scale; the shaded band is where E12 selected <code>ned</code> on most trees at turnover 0.10. Corvidae and Icteridae lie above the 2-AIC line, Cotingidae below; the band was measured at a different turnover, so it is a reference and not a test (that is <a href="E16.html">E16</a>).</figcaption>
+</figure>
+<figure id="figure-2">
+<img src="../assets/wiki/E5-trees.png" alt="E5 trees" loading="lazy">
+<figcaption><strong>Figure 2.</strong> The three chosen trees after tip extension, tips shaded by ED, with each tree's ED range, pendant-age and K spread printed below. Corvidae carries the widest ED range (3.4 to 30.5) and Icteridae the narrowest (2.4 to 12.6).</figcaption>
+</figure>
+<h2 id="conclusion">Conclusion</h2>
+<p>Met as a description: the workflow ran on all 46 accepted trees and returned the AIC table, the effective sample and an exact <code>cr</code> reference within 0.53 nats on every one. On the three fitted clades <code>ned</code> beats <code>dd</code> by 18.6 and 14.7 AIC on Corvidae and Icteridae and loses by 2.7 on Cotingidae; only on Corvidae does <code>ed</code> (no <span class="math inline">\(N\)</span> term) beat <code>dd</code> (by 13.8). The fits are unfinished: 21 of 24 ended on the iteration cap. The record's adversarial pass graded the result "weakened": the three clades were chosen for low turnover and tidy tip depths, and the comparison with <a href="E12.html">E12</a>'s floor crosses turnovers (0.10 there, up to 0.3 here), which is what <a href="E16.html">E16</a> and <a href="E17.html">E17</a> were run to address.</p>
+<p>Two statements in the report about this experiment are off against <code>fits.csv</code>: "every one ending on <code>max_iter</code>" (21 of 24 did), and "over five seeds the NED AIC moves by less than 0.6" (Corvidae moves by 0.64). The extinction slopes on ED in the report's table (-0.008, -0.013, -0.008) do not match seed 1 (-0.0056, -0.0108, -0.0077); which seed or summary the table used is not recorded. These are linear-link fits; the exponential-link numbers of <a href="E25.html">E25</a> and <a href="E28.html">E28</a> are different fits and are not to be set beside these in one sentence.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E12.html">E12</a> — the selection floor at turnover 0.10 the clades were read against.</li>
+<li><a href="E16.html">E16</a> — the same floor at turnover 0.25, where the clades sit.</li>
+<li><a href="E17.html">E17</a> — parametric bootstrap of the three margins found here.</li>
+<li><a href="E25.html">E25</a> — the same three trees under the ladder on the exponential link.</li>
+<li><a href="E26.html">E26</a> — all 47 screened families under the whole workflow.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 0.4. Francisco Richter, Università della Svizzera italiana. The experiment pages are the public record of the study behind the package; the maths is set with MathJax from a local copy.</p>
+</footer>
+</body>
+</html>
