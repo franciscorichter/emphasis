@@ -96,3 +96,64 @@ test_that("the default leaves an ordinary draw untouched", {
   expect_identical(a$logg, b$logg)
   expect_identical(a$fhat, b$fhat)
 })
+
+# Decision D2: a relaxed or non-converged mean field is recorded in the fit's
+# notes, with the relaxation, the sweeps, the final residual and whether it
+# converged, and print() shows it.
+
+test_that("the iteration reports the relaxation it ended at", {
+  cs <- contracting()
+  auto <- it(cs, "auto")
+  expect_identical(auto$omega, 1)
+  expect_identical(auto$damping, "auto")
+  expect_identical(it(cs, 0.5)$omega, 0.5)
+  skip_on_cran()
+  dv <- it(diverging(), "auto")
+  expect_lt(dv$omega, 1)
+})
+
+mf_fit <- function(omega, converged, damping = "auto") {
+  n <- length(omega)
+  structure(list(model = c(1L, 0L, 0L, 0L, 0L), pars = c(0.5, -0.01, 0.1, 0),
+                 details = list(damping = damping,
+                                mcem = data.frame(mf_converged = converged, mf_delta = rep(2e-5, n),
+                                                  mf_sweeps = rep(12L, n), mf_omega = omega,
+                                                  mf_budget = rep(20L, n)))),
+            class = "emphasis_fit")
+}
+
+test_that("the mean-field note appears only when the iteration was relaxed, not converged, or set", {
+  expect_null(emphasis:::.mean_field_note(mf_fit(c(1, 1), c(TRUE, TRUE))))
+  n <- emphasis:::.mean_field_note(mf_fit(c(1, 0.25), c(TRUE, TRUE)))
+  expect_match(n, "took 12 of 20 sweeps")
+  expect_match(n, "relaxation 0.25")
+  expect_match(n, "residual 2.00e-05: converged")
+  expect_match(n, "1 relaxed the iteration below the full step and 0 did not converge")
+  n <- emphasis:::.mean_field_note(mf_fit(c(1, 1), c(TRUE, FALSE)))
+  expect_match(n, "not converged")
+  n <- emphasis:::.mean_field_note(mf_fit(c(0.5, 0.5), c(TRUE, TRUE), damping = 0.5))
+  expect_match(n, "damping = 0.5")
+  # cr: no mean field is solved, nothing to say
+  expect_null(emphasis:::.mean_field_note(mf_fit(c(NA, NA), c(NA, NA))))
+  expect_identical(names(emphasis:::.fit_notes(mf_fit(c(1, 0.25), c(TRUE, TRUE)), 100L, 0L)),
+                   "mean_field")
+})
+
+test_that("a fit records a relaxed mean field in its notes and print() says so", {
+  skip_on_cran()
+  set.seed(21); phy <- ape::rcoal(50)
+  ctrl <- list(lower_bound = c(0.1, -0.05, 0.01, -0.05), upper_bound = c(2, 0.05, 1, 0.05),
+               num_trees = 20L, max_iter = 2L)
+  fit <- suppressWarnings(estimate_rates(phy, method = "mcem", model = "dd", link = "linear",
+                                         init_pars = c(0.7, -0.008, 0.25, 0),
+                                         control = c(ctrl, list(damping = 0.5))))
+  expect_identical(fit$sampling, "bdi")
+  expect_true(all(c("mf_converged", "mf_delta", "mf_sweeps", "mf_omega") %in% names(fit$details$mcem)))
+  expect_true("mean_field" %in% names(fit$notes))
+  expect_match(fit$notes[["mean_field"]], "damping = 0.5")
+  expect_output(print(fit), "mean field")
+  plain <- suppressWarnings(estimate_rates(phy, method = "mcem", model = "dd", link = "linear",
+                                           init_pars = c(0.7, -0.008, 0.25, 0), control = ctrl))
+  if (all(plain$details$mcem$mf_omega == 1) && all(plain$details$mcem$mf_converged))
+    expect_false("mean_field" %in% names(plain$notes))
+})

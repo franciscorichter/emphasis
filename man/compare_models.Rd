@@ -63,7 +63,8 @@ Measured, on 20 trees a cell from a diversity-dependent generator at 50 to
 200 tips: a lineage-level model had the minimum AIC on 2 to 7 of 20, and
 led by more than 2 AIC on 0 to 2 of 20 (E27). The \code{chosen} attribute
 is therefore the model with the fewest parameters among those within
-\code{margin} AIC units of the minimum, and \code{within_margin} marks
+\code{margin} AIC units of the minimum, the one with the lower AIC when
+several share that number of parameters, and \code{within_margin} marks
 those rows; the full ranking is kept so that the margin can be read.
 
 A warning names the chosen model when its own effective sample is below

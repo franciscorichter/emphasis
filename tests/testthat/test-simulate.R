@@ -31,12 +31,29 @@ test_that("simulate_tree errors on invalid max_lin", {
   )
 })
 
-test_that("simulate_tree accepts max_tries = 0 (no retries)", {
+test_that("max_tries counts the draws in all, the first included", {
+  # extinction dominates, so nearly every draw dies and the budget is spent
   set.seed(1)
-  # max_tries = 0 is valid: extinct runs are not retried (used for GAM training)
-  result <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, max_tries = 0,
-                          useDDD = FALSE, link = "linear")
-  expect_true(result$status %in% c("done", "extinct", "too_large"))
+  one <- simulate_tree(pars = c(0.05, 2.0), max_t = 10, max_tries = 1,
+                       useDDD = FALSE, link = "linear")
+  expect_identical(one$attempts, 1L)
+  set.seed(1)
+  def <- simulate_tree(pars = c(0.05, 2.0), max_t = 10, useDDD = FALSE, link = "linear")
+  expect_identical(def$attempts, 1L)                 # the default is a single draw
+  set.seed(2)
+  three <- simulate_tree(pars = c(0.05, 2.0), max_t = 10, max_tries = 3,
+                         useDDD = FALSE, link = "linear")
+  expect_true(three$attempts >= 1L && three$attempts <= 3L)
+  if (three$status == "extinct") expect_identical(three$attempts, 3L)
+  # 0 asked for a single draw under the old count; it is read as 1, with a warning
+  set.seed(1)
+  expect_warning(zero <- simulate_tree(pars = c(0.05, 2.0), max_t = 10, max_tries = 0,
+                                       useDDD = FALSE, link = "linear"), "read as 1")
+  expect_identical(zero$attempts, 1L)
+  expect_error(simulate_tree(pars = c(0.5, 0.1), max_t = 5, max_tries = -1, link = "linear"),
+               "positive integer")
+  expect_error(simulate_tree(pars = c(0.5, 0.1), max_t = 5, max_tries = 1.5, link = "linear"),
+               "positive integer")
 })
 
 test_that("simulate_tree errors on wrong pars length for model", {
@@ -119,9 +136,10 @@ test_that("simulate_tree returns survival_prob", {
   result <- simulate_tree(pars = c(0.8, 0.1), max_t = 5, model = "cr", link = "linear")
   expect_true(is.numeric(result$survival_prob))
   expect_true(result$survival_prob >= 0 && result$survival_prob <= 1)
-  # survival_prob is 1/attempts on success and 0 on failure; max_tries = 1
-  # allows two attempts
-  expect_true(result$survival_prob %in% c(0, 0.5, 1))
+  # survival_prob is 1/attempts on success and 0 on failure; the default
+  # max_tries = 1 is a single draw
+  expect_true(result$survival_prob %in% c(0, 1))
+  expect_identical(result$attempts, 1L)
   expect_equal(result$survival_prob > 0, result$status == "done")
 })
 
@@ -135,7 +153,7 @@ test_that("simulate_tree returns survival_prob", {
 #   P(done) = (1 - u)^2 ,   E[N_T | done] = 2 e^{(lambda - mu) T} / (1 - u) ,
 #
 # the second because E[N_T] = e^{rT} per clade with N = 0 on extinction, and
-# the two clades are independent.  max_tries = 0 means one attempt, so the
+# the two clades are independent.  max_tries = 1 is one draw, so the
 # draws are unconditional and these are the moments to compare against.
 
 bd_extinction_prob <- function(lambda, mu, tt) {
@@ -152,7 +170,7 @@ test_that("forward cr simulation matches the birth-death moments", {
 
   n_extant <- vapply(seq_len(reps), function(i) {
     x <- simulate_tree(pars = c(lambda, mu), max_t = tt, model = "cr",
-                       max_tries = 0, useDDD = FALSE, link = "linear")
+                       max_tries = 1, useDDD = FALSE, link = "linear")
     if (is.null(x$L)) 0L else sum(x$L[, 4] == -1)
   }, integer(1))
 
@@ -186,8 +204,8 @@ test_that("an overflowing clade is not retried, an extinct one is", {
   set.seed(6)
   dead <- simulate_tree(pars = c(0.05, 2.0), max_t = 10, model = "cr", link = "linear",
                         max_lin = 1000L, max_tries = 3L)
-  expect_true(dead$attempts >= 1L && dead$attempts <= 4L)
-  if (dead$status == "extinct") expect_identical(dead$attempts, 4L)
+  expect_true(dead$attempts >= 1L && dead$attempts <= 3L)
+  if (dead$status == "extinct") expect_identical(dead$attempts, 3L)
 })
 
 test_that("a clade that churns under max_lin stops at ten times max_lin lineages in all", {

@@ -32,3 +32,20 @@ test_that("a chosen model on fewer than 10 effective draws is warned about", {
   expect_true(attr(tb, "chosen_starved"))
   expect_identical(attr(tb, "chosen"), "nk")
 })
+
+test_that("among models with the fewest parameters within the margin, the lower AIC is chosen", {
+  # Meliphagidae in E28 (177 tips): ned and nd both have six parameters and are
+  # both within 2 AIC of the minimum, which ned holds; dd is 2.26 behind and
+  # outside the margin. The rule names ned, whatever order the fits come in.
+  fits <- list(cr  = mk(-604.480113730276, 2, 300),
+               dd  = mk(-594.565125715573, 4, 295.5),
+               nd  = mk(-592.02332874601,  6, 24.9),
+               ned = mk(-591.434418518233, 6, 44.8),
+               nk  = mk(-594.7959621419,   6, 20.8))
+  tb <- suppressWarnings(do.call(compare_models, fits))
+  expect_equal(tb$AIC[tb$model == "ned"], 1194.86883703647, tolerance = 1e-9)
+  expect_identical(tb$model[tb$within_margin], c("ned", "nd"))
+  expect_identical(attr(tb, "chosen"), "ned")
+  for (ord in list(rev(names(fits)), c("nd", "ned", "nk", "dd", "cr")))
+    expect_identical(attr(suppressWarnings(do.call(compare_models, fits[ord])), "chosen"), "ned")
+})

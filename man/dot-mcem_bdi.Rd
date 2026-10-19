@@ -36,7 +36,20 @@ A list: \code{mcem} (trace, one row per iteration plus the final
   E-step), \code{pars}, \code{iterations} (number of completed E+M
   iterations), \code{stop_reason}, \code{loglik} (fhat at \code{pars},
   \code{NA} when the final E-step failed), \code{loglik_var},
-  \code{final_IS}, \code{n_failed} (E- or M-step failures).
+  \code{final_IS}, \code{n_failed} (E- or M-step failures),
+  \code{final_truncated}, \code{time_note} and \code{damping} (the
+  setting the mean field ran under).  The trace carries the mean field
+  of every E-step: \code{mf_converged}, \code{mf_delta} (final residual),
+  \code{mf_sweeps}, \code{mf_omega} (the relaxation of the last sweep) and
+  \code{mf_budget} (the sweep budget).
+
+Clock.  \code{max_time} binds inside the E-step: the sampler is given the
+deadline and stops drawing when it passes, between draws and inside one.
+An iteration whose E-step ran out is discarded and the run stops with
+\code{"time_budget"} and a \code{time_note}.  The final E-step is given a
+clock of its own, \code{max_time} again, and when it runs out the
+log-likelihood rests on the draws it made (\code{final_truncated}), so a
+fit returns within about twice \code{max_time} plus one M-step.
 }
 \description{
 Drop-in replacement for .mcem_dynamic_fresh(). Uses BDI exact sampling

@@ -34,6 +34,16 @@ Shared parameters (both methods):
     \code{rho < 1} the augmentation inserts unsampled extant lineages as
     well as extinct ones; both samplers do so, and the choice of sampler
     does not depend on \code{rho}.}
+  \item{\code{max_time}}{Wall-clock budget of the fit in seconds; \code{NULL}
+    disables it. Default \code{3600}. Under \code{"mcem"} the clock binds
+    inside the E-step: both samplers stop drawing when it runs out, inside
+    a draw as well as between draws, the iteration in progress is
+    discarded, and the fit ends with \code{stop_reason = "time_budget"}
+    and a \code{clock} note. The E-step that evaluates the returned
+    parameters then gets \code{max_time} again, and when it runs out its
+    log-likelihood rests on the draws it made, so an MCEM fit returns
+    within about twice \code{max_time} plus one M-step. Under
+    \code{"cem"} and \code{"gam"} the clock is read between evaluations.}
 }
 
 MCEM-specific parameters:
@@ -62,7 +72,16 @@ MCEM-specific parameters:
     plain iteration. Relaxation below about \eqn{1/20} converges too slowly
     to be useful. It fixes the iteration and nothing else: at 416 tips the
     effective sample is 2.1 of 97 even with a converged mean field, because
-    the proposal must invent some 600 missing lineages there (audit H108).}
+    the proposal must invent some 600 missing lineages there (audit H108).
+    Every E-step's mean field is in the trace (\code{mf_converged},
+    \code{mf_delta}, the final residual, \code{mf_sweeps},
+    \code{mf_omega}, the relaxation of the last sweep, and
+    \code{mf_budget}); when some E-step relaxed the iteration below the
+    full step or did not converge within its sweep budget, or the setting
+    is not \code{"auto"}, the fit's \code{notes} carry a
+    \code{mean_field} entry with the setting, the sweeps, relaxation and
+    residual of the last E-step and whether it converged, and
+    \code{print()} shows it.}
   \item{\code{mesh}}{BDI only, and only where its Gillespie branch runs
     (any model but \code{"cr"}): the number of steps per crown age the
     frozen rates are re-evaluated on. \code{NULL} (default) leaves the

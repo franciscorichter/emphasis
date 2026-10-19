@@ -1,7 +1,8 @@
 #' Train a survival-probability GAM on forward simulation results
 #'
 #' Fits a binomial GAM to estimate P(survival | parameters) from forward
-#' simulations run with \code{max_tries = 0}.  Each simulation row has a
+#' simulations run with \code{max_tries = 1} (one draw each, unconditioned
+#' on survival).  Each simulation row has a
 #' binary outcome: 1 if both crown lineages reached the present (\code{status}
 #' \code{"done"}) or the clade passed the lineage cap (\code{"too_large"}),
 #' 0 if it went extinct.  A clade stopped at the cap has survived so far, and
@@ -10,7 +11,7 @@
 #' fast, which then rewards the fit for moving there (E36c of the paper).
 #'
 #' @param simulations List of \code{simulate_tree()} outputs (one per row of
-#'   \code{pars_mat}), produced with \code{max_tries = 0}.
+#'   \code{pars_mat}), produced with \code{max_tries = 1}.
 #' @param pars_mat Numeric matrix whose rows are the parameter vectors used to
 #'   generate \code{simulations}.  Column names are used as predictor names; if
 #'   absent, names are auto-generated from \code{model}.
@@ -32,7 +33,7 @@
 #' pars_mat <- cbind(beta_0  = log(runif(100, 0.3, 1.2)),
 #'                   gamma_0 = log(runif(100, 0.05, 0.5)))
 #' sims <- simulate_tree(pars = pars_mat, max_t = 4, model = "cr",
-#'                       max_tries = 0)
+#'                       max_tries = 1)
 #' gam_uni <- train_GAM(sims$simulations, pars_mat, model = "cr")
 #' predict_survival(gam_uni, data.frame(beta_0 = log(0.8), gamma_0 = log(0.2)))
 #' @export
@@ -92,7 +93,7 @@ train_GAM <- function(simulations, pars_mat, model = "cr",
 #' pars_mat <- cbind(beta_0  = log(runif(100, 0.3, 1.2)),
 #'                   gamma_0 = log(runif(100, 0.05, 0.5)))
 #' sims <- simulate_tree(pars = pars_mat, max_t = 4, model = "cr",
-#'                       max_tries = 0)
+#'                       max_tries = 1)
 #' gam_fit <- train_GAM(sims$simulations, pars_mat, model = "cr")
 #' predict_survival(gam_fit, data.frame(beta_0  = log(c(0.5, 1.0)),
 #'                                      gamma_0 = log(c(0.1, 0.3))))
@@ -145,9 +146,10 @@ predict_survival <- function(gam_fit, newpars) {
 #' @param num_threads Parallel threads for batch simulation (default 1).
 #' @param verbose Print progress (default \code{TRUE}).
 #' @param rho Sampling fraction (0, 1]. Default \code{1} (complete sampling).
-#' @param surv_tries Simulations per candidate when judging whether a parameter
-#'   vector produces surviving clades of a usable size (default 20).
-#'   Passed through to IS feasibility diagnostics.
+#' @param surv_tries Draws allowed per simulation, the first included, when
+#'   judging whether a parameter vector produces surviving clades of a usable
+#'   size: an extinct clade is redrawn up to this many times in all (passed to
+#'   \code{simulate_tree} as \code{max_tries}). Default 20.
 #' @return A list with components:
 #'   \describe{
 #'     \item{lower_bound}{Numeric vector of lower bounds (compact layout).}
@@ -480,7 +482,7 @@ auto_bounds <- function(tree, model = "cr", link = "exponential",
     gam_sims <- simulate_tree(
       pars = gam_mat, max_t = max_t,
       model = model, link = link,
-      max_tries = 0,
+      max_tries = 1,
       max_lin = max_lin,
       num_threads = num_threads,
       rho = rho

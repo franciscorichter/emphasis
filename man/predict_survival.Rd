@@ -27,7 +27,7 @@ set.seed(1)
 pars_mat <- cbind(beta_0  = log(runif(100, 0.3, 1.2)),
                   gamma_0 = log(runif(100, 0.05, 0.5)))
 sims <- simulate_tree(pars = pars_mat, max_t = 4, model = "cr",
-                      max_tries = 0)
+                      max_tries = 1)
 gam_fit <- train_GAM(sims$simulations, pars_mat, model = "cr")
 predict_survival(gam_fit, data.frame(beta_0  = log(c(0.5, 1.0)),
                                      gamma_0 = log(c(0.1, 0.3))))

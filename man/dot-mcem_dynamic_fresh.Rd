@@ -40,7 +40,17 @@ A list: \code{mcem} (trace, one row per completed iteration plus the
   \code{maxN} (the ratcheted attempt cap: doubled on every E-step failure
   up to 50000, never reset after a success), \code{loglik} (fhat at
   \code{pars}, \code{NA} when the final E-step failed), \code{loglik_var},
-  \code{final_IS}.
+  \code{final_IS}, \code{final_truncated} (the final E-step ran out of its
+  clock and \code{loglik} rests on the draws it made) and \code{time_note}
+  (what the clock cut short, or \code{NULL}).
+
+Clock.  \code{max_time} binds inside the E-step: \code{em_cpp} is given
+the seconds left and stops drawing when they run out, between draws and
+inside one.  An iteration whose E-step ran out is discarded and the run
+stops with \code{"time_budget"}; the clock is also read between
+iterations, as before.  The final E-step is given a clock of its own,
+\code{max_time} again, so a fit returns within about twice
+\code{max_time} plus one M-step.
 }
 \description{
 E-step and M-step of one iteration are a single \code{em_cpp()} call: the

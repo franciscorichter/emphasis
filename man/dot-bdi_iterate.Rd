@@ -21,7 +21,8 @@
 }
 \value{
 List with p_fun, Nhat_fun, Phat_fun, Ehat_fun, and the fixed-point
-  diagnostics converged / delta / iterations.
+  diagnostics converged / delta / iterations, with omega (the relaxation
+  of the last sweep), damping (the setting) and max_iter (the budget).
 }
 \description{
 Mean-field state: Nhat(t) = k(t) + mhat(t), Phat(t) = P_obs(t) + Phat_miss(t),

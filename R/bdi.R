@@ -587,7 +587,8 @@
 #' change a run that already converged.
 #'
 #' @return List with p_fun, Nhat_fun, Phat_fun, Ehat_fun, and the fixed-point
-#'   diagnostics converged / delta / iterations.
+#'   diagnostics converged / delta / iterations, with omega (the relaxation
+#'   of the last sweep), damping (the setting) and max_iter (the budget).
 #' @keywords internal
 .bdi_iterate <- function(pars8, model_bin, link, bt, tp,
                          max_iter = NULL, tol = 1e-4, n_grid = 500,
@@ -777,7 +778,12 @@
        # link.
        converged = isTRUE(delta < tol),
        delta     = delta,
-       iterations = n_iter_used)
+       iterations = n_iter_used,
+       # the relaxation the last sweep was taken at (1 is the plain
+       # iteration) and the setting it came from
+       omega     = omega,
+       damping   = damping,
+       max_iter  = max_iter)
 }
 
 
@@ -849,10 +855,15 @@
 #' @param obs_pid Parent ids of the observed nodes, when the topology is known.
 #' @param beta_ed The ED coefficient, which tilts the attachment choice toward
 #'   the lineages the model gives a higher rate.  Zero attaches uniformly.
+#' @param attach_fn Exact attachment weights for a D model, or \code{NULL}.
+#' @param deadline The fit's clock as an absolute \code{proc.time()} elapsed
+#'   value; the draw is abandoned with reason \code{"deadline"} once it has
+#'   passed.  \code{Inf} (the default) is no deadline.
 #' @return List with \code{$reason}: \code{"accepted"} (then also
 #'   \code{$species}, \code{$unsampled}, \code{$n_alive_at_tp}, \code{$logg},
 #'   and the parent records when \code{track_parents}), \code{"max_missing"}
-#'   (more than \code{max_missing} missing lineages drawn) or
+#'   (more than \code{max_missing} missing lineages drawn),
+#'   \code{"deadline"} (the clock ran out during the draw) or
 #'   \code{"survivor"} (a missing lineage still alive at tp; only reachable at
 #'   \code{rho = 1}, where such a tree has f = 0).
 #' @keywords internal
@@ -862,8 +873,12 @@
                              max_missing = 1e4L, rho = 1,
                              track_parents = FALSE, first_aug_id = 0L,
                              step_max = Inf, obs_pid = NULL, beta_ed = 0,
-                             attach_fn = NULL) {
+                             attach_fn = NULL, deadline = Inf) {
   bt <- sort(bt)
+  # The fit's clock, an absolute proc.time() elapsed value; read every 64
+  # events, so a draw that churns stops when it runs out.
+  check_clock <- is.finite(deadline)
+  n_events    <- 0L
   is_cr <- all(model_bin == 0L)
   complete <- (rho >= 1)
   # Exact attachment (D models): attach_fn(E_pool, E_all, N) returns the
@@ -960,6 +975,11 @@
     if (seg_idx >= 2L) note_event(seg_idx - 1L)   # the split that opened this segment
 
     while (t < t1) {
+      if (check_clock) {
+        n_events <- n_events + 1L
+        if (n_events %% 64L == 0L && proc.time()[[3L]] >= deadline)
+          return(list(reason = "deadline"))
+      }
       if (is_cr) {
         # -- Exact time-change method for CR --
         U <- stats::rexp(1)
@@ -1322,7 +1342,13 @@
 #'   (finite-weight draws only), \code{fhat}, \code{n_valid} (completed
 #'   draws), \code{n_nonfinite} (completed draws dropped for a non-finite
 #'   log-weight), \code{n_attempts}, \code{n_rejected} (survivors at tp),
-#'   \code{n_rejected_max_missing}, \code{acc}.  \code{trees} is empty when
+#'   \code{n_rejected_max_missing}, \code{acc}, the mean-field diagnostics
+#'   \code{mf_converged}, \code{mf_delta} (final residual), \code{mf_sweeps},
+#'   \code{mf_omega} (relaxation of the last sweep), \code{mf_budget} and
+#'   \code{mf_damping} (all \code{NA} under cr), and \code{timed_out} (the
+#'   \code{deadline}, an absolute \code{proc.time()} elapsed value, passed
+#'   before \code{sample_size} draws completed: the draws made are returned
+#'   and no shortfall warning is issued).  \code{trees} is empty when
 #'   no draw completed or every completed draw has a non-finite log-weight;
 #'   a warning is issued when fewer than \code{sample_size} draws completed.
 #' @keywords internal
@@ -1337,8 +1363,10 @@
                               topology    = NULL,
                               mesh        = NULL,
                               attach      = c("rate", "uniform"),
-                              damping     = "auto") {
+                              damping     = "auto",
+                              deadline    = Inf) {
   attach <- match.arg(attach)
+  if (is.null(deadline) || !is.numeric(deadline) || is.na(deadline)) deadline <- Inf
   brts  <- .extract_brts(tree)
   mb4   <- .pad_model_bin(model_bin)
   # Accept compact, 8-element (no ED/K), 10-element (with ED) or 12-element pars
@@ -1423,6 +1451,9 @@
   p_fun <- Nhat_fun <- Phat_fun <- Ehat_fun <- NULL
   mf_converged <- NA
   mf_delta     <- NA_real_
+  mf_sweeps    <- NA_integer_
+  mf_omega     <- NA_real_
+  mf_budget    <- NA_integer_
   if (!is_cr) {
     sol <- .bdi_iterate(pars8, mb_prop, link, bt, tp,
                         use_gaussian_closure = use_gaussian_closure,
@@ -1435,6 +1466,9 @@
     Ehat_fun <- sol$Ehat_fun
     mf_converged <- isTRUE(sol$converged)
     mf_delta     <- sol$delta
+    mf_sweeps    <- as.integer(sol$iterations)
+    mf_omega     <- as.numeric(sol$omega)
+    mf_budget    <- as.integer(sol$max_iter)
     # The mean-field covariates the whole DD proposal is built on are the
     # fixed point of .bdi_iterate.  When the iteration stops on max_iter
     # instead, the proposal is built on whatever the last sweep produced.  It
@@ -1457,9 +1491,11 @@
   n_rej_surv <- 0L
   n_rej_mm   <- 0L
   max_tries  <- 5L * sample_size
+  timed_out  <- FALSE
 
   for (attempt in seq_len(max_tries)) {
     if (n_valid >= sample_size) break
+    if (proc.time()[[3L]] >= deadline) { timed_out <- TRUE; break }
     n_attempts <- n_attempts + 1L
     aug <- .bdi_augment_one(bt, pars8, mb_prop, link, tp,
                             p_fun, Nhat_fun, Phat_fun, Ehat_fun,
@@ -1467,7 +1503,9 @@
                             track_parents = use_top, first_aug_id = n_obs,
                             step_max = step_max, obs_pid = obs_pid,
                             beta_ed = if (attach == "rate") tilt_d + (if (use_ed) pars_full[9L] else 0) else 0,
-                            attach_fn = attach_fn)
+                            attach_fn = attach_fn, deadline = deadline)
+    # the draw in flight is dropped: it is neither kept nor counted
+    if (aug$reason == "deadline")    { n_attempts <- n_attempts - 1L; timed_out <- TRUE; break }
     if (aug$reason == "survivor")    { n_rej_surv <- n_rej_surv + 1L; next }
     if (aug$reason == "max_missing") { n_rej_mm   <- n_rej_mm   + 1L; next }
 
@@ -1491,7 +1529,7 @@
   trees <- trees[seq_len(n_valid)]
   logg  <- logg[seq_len(n_valid)]
 
-  if (n_valid < sample_size) {
+  if (n_valid < sample_size && !timed_out) {
     warning(sprintf(paste0(
       "BDI augmentation: %d of %d requested draws completed in %d attempts ",
       "(%d survivors at tp, %d over max_missing = %d)."),
@@ -1545,7 +1583,15 @@
        acc     = acc,
        # NA under cr (no mean-field system is solved); TRUE/FALSE under dd.
        mf_converged = mf_converged,
-       mf_delta     = mf_delta)
+       mf_delta     = mf_delta,
+       # the sweeps taken, the relaxation of the last one, the sweep budget
+       # and the damping setting; NA under cr
+       mf_sweeps    = mf_sweeps,
+       mf_omega     = mf_omega,
+       mf_budget    = mf_budget,
+       mf_damping   = if (is_cr) NA else damping,
+       # the clock ran out before sample_size draws completed
+       timed_out    = timed_out)
 }
 
 
@@ -1601,7 +1647,20 @@
 #'   E-step), \code{pars}, \code{iterations} (number of completed E+M
 #'   iterations), \code{stop_reason}, \code{loglik} (fhat at \code{pars},
 #'   \code{NA} when the final E-step failed), \code{loglik_var},
-#'   \code{final_IS}, \code{n_failed} (E- or M-step failures).
+#'   \code{final_IS}, \code{n_failed} (E- or M-step failures),
+#'   \code{final_truncated}, \code{time_note} and \code{damping} (the
+#'   setting the mean field ran under).  The trace carries the mean field
+#'   of every E-step: \code{mf_converged}, \code{mf_delta} (final residual),
+#'   \code{mf_sweeps}, \code{mf_omega} (the relaxation of the last sweep) and
+#'   \code{mf_budget} (the sweep budget).
+#'
+#' Clock.  \code{max_time} binds inside the E-step: the sampler is given the
+#' deadline and stops drawing when it passes, between draws and inside one.
+#' An iteration whose E-step ran out is discarded and the run stops with
+#' \code{"time_budget"} and a \code{time_note}.  The final E-step is given a
+#' clock of its own, \code{max_time} again, and when it runs out the
+#' log-likelihood rests on the draws it made (\code{final_truncated}), so a
+#' fit returns within about twice \code{max_time} plus one M-step.
 #' @keywords internal
 .mcem_bdi <- function(brts,
                       pars,
@@ -1650,8 +1709,16 @@
   floor_val  <- .rel_floor(brts, link_int)
   rel_change <- function(new, old) .rel_change(new, old, floor_val)
 
-  # One BDI E-step at `theta`; NULL on error or when no tree was drawn.
-  e_step_at <- function(theta) {
+  # The clock binds inside the E-step: the sampler is given the deadline and
+  # stops drawing when it passes, between draws and inside one.
+  t0_mcem  <- proc.time()[[3L]]
+  deadline <- if (is.null(max_time)) Inf else t0_mcem + max_time
+  time_note <- NULL
+
+  # One BDI E-step at `theta`; NULL on error or when no tree was drawn and the
+  # clock did not run out.  A sample the clock cut short is returned with
+  # timed_out = TRUE, whatever it holds.
+  e_step_at <- function(theta, until = deadline) {
     e <- tryCatch(
       .augment_tree_bdi(
         tree        = brts,
@@ -1662,11 +1729,14 @@
         link        = link_int,
         rho         = as.numeric(rho),
         mesh        = mesh,
-        damping     = damping
+        damping     = damping,
+        deadline    = until
       ),
       error = function(e) NULL
     )
-    if (is.null(e) || length(e$trees) == 0L) return(NULL)
+    if (is.null(e)) return(NULL)
+    if (isTRUE(e$timed_out)) return(e)
+    if (length(e$trees) == 0L) return(NULL)
     e
   }
 
@@ -1695,6 +1765,13 @@
       # error, and the draws the E-step used at that iteration.
       mc_z        = NA_real_,
       sample_size = sample_size,
+      # the mean field the proposal was built on: converged, final residual,
+      # sweeps taken and the relaxation of the last sweep (NA under cr)
+      mf_converged = if (is.null(e$mf_converged)) NA else e$mf_converged,
+      mf_delta    = if (is.null(e$mf_delta)) NA_real_ else e$mf_delta,
+      mf_sweeps   = if (is.null(e$mf_sweeps)) NA_integer_ else e$mf_sweeps,
+      mf_omega    = if (is.null(e$mf_omega)) NA_real_ else e$mf_omega,
+      mf_budget   = if (is.null(e$mf_budget)) NA_integer_ else e$mf_budget,
       time        = elapsed_e * 1000 + m_time
     ))
   }
@@ -1708,13 +1785,24 @@
   mcem        <- NULL
   n_iter      <- 0L
   stop_reason <- "max_iter"
-  t0_mcem     <- proc.time()[3]
 
   for (i in seq_len(max_iter)) {
     # -- E-step: BDI augmentation --
     t0_e  <- proc.time()[3]
     e_raw <- e_step_at(pars)
     elapsed_e <- as.numeric(proc.time()[3] - t0_e)
+
+    # The clock ran out inside this E-step: its partial sample is not
+    # optimised over, and the fit ends at the last completed iterate.
+    if (!is.null(e_raw) && isTRUE(e_raw$timed_out)) {
+      stop_reason <- "time_budget"
+      time_note <- sprintf(paste0(
+        "the clock (max_time = %gs) ran out inside the E-step of iteration %d, after %d of ",
+        "%d draws; that iteration was discarded and the fit ends at the last completed iterate."),
+        max_time, i, .n0(e_raw$n_valid), as.integer(sample_size))
+      if (verbose) message("Time budget reached inside the E-step of iteration ", i)
+      break
+    }
 
     if (is.null(e_raw)) {
       fail_streak <- fail_streak + 1L
@@ -1902,9 +1990,29 @@
 
   # -- Final E-step at the returned iterate --
   # The trace rows pair theta_k with fhat(theta_{k-1}); this E-step gives
-  # fhat, ESS and the IS diagnostics at pars itself.
+  # fhat, ESS and the IS diagnostics at pars itself.  It gets a clock of its
+  # own, max_time again, so a fit that stopped on its clock still evaluates
+  # the point it returns, in bounded time; cut short, it keeps the draws it
+  # made when it has any.
+  final_truncated <- FALSE
+  final_clock <- function() if (is.null(max_time)) Inf else proc.time()[[3L]] + max_time
+  settle_final <- function(e) {
+    if (is.null(e) || !isTRUE(e$timed_out)) return(e)
+    if (length(e$trees) >= 1L && is.finite(e$fhat)) {
+      final_truncated <<- TRUE
+      time_note <<- paste(c(time_note, sprintf(paste0(
+        "the final E-step at the returned parameters ran out of its clock (%gs) after %d of %d ",
+        "draws; the log-likelihood is estimated from those draws."),
+        max_time, .n0(e$n_valid), as.integer(sample_size))), collapse = " ")
+      return(e)
+    }
+    time_note <<- paste(c(time_note, sprintf(paste0(
+      "the final E-step at the returned parameters drew no tree within its clock (%gs); ",
+      "loglik is NA."), max_time)), collapse = " ")
+    NULL
+  }
   t0_e    <- proc.time()[3]
-  e_final <- e_step_at(pars)
+  e_final <- settle_final(e_step_at(pars, until = final_clock()))
   elapsed_e <- as.numeric(proc.time()[3] - t0_e)
 
   # An iterate the sampler cannot evaluate is not an estimate: fall back to
@@ -1916,7 +2024,7 @@
     if (verbose) message(
       "Final E-step failed; returning the last iterate whose E-step succeeded.")
     t0_e      <- proc.time()[3]
-    e_final   <- e_step_at(pars)
+    e_final   <- settle_final(e_step_at(pars, until = final_clock()))
     elapsed_e <- as.numeric(proc.time()[3] - t0_e)
   }
 
@@ -1964,6 +2072,9 @@
     loglik      = loglik,
     loglik_var  = loglik_var,
     final_IS    = final_IS,
-    n_failed    = n_failed
+    n_failed    = n_failed,
+    final_truncated = final_truncated,
+    time_note   = time_note,
+    damping     = damping
   )
 }

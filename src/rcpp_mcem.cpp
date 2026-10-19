@@ -52,6 +52,10 @@ namespace {
 //' one from R's generator, so set.seed() reaches the sampler whether or not a
 //' seed is passed.
 //' @param rconditional R function that evaluates the GAM function.
+//' @param time_left seconds the fit has left on its clock; the E-step stops
+//' drawing when they run out, inside a draw as well as between draws, and
+//' returns the trees it has with \code{timed_out = TRUE} and no M-step.
+//' Negative (the default) means no deadline.
 //' @return a list with the following components:
 //' \describe{
 //'  \item{trees}{list of trees}
@@ -68,6 +72,9 @@ namespace {
 //'  \item{weights}{vector of weights}
 //'  \item{logf}{vector of log p(obs, z_i | theta) for each valid tree}
 //'  \item{logg}{vector of log q(z_i | obs, theta) for each valid tree}
+//'  \item{timed_out}{whether the deadline passed before sample_size trees
+//'  were drawn; when \code{TRUE} no M-step was run and \code{estimates} is
+//'  \code{init_pars}}
 //' }
 //' @keywords internal
 // [[Rcpp::export(name = "em_cpp")]]
@@ -88,8 +95,10 @@ List rcpp_mcem(const std::vector<double>& brts,
                Nullable<Function> rconditional = R_NilValue,
                Rcpp::NumericVector parent_tip_start = Rcpp::NumericVector::create(),
                int seed = 0,
-               Rcpp::IntegerVector parent_id = Rcpp::IntegerVector::create())
+               Rcpp::IntegerVector parent_id = Rcpp::IntegerVector::create(),
+               double time_left = -1.0)
 {
+  const emphasis::deadline_t deadline = emphasis::deadline_t::in_seconds(time_left);
   emphasis::rng::set_seed(emphasis::resolve_seed(seed));
   const std::vector<double> pts(parent_tip_start.begin(), parent_tip_start.end());
   const std::vector<int> pid(parent_id.begin(), parent_id.end());
@@ -144,8 +153,10 @@ List rcpp_mcem(const std::vector<double>& brts,
                              num_threads,
                              conditional ? &conditional : nullptr,
                              pts,
-                             pid);
-  if (mcem.e.trees.empty()) {
+                             pid,
+                             deadline);
+  const bool timed_out = mcem.e.info.timed_out;
+  if (mcem.e.trees.empty() && !timed_out) {
     throw std::runtime_error("no trees, no optimization");
   }
   List ret;
@@ -164,7 +175,10 @@ List rcpp_mcem(const std::vector<double>& brts,
   ret["rejected_zero_weights"] = mcem.e.info.rejected_zero_weights;
   ret["rejected_nonfinite"] = mcem.e.info.rejected_nonfinite;
   ret["num_trees"] = mcem.e.info.num_trees;
-  {
+  if (timed_out) {
+    // no M-step ran: the iterate is where the E-step sampled
+    ret["estimates"] = NumericVector(init_pars.begin(), init_pars.end());
+  } else {
     // Returned in the layout the caller used: 8 slots when it passed 8.
     const long n_out = static_cast<long>(std::min(init_pars.size(), mcem.m.estimates.size()));
     ret["estimates"] = NumericVector(mcem.m.estimates.begin(), mcem.m.estimates.begin() + n_out);
@@ -175,5 +189,6 @@ List rcpp_mcem(const std::vector<double>& brts,
   ret["weights"] = mcem.e.weights;
   ret["logf"] = NumericVector(mcem.e.logf_.begin(), mcem.e.logf_.end());
   ret["logg"] = NumericVector(mcem.e.logg_.begin(), mcem.e.logg_.end());
+  ret["timed_out"] = timed_out;
   return ret;
 }

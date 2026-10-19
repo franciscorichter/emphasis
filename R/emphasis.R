@@ -49,7 +49,17 @@
 #'   \code{maxN} (the ratcheted attempt cap: doubled on every E-step failure
 #'   up to 50000, never reset after a success), \code{loglik} (fhat at
 #'   \code{pars}, \code{NA} when the final E-step failed), \code{loglik_var},
-#'   \code{final_IS}.
+#'   \code{final_IS}, \code{final_truncated} (the final E-step ran out of its
+#'   clock and \code{loglik} rests on the draws it made) and \code{time_note}
+#'   (what the clock cut short, or \code{NULL}).
+#'
+#' Clock.  \code{max_time} binds inside the E-step: \code{em_cpp} is given
+#' the seconds left and stops drawing when they run out, between draws and
+#' inside one.  An iteration whose E-step ran out is discarded and the run
+#' stops with \code{"time_budget"}; the clock is also read between
+#' iterations, as before.  The final E-step is given a clock of its own,
+#' \code{max_time} again, so a fit returns within about twice
+#' \code{max_time} plus one M-step.
 #' @keywords internal
 .mcem_dynamic_fresh <- function(brts,
                       pars,
@@ -143,7 +153,14 @@
     apply(est, 2, stats::sd) / sqrt(nrow(est))
   }
 
-  run_em <- function(at, maxN_now) {
+  # The clock binds inside the E-step: em_cpp is given the seconds left and
+  # stops drawing when they run out, inside a draw as well as between draws.
+  # With no max_time it is given -1, no deadline.
+  time_left <- function() {
+    if (is.null(max_time)) return(-1)
+    max(0, max_time - (proc.time()[[3L]] - t0_mcem))
+  }
+  run_em <- function(at, maxN_now, left = time_left()) {
     tryCatch(
       em_cpp(brts = brts,
              init_pars = at,
@@ -161,10 +178,12 @@
              rho = as.numeric(rho),
              rconditional = conditional,
              parent_tip_start = parent_tip_start,
-             parent_id = parent_id),
+             parent_id = parent_id,
+             time_left = as.numeric(left)),
       error = function(e) NULL
     )
   }
+  time_note <- NULL
 
   # The four disjoint ways the E-step discards a draw. Zero-weight draws are
   # not among them: they completed and stay in the fhat denominator.
@@ -212,6 +231,18 @@
   for (i in seq_len(max_iter)) {
     maxN_used <- maxN
     results   <- run_em(cur_pars, maxN)
+
+    # The clock ran out inside this E-step: its partial sample is not
+    # optimised over, and the fit ends at the last completed iterate.
+    if (!is.null(results) && isTRUE(results$timed_out)) {
+      stop_reason <- "time_budget"
+      time_note <- sprintf(paste0(
+        "the clock (max_time = %gs) ran out inside the E-step of iteration %d, after %d of ",
+        "%d draws; that iteration was discarded and the fit ends at the last completed iterate."),
+        max_time, i, .n0(results$num_trees), as.integer(sample_size))
+      if (verbose) message("Time budget reached inside the E-step of iteration ", i)
+      break
+    }
 
     if (is.null(results)) {
       fail_streak <- fail_streak + 1L
@@ -359,9 +390,28 @@
   # alternative is to report the previous iterate's E-step as the likelihood
   # of `pars`. When it fails, loglik, loglik_var and final_IS report nothing.
   final_estep <- FALSE
+  final_truncated <- FALSE
   fin <- NULL
   if (had_success) {
-    fin <- run_em(prev_pars, maxN)
+    # The final E-step gets a clock of its own, max_time again, so a fit that
+    # stopped on its clock still evaluates the point it returns, and does so
+    # in bounded time.  Cut short, it keeps the draws it made when it has any.
+    fin <- run_em(prev_pars, maxN,
+                  left = if (is.null(max_time)) -1 else as.numeric(max_time))
+    if (!is.null(fin) && isTRUE(fin$timed_out)) {
+      if (.n0(fin$num_trees) >= 1L && is.finite(fin$fhat)) {
+        final_truncated <- TRUE
+        time_note <- paste(c(time_note, sprintf(paste0(
+          "the final E-step at the returned parameters ran out of its clock (%gs) after %d of %d ",
+          "draws; the log-likelihood is estimated from those draws."),
+          max_time, .n0(fin$num_trees), as.integer(sample_size))), collapse = " ")
+      } else {
+        fin <- NULL
+        time_note <- paste(c(time_note, sprintf(paste0(
+          "the final E-step at the returned parameters drew no tree within its clock (%gs); ",
+          "loglik is NA."), max_time)), collapse = " ")
+      }
+    }
     if (!is.null(fin)) {
       final_estep <- TRUE
       mcem <- rbind(mcem, trace_row(prev_pars, fin, NA_real_, NA_real_, NA_real_,
@@ -418,7 +468,9 @@
     sample_size = sample_size,
     loglik      = loglik,
     loglik_var  = loglik_var,
-    final_IS    = final_IS
+    final_IS    = final_IS,
+    final_truncated = final_truncated,
+    time_note   = time_note
   )
 }
 

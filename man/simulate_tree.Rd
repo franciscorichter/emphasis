@@ -45,11 +45,16 @@ is too large as well, which bounds the cost of a simulation that churns
 (high speciation and extinction over a long crown) under the cap.
 Default \code{1e6}.}
 
-\item{max_tries}{Maximum additional attempts after extinction (forward
-simulation only). A clade that overflows \code{max_lin} is not retried:
-the overflow is a property of the parameters, not of the draw, and every
-retry would run to the cap again. Retries are tracked at the R level to
-compute \code{survival_prob}. Default \code{1}.}
+\item{max_tries}{Maximum number of forward simulations in all, the first
+included (forward simulation only): a clade that goes extinct is drawn
+again until one survives or \code{max_tries} draws have been made, so the
+default \code{1} is a single draw, unconditioned on survival. A positive
+integer; \code{0}, which asked for a single draw when the argument counted
+the draws after the first, is read as \code{1} with a warning. A clade
+that overflows \code{max_lin} is not retried: the
+overflow is a property of the parameters, not of the draw, and every
+retry would run to the cap again. The draws are counted at the R level
+(\code{attempts}) to compute \code{survival_prob}. Default \code{1}.}
 
 \item{useDDD}{Convert L-table to \code{phylo} via \pkg{DDD}.
 Default \code{TRUE}.}

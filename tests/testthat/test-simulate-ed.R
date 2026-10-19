@@ -12,7 +12,7 @@ test_that("the raw-ED path with zero ED coefficients matches the birth-death mom
   set.seed(11)
   tips <- replicate(300, {
     s <- simulate_tree(pars = c(log(lambda), 0, log(mu), 0), max_t = tt, model = "ed",
-                       link = "exponential", max_tries = 0, num_threads = 1L)
+                       link = "exponential", max_tries = 1, num_threads = 1L)
     if (identical(s$status, "done") && !is.null(s$tes)) ape::Ntip(s$tes) else NA_real_
   })
   # E[N(T) | survival of both crown lineages] against the same quantity from the
@@ -20,7 +20,7 @@ test_that("the raw-ED path with zero ED coefficients matches the birth-death mom
   set.seed(11)
   ref <- replicate(300, {
     s <- simulate_tree(pars = c(log(lambda), log(mu)), max_t = tt, model = "cr",
-                       link = "exponential", max_tries = 0, num_threads = 1L)
+                       link = "exponential", max_tries = 1, num_threads = 1L)
     if (identical(s$status, "done") && !is.null(s$tes)) ape::Ntip(s$tes) else NA_real_
   })
   a <- tips[is.finite(tips)]; b <- ref[is.finite(ref)]
@@ -41,7 +41,7 @@ test_that("a negative ED coefficient on the exponential link slows the clade bel
   set.seed(5)
   tips <- replicate(200, {
     s <- simulate_tree(pars = pars, max_t = 8, model = "ned", link = "exponential",
-                       max_tries = 0, num_threads = 1L, max_lin = 5000L)
+                       max_tries = 1, num_threads = 1L, max_lin = 5000L)
     if (identical(s$status, "done") && !is.null(s$tes)) ape::Ntip(s$tes) else NA_real_
   })
   a <- tips[is.finite(tips)]
@@ -52,6 +52,6 @@ test_that("a negative ED coefficient on the exponential link slows the clade bel
 test_that("the thinning path is deterministic under set.seed", {
   pars <- c(log(0.5), -0.01, -0.05, log(0.05), 0, 0)
   one <- function() { set.seed(3); simulate_tree(pars = pars, max_t = 6, model = "ned", link = "exponential",
-                                                 max_tries = 0, num_threads = 1L)$L }
+                                                 max_tries = 1, num_threads = 1L)$L }
   expect_identical(one(), one())
 })

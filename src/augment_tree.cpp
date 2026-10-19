@@ -422,7 +422,8 @@ namespace emphasis {
     }
 
 
-    void do_augment_tree_cont(const param_t& pars, tree_t& tree, const Model& model, int max_missing, double max_lambda, int& next_id)
+    void do_augment_tree_cont(const param_t& pars, tree_t& tree, const Model& model, int max_missing, double max_lambda, int& next_id,
+                              const deadline_t* deadline = nullptr)
     {
       // The birth times, the parent draws and Model::extinction_time all come
       // off this one engine (see the rng notes in inst/include/model.hpp);
@@ -470,7 +471,17 @@ namespace emphasis {
       std::vector<char> alive_scratch;
       ed::result_t edr;
       Model::ed_proposal_seg_t seg;
+      // max_missing bounds the accepted births, not the rejected candidates:
+      // under an envelope as high as max_lambda (em_cpp passes 1e6) a single
+      // draw can test candidates without end.  The fit's deadline is read
+      // every 1024 passes of the loop, which costs one clock read per 1024
+      // candidates or segments, so the draw stops when the clock runs out.
+      const bool check_clock = (deadline != nullptr) && deadline->active;
+      unsigned clock_count = 0;
       while (cbt < b) {
+        if (check_clock && ((++clock_count & 1023u) == 0u) && deadline->passed()) {
+          throw augmentation_timeout{};
+        }
         auto next_it = std::upper_bound(tree.begin(), tree.end(), cbt, detail::node_less{});
         if (next_it == tree.end()) next_it = tree.end() - 1;
         const double next_bt = next_it->brts;
@@ -610,7 +621,8 @@ namespace emphasis {
   }
 
 
-  void augment_tree(const param_t& pars, const tree_t& input_tree, const Model& model, int max_missing, double max_lambda, tree_t& pooled)
+  void augment_tree(const param_t& pars, const tree_t& input_tree, const Model& model, int max_missing, double max_lambda, tree_t& pooled,
+                    const deadline_t* deadline)
   {
     rng::stream(worker_substream());
     pooled.resize(input_tree.size());
@@ -628,7 +640,7 @@ namespace emphasis {
         node.parent_id = -1;
       }
     }
-    do_augment_tree_cont(pars, pooled, model, max_missing, max_lambda, next_id);
+    do_augment_tree_cont(pars, pooled, model, max_missing, max_lambda, next_id, deadline);
   }
 
 

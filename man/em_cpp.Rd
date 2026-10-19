@@ -22,7 +22,8 @@ em_cpp(
   rconditional = NULL,
   parent_tip_start = as.numeric(c()),
   seed = 0L,
-  parent_id = as.integer(c())
+  parent_id = as.integer(c()),
+  time_left = -1
 )
 }
 \arguments{
@@ -67,6 +68,11 @@ every observed event.}
 \item{seed}{positive integer seeding the C++ sampler; 0 (the default) draws
 one from R's generator, so set.seed() reaches the sampler whether or not a
 seed is passed.}
+
+\item{time_left}{seconds the fit has left on its clock; the E-step stops
+drawing when they run out, inside a draw as well as between draws, and
+returns the trees it has with \code{timed_out = TRUE} and no M-step.
+Negative (the default) means no deadline.}
 }
 \value{
 a list with the following components:
@@ -85,6 +91,9 @@ a list with the following components:
  \item{weights}{vector of weights}
  \item{logf}{vector of log p(obs, z_i | theta) for each valid tree}
  \item{logg}{vector of log q(z_i | obs, theta) for each valid tree}
+ \item{timed_out}{whether the deadline passed before sample_size trees
+ were drawn; when \code{TRUE} no M-step was run and \code{estimates} is
+ \code{init_pars}}
 }
 }
 \description{

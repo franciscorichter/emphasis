@@ -318,7 +318,7 @@ pars_mat <- cbind(
 batch <- simulate_tree(
   pars = pars_mat, max_t = 10,
   model = "dd", link = "exponential",
-  max_tries = 0, num_threads = 4
+  max_tries = 1, num_threads = 4
 )
 
 # Conditional simulation: augment an observed tree with latent lineages

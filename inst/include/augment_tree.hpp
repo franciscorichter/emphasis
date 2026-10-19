@@ -22,6 +22,14 @@ namespace emphasis {
   };
 
 
+  // thrown if the fit's deadline passed while a tree was being drawn
+  class augmentation_timeout : public std::runtime_error
+  {
+  public:
+    augmentation_timeout() : std::runtime_error("deadline passed during augmentation") {}
+  };
+
+
   // Number of thinning candidates whose acceptance probability exceeded 1
   // (the envelope did not dominate nh at the candidate) since the last reset.
   long long thinning_envelope_violations(bool reset);
@@ -32,7 +40,8 @@ namespace emphasis {
                     const Model& model,
                     int max_missing,
                     double max_lambda,
-                    tree_t& out);
+                    tree_t& out,
+                    const deadline_t* deadline = nullptr);  // checked inside the draw
 
 
   // What the proposal had to choose from at one augmented birth: the lineages

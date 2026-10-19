@@ -56,9 +56,10 @@ on the detected region.}
 
 \item{rho}{Sampling fraction (0, 1]. Default \code{1} (complete sampling).}
 
-\item{surv_tries}{Simulations per candidate when judging whether a parameter
-vector produces surviving clades of a usable size (default 20).
-Passed through to IS feasibility diagnostics.}
+\item{surv_tries}{Draws allowed per simulation, the first included, when
+judging whether a parameter vector produces surviving clades of a usable
+size: an extinct clade is redrawn up to this many times in all (passed to
+\code{simulate_tree} as \code{max_tries}). Default 20.}
 }
 \value{
 A list with components:

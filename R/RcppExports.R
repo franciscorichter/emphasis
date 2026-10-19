@@ -252,6 +252,10 @@ thinning_envelope_violations <- function(reset = FALSE) {
 #' one from R's generator, so set.seed() reaches the sampler whether or not a
 #' seed is passed.
 #' @param rconditional R function that evaluates the GAM function.
+#' @param time_left seconds the fit has left on its clock; the E-step stops
+#' drawing when they run out, inside a draw as well as between draws, and
+#' returns the trees it has with \code{timed_out = TRUE} and no M-step.
+#' Negative (the default) means no deadline.
 #' @return a list with the following components:
 #' \describe{
 #'  \item{trees}{list of trees}
@@ -268,10 +272,13 @@ thinning_envelope_violations <- function(reset = FALSE) {
 #'  \item{weights}{vector of weights}
 #'  \item{logf}{vector of log p(obs, z_i | theta) for each valid tree}
 #'  \item{logg}{vector of log q(z_i | obs, theta) for each valid tree}
+#'  \item{timed_out}{whether the deadline passed before sample_size trees
+#'  were drawn; when \code{TRUE} no M-step was run and \code{estimates} is
+#'  \code{init_pars}}
 #' }
 #' @keywords internal
-em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, rconditional = NULL, parent_tip_start = as.numeric( c()), seed = 0L, parent_id = as.integer( c())) {
-    .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model, link, rho, rconditional, parent_tip_start, seed, parent_id)
+em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, rconditional = NULL, parent_tip_start = as.numeric( c()), seed = 0L, parent_id = as.integer( c()), time_left = -1.0) {
+    .Call('_emphasis_rcpp_mcem', PACKAGE = 'emphasis', brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model, link, rho, rconditional, parent_tip_start, seed, parent_id, time_left)
 }
 
 #' function to perform one step of the E-M algorithm

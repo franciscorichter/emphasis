@@ -142,6 +142,16 @@ A list with class \code{"emphasis_fit"} containing:
       (\code{0} when every E-step failed); \code{NA} for other methods.}
     \item{\code{n_failed}}{Number of E- or M-step failures over the MCEM
       run; \code{NA} for other methods.}
+    \item{\code{notes}}{Named character vector of what the measurements
+      and the run say about this fit: \code{size}, \code{starved} and
+      \code{turnover} (emitted as a warning or messages when the fit is
+      made), \code{mean_field} (the surrogate proposal's mean-field
+      iteration was relaxed below the full step, ran under a
+      \code{damping} other than \code{"auto"}, or did not converge within
+      its sweep budget: the setting, the sweeps taken, the relaxation and
+      residual of the last E-step, and how many E-steps of the run relaxed
+      or failed to converge) and \code{clock} (\code{max_time} ran out
+      inside an E-step). \code{print()} shows the last two.}
     \item{\code{details}}{Full output from the back-end function
       (\code{.mcem_dynamic_fresh} or \code{emphasis_cem}).}
   }

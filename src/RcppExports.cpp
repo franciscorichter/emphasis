@@ -142,8 +142,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // rcpp_mcem
-List rcpp_mcem(const std::vector<double>& brts, const std::vector<double>& init_pars, int sample_size, int maxN, int max_missing, double max_lambda, const std::vector<double>& lower_bound, const std::vector<double>& upper_bound, double xtol_rel, int num_threads, bool copy_trees, Rcpp::IntegerVector model, int link, double rho, Nullable<Function> rconditional, Rcpp::NumericVector parent_tip_start, int seed, Rcpp::IntegerVector parent_id);
-RcppExport SEXP _emphasis_rcpp_mcem(SEXP brtsSEXP, SEXP init_parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP lower_boundSEXP, SEXP upper_boundSEXP, SEXP xtol_relSEXP, SEXP num_threadsSEXP, SEXP copy_treesSEXP, SEXP modelSEXP, SEXP linkSEXP, SEXP rhoSEXP, SEXP rconditionalSEXP, SEXP parent_tip_startSEXP, SEXP seedSEXP, SEXP parent_idSEXP) {
+List rcpp_mcem(const std::vector<double>& brts, const std::vector<double>& init_pars, int sample_size, int maxN, int max_missing, double max_lambda, const std::vector<double>& lower_bound, const std::vector<double>& upper_bound, double xtol_rel, int num_threads, bool copy_trees, Rcpp::IntegerVector model, int link, double rho, Nullable<Function> rconditional, Rcpp::NumericVector parent_tip_start, int seed, Rcpp::IntegerVector parent_id, double time_left);
+RcppExport SEXP _emphasis_rcpp_mcem(SEXP brtsSEXP, SEXP init_parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP lower_boundSEXP, SEXP upper_boundSEXP, SEXP xtol_relSEXP, SEXP num_threadsSEXP, SEXP copy_treesSEXP, SEXP modelSEXP, SEXP linkSEXP, SEXP rhoSEXP, SEXP rconditionalSEXP, SEXP parent_tip_startSEXP, SEXP seedSEXP, SEXP parent_idSEXP, SEXP time_leftSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -165,7 +165,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type parent_tip_start(parent_tip_startSEXP);
     Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
     Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type parent_id(parent_idSEXP);
-    rcpp_result_gen = Rcpp::wrap(rcpp_mcem(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model, link, rho, rconditional, parent_tip_start, seed, parent_id));
+    Rcpp::traits::input_parameter< double >::type time_left(time_leftSEXP);
+    rcpp_result_gen = Rcpp::wrap(rcpp_mcem(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model, link, rho, rconditional, parent_tip_start, seed, parent_id, time_left));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -201,7 +202,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_emphasis_rcpp_attachments", (DL_FUNC) &_emphasis_rcpp_attachments, 1},
     {"_emphasis_rcpp_pendant_sweep", (DL_FUNC) &_emphasis_rcpp_pendant_sweep, 3},
     {"_emphasis_rcpp_thinning_envelope_violations", (DL_FUNC) &_emphasis_rcpp_thinning_envelope_violations, 1},
-    {"_emphasis_rcpp_mcem", (DL_FUNC) &_emphasis_rcpp_mcem, 18},
+    {"_emphasis_rcpp_mcem", (DL_FUNC) &_emphasis_rcpp_mcem, 19},
     {"_emphasis_rcpp_mcm", (DL_FUNC) &_emphasis_rcpp_mcm, 11},
     {NULL, NULL, 0}
 };

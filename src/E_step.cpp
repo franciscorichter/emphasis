@@ -98,7 +98,8 @@ namespace emphasis {
                   int num_threads,
                   double max_time_seconds,  // 0 = default 120s safety limit
                   const std::vector<double>& parent_tip_start,
-                  const std::vector<int>& parent_id)
+                  const std::vector<int>& parent_id,
+                  const deadline_t& deadline)
   {
     // N < 1 leaves the sample empty on every path: nothing is stored, the
     // `num_trees < N` test below is false, and max_element/fhat would then
@@ -110,6 +111,10 @@ namespace emphasis {
     num_threads = std::max(1, std::min(num_threads, static_cast<int>(std::thread::hardware_concurrency())));
     std::mutex mutex;
     std::atomic<bool> stop{ false };
+    // Set, under `mutex`, when the fit's deadline passes: before a draw starts
+    // or inside one (augmentation_timeout).  The sample drawn so far is then
+    // returned rather than thrown on, and the driver ends the fit.
+    bool timed_out = false;
 
     tree_t init_tree = detail::create_tree(brts, parent_tip_start, parent_id);
     auto E = E_step_t{};
@@ -149,10 +154,19 @@ namespace emphasis {
               break;
             }
           }
+          // The fit's own clock, read once per draw; augment_tree reads it
+          // again inside the draw.
+          if (deadline.passed()) {
+            std::lock_guard<std::mutex> _(mutex);
+            if (!stop) timed_out = true;
+            stop = true;
+            break;
+          }
           // reuse tree from pool
           auto& pool_tree = detail::pooled_tree;
 
-          emphasis::augment_tree(pars, init_tree, model, max_missing, max_lambda, pool_tree);
+          emphasis::augment_tree(pars, init_tree, model, max_missing, max_lambda, pool_tree,
+                                 deadline.active ? &deadline : nullptr);
 
           double log_w = 0.0;
           double logf = 0.0;
@@ -191,6 +205,14 @@ namespace emphasis {
             ++E.info.rejected_nonfinite;
           }
         }
+        catch (const augmentation_timeout&) {
+          // the draw in flight is dropped, as one in flight when the sample
+          // fills is: it is neither stored nor counted
+          std::lock_guard<std::mutex> _(mutex);
+          if (!stop) timed_out = true;
+          stop = true;
+          break;
+        }
         catch (const augmentation_overrun&) {
           std::lock_guard<std::mutex> _(mutex);
           if (stop) break;
@@ -212,10 +234,20 @@ namespace emphasis {
     E.info.num_trees = static_cast<int>(E.trees.size());
     auto T1 = std::chrono::high_resolution_clock::now();
     E.info.elapsed = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count());
+    E.info.timed_out = timed_out;
 
+    // A sample cut short by the deadline is returned as it stands, flagged,
+    // so the driver can end the fit; fhat is computed when it holds a tree
+    // and left NaN when it holds none.
+    if (timed_out) {
+      if (E.weights.empty()) {
+        E.info.fhat = std::numeric_limits<double>::quiet_NaN();
+        return E;
+      }
+    }
     // An empty sample is thrown on unconditionally: max_element below has no
     // defined result on an empty range, and S_completed would be zero.
-    if (E.info.num_trees < N || E.weights.empty()) {
+    else if (E.info.num_trees < N || E.weights.empty()) {
       throw emphasis_error_E(E);
     }
   

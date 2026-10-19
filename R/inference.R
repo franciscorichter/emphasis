@@ -47,6 +47,16 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     \code{rho < 1} the augmentation inserts unsampled extant lineages as
 #'     well as extinct ones; both samplers do so, and the choice of sampler
 #'     does not depend on \code{rho}.}
+#'   \item{\code{max_time}}{Wall-clock budget of the fit in seconds; \code{NULL}
+#'     disables it. Default \code{3600}. Under \code{"mcem"} the clock binds
+#'     inside the E-step: both samplers stop drawing when it runs out, inside
+#'     a draw as well as between draws, the iteration in progress is
+#'     discarded, and the fit ends with \code{stop_reason = "time_budget"}
+#'     and a \code{clock} note. The E-step that evaluates the returned
+#'     parameters then gets \code{max_time} again, and when it runs out its
+#'     log-likelihood rests on the draws it made, so an MCEM fit returns
+#'     within about twice \code{max_time} plus one M-step. Under
+#'     \code{"cem"} and \code{"gam"} the clock is read between evaluations.}
 #' }
 #'
 #' MCEM-specific parameters:
@@ -75,7 +85,16 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     plain iteration. Relaxation below about \eqn{1/20} converges too slowly
 #'     to be useful. It fixes the iteration and nothing else: at 416 tips the
 #'     effective sample is 2.1 of 97 even with a converged mean field, because
-#'     the proposal must invent some 600 missing lineages there (audit H108).}
+#'     the proposal must invent some 600 missing lineages there (audit H108).
+#'     Every E-step's mean field is in the trace (\code{mf_converged},
+#'     \code{mf_delta}, the final residual, \code{mf_sweeps},
+#'     \code{mf_omega}, the relaxation of the last sweep, and
+#'     \code{mf_budget}); when some E-step relaxed the iteration below the
+#'     full step or did not converge within its sweep budget, or the setting
+#'     is not \code{"auto"}, the fit's \code{notes} carry a
+#'     \code{mean_field} entry with the setting, the sweeps, relaxation and
+#'     residual of the last E-step and whether it converged, and
+#'     \code{print()} shows it.}
 #'   \item{\code{mesh}}{BDI only, and only where its Gillespie branch runs
 #'     (any model but \code{"cr"}): the number of steps per crown age the
 #'     frozen rates are re-evaluated on. \code{NULL} (default) leaves the
@@ -1063,6 +1082,16 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'       (\code{0} when every E-step failed); \code{NA} for other methods.}
 #'     \item{\code{n_failed}}{Number of E- or M-step failures over the MCEM
 #'       run; \code{NA} for other methods.}
+#'     \item{\code{notes}}{Named character vector of what the measurements
+#'       and the run say about this fit: \code{size}, \code{starved} and
+#'       \code{turnover} (emitted as a warning or messages when the fit is
+#'       made), \code{mean_field} (the surrogate proposal's mean-field
+#'       iteration was relaxed below the full step, ran under a
+#'       \code{damping} other than \code{"auto"}, or did not converge within
+#'       its sweep budget: the setting, the sweeps taken, the relaxation and
+#'       residual of the last E-step, and how many E-steps of the run relaxed
+#'       or failed to converge) and \code{clock} (\code{max_time} ran out
+#'       inside an E-step). \code{print()} shows the last two.}
 #'     \item{\code{details}}{Full output from the back-end function
 #'       (\code{.mcem_dynamic_fresh} or \code{emphasis_cem}).}
 #'   }
@@ -1286,7 +1315,7 @@ estimate_rates <- function(tree,
                  n_failed = n_failed,
                  cond = !is.null(cond), details = raw$details)
   class(result) <- "emphasis_fit"
-  .fit_notes(result, n_tips = length(brts) + 1L, link_int = link_int, emit = TRUE)
+  result$notes <- .fit_notes(result, n_tips = length(brts) + 1L, link_int = link_int, emit = TRUE)
   result
 }
 
@@ -1298,8 +1327,14 @@ estimate_rates <- function(tree,
 #             pre-registered rules exclude from every selection statement;
 #   turnover  mu/lambda at the intercepts above 0.5, a boundary of the regime
 #             the estimator was measured in.
-# The starved note is a warning, the other two are messages.  Returned
-# invisibly as a character vector so that a test can read them.
+# The starved note is a warning, the other two are messages.  Two more are
+# recorded without being emitted, and print() shows them:
+#   mean_field  the surrogate proposal's mean-field iteration was relaxed
+#               (damping below the full step), ran under a damping setting
+#               other than "auto", or did not converge within its sweeps;
+#   clock       max_time ran out inside an E-step (the driver's time_note).
+# Returned invisibly as a character vector; estimate_rates() keeps it in the
+# fit as `notes`.
 #' @keywords internal
 .fit_notes <- function(fit, n_tips, link_int, emit = FALSE) {
   notes <- character(0)
@@ -1333,11 +1368,45 @@ estimate_rates <- function(tree,
         "of the estimate)."), turn))
     }
   }
+  mf <- .mean_field_note(fit)
+  if (!is.null(mf)) notes <- c(notes, mean_field = mf)
+  tn <- fit$details$time_note
+  if (is.character(tn) && length(tn) == 1L && nzchar(tn)) notes <- c(notes, clock = tn)
   if (emit) {
     if (!is.na(notes["starved"])) warning(notes[["starved"]], call. = FALSE)
     for (nm in intersect(c("size", "turnover"), names(notes))) message("Note: ", notes[[nm]])
   }
   invisible(notes)
+}
+
+# The mean field the surrogate proposal was built on, from the trace of a
+# .mcem_bdi run: NULL unless some E-step relaxed the iteration (relaxation
+# below 1), some E-step's iteration did not converge within its sweep budget,
+# or the damping setting is not the default "auto".  The figures quoted are
+# those of the last E-step, the one the log-likelihood comes from.
+#' @keywords internal
+.mean_field_note <- function(fit) {
+  mc <- fit$details$mcem
+  if (is.null(mc) || !all(c("mf_converged", "mf_omega") %in% names(mc))) return(NULL)
+  ok <- !is.na(mc$mf_converged)
+  if (!any(ok)) return(NULL)
+  mc <- mc[ok, , drop = FALSE]
+  damping <- fit$details$damping
+  if (is.null(damping)) damping <- "auto"
+  relaxed <- is.finite(mc$mf_omega) & mc$mf_omega < 1
+  nonconv <- !as.logical(mc$mf_converged)
+  if (!any(relaxed) && !any(nonconv) && identical(damping, "auto")) return(NULL)
+  last <- mc[nrow(mc), , drop = FALSE]
+  budget <- if ("mf_budget" %in% names(last) && is.finite(last$mf_budget))
+    sprintf(" of %d", as.integer(last$mf_budget)) else ""
+  sprintf(paste0(
+    "the surrogate proposal's mean field (damping = %s) at the last E-step took %d%s sweeps, ",
+    "the last at relaxation %.4g, and ended at residual %.2e: %s. Over the %d E-steps of the ",
+    "fit, %d relaxed the iteration below the full step and %d did not converge."),
+    if (is.character(damping)) dQuote(damping, FALSE) else format(damping),
+    as.integer(last$mf_sweeps), budget, last$mf_omega, last$mf_delta,
+    if (isTRUE(as.logical(last$mf_converged))) "converged" else "not converged",
+    nrow(mc), sum(relaxed), sum(nonconv))
 }
 
 # model = "all": the nested ladder of models, each fitted from the estimate
@@ -1457,6 +1526,9 @@ print.emphasis_fit <- function(x, ...) {
     cat("Iterations:    ", x$iterations, "\n")
   if (!is.null(x$stop_reason) && !is.na(x$stop_reason))
     cat("Stop reason:   ", x$stop_reason, "\n")
+  for (nm in intersect(c("clock", "mean_field"), names(x$notes)))
+    cat(strwrap(paste0("Note: ", x$notes[[nm]]), width = 0.9 * getOption("width"), exdent = 2),
+        sep = "\n")
   if (is.na(x$loglik)) {
     reason <- if (!is.null(x$stop_reason) && !is.na(x$stop_reason))
       paste0(" (", x$stop_reason, ")") else ""
@@ -1557,7 +1629,8 @@ print.emphasis_fit <- function(x, ...) {
 #' 200 tips: a lineage-level model had the minimum AIC on 2 to 7 of 20, and
 #' led by more than 2 AIC on 0 to 2 of 20 (E27). The \code{chosen} attribute
 #' is therefore the model with the fewest parameters among those within
-#' \code{margin} AIC units of the minimum, and \code{within_margin} marks
+#' \code{margin} AIC units of the minimum, the one with the lower AIC when
+#' several share that number of parameters, and \code{within_margin} marks
 #' those rows; the full ranking is kept so that the margin can be read.
 #'
 #' A warning names the chosen model when its own effective sample is below
@@ -1671,10 +1744,11 @@ compare_models <- function(..., margin = 2) {
   attr(tab, "ranking_at_risk") <- at_risk
 
   # The choice: the fewest parameters among the models within `margin` of the
-  # minimum AIC.  Ties on n_pars go to the lower AIC, which is the row order.
+  # minimum AIC, and among those the lowest AIC.  Both keys are explicit, so
+  # the choice does not rest on the row order the table happens to have.
   tab$within_margin <- is.finite(tab$delta_AIC) & tab$delta_AIC <= margin
   cand <- which(tab$within_margin)
-  chosen_row <- cand[which.min(tab$n_pars[cand])]
+  chosen_row <- cand[order(tab$n_pars[cand], tab$AIC[cand])][1L]
   chosen <- tab$model[chosen_row]
   attr(tab, "chosen") <- chosen
   attr(tab, "margin") <- margin

@@ -21,7 +21,8 @@
   step_max = Inf,
   obs_pid = NULL,
   beta_ed = 0,
-  attach_fn = NULL
+  attach_fn = NULL,
+  deadline = Inf
 )
 }
 \arguments{
@@ -58,12 +59,19 @@ rates are re-evaluated.  \code{Inf} leaves the step uncapped.}
 
 \item{beta_ed}{The ED coefficient, which tilts the attachment choice toward
 the lineages the model gives a higher rate.  Zero attaches uniformly.}
+
+\item{attach_fn}{Exact attachment weights for a D model, or \code{NULL}.}
+
+\item{deadline}{The fit's clock as an absolute \code{proc.time()} elapsed
+value; the draw is abandoned with reason \code{"deadline"} once it has
+passed.  \code{Inf} (the default) is no deadline.}
 }
 \value{
 List with \code{$reason}: \code{"accepted"} (then also
   \code{$species}, \code{$unsampled}, \code{$n_alive_at_tp}, \code{$logg},
   and the parent records when \code{track_parents}), \code{"max_missing"}
-  (more than \code{max_missing} missing lineages drawn) or
+  (more than \code{max_missing} missing lineages drawn),
+  \code{"deadline"} (the clock ran out during the draw) or
   \code{"survivor"} (a missing lineage still alive at tp; only reachable at
   \code{rho = 1}, where such a tree has f = 0).
 }

@@ -7,6 +7,7 @@
 #ifndef EMPHASIS_EMPHASIS_HPP_INCLUDED
 #define EMPHASIS_EMPHASIS_HPP_INCLUDED
 
+#include <chrono>
 #include <stdexcept>
 #include <string>
 #include <limits>
@@ -23,6 +24,30 @@ namespace emphasis {
   using brts_t = std::vector<double>;     // input tree
 
 
+  // The wall-clock deadline of a fit, passed down from the R driver as the
+  // seconds it has left.  Read-only once set, so every TBB worker may compare
+  // the clock against it without synchronisation.
+  using steady_clock_t = std::chrono::steady_clock;
+  struct deadline_t
+  {
+    bool active = false;
+    steady_clock_t::time_point at{};
+
+    // `seconds_left` < 0 or not finite: no deadline.  0: already passed.
+    static deadline_t in_seconds(double seconds_left)
+    {
+      deadline_t d;
+      if (seconds_left >= 0.0 && seconds_left < 1e9) {
+        d.active = true;
+        d.at = steady_clock_t::now() +
+          std::chrono::duration_cast<steady_clock_t::duration>(std::chrono::duration<double>(seconds_left));
+      }
+      return d;
+    }
+    bool passed() const { return active && steady_clock_t::now() >= at; }
+  };
+
+
   struct E_step_info_t
   {
     double fhat = 0;                    // mean, unscaled, weight
@@ -35,6 +60,7 @@ namespace emphasis {
     double elapsed = 0;                 // elapsed runtime [ms]
     double logf = 0;                    // likelihood of simulated tree
     double logg = 0;                    // sampling probability
+    bool timed_out = false;             // the deadline passed before N trees were drawn
   };
 
 
@@ -102,7 +128,8 @@ namespace emphasis {
                   int num_threads = 0,
                   double max_time_seconds = 0,  // 0 = no time limit
                   const std::vector<double>& parent_tip_start = {},
-                  const std::vector<int>& parent_id = {});
+                  const std::vector<int>& parent_id = {},
+                  const deadline_t& deadline = {});  // inactive: no deadline
 
 
   // results from m
@@ -157,7 +184,8 @@ namespace emphasis {
               int num_threads = 0,
               conditional_fun_t* conditional = nullptr,
               const std::vector<double>& parent_tip_start = {},
-              const std::vector<int>& parent_id = {});
+              const std::vector<int>& parent_id = {},
+              const deadline_t& deadline = {});
 
 }
 

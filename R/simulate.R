@@ -113,11 +113,16 @@
 #'   is too large as well, which bounds the cost of a simulation that churns
 #'   (high speciation and extinction over a long crown) under the cap.
 #'   Default \code{1e6}.
-#' @param max_tries Maximum additional attempts after extinction (forward
-#'   simulation only). A clade that overflows \code{max_lin} is not retried:
-#'   the overflow is a property of the parameters, not of the draw, and every
-#'   retry would run to the cap again. Retries are tracked at the R level to
-#'   compute \code{survival_prob}. Default \code{1}.
+#' @param max_tries Maximum number of forward simulations in all, the first
+#'   included (forward simulation only): a clade that goes extinct is drawn
+#'   again until one survives or \code{max_tries} draws have been made, so the
+#'   default \code{1} is a single draw, unconditioned on survival. A positive
+#'   integer; \code{0}, which asked for a single draw when the argument counted
+#'   the draws after the first, is read as \code{1} with a warning. A clade
+#'   that overflows \code{max_lin} is not retried: the
+#'   overflow is a property of the parameters, not of the draw, and every
+#'   retry would run to the cap again. The draws are counted at the R level
+#'   (\code{attempts}) to compute \code{survival_prob}. Default \code{1}.
 #' @param useDDD Convert L-table to \code{phylo} via \pkg{DDD}.
 #'   Default \code{TRUE}.
 #' @param n_trees Number of augmented trees to draw (augmentation only).
@@ -210,6 +215,17 @@ simulate_tree <- function(tree        = NULL,
   model_bin <- .resolve_model(model)
   link_int  <- .resolve_link(link)
   .check_rho(rho, "rho")
+  if (!is.numeric(max_tries) || length(max_tries) != 1L || !is.finite(max_tries) ||
+      max_tries < 0 || max_tries != round(max_tries))
+    stop("'max_tries' must be a positive integer: the number of draws in all, ",
+         "the first included (1 is a single draw).")
+  # 0 was the way to ask for a single draw while max_tries counted the draws
+  # after the first; it is read as that single draw, and said so.
+  if (max_tries == 0) {
+    warning("'max_tries' counts the draws in all, the first included: ",
+            "max_tries = 0 is read as 1, a single draw.", call. = FALSE)
+    max_tries <- 1L
+  }
 
   if (!is.numeric(pars) || length(pars) == 0L)
     stop("'pars' must be a non-empty numeric vector or matrix.")
@@ -277,7 +293,7 @@ simulate_tree <- function(tree        = NULL,
     raw        <- simulate_div_tree_cpp(pars8, model_bin, max_t, max_lin_i, 0L,
                                         link_int, seed = .draw_seed())
     n_attempts <- n_attempts + 1L
-    if (raw$status != "extinct" || n_attempts > max_tries_i) break
+    if (raw$status != "extinct" || n_attempts >= max_tries_i) break
   }
 
   survival_prob <- if (raw$status == "done") 1.0 / n_attempts else 0.0

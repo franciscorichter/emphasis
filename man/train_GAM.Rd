@@ -14,7 +14,7 @@ train_GAM(
 }
 \arguments{
 \item{simulations}{List of \code{simulate_tree()} outputs (one per row of
-\code{pars_mat}), produced with \code{max_tries = 0}.}
+\code{pars_mat}), produced with \code{max_tries = 1}.}
 
 \item{pars_mat}{Numeric matrix whose rows are the parameter vectors used to
 generate \code{simulations}.  Column names are used as predictor names; if
@@ -38,7 +38,8 @@ A \code{gam} object (binomial family) representing
 }
 \description{
 Fits a binomial GAM to estimate P(survival | parameters) from forward
-simulations run with \code{max_tries = 0}.  Each simulation row has a
+simulations run with \code{max_tries = 1} (one draw each, unconditioned
+on survival).  Each simulation row has a
 binary outcome: 1 if both crown lineages reached the present (\code{status}
 \code{"done"}) or the clade passed the lineage cap (\code{"too_large"}),
 0 if it went extinct.  A clade stopped at the cap has survived so far, and
@@ -52,7 +53,7 @@ set.seed(1)
 pars_mat <- cbind(beta_0  = log(runif(100, 0.3, 1.2)),
                   gamma_0 = log(runif(100, 0.05, 0.5)))
 sims <- simulate_tree(pars = pars_mat, max_t = 4, model = "cr",
-                      max_tries = 0)
+                      max_tries = 1)
 gam_uni <- train_GAM(sims$simulations, pars_mat, model = "cr")
 predict_survival(gam_uni, data.frame(beta_0 = log(0.8), gamma_0 = log(0.2)))
 }

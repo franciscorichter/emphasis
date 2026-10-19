@@ -16,7 +16,8 @@
   topology = NULL,
   mesh = NULL,
   attach = c("rate", "uniform"),
-  damping = "auto"
+  damping = "auto",
+  deadline = Inf
 )
 }
 \value{
@@ -24,7 +25,13 @@ List: \code{trees}, \code{logf}, \code{logg}, \code{weights}
   (finite-weight draws only), \code{fhat}, \code{n_valid} (completed
   draws), \code{n_nonfinite} (completed draws dropped for a non-finite
   log-weight), \code{n_attempts}, \code{n_rejected} (survivors at tp),
-  \code{n_rejected_max_missing}, \code{acc}.  \code{trees} is empty when
+  \code{n_rejected_max_missing}, \code{acc}, the mean-field diagnostics
+  \code{mf_converged}, \code{mf_delta} (final residual), \code{mf_sweeps},
+  \code{mf_omega} (relaxation of the last sweep), \code{mf_budget} and
+  \code{mf_damping} (all \code{NA} under cr), and \code{timed_out} (the
+  \code{deadline}, an absolute \code{proc.time()} elapsed value, passed
+  before \code{sample_size} draws completed: the draws made are returned
+  and no shortfall warning is issued).  \code{trees} is empty when
   no draw completed or every completed draw has a non-finite log-weight;
   a warning is issued when fewer than \code{sample_size} draws completed.
 }
