@@ -19,10 +19,4 @@ A \code{phylo} object with only extant tips retained.
 Drops tips that did not survive to the present (i.e. tips whose root-to-tip
 distance is shorter than the maximum, within a small numerical tolerance).
 }
-\examples{
-\dontrun{
-sim <- simulate_tree(c(0.1, 0.5, -0.02, 0.01), max_t = 5, model = "dd")
-extant <- prune_to_extant(sim$tas)
-}
-}
 \keyword{internal}

@@ -16,6 +16,11 @@
 #' @return A data frame with columns \code{seg}, \code{lineage}, \code{id},
 #'   \code{event}, \code{t0}, \code{t1}, \code{N}, \code{M}, \code{ts},
 #'   \code{ed0}.
+#' @examples
+#' set.seed(1)
+#' tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+#' phy <- tr$tes
+#' head(lineage_table(phy))
 #' @export
 lineage_table <- function(tree) {
   if (inherits(tree, "phylo")) tree <- .observed_frame(tree)
@@ -85,6 +90,12 @@ lineage_table <- function(tree) {
 #'   the trees (the extinction rate of a fully observed tree) gets an empty
 #'   path: \code{path} is \code{NULL}, \code{active} and \code{entry_order}
 #'   are empty and \code{n_events} is 0.
+#' @examples
+#' set.seed(1)
+#' tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+#' phy <- tr$tes
+#' cp <- covariate_path(phy, rate = "speciation")
+#' cp$speciation$entry_order
 #' @export
 covariate_path <- function(trees, log_weights = NULL, n_trees = 40L,
                            covariates = c("N", "D", "ED"),

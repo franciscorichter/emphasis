@@ -76,3 +76,10 @@ normalised to sum to one, so the objective is the expected complete-data
 log-likelihood of one tree --- the M-step's Q function --- and the sample
 size behind BIC is the weighted mean number of events per tree.
 }
+\examples{
+set.seed(1)
+tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+phy <- tr$tes
+cp <- covariate_path(phy, rate = "speciation")
+cp$speciation$entry_order
+}

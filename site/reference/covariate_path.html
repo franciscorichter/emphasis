@@ -97,3 +97,12 @@ path: <code>path</code> is <code>NULL</code>, <code>active</code> and <code>entr
 are empty and <code>n_events</code> is 0.
 </p>
 
+<h3>Examples</h3>
+
+<pre><code class='language-R'>set.seed(1)
+tr  &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+phy &lt;- tr$tes
+cp &lt;- covariate_path(phy, rate = "speciation")
+cp$speciation$entry_order
+</code></pre>
+

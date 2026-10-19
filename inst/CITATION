@@ -1,0 +1,33 @@
+bibentry(
+  bibtype = "Manual",
+  header  = "To cite the package:",
+  title   = "emphasis: Monte Carlo Inference for Phylogenetic Diversification Models",
+  author  = person("Francisco", "Richter"),
+  year    = "2026",
+  note    = sprintf("R package version %s", meta$Version),
+  url     = "https://franciscorichter.github.io/emphasis/",
+  textVersion = paste0(
+    "Richter F (2026). emphasis: Monte Carlo Inference for Phylogenetic ",
+    "Diversification Models. R package version ", meta$Version, ". ",
+    "https://franciscorichter.github.io/emphasis/")
+)
+
+bibentry(
+  bibtype = "Article",
+  header  = "To cite the model class and the method:",
+  title   = "Introducing a general class of species diversification models for phylogenetic trees",
+  author  = c(person("Francisco", "Richter"),
+              person("Bart", "Haegeman"),
+              person("Rampal S.", "Etienne"),
+              person("Ernst C.", "Wit")),
+  journal = "Statistica Neerlandica",
+  year    = "2020",
+  volume  = "74",
+  number  = "3",
+  pages   = "261--274",
+  doi     = "10.1111/stan.12205",
+  textVersion = paste(
+    "Richter F, Haegeman B, Etienne RS, Wit EC (2020).",
+    "Introducing a general class of species diversification models for phylogenetic trees.",
+    "Statistica Neerlandica, 74(3), 261-274. doi:10.1111/stan.12205")
+)

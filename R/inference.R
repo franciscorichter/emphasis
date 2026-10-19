@@ -7,11 +7,6 @@
 #' @param tol Tolerance for deciding whether a tip is at the present.
 #'   Default \code{1e-8}.
 #' @return A \code{phylo} object with only extant tips retained.
-#' @examples
-#' \dontrun{
-#' sim <- simulate_tree(c(0.1, 0.5, -0.02, 0.01), max_t = 5, model = "dd")
-#' extant <- prune_to_extant(sim$tas)
-#' }
 #' @keywords internal
 prune_to_extant <- function(phy, tol = 1e-8) {
   if (!inherits(phy, "phylo")) stop("'phy' must be a phylo object.")
@@ -121,9 +116,9 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     when the tree is expressed in another unit of time. Default
 #'     \code{1e-2}: every coordinate must move by less than 1\% of its own
 #'     magnitude, \code{patience} times in a row. The step the sampler
-#'     itself produces sets whether that is reachable — on a 12-tip CR tree
+#'     itself produces sets whether that is reachable -- on a 12-tip CR tree
 #'     at \code{num_trees = 200} the statistic has median 0.02 and falls
-#'     below \code{1e-2} in about a fifth of iterations — so runs at these
+#'     below \code{1e-2} in about a fifth of iterations -- so runs at these
 #'     defaults commonly end at \code{max_iter}. Raising \code{num_trees}
 #'     shrinks the Monte Carlo part of the step.}
 #'   \item{\code{patience}}{Number of consecutive iterations with parameter
@@ -355,7 +350,22 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #' numeric input, where no topology exists.
 #' @keywords internal
 .extract_brts <- function(tree) {
+  # Branching times are measured back from the present.  A negative one is a
+  # node placed after the present: ape::branching.times() returns them for a
+  # tree that is not ultrametric, and the C++ layer would then score the
+  # present as an observed split and lose the last real one, for every model.
+  check_times <- function(brts) {
+    b <- as.numeric(brts)
+    if (any(!is.finite(b))) stop("branching times must be finite.")
+    if (length(b) && min(b) < -1e-8 * max(abs(b), 1))
+      stop(sprintf(paste0("%d branching time(s) are negative (the smallest is %.4g): ",
+                          "the tree is not ultrametric. Make it ultrametric first, for example ",
+                          "by extending every tip to the present (see ape::force.ultrametric)."),
+                   sum(b < -1e-8 * max(abs(b), 1)), min(b)), call. = FALSE)
+    brts
+  }
   with_pts <- function(brts, phy) {
+    check_times(brts)
     if (!is.null(phy)) {
       attr(brts, "parent_tip_start") <- c(.observed_parent_tip_start(phy), -1)
       attr(brts, "parent_id")        <- c(.observed_parent_id(phy), -1L)
@@ -363,7 +373,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
     brts
   }
   if (is.numeric(tree)) {
-    out <- sort(tree, decreasing = TRUE)
+    out <- sort(check_times(tree), decreasing = TRUE)
     # A vector that already carries tip starts is one this function produced;
     # keep them, unless sorting moved an entry, which would break the
     # event-to-entry correspondence.
@@ -837,7 +847,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 
   if (n_total > 0L) {
     # Latin Hypercube Sampling via the shared .lhs_sample() helper, which
-    # permutes EACH column with an independent sample.int(n) — the property
+    # permutes EACH column with an independent sample.int(n) -- the property
     # that gives LHS its space-filling guarantee. The previous inline version
     # stratified each column in order and then applied a single shared row
     # permutation to the whole matrix; one shared permutation cannot decorrelate
@@ -857,7 +867,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
                           nrow(pars_grid), gp, n_par)
   }
 
-  if (ctrl$verbose) cat(grid_label)
+  if (ctrl$verbose) .vcat(grid_label)
 
   # Evaluate IS log-likelihood at each grid point
   surface <- estimate_likelihood_surface(
@@ -887,13 +897,14 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
          "need at least 10. Try increasing grid_points or sample_size.")
 
   if (ctrl$verbose)
-    cat(sprintf("  GAM surface: %d/%d valid grid points\n",
+    .vcat(sprintf("  GAM surface: %d/%d valid grid points\n",
                 n_valid, nrow(surface)))
 
   # Fit GAM to the surface
   gam_fit <- train_likelihood_GAM(
     surface, par_names = par_names,
-    spline_type = ctrl$spline_type
+    spline_type = ctrl$spline_type,
+    verbose = isTRUE(ctrl$verbose)
   )
 
   # Optimize to find MLE (only over varying dimensions)
@@ -1049,19 +1060,19 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'       (\code{.mcem_dynamic_fresh} or \code{emphasis_cem}).}
 #'   }
 #' @examples
-#' \dontrun{
-#' set.seed(42)
-#' # Constant-rate model
-#' sim <- simulate_tree(c(0.5, 0.1), max_t = 5, model = "cr")
-#' fit <- estimate_rates(sim, method = "mcem", model = "cr",
-#'   control = list(lower_bound = c(0, 0), upper_bound = c(2, 1)))
-#' fit$pars
-#'
-#' # Diversity-dependent model
-#' sim_dd <- simulate_tree(c(0.5, -0.005, 0.1, 0), max_t = 8, model = "dd")
-#' fit_dd <- estimate_rates(sim_dd, method = "mcem", model = "dd",
-#'   control = list(lower_bound = c(0.1, -0.1, 0, -0.01),
-#'                  upper_bound = c(2, 0.01, 0.5, 0.01)))
+#' set.seed(1)
+#' tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+#' phy <- tr$tes
+#' fit <- estimate_rates(phy, method = "mcem", model = "cr",
+#'   control = list(lower_bound = c(0, 0), upper_bound = c(2, 1),
+#'                  max_iter = 10, num_trees = 50))
+#' fit
+#' \donttest{
+#' # Diversity-dependent model on the same tree
+#' fit_dd <- estimate_rates(phy, method = "mcem", model = "dd",
+#'   control = list(lower_bound = c(0, -0.1, 0, -0.1),
+#'                  upper_bound = c(2, 0.1, 1, 0.1),
+#'                  max_iter = 10, num_trees = 50))
 #' fit_dd$pars
 #' }
 #' @export
@@ -1140,7 +1151,7 @@ estimate_rates <- function(tree,
     )
   }
 
-  # Warn if the D model with linear link — IS collapse is very likely
+  # Warn if the D model with linear link -- IS collapse is very likely
   if (link_int == 0L && model_bin[3] == 1L &&
       any(lower_bound < 0)) {
     model_str <- .model_label(model_bin)
@@ -1158,7 +1169,7 @@ estimate_rates <- function(tree,
 
   if (ctrl$verbose) {
     model_str <- .model_label(model_bin)
-    cat(sprintf(
+    .vcat(sprintf(
       "[estimate_rates] method=%s  model=%s  n_brts=%d  link=%s\n",
       toupper(method), model_str, length(brts),
       c("linear", "exponential", "gaussian")[link_int + 1L]
@@ -1179,12 +1190,12 @@ estimate_rates <- function(tree,
           fhat_desc <- paste0(fhat_desc,
             "                   NOTE: num_trees < 5; recommend >= 5 for stable variance\n")
       }
-      cat(sprintf(paste0(
+      .vcat(sprintf(paste0(
         "  particles/iter : %d\n",
         "  trees/particle : %d  =>  ~%d augmented trees per iteration\n"),
         np, ss, np * ss))
-      cat(fhat_desc)
-      cat(sprintf("  tree mode      : %s\n  max_iter=%d\n",
+      .vcat(fhat_desc)
+      .vcat(sprintf("  tree mode      : %s\n  max_iter=%d\n",
                   mode, ctrl$max_iter))
     }
     if (method == "mcem") {
@@ -1193,16 +1204,16 @@ estimate_rates <- function(tree,
           if (model_bin[1L] == 0L) "BDI (exact)" else "BDI (mean-field)"
         else
           "dynamic_fresh (BDI not available for this model/link)"
-      cat(sprintf("  sampling=%s  num_trees=%d  max_iter=%d  tol=%.1e  patience=%d  xtol=%.1e  rho=%s\n",
+      .vcat(sprintf("  sampling=%s  num_trees=%d  max_iter=%d  tol=%.1e  patience=%d  xtol=%.1e  rho=%s\n",
                   sampling_str, ctrl$num_trees, ctrl$max_iter, ctrl$tol,
                   ctrl$patience, ctrl$xtol, format(ctrl$rho)))
       if (ctrl$num_trees >= 2L)
-        cat("  loglik_var   : bootstrapped automatically (B=200)\n")
+        .vcat("  loglik_var   : bootstrapped automatically (B=200)\n")
       else
-        cat("  loglik_var   : NA (need num_trees >= 2)\n")
+        .vcat("  loglik_var   : NA (need num_trees >= 2)\n")
     }
     if (method == "gam") {
-      cat(sprintf("  grid_points=%d  sample_size=%d  spline=%s\n",
+      .vcat(sprintf("  grid_points=%d  sample_size=%d  spline=%s\n",
                   ctrl$grid_points, ctrl$sample_size, ctrl$spline_type))
     }
   }
@@ -1253,7 +1264,7 @@ estimate_rates <- function(tree,
   n_failed    <- if (!is.null(raw$n_failed)) as.integer(raw$n_failed) else NA_integer_
 
   if (ctrl$verbose) {
-    cat(sprintf("[estimate_rates] loglik=%.4f  AIC=%.4f  pars: %s%s\n",
+    .vcat(sprintf("[estimate_rates] loglik=%.4f  AIC=%.4f  pars: %s%s\n",
                 loglik, aic,
                 paste(names(pars), "=", round(pars, 4), collapse="  "),
                 if (!is.null(cond)) "  (conditioned)" else ""))
@@ -1393,6 +1404,7 @@ estimate_rates <- function(tree,
 #'
 #' @param x An \code{emphasis_fits} object.
 #' @param ... Ignored.
+#' @return \code{x}, invisibly.
 #' @export
 print.emphasis_fits <- function(x, ...) {
   cat("emphasis fits (", x$method, ", link = ", x$link, "): ",
@@ -1412,6 +1424,7 @@ print.emphasis_fits <- function(x, ...) {
 #'
 #' @param x An \code{emphasis_fit} object returned by \code{\link{estimate_rates}}.
 #' @param ... Additional arguments (ignored).
+#' @return \code{x}, invisibly.
 #' @export
 print.emphasis_fit <- function(x, ...) {
   model_str <- .model_label(x$model)
@@ -1550,7 +1563,7 @@ print.emphasis_fit <- function(x, ...) {
 #' @param margin AIC units within which two models are not told apart.
 #'   Default 2.
 #'
-#' @return A \code{model_selection} data frame, one row per fit, with columns
+#' @return A data frame, one row per fit, with columns
 #'   \code{model}, \code{n_pars}, \code{loglik}, \code{AIC}, \code{loglik_se},
 #'   \code{ESS}, \code{loglik_gap}, \code{gap_heavy}, \code{delta_AIC},
 #'   \code{AICw}, \code{AIC_swing} and \code{within_margin}, ordered by AIC,
@@ -1559,6 +1572,17 @@ print.emphasis_fit <- function(x, ...) {
 #'   model's effective sample is below 10) and \code{ranking_at_risk}.
 #'
 #' @seealso \code{\link{estimate_rates}}
+#' @examples
+#' set.seed(1)
+#' tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+#' phy <- tr$tes
+#' ctrl <- list(max_iter = 5, num_trees = 30)
+#' fit_cr <- estimate_rates(phy, method = "mcem", model = "cr",
+#'   control = c(ctrl, list(lower_bound = c(0, 0), upper_bound = c(2, 1))))
+#' fit_dd <- estimate_rates(phy, method = "mcem", model = "dd",
+#'   control = c(ctrl, list(lower_bound = c(0, -0.1, 0, -0.1),
+#'                          upper_bound = c(2, 0.1, 1, 0.1))))
+#' compare_models(cr = fit_cr, dd = fit_dd)
 #' @export
 compare_models <- function(..., margin = 2) {
   fits <- list(...)
@@ -1683,155 +1707,4 @@ compare_models <- function(..., margin = 2) {
   covs <- c("N", "M", "D", if (model_bin[4L] >= 3L) "EDc" else "ED", "K")[which(model_bin != 0L)]
   if (length(covs) == 0L) return("CR")
   paste(covs, collapse = " + ")
-}
-
-
-# --------------------------------------------------------------------------- #
-#  Single-covariate model comparison                                           #
-# --------------------------------------------------------------------------- #
-
-#' Fit and compare the single-covariate diversification models
-#'
-#' Fits the two 4-parameter single-covariate models -- diversity dependence
-#' (DD, covariate N) and age-imbalance dependence (D, covariate D = E - M) --
-#' to the same tree using a two-stage MCDE -> MCEM workflow, then ranks them by
-#' AIC and computes AIC weights.
-#'
-#' Both models share the same parameter layout:
-#' \code{c(beta_0, beta_X, gamma_0, gamma_X)}, so a single pair of bounds
-#' applies to both.
-#'
-#' @param tree Ultrametric tree. Accepts a \code{phylo} object, a
-#'   \code{\link{simulate_tree}} result, or a numeric branching-time vector.
-#' @param lower_bound Length-4 numeric vector of lower parameter bounds:
-#'   \code{c(beta_0, beta_X, gamma_0, gamma_X)}. Default
-#'   \code{c(0.1, -0.5, 0, -0.5)}.
-#' @param upper_bound Length-4 numeric vector of upper parameter bounds.
-#'   Default \code{c(3, 0.5, 1, 0.5)}.
-#' @param link Link function: \code{"linear"} (default),
-#'   \code{"exponential"}, or \code{"gaussian"}.
-#' @param control Named list with optional sub-lists \code{cem} and
-#'   \code{mcem} to override tuning defaults for each stage. Bounds and
-#'   verbose are taken from the outer arguments; no need to repeat them here.
-#'   Example: \code{list(cem = list(max_iter = 20, num_particles = 50),
-#'                       mcem = list(num_trees = 300, tol = 0.05))}.
-#' @param verbose Print progress messages. Default \code{FALSE}.
-#' @return A list of class \code{"model_selection"} with:
-#'   \describe{
-#'     \item{\code{summary}}{Data frame with columns \code{model},
-#'       \code{n_pars}, \code{loglik}, \code{AIC}, \code{delta_AIC},
-#'       \code{AICw}, sorted by AIC.}
-#'     \item{\code{best_model}}{Name of the best-supported model
-#'       (\code{"dd"} or \code{"d"}).}
-#'     \item{\code{best_pars}}{Named parameter estimates of the best model.}
-#'     \item{\code{fits}}{Named list of the \code{emphasis_fit}
-#'       objects (\code{$dd}, \code{$d}).}
-#'   }
-#' @seealso \code{\link{estimate_rates}}, \code{\link{compare_models}}
-#' @examples
-#' \dontrun{
-#' set.seed(42)
-#' sim <- simulate_tree(pars = c(0.8, -0.02, 0.2, 0), model = "dd", max_t = 8)
-#' sel <- select_diversification_model(sim,
-#'   lower_bound = c(0.1, -0.5, 0, -0.5),
-#'   upper_bound = c(3,    0.5, 1,  0.5))
-#' sel
-#' sel$best_model   # "dd"
-#' sel$best_pars
-#' }
-#' @keywords internal
-select_diversification_model <- function(tree,
-                                         lower_bound = c(0.1, -0.5, 0, -0.5),
-                                         upper_bound = c(3,    0.5, 1,  0.5),
-                                         link        = "linear",
-                                         control     = list(),
-                                         verbose     = FALSE) {
-  if (length(lower_bound) != 4L || length(upper_bound) != 4L)
-    stop("'lower_bound' and 'upper_bound' must each have length 4: ",
-         "c(beta_0, beta_X, gamma_0, gamma_X).")
-
-  defaults <- list(
-    cem  = list(max_iter = 15, num_particles = 40),
-    mcem = list(num_trees = 200, tol = 1e-3)
-  )
-  ctrl <- utils::modifyList(defaults, control)
-
-  # Inject bounds and verbose into each stage's control list
-  bounds <- list(lower_bound = lower_bound, upper_bound = upper_bound,
-                 verbose = verbose)
-  ctrl$cem  <- utils::modifyList(bounds, ctrl$cem)
-  ctrl$mcem <- utils::modifyList(bounds, ctrl$mcem)
-
-  # The two single-covariate models share the length-4 bound layout
-  # c(beta_0, beta_X, gamma_0, gamma_X): dd = diversity (N), d = age-imbalance (D).
-  model_names <- c("dd", "d")
-  fits <- vector("list", length(model_names))
-  names(fits) <- model_names
-
-  for (m in model_names) {
-    if (verbose) message("Fitting model: ", toupper(m), " ...")
-
-    fit_de <- tryCatch(
-      estimate_rates(tree, method = "cem", model = m,
-                     link = link, control = ctrl$cem),
-      error = function(e) {
-        warning("MCDE failed for model '", m, "': ", conditionMessage(e))
-        NULL
-      }
-    )
-
-    init <- if (!is.null(fit_de)) fit_de$pars else (lower_bound + upper_bound) / 2
-
-    fits[[m]] <- tryCatch(
-      estimate_rates(tree, method = "mcem", model = m,
-                     init_pars = init, link = link, control = ctrl$mcem),
-      error = function(e) {
-        warning("MCEM failed for model '", m, "': ", conditionMessage(e))
-        NULL
-      }
-    )
-  }
-
-  # Drop any models that failed entirely
-  fits <- Filter(Negate(is.null), fits)
-  if (length(fits) < 2L)
-    stop("Fewer than two models converged; cannot perform model selection.")
-
-  tab <- do.call(compare_models, fits)
-
-  # Best model = row with delta_AIC == 0
-  best_key <- tab$model[tab$delta_AIC == 0 & !is.na(tab$delta_AIC)][1L]
-  if (is.na(best_key) || !best_key %in% names(fits))
-    best_key <- names(fits)[1L]
-
-  result <- list(
-    summary    = tab,
-    best_model = unname(best_key),
-    best_pars  = fits[[best_key]]$pars,
-    fits       = fits
-  )
-  class(result) <- "model_selection"
-  result
-}
-
-
-#' Print method for model_selection objects
-#'
-#' @param x A \code{model_selection} object from
-#'   \code{\link{select_diversification_model}}.
-#' @param ... Additional arguments (ignored).
-#' @export
-print.model_selection <- function(x, ...) {
-  cat("Diversification model selection\n")
-  cat("================================\n\n")
-  tab <- x$summary
-  tab$loglik    <- round(tab$loglik,    3)
-  tab$AIC       <- round(tab$AIC,       3)
-  tab$delta_AIC <- round(tab$delta_AIC, 3)
-  tab$AICw      <- round(tab$AICw,      4)
-  print(tab, row.names = FALSE)
-  cat("\nBest model:", toupper(x$best_model), "\n")
-  cat("Parameters:\n")
-  print(round(x$best_pars, 6))
-  invisible(x)
 }

@@ -16,7 +16,8 @@ fast, which then rewards the fit for moving there (E36c of the paper).
   simulations,
   pars_mat,
   model = "cr",
-  spline_type = c("univariate", "bivariate")
+  spline_type = c("univariate", "bivariate"),
+  verbose = TRUE
 )
 </code></pre>
 
@@ -47,6 +48,11 @@ terms <code>s(x)</code> for each varying predictor.  <code>"bivariate"</code> fi
 tensor-product smooths <code>te(x, y)</code> for every pair of varying
 predictors, which can capture interaction effects.</p>
 </td></tr>
+<tr><td><code id="train_GAM_:_verbose">verbose</code></td>
+<td>
+<p>Report the number of simulations and the survival rate
+(default <code>TRUE</code>).</p>
+</td></tr>
 </table>
 
 <h3>Value</h3>
@@ -57,15 +63,12 @@ predictors, which can capture interaction effects.</p>
 
 <h3>Examples</h3>
 
-<pre><code class='language-R'>## Not run: 
-set.seed(1)
-pars_mat &lt;- cbind(beta_0  = runif(200, 0.3, 1.2),
-                  gamma_0 = runif(200, 0.05, 0.5))
-sims &lt;- simulate_tree(pars = pars_mat, max_t = 8,
-                      model = "cr", max_tries = 0, useDDD = FALSE)
-gam_uni &lt;- train_GAM(sims, pars_mat, model = "cr")
-gam_biv &lt;- train_GAM(sims, pars_mat, model = "cr", spline_type = "bivariate")
-
-## End(Not run)
+<pre><code class='language-R'>set.seed(1)
+pars_mat &lt;- cbind(beta_0  = runif(100, 0.3, 1.2),
+                  gamma_0 = runif(100, 0.05, 0.5))
+sims &lt;- simulate_tree(pars = pars_mat, max_t = 4, model = "cr",
+                      max_tries = 0)
+gam_uni &lt;- train_GAM(sims$simulations, pars_mat, model = "cr")
+predict_survival(gam_uni, data.frame(beta_0 = 0.8, gamma_0 = 0.2))
 </code></pre>
 

@@ -287,31 +287,36 @@ one per successful draw.</p>
 </dd>
 </dl>
 
+<h3>Value</h3>
+
+<p>A list whose components depend on the mode: for a single forward
+simulation <code>tes</code>, <code>tas</code>, <code>L</code>, <code>status</code>,
+<code>survival_prob</code> and <code>attempts</code>; for a matrix <code>pars</code> a
+list with <code>simulations</code> and <code>survival_prob</code>; for an
+augmentation the augmented tree(s) and their proposal log-densities
+<code>log_q</code>.  The sections below list every component.
+</p>
+
 <h3>Examples</h3>
 
-<pre><code class='language-R'>## Not run: 
-# --- Forward simulation ---
-tr &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr")
-tr$status          # "done"
-tr$survival_prob   # e.g. 0.25 if took 4 attempts
+<pre><code class='language-R'># Forward simulation
+set.seed(1)
+tr &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr$status
+tr$survival_prob
 
-# Batch: 200 CR simulations
-pm &lt;- cbind(beta_0 = runif(200, 0.3, 0.8), gamma_0 = runif(200, 0.05, 0.3))
-sims &lt;- simulate_tree(pars = pm, max_t = 8, model = "cr")
-sims$survival_prob              # fraction that succeeded
-sims$simulations[[1]]$tes      # first extant phylo
+# Batch: 20 constant-rate simulations
+pm &lt;- cbind(beta_0 = runif(20, 0.3, 0.8), gamma_0 = runif(20, 0.05, 0.3))
+sims &lt;- simulate_tree(pars = pm, max_t = 4, model = "cr")
+sims$survival_prob
 
-# --- Augmentation ---
+# Augmentation of the extant tree
 aug &lt;- simulate_tree(tree = tr, pars = c(0.5, 0.1), model = "cr")
-aug$tas     # augmented phylo
-aug$log_q   # log q(z | obs, theta)
+aug$log_q
 
 # Many augmented trees
 augN &lt;- simulate_tree(tree = tr, pars = c(0.5, 0.1), model = "cr",
-                      n_trees = 100L)
-augN$log_q          # vector of length 100
-augN$trees[[1]]     # first augmented phylo
-
-## End(Not run)
+                      n_trees = 20L)
+length(augN$log_q)
 </code></pre>
 

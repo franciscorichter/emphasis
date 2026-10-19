@@ -8,7 +8,8 @@ train_GAM(
   simulations,
   pars_mat,
   model = "cr",
-  spline_type = c("univariate", "bivariate")
+  spline_type = c("univariate", "bivariate"),
+  verbose = TRUE
 )
 }
 \arguments{
@@ -27,6 +28,9 @@ Default \code{"cr"}.}
 terms \code{s(x)} for each varying predictor.  \code{"bivariate"} fits
 tensor-product smooths \code{te(x, y)} for every pair of varying
 predictors, which can capture interaction effects.}
+
+\item{verbose}{Report the number of simulations and the survival rate
+(default \code{TRUE}).}
 }
 \value{
 A \code{gam} object (binomial family) representing
@@ -43,15 +47,13 @@ it as extinct teaches the GAM a survival near zero wherever clades grow
 fast, which then rewards the fit for moving there (E36c of the paper).
 }
 \examples{
-\dontrun{
 set.seed(1)
-pars_mat <- cbind(beta_0  = runif(200, 0.3, 1.2),
-                  gamma_0 = runif(200, 0.05, 0.5))
-sims <- simulate_tree(pars = pars_mat, max_t = 8,
-                      model = "cr", max_tries = 0, useDDD = FALSE)
-gam_uni <- train_GAM(sims, pars_mat, model = "cr")
-gam_biv <- train_GAM(sims, pars_mat, model = "cr", spline_type = "bivariate")
-}
+pars_mat <- cbind(beta_0  = runif(100, 0.3, 1.2),
+                  gamma_0 = runif(100, 0.05, 0.5))
+sims <- simulate_tree(pars = pars_mat, max_t = 4, model = "cr",
+                      max_tries = 0)
+gam_uni <- train_GAM(sims$simulations, pars_mat, model = "cr")
+predict_survival(gam_uni, data.frame(beta_0 = 0.8, gamma_0 = 0.2))
 }
 \seealso{
 \code{\link{simulate_tree}}, \code{\link{predict_survival}}

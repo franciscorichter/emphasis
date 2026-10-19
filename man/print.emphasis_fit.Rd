@@ -11,6 +11,9 @@
 
 \item{...}{Additional arguments (ignored).}
 }
+\value{
+\code{x}, invisibly.
+}
 \description{
 Print method for emphasis_fit objects
 }

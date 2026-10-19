@@ -6,19 +6,11 @@
 ^\.git$
 ^\.github$
 ^\.\.Rcheck$
-^results$
-^Documentation$
 ^\.gitignore$
 ^\.gitattributes$
 ^\.claude$
-^Rcheck-log\.txt$
 ^src/.*\.o$
 ^src/.*\.so$
-^vignettes/.*\.html$
-^\.R$
-^doc$
-^state\.md$
-^analysis$
 ^index\.html$
 ^\.nojekyll$
 ^assets$
@@ -31,3 +23,5 @@
 ^site$
 ^experiments$
 ^[^/]+\.html$
+^cran-comments\.md$
+^CRAN-SUBMISSION$

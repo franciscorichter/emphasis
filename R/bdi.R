@@ -1,11 +1,11 @@
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 # BDI exact augmentation sampler
 #
 # Draws augmented trees from the exact conditional distribution
 # p(A | T, theta) via an aggregate Gillespie algorithm.
 # Under constant rates: ESS = S (zero-variance proposal).
 # Under DD/endogenous: self-consistent backward-forward iteration.
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 
 
 # --------------------------------------------------------------------------- #
@@ -234,7 +234,7 @@
 .bdi_find_event_time_cr <- function(t_cur, U, n, k, lam0, mu0, tp, t_max,
                                     rho = 1) {
   # Quick check: will H reach U before t_max?
-  # When n>0 and t_max==tp, H→Inf so event always exists -- but only at
+  # When n>0 and t_max==tp, H->Inf so event always exists -- but only at
   # complete sampling.  At rho < 1 the extinction integral is finite at tp
   # (a doomed lineage may survive as an unsampled extant tip), so the last
   # segment takes the ordinary branch and can return "no event".
@@ -402,7 +402,7 @@
 
 #' Solve survival probability p(t) backward from tp to 0.
 #' ODE: dp/dt = lam(t)*p^2 - (lam(t)-mu(t))*p, p(tp) = rho.
-#' Rates use the mean-field covariates (N̂, P̂, Ê) — supports DD/PD/EP and
+#' Rates use the mean-field covariates (Nhat, Phat, Ehat) -- supports DD/PD/EP and
 #' mixed models. For CR (all model_bin = 0) the covariate arguments are
 #' ignored inside .bdi_lam/.bdi_mu.
 #'
@@ -452,7 +452,7 @@
 #'                                                   missing lineage extends
 #'                                                   its pendant edge at rate 1)
 #'
-#' Rates lam, mu are evaluated at (N̂, P̂, Ê) to support DD/PD/EP + mixed.
+#' Rates lam, mu are evaluated at (Nhat, Phat, Ehat) to support DD/PD/EP + mixed.
 #' @return list(m_vals, pm_vals) on t_grid.
 #' @keywords internal
 .bdi_solve_mean_forward <- function(pars8, model_bin, link, bt, tp,
@@ -501,17 +501,17 @@
 #' Solve the forward mean + second-moment ODE (Gaussian closure).
 #'
 #' Augments `.bdi_solve_mean_forward` with variance state needed to cancel
-#' the process-level Jensen residual E[P/N] − P̂/N̂ ≈ −Cov(P,N)/N̂² + P̂ Var(N)/N̂³.
+#' the process-level Jensen residual E[P/N] - Phat/Nhat ~ -Cov(P,N)/Nhat^2 + Phat Var(N)/Nhat^3.
 #' State: s = (m, P_miss, Var(N), Cov(N,P)) with
-#'   dm/dt         = (lam_bdi − mu_bdi) m + nu
+#'   dm/dt         = (lam_bdi - mu_bdi) m + nu
 #'   dP_miss/dt    = m
-#'   dVar(N)/dt    = 2(lam_bdi − mu_bdi) Var(N) + (lam_bdi + mu_bdi) m + nu
-#'   dCov(N,P)/dt  = (lam_bdi − mu_bdi) Cov(N,P) + Var(N)
+#'   dVar(N)/dt    = 2(lam_bdi - mu_bdi) Var(N) + (lam_bdi + mu_bdi) m + nu
+#'   dCov(N,P)/dt  = (lam_bdi - mu_bdi) Cov(N,P) + Var(N)
 #'
 #' The Var(N) ODE is the standard jump-diffusion variance infusion for a BDI
 #' process; the Cov(N,P) ODE comes from the deterministic coupling dP = N dt
-#' between events. Cross-jumps at deaths (ΔN = −1, ΔP = −age) are dropped
-#' at this order — they are second-order corrections to cNP and would require
+#' between events. Cross-jumps at deaths (DeltaN = -1, DeltaP = -age) are dropped
+#' at this order -- they are second-order corrections to cNP and would require
 #' tracking the age distribution.
 #' @return list(m_vals, pm_vals, vN_vals, cNP_vals) on t_grid.
 #' @keywords internal
@@ -571,27 +571,14 @@
 }
 
 
-#' Observed-tree phylogenetic diversity under the emphasis tip_start=0
-#' convention.
-#'
-#' The BDI tree data frame (.bdi_to_tree_df) sets tip_start = 0 for every
-#' observed lineage, so their pendant PD at t is k(t) * t, with k counting the
-#' two crown lineages.  Missing species carry their actual birth time.
-#' P(t) = P_obs(t) + P_miss(t).
-#' @keywords internal
-.bdi_P_obs <- function(t, bt) {
-  k <- 2L + sum(bt <= t)
-  k * t
-}
-
 #' Backward-forward iteration for self-consistent BDI rates.
 #'
-#' Mean-field state: N̂(t) = k(t) + m̂(t), P̂(t) = P_obs(t) + P̂_miss(t),
-#' Ê(t) = P̂(t) / N̂(t).  All three enter the rate function; inactive
+#' Mean-field state: Nhat(t) = k(t) + mhat(t), Phat(t) = P_obs(t) + Phat_miss(t),
+#' Ehat(t) = Phat(t) / Nhat(t).  All three enter the rate function; inactive
 #' covariates (pars8 slopes pinned to 0) make the extension transparent
 #' for CR/DD and activate PD/EP/mixed models.
 #' The sweep budget is 60 because the iteration slows as \code{rho} falls: the
-#' unsampled extant lineages raise \code{N̂}, which feeds back into the rates
+#' unsampled extant lineages raise \code{Nhat}, which feeds back into the rates
 #' that produced them.  On the 20-tip DD tree at \code{K = 20} the fixed point
 #' is reached in 6 sweeps at \code{rho = 1}, 7 at 0.9, 14 at 0.5 and 27 at 0.2.
 #' The old budget of 20 therefore returned a non-converged mean field at small
@@ -653,14 +640,14 @@
     2 * t_grid + vapply(t_grid, function(t) sum(pmax(0, t - bt)), 1)
   } else k_vals * t_grid
 
-  # Initial guess: m = 0, P_miss = 0 ⇒ N̂ = k, P̂ = P_obs, Ê = P̂/N̂.
+  # Initial guess: m = 0, P_miss = 0 => Nhat = k, Phat = P_obs, Ehat = Phat/Nhat.
   Nhat_vals <- k_vals
   Phat_vals <- P_obs_vals
   Ehat_vals <- ifelse(Nhat_vals > 0, Phat_vals / Nhat_vals, 0)
   vN_vals   <- numeric(length(t_grid))
   cNP_vals  <- numeric(length(t_grid))
 
-  # Scale for convergence check (normalize P̂ by a stable magnitude).
+  # Scale for convergence check (normalize Phat by a stable magnitude).
   Pscale <- max(max(Phat_vals), 1)
 
   p_vals <- rep(0, length(t_grid))
@@ -699,8 +686,8 @@
 
     Nhat_new <- k_vals + m_vals
     Phat_new <- P_obs_vals + pm_vals
-    # Second-order Taylor correction: E[P/N] ≈ P̂/N̂ − Cov(P,N)/N̂² + P̂·Var(N)/N̂³
-    # (zero under plain mean-field closure ⇒ backwards-compatible).
+    # Second-order Taylor correction: E[P/N] ~ Phat/Nhat - Cov(P,N)/Nhat^2 + Phat*Var(N)/Nhat^3
+    # (zero under plain mean-field closure => backwards-compatible).
     Ehat_raw <- ifelse(Nhat_new > 0,
                        Phat_new / Nhat_new
                        - cNP_vals / pmax(Nhat_new, 1e-12)^2
@@ -974,7 +961,7 @@
 
     while (t < t1) {
       if (is_cr) {
-        # ── Exact time-change method for CR ──
+        # -- Exact time-change method for CR --
         U <- stats::rexp(1)
         t_star <- .bdi_find_event_time_cr(t, U, n_alive, k, lam0, mu0, tp, t1,
                                           rho)
@@ -998,10 +985,10 @@
         total <- n_alive * (la + mu_r) + nu
 
       } else {
-        # ── Approximate Gillespie for DD / PD / EP / mixed ──
+        # -- Approximate Gillespie for DD / PD / EP / mixed --
         # Rates use the mean-field covariates from the backward-forward
-        # iteration. Under DD only N̂ is active; PD activates P̂;
-        # EP activates Ê = P̂/N̂ (mean isolation time).
+        # iteration. Under DD only Nhat is active; PD activates Phat;
+        # EP activates Ehat = Phat/Nhat (mean isolation time).
         p   <- p_fun(t)
         omp <- 1 - p
         if (omp < 1e-12) break
@@ -1033,9 +1020,9 @@
         logg <- logg - total * dt
       }
 
-      # ── Event type selection (shared) ──
+      # -- Event type selection (shared) --
       # logg uses per-lineage rates (labeled density) to match C++ logf:
-      #   logf has log(λ) per speciation = per-lineage rate
+      #   logf has log(lambda) per speciation = per-lineage rate
       #   so logg must use per-lineage BDI rates, not total rates.
       r <- stats::runif(1) * total
       if (r < n_alive * la) {
@@ -1513,7 +1500,7 @@
   }
 
   # Compute logf (model log-likelihood) via C++ eval_logf.
-  # eval_logf also returns a thinning-based logg — we discard it
+  # eval_logf also returns a thinning-based logg -- we discard it
   # and use the Gillespie-accumulated logg from above instead.
   if (n_valid > 0L) {
     ev   <- eval_logf(pars_full, trees,
@@ -1724,7 +1711,7 @@
   t0_mcem     <- proc.time()[3]
 
   for (i in seq_len(max_iter)) {
-    # ── E-step: BDI augmentation ──
+    # -- E-step: BDI augmentation --
     t0_e  <- proc.time()[3]
     e_raw <- e_step_at(pars)
     elapsed_e <- as.numeric(proc.time()[3] - t0_e)
@@ -1788,7 +1775,7 @@
       fhat                  = e_raw$fhat
     )
 
-    # ── M-step: C++ optimisation ──
+    # -- M-step: C++ optimisation --
     m_result <- tryCatch(
       m_cpp(e_step     = e_step,
             init_pars  = pars,
@@ -1913,7 +1900,7 @@
     if (length(take) >= 2L) pars <- colMeans(do.call(rbind, take))
   }
 
-  # ── Final E-step at the returned iterate ──
+  # -- Final E-step at the returned iterate --
   # The trace rows pair theta_k with fhat(theta_{k-1}); this E-step gives
   # fhat, ESS and the IS diagnostics at pars itself.
   t0_e    <- proc.time()[3]

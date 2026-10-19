@@ -50,6 +50,13 @@
 #' each worker draws from its own substream of the seed, but the sample keeps
 #' the first \code{n_trees} augmentations to finish.
 #'
+#' @return A list whose components depend on the mode: for a single forward
+#'   simulation \code{tes}, \code{tas}, \code{L}, \code{status},
+#'   \code{survival_prob} and \code{attempts}; for a matrix \code{pars} a
+#'   list with \code{simulations} and \code{survival_prob}; for an
+#'   augmentation the augmented tree(s) and their proposal log-densities
+#'   \code{log_q}.  The sections below list every component.
+#'
 #' @section Output -- forward simulation (single):
 #' \describe{
 #'   \item{\code{tes}}{Extant-only phylogeny (\code{phylo}), or \code{NULL}.}
@@ -149,29 +156,25 @@
 #'   \code{"thinning"} method draws the parent from every lineage alive, the
 #'   two crown lineages included, and is not affected.
 #' @examples
-#' \dontrun{
-#' # --- Forward simulation ---
-#' tr <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr")
-#' tr$status          # "done"
-#' tr$survival_prob   # e.g. 0.25 if took 4 attempts
+#' # Forward simulation
+#' set.seed(1)
+#' tr <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+#' tr$status
+#' tr$survival_prob
 #'
-#' # Batch: 200 CR simulations
-#' pm <- cbind(beta_0 = runif(200, 0.3, 0.8), gamma_0 = runif(200, 0.05, 0.3))
-#' sims <- simulate_tree(pars = pm, max_t = 8, model = "cr")
-#' sims$survival_prob              # fraction that succeeded
-#' sims$simulations[[1]]$tes      # first extant phylo
+#' # Batch: 20 constant-rate simulations
+#' pm <- cbind(beta_0 = runif(20, 0.3, 0.8), gamma_0 = runif(20, 0.05, 0.3))
+#' sims <- simulate_tree(pars = pm, max_t = 4, model = "cr")
+#' sims$survival_prob
 #'
-#' # --- Augmentation ---
+#' # Augmentation of the extant tree
 #' aug <- simulate_tree(tree = tr, pars = c(0.5, 0.1), model = "cr")
-#' aug$tas     # augmented phylo
-#' aug$log_q   # log q(z | obs, theta)
+#' aug$log_q
 #'
 #' # Many augmented trees
 #' augN <- simulate_tree(tree = tr, pars = c(0.5, 0.1), model = "cr",
-#'                       n_trees = 100L)
-#' augN$log_q          # vector of length 100
-#' augN$trees[[1]]     # first augmented phylo
-#' }
+#'                       n_trees = 20L)
+#' length(augN$log_q)
 #' @importFrom stats rbinom
 #' @export
 simulate_tree <- function(tree        = NULL,
@@ -623,6 +626,11 @@ simulate_tree <- function(tree        = NULL,
 
 `%||%` <- function(x, y) if (!is.null(x)) x else y
 
+# Progress output of the fitting functions.  Arguments are joined as cat()
+# joins them, but the text goes through message(), so suppressMessages()
+# silences it and it reaches stderr rather than the console's stdout.
+.vcat <- function(...) message(paste(...), appendLF = FALSE)
+
 
 # --------------------------------------------------------------------------- #
 #  Internal augmentation (raw C++ output -- for inference use only)            #
@@ -659,3 +667,11 @@ simulate_tree <- function(tree        = NULL,
     parent_id   = .pid(brts)
   )
 }
+
+
+# simulate_div_tree_cpp() is documented in src/div_tree.cpp; this block marks
+# that topic internal, since the function is not exported.
+#' @name simulate_div_tree_cpp
+#' @rdname simulate_div_tree_cpp
+#' @keywords internal
+NULL

@@ -174,6 +174,7 @@ test_that("em_cpp fhat is the log-mean-exp over trees.size() + rejected_zero_wei
 })
 
 test_that("H62/H68: 50 replicate calls with num_threads = 8 all return exactly sample_size trees", {
+  skip_on_cran()  # eight threads; CRAN allows two
   N <- 50L; maxN <- 5000L
   one <- function(nt) {
     r <- aug(b4, 0.5, 0.1, N, maxN, num_threads = nt)
@@ -194,6 +195,7 @@ test_that("H62/H68: 50 replicate calls with num_threads = 8 all return exactly s
 })
 
 test_that("H62: em_cpp with num_threads = 8 returns sample_size trees and an unbiased fhat", {
+  skip_on_cran()  # eight threads; CRAN allows two
   lb <- c(0.01, 0, 0, 0, 0.001, 0, 0, 0)
   ub <- c(5,    0, 0, 0, 5,     0, 0, 0)
   em1 <- function(nt) {

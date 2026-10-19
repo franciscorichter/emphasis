@@ -11,6 +11,9 @@
 
 \item{...}{Ignored.}
 }
+\value{
+\code{x}, invisibly.
+}
 \description{
 Print method for the fits of \code{estimate_rates(model = "all")}
 }

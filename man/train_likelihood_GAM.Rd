@@ -7,7 +7,8 @@
 train_likelihood_GAM(
   surface,
   par_names = NULL,
-  spline_type = c("univariate", "bivariate")
+  spline_type = c("univariate", "bivariate"),
+  verbose = TRUE
 )
 }
 \arguments{
@@ -20,6 +21,8 @@ and \code{n_trees} are used.}
 
 \item{spline_type}{\code{"univariate"} (default) or \code{"bivariate"}.
 See \code{\link{train_GAM}} for details.}
+
+\item{verbose}{Report the number of grid points (default \code{TRUE}).}
 }
 \value{
 A \code{gam} object (Gaussian family) representing

@@ -146,19 +146,19 @@ branching times (pruning to extant tips if needed), and dispatches to
 the chosen optimisation back-end.
 }
 \examples{
-\dontrun{
-set.seed(42)
-# Constant-rate model
-sim <- simulate_tree(c(0.5, 0.1), max_t = 5, model = "cr")
-fit <- estimate_rates(sim, method = "mcem", model = "cr",
-  control = list(lower_bound = c(0, 0), upper_bound = c(2, 1)))
-fit$pars
-
-# Diversity-dependent model
-sim_dd <- simulate_tree(c(0.5, -0.005, 0.1, 0), max_t = 8, model = "dd")
-fit_dd <- estimate_rates(sim_dd, method = "mcem", model = "dd",
-  control = list(lower_bound = c(0.1, -0.1, 0, -0.01),
-                 upper_bound = c(2, 0.01, 0.5, 0.01)))
+set.seed(1)
+tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+phy <- tr$tes
+fit <- estimate_rates(phy, method = "mcem", model = "cr",
+  control = list(lower_bound = c(0, 0), upper_bound = c(2, 1),
+                 max_iter = 10, num_trees = 50))
+fit
+\donttest{
+# Diversity-dependent model on the same tree
+fit_dd <- estimate_rates(phy, method = "mcem", model = "dd",
+  control = list(lower_bound = c(0, -0.1, 0, -0.1),
+                 upper_bound = c(2, 0.1, 1, 0.1),
+                 max_iter = 10, num_trees = 50))
 fit_dd$pars
 }
 }

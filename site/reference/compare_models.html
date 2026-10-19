@@ -74,7 +74,7 @@ this covers its variance.
 
 <h3>Value</h3>
 
-<p>A <code>model_selection</code> data frame, one row per fit, with columns
+<p>A data frame, one row per fit, with columns
 <code>model</code>, <code>n_pars</code>, <code>loglik</code>, <code>AIC</code>, <code>loglik_se</code>,
 <code>ESS</code>, <code>loglik_gap</code>, <code>gap_heavy</code>, <code>delta_AIC</code>,
 <code>AICw</code>, <code>AIC_swing</code> and <code>within_margin</code>, ordered by AIC,
@@ -82,4 +82,18 @@ with attributes <code>chosen</code> (the most parsimonious model within
 <code>margin</code> of the minimum), <code>chosen_starved</code> (whether that
 model's effective sample is below 10) and <code>ranking_at_risk</code>.
 </p>
+
+<h3>Examples</h3>
+
+<pre><code class='language-R'>set.seed(1)
+tr  &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+phy &lt;- tr$tes
+ctrl &lt;- list(max_iter = 5, num_trees = 30)
+fit_cr &lt;- estimate_rates(phy, method = "mcem", model = "cr",
+  control = c(ctrl, list(lower_bound = c(0, 0), upper_bound = c(2, 1))))
+fit_dd &lt;- estimate_rates(phy, method = "mcem", model = "dd",
+  control = c(ctrl, list(lower_bound = c(0, -0.1, 0, -0.1),
+                         upper_bound = c(2, 0.1, 1, 0.1))))
+compare_models(cr = fit_cr, dd = fit_dd)
+</code></pre>
 

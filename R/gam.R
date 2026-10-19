@@ -21,22 +21,23 @@
 #'   terms \code{s(x)} for each varying predictor.  \code{"bivariate"} fits
 #'   tensor-product smooths \code{te(x, y)} for every pair of varying
 #'   predictors, which can capture interaction effects.
+#' @param verbose Report the number of simulations and the survival rate
+#'   (default \code{TRUE}).
 #' @return A \code{gam} object (binomial family) representing
 #'   \eqn{P(\text{survival} \mid \theta)}.
 #' @seealso \code{\link{simulate_tree}}, \code{\link{predict_survival}}
-#' @export
 #' @examples
-#' \dontrun{
 #' set.seed(1)
-#' pars_mat <- cbind(beta_0  = runif(200, 0.3, 1.2),
-#'                   gamma_0 = runif(200, 0.05, 0.5))
-#' sims <- simulate_tree(pars = pars_mat, max_t = 8,
-#'                       model = "cr", max_tries = 0, useDDD = FALSE)
-#' gam_uni <- train_GAM(sims, pars_mat, model = "cr")
-#' gam_biv <- train_GAM(sims, pars_mat, model = "cr", spline_type = "bivariate")
-#' }
+#' pars_mat <- cbind(beta_0  = runif(100, 0.3, 1.2),
+#'                   gamma_0 = runif(100, 0.05, 0.5))
+#' sims <- simulate_tree(pars = pars_mat, max_t = 4, model = "cr",
+#'                       max_tries = 0)
+#' gam_uni <- train_GAM(sims$simulations, pars_mat, model = "cr")
+#' predict_survival(gam_uni, data.frame(beta_0 = 0.8, gamma_0 = 0.2))
+#' @export
 train_GAM <- function(simulations, pars_mat, model = "cr",
-                      spline_type = c("univariate", "bivariate")) {
+                      spline_type = c("univariate", "bivariate"),
+                      verbose = TRUE) {
   spline_type <- match.arg(spline_type)
   survived <- sapply(simulations, function(s) as.integer(s$status %in% c("done", "too_large")))
 
@@ -66,8 +67,9 @@ train_GAM <- function(simulations, pars_mat, model = "cr",
   }
 
   form <- stats::as.formula(paste("survived ~", smooth_terms))
-  cat("Training", spline_type, "survival GAM on", nrow(sim_data),
-      "simulations (survival rate:", round(mean(survived), 3), ")...\n")
+  if (verbose)
+    .vcat("Training", spline_type, "survival GAM on", nrow(sim_data),
+          "simulations (survival rate:", round(mean(survived), 3), ")...\n")
   mgcv::gam(form, data = sim_data, family = stats::binomial())
 }
 
@@ -83,6 +85,15 @@ train_GAM <- function(simulations, pars_mat, model = "cr",
 #' @param newpars Numeric matrix or data frame of parameter values to predict
 #'   at.  Column names must match those used in \code{train_GAM}.
 #' @return Numeric vector of predicted survival probabilities.
+#' @examples
+#' set.seed(1)
+#' pars_mat <- cbind(beta_0  = runif(100, 0.3, 1.2),
+#'                   gamma_0 = runif(100, 0.05, 0.5))
+#' sims <- simulate_tree(pars = pars_mat, max_t = 4, model = "cr",
+#'                       max_tries = 0)
+#' gam_fit <- train_GAM(sims$simulations, pars_mat, model = "cr")
+#' predict_survival(gam_fit, data.frame(beta_0  = c(0.5, 1.0),
+#'                                      gamma_0 = c(0.1, 0.3)))
 #' @export
 predict_survival <- function(gam_fit, newpars) {
   nd <- as.data.frame(newpars)
@@ -133,18 +144,22 @@ predict_survival <- function(gam_fit, newpars) {
 #'     \item{survival_gam}{A \code{gam} object if trained, else \code{NULL}.}
 #'     \item{center}{The safe center point used as starting location.}
 #'   }
-#' @export
 #' @examples
-#' \dontrun{
-#' library(ape)
-#' data(bird.orders)
-#' ab <- auto_bounds(bird.orders, model = "dd", link = "exponential")
-#' fit <- estimate_rates(bird.orders, method = "gam", model = "dd",
-#'          link = "exponential",
-#'          control = list(lower_bound = ab$lower_bound,
-#'                         upper_bound = ab$upper_bound),
-#'          cond = ab$survival_gam)
+#' set.seed(1)
+#' tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+#' phy <- tr$tes
+#' # A coarse search without the survival GAM
+#' ab <- auto_bounds(phy, model = "cr", n_test = 3L, bisect_steps = 4L,
+#'                   train_surv_gam = FALSE, verbose = FALSE)
+#' ab$lower_bound
+#' ab$upper_bound
+#' \donttest{
+#' # The default search, which also trains the survival GAM that
+#' # estimate_rates(cond = ) conditions on
+#' ab2 <- auto_bounds(phy, model = "cr", verbose = FALSE)
+#' predict_survival(ab2$survival_gam, as.data.frame(t(ab2$center)))
 #' }
+#' @export
 auto_bounds <- function(tree, model = "cr", link = "linear",
                         n_test = 5L, bisect_steps = 8L,
                         margin = 0.5,
@@ -179,7 +194,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   tip_hi  <- ceiling(n_tips * tip_range[2])
   max_lin <- as.integer(max(20 * n_tips, 500))
 
-  # ── Safe center: observed net rate, zero covariates ────────
+  # -- Safe center: observed net rate, zero covariates --------
   r_hat  <- log(max(n_tips, 2) / 2) / max(max_t, 0.1)
   mu_hat <- 0.2 * r_hat
   lam_hat <- r_hat + mu_hat
@@ -197,13 +212,13 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   names(center) <- pnames
 
   # Verify center is feasible
-  if (verbose) cat(sprintf(
+  if (verbose) .vcat(sprintf(
     "auto_bounds: %s link=%s (%d pars)\n",
     paste(model_bin, collapse = ","),
     c("linear", "exponential", "gaussian")[link_int + 1L],
     n_pars
   ))
-  if (verbose) cat(sprintf(
+  if (verbose) .vcat(sprintf(
     "  center: %s\n",
     paste(round(center, 4), collapse = ", ")
   ))
@@ -216,7 +231,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 
   if (!center_ok) {
     # Try a grid of centers near r_hat
-    if (verbose) cat("  center infeasible, searching...\n")
+    if (verbose) .vcat("  center infeasible, searching...\n")
     center <- .find_feasible_center(
       model_bin, link_int, max_t, n_tips, model, link,
       max_lin, tip_lo, tip_hi, num_threads,
@@ -231,12 +246,12 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
       ))
     }
     names(center) <- pnames
-    if (verbose) cat(sprintf(
+    if (verbose) .vcat(sprintf(
       "  found center: %s\n",
       paste(round(center, 4), collapse = ", ")
     ))
   } else {
-    if (verbose) cat("  center feasible\n")
+    if (verbose) .vcat("  center feasible\n")
   }
 
   # -- Collect all feasible points to determine bounds ---------
@@ -244,9 +259,9 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   feasible_pts <- list(center)  # center is known feasible
 
   # Phase 1: Axis-aligned bisection (original method)
-  if (verbose) cat("  Phase 1: axis-aligned bisection\n")
+  if (verbose) .vcat("  Phase 1: axis-aligned bisection\n")
   for (j in seq_len(n_pars)) {
-    if (verbose) cat(sprintf("    axis %s: ", pnames[j]))
+    if (verbose) .vcat(sprintf("    axis %s: ", pnames[j]))
     hi <- .bisect_boundary(center, j, center[j], wide$ub[j],
                            model, link, max_t, max_lin,
                            n_test, bisect_steps, tip_lo, tip_hi, num_threads, rho = rho,
@@ -255,7 +270,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
                            model, link, max_t, max_lin,
                            n_test, bisect_steps, tip_lo, tip_hi, num_threads, rho = rho,
                            surv_tries = surv_tries)
-    if (verbose) cat(sprintf("[%.4f, %.4f]\n", lo, hi))
+    if (verbose) .vcat(sprintf("[%.4f, %.4f]\n", lo, hi))
     # Record the feasible boundary points
     pt_hi <- center; pt_hi[j] <- hi; feasible_pts[[length(feasible_pts) + 1L]] <- pt_hi
     pt_lo <- center; pt_lo[j] <- lo; feasible_pts[[length(feasible_pts) + 1L]] <- pt_lo
@@ -286,7 +301,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     slopes_turn <- unique(c(s_turn, 1))
     slopes_turn <- slopes_turn[is.finite(slopes_turn) & slopes_turn > 0]
 
-    if (verbose) cat("  Phase 1b: constant-net-rate ray\n")
+    if (verbose) .vcat("  Phase 1b: constant-net-rate ray\n")
     for (s in slopes_turn) {
       direction <- rep(0, n_pars)
       direction[i_lam] <- 1
@@ -307,7 +322,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
       if (verbose) {
         hi_str <- if (!is.null(hi_pt)) sprintf("(%.4f, %.4f)", hi_pt[i_lam], hi_pt[i_mu]) else "---"
         lo_str <- if (!is.null(lo_pt)) sprintf("(%.4f, %.4f)", lo_pt[i_lam], lo_pt[i_mu]) else "---"
-        cat(sprintf("    slope=%.2f: %s .. %s\n", s, lo_str, hi_str))
+        .vcat(sprintf("    slope=%.2f: %s .. %s\n", s, lo_str, hi_str))
       }
     }
   }
@@ -322,14 +337,14 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   obs_covs <- .observed_covariates(brts, model_bin)
 
   if (length(obs_covs) > 0L) {
-    if (verbose) cat("  Phase 2: compensatory diagonals\n")
+    if (verbose) .vcat("  Phase 2: compensatory diagonals\n")
 
     for (cov_info in obs_covs) {
       i_int  <- cov_info$intercept_idx
       i_coef <- cov_info$coeff_idx
       X_obs  <- cov_info$X_obs
 
-      if (verbose) cat(sprintf("    %s (X_obs=%.2f):\n", cov_info$name, X_obs))
+      if (verbose) .vcat(sprintf("    %s (X_obs=%.2f):\n", cov_info$name, X_obs))
 
       # Explore multiple compensatory slopes:
       # The exact compensatory slope is X_obs, but we also explore
@@ -358,7 +373,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
         if (verbose) {
           hi_str <- if (!is.null(hi_pt)) sprintf("(%.4f, %.4f)", hi_pt[i_int], hi_pt[i_coef]) else "---"
           lo_str <- if (!is.null(lo_pt)) sprintf("(%.4f, %.4f)", lo_pt[i_int], lo_pt[i_coef]) else "---"
-          cat(sprintf("      slope=%.1f: %s .. %s\n", s, lo_str, hi_str))
+          .vcat(sprintf("      slope=%.1f: %s .. %s\n", s, lo_str, hi_str))
         }
       }
 
@@ -391,7 +406,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   # restore the caller's global RNG state so auto_bounds() does not silently
   # reset the user's random stream mid-analysis.
   n_random <- max(4L, n_pars)
-  if (verbose) cat(sprintf("  Phase 3: %d random directions\n", n_random))
+  if (verbose) .vcat(sprintf("  Phase 3: %d random directions\n", n_random))
   .ab_old_seed <- if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE))
     get(".Random.seed", envir = .GlobalEnv) else NULL
   set.seed(12345L)  # reproducible feasibility directions
@@ -429,24 +444,24 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   ub <- pmin(ub + margin * span, wide$ub)
 
   if (verbose) {
-    cat(sprintf("  %d feasible points collected\n", nrow(feas_mat)))
-    cat("  final bounds:\n")
+    .vcat(sprintf("  %d feasible points collected\n", nrow(feas_mat)))
+    .vcat("  final bounds:\n")
     for (j in seq_len(n_pars)) {
-      cat(sprintf("    %s: [%.4f, %.4f]\n", pnames[j], lb[j], ub[j]))
+      .vcat(sprintf("    %s: [%.4f, %.4f]\n", pnames[j], lb[j], ub[j]))
     }
   }
 
   # -- IS feasibility diagnostic (informational only) ----------
   if (verbose) {
-    cat("  IS feasibility check...\n")
+    .vcat("  IS feasibility check...\n")
     .diagnose_is_bounds(center, lb, ub, brts, model_bin, link_int, verbose,
                         rho = rho)
   }
 
-  # ── Survival GAM on detected region ────────────────────────
+  # -- Survival GAM on detected region ------------------------
   surv_gam <- NULL
   if (train_surv_gam) {
-    if (verbose) cat("  training survival GAM...\n")
+    if (verbose) .vcat("  training survival GAM...\n")
     n_gam   <- 2000L   # the size at which the survival GAM meets E36c's accuracy limit
     gam_mat <- .lhs_sample(n_gam, lb, ub)
     colnames(gam_mat) <- pnames
@@ -461,7 +476,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     )
 
     surv_gam <- train_GAM(
-      gam_sims$simulations, gam_mat, model = model
+      gam_sims$simulations, gam_mat, model = model, verbose = verbose
     )
   }
 
@@ -622,9 +637,9 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     )
 
     if (ok) {
-      lo <- mid   # feasible — push further
+      lo <- mid   # feasible -- push further
     } else {
-      hi <- mid   # infeasible — pull back
+      hi <- mid   # infeasible -- pull back
     }
   }
   lo  # last known feasible value
@@ -671,7 +686,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
       }, error = function(e) FALSE)
 
       if (!is_ok) {
-        if (verbose) cat(sprintf(
+        if (verbose) .vcat(sprintf(
           "    IS warning: %s %s bound (%.4f) - augmentation may struggle here\n",
           names(center)[j], side, boundary
         ))
@@ -680,7 +695,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
     }
   }
 
-  if (verbose && !any_issues) cat("    all boundary probes OK\n")
+  if (verbose && !any_issues) .vcat("    all boundary probes OK\n")
   invisible(any_issues)
 }
 
@@ -837,11 +852,11 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
 .wide_bounds <- function(model_bin, link_int, max_t, n_tips) {
   model_bin <- .pad_model_bin(model_bin)
   active <- which(model_bin != 0L)
-  T <- max(max_t, 0.1)
+  t_obs <- max(max_t, 0.1)
   N <- max(n_tips, 2)
 
-  r_hat  <- log(N / 2) / T                # observed net rate
-  r_max  <- log(50 * N / 2) / T           # net rate for 50x tips
+  r_hat  <- log(N / 2) / t_obs                # observed net rate
+  r_max  <- log(50 * N / 2) / t_obs           # net rate for 50x tips
   lam_hi <- max(r_max + 0.5 * r_hat, 0.1) # allow some extinction
 
   # Turnover headroom.  A reconstructed tree pins the NET rate r = lambda - mu,
@@ -869,7 +884,7 @@ auto_bounds <- function(tree, model = "cr", link = "linear",
   # covariate, the old rule, put the N slope at 0.6 per lineage on the
   # exponential link, e^60 at 100 lineages, and an M-step that stepped there
   # left the E-step with no augmentation that completes (E23, 2026-10-01).
-  scale  <- c(N = N, M = T / 2, D = T / 2, ED = T / 2, K = 2 * log(N))
+  scale  <- c(N = N, M = t_obs / 2, D = t_obs / 2, ED = t_obs / 2, K = 2 * log(N))
   amount <- if (link_int == 1L) 3 else max(0.3, 3 * abs(r_hat))
   cov_hi <- amount / pmax(scale[active], 1e-6)
 
@@ -1013,7 +1028,7 @@ estimate_likelihood_surface <- function(tree, pars_mat, model = "cr",
                      n_pts >= num_threads)
 
   if (use_r_parallel) {
-    if (verbose) cat(sprintf(
+    if (verbose) .vcat(sprintf(
       "  IS grid: %d points x %d trees (%d cores)...\n",
       n_pts, sample_size, num_threads
     ))
@@ -1045,7 +1060,7 @@ estimate_likelihood_surface <- function(tree, pars_mat, model = "cr",
     }
   }
 
-  if (verbose) cat(sprintf(
+  if (verbose) .vcat(sprintf(
     "  grid done: %.1fs, %d/%d valid\n",
     proc.time()[3] - t0_grid, sum(is.finite(fhat)), n_pts
   ))
@@ -1067,13 +1082,15 @@ estimate_likelihood_surface <- function(tree, pars_mat, model = "cr",
 #'   and \code{n_trees} are used.
 #' @param spline_type \code{"univariate"} (default) or \code{"bivariate"}.
 #'   See \code{\link{train_GAM}} for details.
+#' @param verbose Report the number of grid points (default \code{TRUE}).
 #' @return A \code{gam} object (Gaussian family) representing
 #'   \eqn{\hat\ell(\theta) \approx \log L(\theta \mid \text{data})}.
 #' @seealso \code{\link{estimate_likelihood_surface}}, \code{\link{find_MLE}}
 #' @keywords internal
 train_likelihood_GAM <- function(surface,
                                  par_names = NULL,
-                                 spline_type = c("univariate", "bivariate")) {
+                                 spline_type = c("univariate", "bivariate"),
+                                 verbose = TRUE) {
   spline_type <- match.arg(spline_type)
   surface <- surface[is.finite(surface$fhat), , drop = FALSE]
   if (nrow(surface) < 10L)
@@ -1111,8 +1128,9 @@ train_likelihood_GAM <- function(surface,
   }
 
   form <- stats::as.formula(paste("fhat ~", smooth_terms))
-  cat("Training", spline_type, "likelihood GAM on", nrow(surface),
-      "grid points...\n")
+  if (verbose)
+    .vcat("Training", spline_type, "likelihood GAM on", nrow(surface),
+          "grid points...\n")
   mgcv::gam(form, data = surface, family = stats::gaussian())
 }
 

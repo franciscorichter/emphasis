@@ -1,11 +1,11 @@
 <h3>Description</h3>
 
-<p>Mean-field state: N̂(t) = k(t) + m̂(t), P̂(t) = P_obs(t) + P̂_miss(t),
-Ê(t) = P̂(t) / N̂(t).  All three enter the rate function; inactive
+<p>Mean-field state: Nhat(t) = k(t) + mhat(t), Phat(t) = P_obs(t) + Phat_miss(t),
+Ehat(t) = Phat(t) / Nhat(t).  All three enter the rate function; inactive
 covariates (pars8 slopes pinned to 0) make the extension transparent
 for CR/DD and activate PD/EP/mixed models.
 The sweep budget is 60 because the iteration slows as <code>rho</code> falls: the
-unsampled extant lineages raise <code>N̂</code>, which feeds back into the rates
+unsampled extant lineages raise <code>Nhat</code>, which feeds back into the rates
 that produced them.  On the 20-tip DD tree at <code>K = 20</code> the fixed point
 is reached in 6 sweeps at <code>rho = 1</code>, 7 at 0.9, 14 at 0.5 and 27 at 0.2.
 The old budget of 20 therefore returned a non-converged mean field at small

@@ -97,6 +97,14 @@ sampling). With \code{rho < 1} a random fraction of extant tips is dropped
   \code{"thinning"} method draws the parent from every lineage alive, the
   two crown lineages included, and is not affected.}
 }
+\value{
+A list whose components depend on the mode: for a single forward
+  simulation \code{tes}, \code{tas}, \code{L}, \code{status},
+  \code{survival_prob} and \code{attempts}; for a matrix \code{pars} a
+  list with \code{simulations} and \code{survival_prob}; for an
+  augmentation the augmented tree(s) and their proposal log-densities
+  \code{log_q}.  The sections below list every component.
+}
 \description{
 Unified entry point for forward and conditional tree simulation.
 When \code{tree = NULL} (default) a complete tree is simulated forward
@@ -200,27 +208,23 @@ When \code{n_trees > 1}:
 }
 
 \examples{
-\dontrun{
-# --- Forward simulation ---
-tr <- simulate_tree(pars = c(0.5, 0.1), max_t = 5, model = "cr")
-tr$status          # "done"
-tr$survival_prob   # e.g. 0.25 if took 4 attempts
+# Forward simulation
+set.seed(1)
+tr <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr$status
+tr$survival_prob
 
-# Batch: 200 CR simulations
-pm <- cbind(beta_0 = runif(200, 0.3, 0.8), gamma_0 = runif(200, 0.05, 0.3))
-sims <- simulate_tree(pars = pm, max_t = 8, model = "cr")
-sims$survival_prob              # fraction that succeeded
-sims$simulations[[1]]$tes      # first extant phylo
+# Batch: 20 constant-rate simulations
+pm <- cbind(beta_0 = runif(20, 0.3, 0.8), gamma_0 = runif(20, 0.05, 0.3))
+sims <- simulate_tree(pars = pm, max_t = 4, model = "cr")
+sims$survival_prob
 
-# --- Augmentation ---
+# Augmentation of the extant tree
 aug <- simulate_tree(tree = tr, pars = c(0.5, 0.1), model = "cr")
-aug$tas     # augmented phylo
-aug$log_q   # log q(z | obs, theta)
+aug$log_q
 
 # Many augmented trees
 augN <- simulate_tree(tree = tr, pars = c(0.5, 0.1), model = "cr",
-                      n_trees = 100L)
-augN$log_q          # vector of length 100
-augN$trees[[1]]     # first augmented phylo
-}
+                      n_trees = 20L)
+length(augN$log_q)
 }

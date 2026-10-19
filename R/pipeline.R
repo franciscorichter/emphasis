@@ -28,7 +28,7 @@
 #'   e.g. \code{c("bounds", "gam")} for a quick exploratory fit.
 #' @param control Named list with optional sub-lists \code{bounds}, \code{gam},
 #'   \code{cem}, \code{mcem} to override defaults for each stage.  Common
-#'   parameters (\code{num_threads}, \code{max_missing}, \code{max_time},
+#'   parameters (\code{num_threads}, default 1, \code{max_missing}, \code{max_time},
 #'   \code{rho}) can be set at the top level and are inherited by all stages.
 #'   \code{rho}, the sampling fraction in \code{(0, 1]}, is inherited by the
 #'   bounds, gam, cem and mcem stages alike, and a value nested under
@@ -51,13 +51,21 @@
 #'     \item{\code{fits}}{Named list of individual \code{emphasis_fit} objects.}
 #'   }
 #' @examples
-#' \dontrun{
-#' library(ape)
-#' data(bird.orders)
-#' result <- emphasis_pipeline(bird.orders, model = "dd", link = "linear")
-#' result           # prints summary log
-#' result$pars      # best parameters
-#' result$log       # full stage log
+#' set.seed(1)
+#' tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+#' phy <- tr$tes
+#' # CEM stage only, with the search box given
+#' res <- emphasis_pipeline(phy, model = "cr", stages = "cem",
+#'   control = list(lower_bound = c(0, 0), upper_bound = c(2, 1),
+#'                  cem = list(max_iter = 3, num_particles = 10)),
+#'   verbose = FALSE)
+#' res
+#' \donttest{
+#' # Bounds found automatically, then CEM
+#' res2 <- emphasis_pipeline(phy, model = "cr", stages = c("bounds", "cem"),
+#'   control = list(cem = list(max_iter = 3, num_particles = 10)),
+#'   verbose = FALSE)
+#' res2$log
 #' }
 #' @export
 emphasis_pipeline <- function(tree,
@@ -76,12 +84,12 @@ emphasis_pipeline <- function(tree,
 
   # Shared defaults.  A top-level entry is inherited by every stage; a value
   # nested under control$gam / $cem / $mcem overrides it for that stage.
-  num_threads <- control$num_threads %||% max(1L, parallel::detectCores() - 1L)
+  num_threads <- control$num_threads %||% 1L
   max_missing <- control$max_missing %||% 1e4
   max_time    <- control$max_time %||% 3600
   rho         <- .check_rho(control$rho %||% 1.0)
 
-  if (verbose) cat(sprintf(
+  if (verbose) .vcat(sprintf(
     "[pipeline] model=%s  link=%s  n_brts=%d  threads=%d  rho=%s\n",
     model_str, link_str, n_brts, num_threads, format(rho)
   ))
@@ -114,18 +122,18 @@ emphasis_pipeline <- function(tree,
     run_log <<- rbind(run_log, row)
 
     if (verbose) {
-      cat(sprintf("  [%s] %s  loglik=%.2f  AIC=%.2f  (%.1fs)\n",
+      .vcat(sprintf("  [%s] %s  loglik=%.2f  AIC=%.2f  (%.1fs)\n",
                   stage, status,
                   if (is.finite(ll)) ll else NA,
                   if (is.finite(aic)) aic else NA,
                   elapsed))
-      if (nchar(pars_str) > 0) cat(sprintf("    pars: %s\n", pars_str))
+      if (nchar(pars_str) > 0) .vcat(sprintf("    pars: %s\n", pars_str))
     }
   }
 
-  # ── Stage 1: Bounds ──────────────────────────────────────────
+  # -- Stage 1: Bounds ------------------------------------------
   if ("bounds" %in% stages) {
-    if (verbose) cat("\n[Stage 1] auto_bounds...\n")
+    if (verbose) .vcat("\n[Stage 1] auto_bounds...\n")
     t0 <- proc.time()[3]
     ab <- tryCatch(
       auto_bounds(tree, model = model, link = link,
@@ -135,7 +143,7 @@ emphasis_pipeline <- function(tree,
                   verbose = verbose,
                   rho     = rho),
       error = function(e) {
-        if (verbose) cat(sprintf("  bounds FAILED: %s\n", e$message))
+        if (verbose) .vcat(sprintf("  bounds FAILED: %s\n", e$message))
         NULL
       }
     )
@@ -155,8 +163,8 @@ emphasis_pipeline <- function(tree,
 
     log_stage("bounds", NULL, elapsed_bounds, "ok")
     if (verbose) {
-      cat(sprintf("    lb: %s\n", paste(round(ab$lower_bound, 4), collapse = ", ")))
-      cat(sprintf("    ub: %s\n", paste(round(ab$upper_bound, 4), collapse = ", ")))
+      .vcat(sprintf("    lb: %s\n", paste(round(ab$lower_bound, 4), collapse = ", ")))
+      .vcat(sprintf("    ub: %s\n", paste(round(ab$upper_bound, 4), collapse = ", ")))
     }
   } else {
     # Bounds must be provided in control
@@ -172,9 +180,9 @@ emphasis_pipeline <- function(tree,
 
   cond <- ab$survival_gam
 
-  # ── Stage 2: GAM ────────────────────────────────────────────
+  # -- Stage 2: GAM --------------------------------------------
   if ("gam" %in% stages) {
-    if (verbose) cat("\n[Stage 2] GAM surface fit...\n")
+    if (verbose) .vcat("\n[Stage 2] GAM surface fit...\n")
 
     gam_defaults <- list(n_grid = 150, sample_size = 200, rho = rho)
     gam_ctrl <- utils::modifyList(gam_defaults, control$gam %||% list())
@@ -190,7 +198,7 @@ emphasis_pipeline <- function(tree,
       estimate_rates(tree, method = "gam", model = model, link = link,
                      cond = cond, control = gam_ctrl),
       error = function(e) {
-        if (verbose) cat(sprintf("  GAM FAILED: %s\n", e$message))
+        if (verbose) .vcat(sprintf("  GAM FAILED: %s\n", e$message))
         NULL
       }
     )
@@ -203,9 +211,9 @@ emphasis_pipeline <- function(tree,
               rho_used = gam_ctrl$rho)
   }
 
-  # ── Stage 3: CEM ────────────────────────────────────────────
+  # -- Stage 3: CEM --------------------------------------------
   if ("cem" %in% stages) {
-    if (verbose) cat("\n[Stage 3] CEM global search...\n")
+    if (verbose) .vcat("\n[Stage 3] CEM global search...\n")
 
     cem_defaults <- list(max_iter = 20, num_particles = 50, num_trees = 5,
                          rho = rho)
@@ -222,7 +230,7 @@ emphasis_pipeline <- function(tree,
       estimate_rates(tree, method = "cem", model = model, link = link,
                      cond = cond, control = cem_ctrl),
       error = function(e) {
-        if (verbose) cat(sprintf("  CEM FAILED: %s\n", e$message))
+        if (verbose) .vcat(sprintf("  CEM FAILED: %s\n", e$message))
         NULL
       }
     )
@@ -235,7 +243,7 @@ emphasis_pipeline <- function(tree,
               rho_used = cem_ctrl$rho)
   }
 
-  # ── Pick best init for MCEM ─────────────────────────────────
+  # -- Pick best init for MCEM ---------------------------------
   # Prefer CEM over GAM for init: CEM is a proper global search,
   # GAM with low sample_size can produce misleading optima.
   best_init     <- NULL
@@ -253,12 +261,12 @@ emphasis_pipeline <- function(tree,
   }
 
   if (verbose && !is.null(best_init)) {
-    cat(sprintf("\n  Best init from %s (loglik=%.2f)\n", best_init_src, best_init_ll))
+    .vcat(sprintf("\n  Best init from %s (loglik=%.2f)\n", best_init_src, best_init_ll))
   }
 
-  # ── Stage 4: MCEM ───────────────────────────────────────────
+  # -- Stage 4: MCEM -------------------------------------------
   if ("mcem" %in% stages) {
-    if (verbose) cat("\n[Stage 4] MCEM refinement...\n")
+    if (verbose) .vcat("\n[Stage 4] MCEM refinement...\n")
 
     # tol and patience are taken from the shared MCEM defaults so that the
     # stage uses the same stopping rule as a direct estimate_rates call.
@@ -279,7 +287,7 @@ emphasis_pipeline <- function(tree,
       estimate_rates(tree, method = "mcem", model = model, link = link,
                      init_pars = best_init, cond = cond, control = mcem_ctrl),
       error = function(e) {
-        if (verbose) cat(sprintf("  MCEM FAILED: %s\n", e$message))
+        if (verbose) .vcat(sprintf("  MCEM FAILED: %s\n", e$message))
         NULL
       }
     )
@@ -302,13 +310,13 @@ emphasis_pipeline <- function(tree,
     if (verbose && !is.null(mcem_trace) && nrow(mcem_trace) > 0) {
       n_iter <- if (!is.null(mcem_fit$iterations) && !is.na(mcem_fit$iterations))
         mcem_fit$iterations else sum(.mcem_iter_rows(mcem_trace))
-      cat(sprintf("    MCEM: %d iterations, final fhat=%.2f\n",
+      .vcat(sprintf("    MCEM: %d iterations, final fhat=%.2f\n",
                   n_iter,
                   utils::tail(mcem_trace$fhat[is.finite(mcem_trace$fhat)], 1)))
     }
   }
 
-  # ── Select best result ──────────────────────────────────────
+  # -- Select best result --------------------------------------
   # Prefer later stages (more refined): MCEM > CEM > GAM.
   # GAM with sample_size=1 can produce garbage logliks from extrapolation,
   # so we only fall back to GAM if CEM and MCEM both failed.
@@ -324,11 +332,11 @@ emphasis_pipeline <- function(tree,
     }
   }
 
-  # ── Summary ─────────────────────────────────────────────────
+  # -- Summary -------------------------------------------------
   total_time <- sum(run_log$elapsed)
 
   if (verbose) {
-    cat(sprintf("\n[pipeline] DONE in %.1fs  best=%s  loglik=%.2f  AIC=%.2f\n",
+    .vcat(sprintf("\n[pipeline] DONE in %.1fs  best=%s  loglik=%.2f  AIC=%.2f\n",
                 total_time, best_stage,
                 if (!is.null(best_fit)) best_fit$loglik else NA,
                 if (!is.null(best_fit)) best_fit$AIC else NA))
@@ -362,6 +370,7 @@ emphasis_pipeline <- function(tree,
 #'
 #' @param x An \code{emphasis_pipeline} result.
 #' @param ... Additional arguments (ignored).
+#' @return \code{x}, invisibly.
 #' @export
 print.emphasis_pipeline <- function(x, ...) {
   model_str <- .model_label(x$model)

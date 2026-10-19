@@ -28,6 +28,6 @@ State: s = (m, P_miss) with
                                                   its pendant edge at rate 1)
 }
 \details{
-Rates lam, mu are evaluated at (N̂, P̂, Ê) to support DD/PD/EP + mixed.
+Rates lam, mu are evaluated at (Nhat, Phat, Ehat) to support DD/PD/EP + mixed.
 }
 \keyword{internal}

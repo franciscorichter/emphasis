@@ -4,7 +4,7 @@
 \alias{.bdi_solve_p_backward}
 \title{Solve survival probability p(t) backward from tp to 0.
 ODE: dp/dt = lam(t)*p^2 - (lam(t)-mu(t))*p, p(tp) = rho.
-Rates use the mean-field covariates (N̂, P̂, Ê) — supports DD/PD/EP and
+Rates use the mean-field covariates (Nhat, Phat, Ehat) -- supports DD/PD/EP and
 mixed models. For CR (all model_bin = 0) the covariate arguments are
 ignored inside .bdi_lam/.bdi_mu.}
 \usage{

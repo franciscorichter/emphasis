@@ -1,24 +1,5 @@
-/* Copyright (c) 2007-2014 Massachusetts Institute of Technology
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files (the
- * "Software"), to deal in the Software without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to
- * permit persons to whom the Software is furnished to do so, subject to
- * the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
- * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
- * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
- * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+// Part of the emphasis R package (MIT licence, see LICENSE). This file builds on
+// the earlier C++ implementation by Hanno Hildenbrandt (2020).
 
 //
 // C++-API for plug-in diversification model
@@ -1398,18 +1379,59 @@ namespace emphasis {
       double inte = 0.0;
       double prev_brts = 0.0;
 
-      // The alive multiset of pendant starts the D compensator integrates
-      // over.  It is the one the forward sweep builds node.pd on
-      // (src/augment_tree.cpp): two crown lineages at 0; a split replaces the
-      // splitting lineage's start (node.focal_tip_start) by the event time and
-      // adds the daughter at the event time; an extinction removes the dying
-      // lineage's start (node.tip_start).  With no parent on record the sweep
-      // resets the observed lineage nearest the crown, which here is the
-      // smallest start.  Reading the same multiset keeps the compensator on
-      // the D the event terms and M are computed from: a lineage's pendant
-      // age restarts when it splits.
-      std::multiset<double> alive;
-      if (model_bin_[2]) { alive.insert(0.0); alive.insert(0.0); }
+      // The alive lineages and their pendant starts: the set the D
+      // compensator integrates over.  It replays, lineage by lineage, the
+      // forward sweep that built the tree (pendant_sweep in
+      // src/augment_tree.cpp), so that every lineage's start is the one the
+      // event terms read through focal_tip_start and tip_start: two crown
+      // lineages at 0; a split resets the splitting lineage's start to the
+      // event time and adds the daughter there; an extinction removes the
+      // dying lineage.  Which lineage splits or dies is resolved as the sweep
+      // resolved it:
+      //
+      //   a split naming its parent (parent_id)  that lineage, by id; none if
+      //       it is not alive, as in the sweep;
+      //   a split naming no parent               the lineage whose start is
+      //       its focal_tip_start (an observed lineage under the topology
+      //       convention), which is the start the sweep found it at or the one
+      //       a tree assembled in R records;
+      //   ... and recording ts_unknown           nothing under the legacy
+      //       convention (a bare branching-time vector: every observed
+      //       lineage dates from the crown and the sweep's reset map is not
+      //       touched by an observed split); under the topology convention
+      //       the observed lineage the topology dates nearest the crown;
+      //   an extinction                           the lineage with its id;
+      //       the start it records when it has none (a tree assembled in R).
+      //
+      // Ties go to the first-born lineage, as in the sweep, which holds its
+      // lineages in the same birth order.  The set is node.n lineages on every
+      // segment, which is what makes the compensator collapse onto
+      // dt * n * (lambda + mu) when beta_D = gamma_D = 0.
+      struct alive_t { int id; double ts; double obs_ts; bool observed; };
+      std::vector<alive_t> alive;
+      const bool topology = !tree.empty() && tree.back().clade == clade_topology;
+      if (model_bin_[2]) {
+        alive.reserve(tree.size() + 2);
+        alive.push_back({crown_id_a, 0.0, 0.0, true});
+        alive.push_back({crown_id_b, 0.0, 0.0, true});
+      }
+      auto alive_by_id = [&alive](int id) {
+        if (id == no_parent) return alive.end();
+        return std::find_if(alive.begin(), alive.end(),
+                            [id](const alive_t& l) { return l.id == id; });
+      };
+      // The first-born entry whose start (or, with `obs`, whose start on the
+      // observed tree) is nearest `ts`, optionally among observed lineages only.
+      auto alive_nearest = [&alive](double ts, bool observed_only, bool obs) {
+        auto best = alive.end();
+        double best_d = 0.0;
+        for (auto it = alive.begin(); it != alive.end(); ++it) {
+          if (observed_only && !it->observed) continue;
+          const double d = std::abs((obs ? it->obs_ts : it->ts) - ts);
+          if (best == alive.end() || d < best_d) { best = it; best_d = d; }
+        }
+        return best;
+      };
 
       for (unsigned i = 0; i < tree.size(); ++i) {
         const auto& node = tree[i];
@@ -1426,7 +1448,7 @@ namespace emphasis {
           // value the forward simulator holds between events
           // (inst/include/general_tree.hpp).  Every rate is then constant on
           // the segment and the compensator is dt times the sum of the alive
-          // lineages' rates, under every link.  The alive set is the multiset
+          // lineages' rates, under every link.  The alive set is `alive`
           // above: node.n lineages, which is what makes the branch collapse
           // onto dt*n*(lambda+mu) when beta_D and gamma_D are zero.
           const double N_seg = node.n;
@@ -1438,14 +1460,14 @@ namespace emphasis {
             const double A_lam = pars[0] + pars[1]*N_seg + pars[2]*M_seg + pars[3]*(node.brts - M_seg);
             const double A_mu  = pars[4] + pars[5]*N_seg + pars[6]*M_seg + pars[7]*(node.brts - M_seg);
             double sum_exp_bE = 0.0, sum_exp_gE = 0.0;   // Sum_s exp(-beta_D ts_s), Sum_s exp(-gamma_D ts_s)
-            for (const double ts : alive) {
-              sum_exp_bE += std::exp(-pars[3] * ts);
-              sum_exp_gE += std::exp(-pars[7] * ts);
+            for (const auto& l : alive) {
+              sum_exp_bE += std::exp(-pars[3] * l.ts);
+              sum_exp_gE += std::exp(-pars[7] * l.ts);
             }
             seg = std::exp(A_lam) * sum_exp_bE + std::exp(A_mu) * sum_exp_gE;
           } else {
-            for (const double ts : alive) {
-              const double D = (node.brts - ts) - M_seg;
+            for (const auto& l : alive) {
+              const double D = (node.brts - l.ts) - M_seg;
               if (ep_gauss) {
                 seg += gaussian_rate(pars[0], pars[1]*N_seg + pars[2]*M_seg + pars[3]*D);
                 seg += gaussian_rate(pars[4], pars[5]*N_seg + pars[6]*M_seg + pars[7]*D);
@@ -1478,17 +1500,27 @@ namespace emphasis {
           log_lambda += lambda;
         }
 
-        // The alive multiset after this node's event
+        // The alive set after this node's event
         if (model_bin_[2]) {
           if (is_extinction(node)) {
-            auto it = alive.find(node.tip_start);
+            auto it = alive_by_id(node.id);
+            if (it == alive.end()) it = alive_nearest(node.tip_start, false, false);
             if (it != alive.end()) alive.erase(it);
           } else if (i != tree.size() - 1) {
-            auto it = (node.focal_tip_start >= 0.0) ? alive.find(node.focal_tip_start)
-                                                     : alive.begin();
-            if (it != alive.end()) alive.erase(it);
-            alive.insert(node.brts);      // the splitting lineage, a tip again
-            alive.insert(node.brts);      // the daughter
+            const bool observed = is_tip(node);
+            auto it = alive.end();
+            if (has_parent(node.parent_id)) {
+              it = alive_by_id(node.parent_id);
+            } else if (node.focal_tip_start >= 0.0) {
+              it = alive_nearest(node.focal_tip_start, topology, false);
+            } else if (topology && observed) {
+              it = alive_nearest(0.0, true, true);
+            }
+            if (it != alive.end()) {
+              it->ts = node.brts;                      // the splitting lineage, a tip again
+              if (observed) it->obs_ts = node.brts;
+            }
+            alive.push_back({node.id, node.brts, node.brts, observed});   // the daughter
           }
         }
 

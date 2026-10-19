@@ -1,38 +1,45 @@
 <h3>Description</h3>
 
-<p>Tools for simulating phylogenetic trees, augmenting missing lineages, and fitting diversification models using Monte Carlo EM, Cross-Entropy Method, and importance sampling.
+<p>Birth-death models of species diversification whose speciation and
+extinction rates depend on covariates the process generates: the number of
+lineages <span class="reqn">\(N\)</span>, the age-imbalance <span class="reqn">\(D\)</span>, the evolutionary
+distinctiveness <span class="reqn">\(ED\)</span> and the number of ancestral splits <span class="reqn">\(K\)</span>.  A
+reconstructed phylogeny records only the extant species; the likelihood is
+integrated over the unobserved extinct (and, at incomplete sampling,
+unsampled) lineages by importance sampling on augmented trees.
 </p>
 
 <h3>Details</h3>
 
-<p>The package revolves around four workflows:
+<p>The main functions:
 </p>
 
 <ul>
-<li> <p><strong>Simulation</strong>: 'simulate_tree()' for forward and conditional simulation.
+<li> <p><code><a href="#simulate_tree">simulate_tree</a></code>: forward simulation under a model, and
+augmentation of an observed tree.
 </p>
 </li>
-<li> <p><strong>Augmentation</strong>: <code>augment_trees()</code> draws IS-weighted augmented trees;
-<code>eval_logf()</code> scores pre-computed trees at any parameter point.
+<li> <p><code><a href="#estimate_rates">estimate_rates</a></code>: maximum-likelihood estimation by Monte
+Carlo expectation-maximization (<code>"mcem"</code>), the cross-entropy
+method (<code>"cem"</code>) or a GAM fitted to a likelihood surface
+(<code>"gam"</code>).
 </p>
 </li>
-<li> <p><strong>Estimation</strong>: 'estimate_rates()', 'emphasis_cem()' (CEM back-end).
+<li> <p><code><a href="#compare_models">compare_models</a></code>: AIC comparison of fits that accounts
+for their Monte Carlo error.
 </p>
 </li>
-<li> <p><strong>Diagnostics</strong>: 'train_GAM()' plus plotting utilities.
+<li> <p><code><a href="#lineage_table">lineage_table</a></code>, <code><a href="#covariate_path">covariate_path</a></code>: the
+per-lineage design of a tree and a selection path over the covariates.
+</p>
+</li>
+<li> <p><code><a href="#diagnose_mcem">diagnose_mcem</a></code>, <code><a href="#diagnose_cem">diagnose_cem</a></code>,
+<code><a href="#diagnose_gam">diagnose_gam</a></code>: convergence and importance-sampling
+diagnostics.
 </p>
 </li></ul>
 
-<p>Heavy computations are delegated to C++ via 'Rcpp' / 'RcppParallel' for performance.
+<p>Computation is in C++ through <span class="pkg">Rcpp</span> and <span class="pkg">RcppParallel</span>; every
+function runs on one thread unless <code>num_threads</code> is set.
 </p>
-
-<h3>Examples</h3>
-
-<pre><code class='language-R'>  ## Not run: 
-    data(bird.orders, package = "ape")
-    result &lt;- emphasis(bird.orders, model = list(pars = c(0.1, 0.2, -0.1, 0)))
-    str(result)
-  
-## End(Not run)
-</code></pre>
 

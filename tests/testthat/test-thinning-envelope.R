@@ -5,12 +5,15 @@
 # lambda_max must dominate nh(t) on the segment; otherwise the sampler draws
 # fewer missing lineages than sampling_prob charges and fhat is biased.
 #
-# Fixed 7-tip CR tree of dev/audit/checks/H7.R. The C++ engine is seeded from
-# the clock, so every assertion is a tolerance on replicates: 3 se for the
-# binomial check, 4 se per grid point plus a pooled chi-square for the fhat
-# gaps. Measured separation of those assertions on the build before the fix,
-# where the envelope collapsed to nh(next_bt): P(no missing) 0.0570 against a
-# closed form of 0.0442, 5.5 se; per-point |z| 4.4 / 4.4 / 5.0 / 4.4 / 6.3 and
+# Fixed 7-tip CR tree of dev/audit/checks/H7.R. The C++ engine draws its seed
+# from R's stream unless one is passed, and the standard library's
+# distributions differ between libstdc++ and libc++, so a draw is fixed on one
+# platform but not across platforms: every assertion is a tolerance, 4 se for
+# the binomial check, 4 se per grid point plus a pooled chi-square for the
+# fhat gaps. Measured separation of those assertions on the build before the
+# fix, where the envelope collapsed to nh(next_bt): P(no missing) 0.0570
+# against a closed form of 0.0442, 6.2 se at n = 10000 and 8.8 se at the
+# n = 20000 used below; per-point |z| 4.4 / 4.4 / 5.0 / 4.4 / 6.3 and
 # 5.3 / 4.6 / 2.1 / 4.4 / 6.0 over two replicates; pooled sum(z^2) 122 and 109
 # against a critical value of 20.5. After the fix, over three replicates:
 # max |z| 1.86, pooled 4.6 / 5.4 / 1.6.
@@ -45,11 +48,11 @@ cr_hazard <- function(lam, mu) {
   h
 }
 
-draw_cr <- function(lam, mu, n, link = 0L) {
+draw_cr <- function(lam, mu, n, link = 0L, seed = 0L) {
   pars <- if (link == 1L) c(log(lam), 0, 0, 0, log(mu), 0, 0, 0) else c(lam, 0, 0, 0, mu, 0, 0, 0)
   augment_trees(brts = brts7, pars = pars, sample_size = n, maxN = 50L * n,
                 max_missing = 200L, max_lambda = 1e6, num_threads = 1L,
-                model = c(0L, 0L, 0L), link = link, rho = 1)
+                model = c(0L, 0L, 0L), link = link, rho = 1, seed = seed)
 }
 
 is_fhat <- function(logf, logg, n_zero = 0) {
@@ -63,15 +66,23 @@ is_fhat <- function(logf, logg, n_zero = 0) {
 test_that("P(no missing lineage) matches the closed form exp(-int nh) (H7.R part 1)", {
   skip_on_cran()
   thinning_envelope_violations(reset = TRUE)
-  n <- 10000L
-  raw <- draw_cr(0.4, 0.2, n)
+  # The draw has its own seed, so it does not move when a test file before
+  # this one changes how much of R's stream it uses.  The bound is 4 se under
+  # the closed form: a false alarm once in 16000 seeds, and the pre-fix bias
+  # (8.8 se at this n) still fails it; 3 se fails one draw in 370, and one
+  # seed R's stream hands this test under NOT_CRAN gives z = -3.4.  The
+  # sampler is unbiased here: over seeds 1001 to 1200 at n = 10000 the pooled
+  # deviation is +0.0002 (1.7 pooled se), 112 of 200 positive, sum(z^2) = 201.
+  # This seed gives p0 = 0.0416, z = -1.8 under libstdc++ (Linux, Windows).
+  n <- 20000L
+  raw <- draw_cr(0.4, 0.2, n, seed = 20261019L)
   expect_equal(raw$rejected_overruns + raw$rejected_lambda + raw$rejected_zero_weights, 0)
 
   n_missing <- vapply(raw$trees, function(df) sum(is_missing_row(df)), numeric(1))
   p0 <- mean(n_missing == 0)
-  se <- sqrt(p0 * (1 - p0) / n)
   p0_closed <- exp(-cr_hazard(0.4, 0.2))
-  expect_lt(abs(p0 - p0_closed), 3 * se)
+  se <- sqrt(p0_closed * (1 - p0_closed) / n)
+  expect_lt(abs(p0 - p0_closed), 4 * se)
 
   # the density charged for an empty augmentation is the same closed form
   logg_empty <- raw$logg[n_missing == 0]

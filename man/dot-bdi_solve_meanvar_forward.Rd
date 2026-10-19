@@ -22,18 +22,18 @@ list(m_vals, pm_vals, vN_vals, cNP_vals) on t_grid.
 }
 \description{
 Augments `.bdi_solve_mean_forward` with variance state needed to cancel
-the process-level Jensen residual E[P/N] − P̂/N̂ ≈ −Cov(P,N)/N̂² + P̂ Var(N)/N̂³.
+the process-level Jensen residual E[P/N] - Phat/Nhat ~ -Cov(P,N)/Nhat^2 + Phat Var(N)/Nhat^3.
 State: s = (m, P_miss, Var(N), Cov(N,P)) with
-  dm/dt         = (lam_bdi − mu_bdi) m + nu
+  dm/dt         = (lam_bdi - mu_bdi) m + nu
   dP_miss/dt    = m
-  dVar(N)/dt    = 2(lam_bdi − mu_bdi) Var(N) + (lam_bdi + mu_bdi) m + nu
-  dCov(N,P)/dt  = (lam_bdi − mu_bdi) Cov(N,P) + Var(N)
+  dVar(N)/dt    = 2(lam_bdi - mu_bdi) Var(N) + (lam_bdi + mu_bdi) m + nu
+  dCov(N,P)/dt  = (lam_bdi - mu_bdi) Cov(N,P) + Var(N)
 }
 \details{
 The Var(N) ODE is the standard jump-diffusion variance infusion for a BDI
 process; the Cov(N,P) ODE comes from the deterministic coupling dP = N dt
-between events. Cross-jumps at deaths (ΔN = −1, ΔP = −age) are dropped
-at this order — they are second-order corrections to cNP and would require
+between events. Cross-jumps at deaths (DeltaN = -1, DeltaP = -age) are dropped
+at this order -- they are second-order corrections to cNP and would require
 tracking the age distribution.
 }
 \keyword{internal}

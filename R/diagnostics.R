@@ -71,25 +71,17 @@
 #'   \code{final_pop}, and \code{best_IS}.
 #' @seealso \code{\link{emphasis_cem}}, \code{\link{estimate_rates}}
 #' @examples
-#' \dontrun{
-#' lb  <- c(0.01, -0.5, 0, -0.5)
-#' ub  <- c(2,     0.5, 1,  0.5)
-#' sim <- simulate_tree(c(0.6, -0.05, 0.15, -0.03), max_t = 10, model = "d")
-#' fit <- estimate_rates(sim, method = "cem", model = "d",
-#'   lower_bound = lb, upper_bound = ub,
-#'   control = list(max_iter = 50, num_points = 80, n_boot = 100))
-#'
-#' # Basic diagnostics -- bounds shown as dashed lines in parameter panels
-#' diag <- diagnose_cem(fit, lower_bound = lb, upper_bound = ub)
-#'
-#' # Simulation study: also show the true generating parameters
+#' set.seed(1)
+#' tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+#' phy <- tr$tes
+#' lb <- c(0, 0)
+#' ub <- c(2, 1)
+#' fit <- estimate_rates(phy, method = "cem", model = "cr",
+#'   control = list(lower_bound = lb, upper_bound = ub,
+#'                  max_iter = 5, num_particles = 20))
 #' diag <- diagnose_cem(fit, lower_bound = lb, upper_bound = ub,
-#'                      true_pars = c(0.6, -0.05, 0.15, -0.03))
-#'
-#' diag$IS_quality$ESS_fraction  # IS efficiency at the best particle
-#' head(diag$final_pop)          # last-iteration particle cloud
-#' diag$convergence              # per-iteration best fhat and rejection counts
-#' }
+#'                      true_pars = c(0.5, 0.1))
+#' diag$convergence
 #' @export
 diagnose_cem <- function(x, plot = TRUE,
                           lower_bound = NULL,
@@ -365,12 +357,13 @@ diagnose_cem <- function(x, plot = TRUE,
 #'   \code{IS_quality}, and \code{final_IS}.
 #' @seealso \code{\link{diagnose_cem}}, \code{\link{estimate_rates}}
 #' @examples
-#' \dontrun{
-#' sim <- simulate_tree(c(0.5, 0.1), max_t = 5, model = "cr")
-#' fit <- estimate_rates(sim, method = "mcem", model = "cr",
-#'   control = list(lower_bound = c(0, 0), upper_bound = c(2, 1)))
+#' set.seed(1)
+#' tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+#' phy <- tr$tes
+#' fit <- estimate_rates(phy, method = "mcem", model = "cr",
+#'   control = list(lower_bound = c(0, 0), upper_bound = c(2, 1),
+#'                  max_iter = 10, num_trees = 50))
 #' diagnose_mcem(fit, lower_bound = c(0, 0), upper_bound = c(2, 1))
-#' }
 #' @export
 diagnose_mcem <- function(x, plot = TRUE,
                            lower_bound = NULL,
@@ -575,6 +568,7 @@ diagnose_mcem <- function(x, plot = TRUE,
 #'
 #' @param x Output of \code{\link{diagnose_mcem}}.
 #' @param ... Additional arguments (ignored).
+#' @return \code{x}, invisibly.
 #' @export
 print.mcem_diagnostics <- function(x, ...) {
   cat("MCEM diagnostics\n")
@@ -644,12 +638,13 @@ print.mcem_diagnostics <- function(x, ...) {
 #' @seealso \code{\link{diagnose_cem}}, \code{\link{diagnose_mcem}},
 #'   \code{\link{estimate_rates}}
 #' @examples
-#' \dontrun{
-#' sim <- simulate_tree(c(0.5, 0.1), max_t = 5, model = "cr")
-#' fit <- estimate_rates(sim, method = "gam", model = "cr",
-#'   control = list(lower_bound = c(0, 0), upper_bound = c(2, 1)))
+#' set.seed(1)
+#' tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+#' phy <- tr$tes
+#' fit <- estimate_rates(phy, method = "gam", model = "cr",
+#'   control = list(lower_bound = c(0.05, 0), upper_bound = c(2, 1),
+#'                  grid_points = 8, sample_size = 20))
 #' diagnose_gam(fit)
-#' }
 #' @export
 diagnose_gam <- function(x, plot = TRUE, true_pars = NULL) {
 
@@ -781,6 +776,7 @@ diagnose_gam <- function(x, plot = TRUE, true_pars = NULL) {
 #'
 #' @param x Output of \code{\link{diagnose_gam}}.
 #' @param ... Additional arguments (ignored).
+#' @return \code{x}, invisibly.
 #' @export
 print.gam_diagnostics <- function(x, ...) {
   cat("GAM-based MLE diagnostics\n")
@@ -814,6 +810,7 @@ print.gam_diagnostics <- function(x, ...) {
 #'
 #' @param x Output of \code{\link{diagnose_cem}}.
 #' @param ... Additional arguments (ignored).
+#' @return \code{x}, invisibly.
 #' @export
 print.cem_diagnostics <- function(x, ...) {
   cat("CEM diagnostics\n")

@@ -68,14 +68,18 @@ going extinct or exploding.  Much more efficient than blanket LHS sampling
 over a wide box.  Optionally trains a survival GAM over the detected region.
 }
 \examples{
-\dontrun{
-library(ape)
-data(bird.orders)
-ab <- auto_bounds(bird.orders, model = "dd", link = "exponential")
-fit <- estimate_rates(bird.orders, method = "gam", model = "dd",
-         link = "exponential",
-         control = list(lower_bound = ab$lower_bound,
-                        upper_bound = ab$upper_bound),
-         cond = ab$survival_gam)
+set.seed(1)
+tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+phy <- tr$tes
+# A coarse search without the survival GAM
+ab <- auto_bounds(phy, model = "cr", n_test = 3L, bisect_steps = 4L,
+                  train_surv_gam = FALSE, verbose = FALSE)
+ab$lower_bound
+ab$upper_bound
+\donttest{
+# The default search, which also trains the survival GAM that
+# estimate_rates(cond = ) conditions on
+ab2 <- auto_bounds(phy, model = "cr", verbose = FALSE)
+predict_survival(ab2$survival_gam, as.data.frame(t(ab2$center)))
 }
 }

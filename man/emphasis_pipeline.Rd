@@ -29,7 +29,7 @@ e.g. \code{c("bounds", "gam")} for a quick exploratory fit.}
 
 \item{control}{Named list with optional sub-lists \code{bounds}, \code{gam},
 \code{cem}, \code{mcem} to override defaults for each stage.  Common
-parameters (\code{num_threads}, \code{max_missing}, \code{max_time},
+parameters (\code{num_threads}, default 1, \code{max_missing}, \code{max_time},
 \code{rho}) can be set at the top level and are inherited by all stages.
 \code{rho}, the sampling fraction in \code{(0, 1]}, is inherited by the
 bounds, gam, cem and mcem stages alike, and a value nested under
@@ -76,12 +76,20 @@ returned.
 }
 
 \examples{
-\dontrun{
-library(ape)
-data(bird.orders)
-result <- emphasis_pipeline(bird.orders, model = "dd", link = "linear")
-result           # prints summary log
-result$pars      # best parameters
-result$log       # full stage log
+set.seed(1)
+tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+phy <- tr$tes
+# CEM stage only, with the search box given
+res <- emphasis_pipeline(phy, model = "cr", stages = "cem",
+  control = list(lower_bound = c(0, 0), upper_bound = c(2, 1),
+                 cem = list(max_iter = 3, num_particles = 10)),
+  verbose = FALSE)
+res
+\donttest{
+# Bounds found automatically, then CEM
+res2 <- emphasis_pipeline(phy, model = "cr", stages = c("bounds", "cem"),
+  control = list(cem = list(max_iter = 3, num_particles = 10)),
+  verbose = FALSE)
+res2$log
 }
 }

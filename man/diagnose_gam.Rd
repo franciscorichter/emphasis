@@ -41,12 +41,13 @@ The MLE parameter estimates and predicted log-likelihood at the optimum.
 }
 
 \examples{
-\dontrun{
-sim <- simulate_tree(c(0.5, 0.1), max_t = 5, model = "cr")
-fit <- estimate_rates(sim, method = "gam", model = "cr",
-  control = list(lower_bound = c(0, 0), upper_bound = c(2, 1)))
+set.seed(1)
+tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+phy <- tr$tes
+fit <- estimate_rates(phy, method = "gam", model = "cr",
+  control = list(lower_bound = c(0.05, 0), upper_bound = c(2, 1),
+                 grid_points = 8, sample_size = 20))
 diagnose_gam(fit)
-}
 }
 \seealso{
 \code{\link{diagnose_cem}}, \code{\link{diagnose_mcem}},

@@ -43,8 +43,9 @@ test_that(".ess_from_lw equals 1 for degenerate weights", {
 #
 # augment_trees, eval_logf and emphasis_cem are internal, so they are reached
 # through `emphasis:::` and the assertions hold under both `load_all()` and the
-# installed namespace.  The C++ engine is clock-seeded: set.seed() does not
-# reproduce a draw, so nothing below pins a drawn number.
+# installed namespace.  The C++ engine takes its seed from R's stream (or the
+# `seed` argument), but its distributions differ between libstdc++ and libc++,
+# so nothing below pins a drawn number.
 
 brts4  <- c(4, 2.5, 1.2, 0.6)
 brts3  <- c(3, 1.5, 0.8)
@@ -124,23 +125,31 @@ test_that("eval_logf uses the model it is given (model_bin[3] gates the D rates)
   # model with beta_D = gamma_D = 0 must reduce to CR exactly.
   pars_d <- c(0.5, 0, 0, 0.05, 0.1, 0, 0, 0.01)
 
-  aug <- emphasis:::augment_trees(brts4, pars_d, sample_size = 5L, maxN = 500L,
-                                  max_missing = 1000L, max_lambda = 100,
-                                  num_threads = 1L, model = d_bin, link = 0L)
+  # Four seeds of five trees each.  The reduction to CR fails on a tree only
+  # when the D compensator's alive set loses track of a lineage (an augmented
+  # birth from a crown lineage, or the death of a lineage that has split); on
+  # this 4-tip tree a seed of five trees holds such a tree about two times in
+  # three, so four seeds hold one with probability above 0.98.
+  for (seed in 1:4) {
+    aug <- emphasis:::augment_trees(brts4, pars_d, sample_size = 5L, maxN = 500L,
+                                    max_missing = 1000L, max_lambda = 100,
+                                    num_threads = 1L, model = d_bin, link = 0L,
+                                    seed = seed)
 
-  logf_d  <- emphasis:::eval_logf(pars_d, aug$trees, model = d_bin, link = 0L)$logf
-  logf_cr <- emphasis:::eval_logf(pars_d, aug$trees, model = cr_bin, link = 0L)$logf
+    logf_d  <- emphasis:::eval_logf(pars_d, aug$trees, model = d_bin, link = 0L)$logf
+    logf_cr <- emphasis:::eval_logf(pars_d, aug$trees, model = cr_bin, link = 0L)$logf
 
-  expect_true(all(is.finite(logf_d)))
-  expect_false(isTRUE(all.equal(logf_d, logf_cr)))
+    expect_true(all(is.finite(logf_d)))
+    expect_false(isTRUE(all.equal(logf_d, logf_cr)))
 
-  # With the D coefficients switched off the two models are the same model.
-  # The two code paths accumulate the compensator in a different order, so
-  # they agree to rounding rather than to the bit; the D effect above is
-  # 0.2 nats, twelve orders of magnitude larger than this tolerance.
-  logf_d0  <- emphasis:::eval_logf(pars_cr, aug$trees, model = d_bin, link = 0L)$logf
-  logf_cr0 <- emphasis:::eval_logf(pars_cr, aug$trees, model = cr_bin, link = 0L)$logf
-  expect_equal(logf_d0, logf_cr0, tolerance = 1e-12)
+    # With the D coefficients switched off the two models are the same model.
+    # The two code paths accumulate the compensator in a different order, so
+    # they agree to rounding rather than to the bit; the D effect above is
+    # 0.2 nats, twelve orders of magnitude larger than this tolerance.
+    logf_d0  <- emphasis:::eval_logf(pars_cr, aug$trees, model = d_bin, link = 0L)$logf
+    logf_cr0 <- emphasis:::eval_logf(pars_cr, aug$trees, model = cr_bin, link = 0L)$logf
+    expect_equal(logf_d0, logf_cr0, tolerance = 1e-12)
+  }
 })
 
 test_that("fhat from augment_trees + .is_fhat matches direct calc", {

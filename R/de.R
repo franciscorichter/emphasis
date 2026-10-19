@@ -805,7 +805,7 @@ emphasis_cem <- function(brts,
       elapsed <- (proc.time() - init_time)[3]
       if (elapsed > max_time) {
         stop_reason <- "time_budget"
-        if (verbose) cat(sprintf("Time budget reached (%.0fs > %ds)\n", elapsed, as.integer(max_time)))
+        if (verbose) .vcat(sprintf("Time budget reached (%.0fs > %ds)\n", elapsed, as.integer(max_time)))
         break
       }
     }
@@ -829,7 +829,7 @@ emphasis_cem <- function(brts,
       lbl <- if (sample_size <= 1L) "best_lw" else "loglik*"
       sd_frac <- if (use_adaptive) mean(sd_vec / (sd_floor / sd_min_frac)) else
                  mean(sd_vec / (sd_vec + alpha))
-      cat(sprintf(
+      .vcat(sprintf(
         "Iter %3d/%d  %s=%8.4f  valid=%d/%d  plateau=%d/%d  sd=%.1f%%\n",
         k, max_iter, lbl, best_loglik[k],
         sum(valid), num_points,
@@ -851,7 +851,7 @@ emphasis_cem <- function(brts,
   # Early exit if no iterations completed successfully
   if (k_ran == 0L) {
     if (verbose)
-      cat(sprintf("Stopped: %s -- no iterations completed.\n", stop_reason))
+      .vcat(sprintf("Stopped: %s -- no iterations completed.\n", stop_reason))
     return(list(
       best_loglik    = numeric(0),
       best_pars      = best_pars[integer(0), , drop = FALSE],
@@ -866,7 +866,7 @@ emphasis_cem <- function(brts,
     ))
   }
 
-  # ── Stable final estimation: re-evaluate top elites with many trees ──────
+  # -- Stable final estimation: re-evaluate top elites with many trees ------
   #
   # During the CEM search, each particle is evaluated with few trees
   # (often just 1), making fhat extremely noisy.  For the final estimate,
@@ -885,7 +885,7 @@ emphasis_cem <- function(brts,
   n_final_trees <- max(20L, as.integer(sample_size))
 
   if (verbose)
-    cat(sprintf("Re-evaluating %d elites with %d trees each...\n",
+    .vcat(sprintf("Re-evaluating %d elites with %d trees each...\n",
                 nrow(elite_pars_mat), n_final_trees))
 
   elite_fhats <- numeric(nrow(elite_pars_mat))
@@ -923,7 +923,7 @@ emphasis_cem <- function(brts,
     w <- w / sum(w)
     best_pars_v <- as.numeric(colSums(pars_valid * w))
     if (verbose)
-      cat(sprintf("Weighted mean of %d elites (top fhat=%.2f, weights entropy=%.2f)\n",
+      .vcat(sprintf("Weighted mean of %d elites (top fhat=%.2f, weights entropy=%.2f)\n",
                   sum(valid_elites), max(fh_valid),
                   -sum(w * log(pmax(w, 1e-300)))))
   } else if (sum(valid_elites) == 1L) {
@@ -971,7 +971,7 @@ emphasis_cem <- function(brts,
   }
 
   if (verbose)
-    cat(sprintf("Stopped: %s after %d iterations.\n", stop_reason, k_ran))
+    .vcat(sprintf("Stopped: %s after %d iterations.\n", stop_reason, k_ran))
 
   list(
     best_loglik    = best_loglik,

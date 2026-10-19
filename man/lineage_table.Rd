@@ -27,3 +27,9 @@ ends the segment (\code{event}: 0 none, 1 speciation, 2 extinction).  These
 are the numbers the likelihood is built on; \code{\link{covariate_path}}
 runs a selection path over them.
 }
+\examples{
+set.seed(1)
+tr  <- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+phy <- tr$tes
+head(lineage_table(phy))
+}

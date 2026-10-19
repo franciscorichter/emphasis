@@ -10,7 +10,8 @@ parameters.
 <pre><code class='language-R'>train_likelihood_GAM(
   surface,
   par_names = NULL,
-  spline_type = c("univariate", "bivariate")
+  spline_type = c("univariate", "bivariate"),
+  verbose = TRUE
 )
 </code></pre>
 
@@ -32,6 +33,10 @@ and <code>n_trees</code> are used.</p>
 <td>
 <p><code>"univariate"</code> (default) or <code>"bivariate"</code>.
 See <code><a href="#train_GAM">train_GAM</a></code> for details.</p>
+</td></tr>
+<tr><td><code id="train_likelihood_GAM_:_verbose">verbose</code></td>
+<td>
+<p>Report the number of grid points (default <code>TRUE</code>).</p>
 </td></tr>
 </table>
 

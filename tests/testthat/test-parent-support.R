@@ -777,10 +777,12 @@ test_that("E_q[f/q] is the brute-force marginal likelihood with no topology", {
     expect_lt(abs(e1 - l1) / l1, 0.05, label = paste("|IS - L1| / L1,", cfg$name))
     expect_lt(abs(ele - l0 - l1) / sle, 5,
               label = paste("|IS - (L0 + L1)| / se,", cfg$name))
-    # the draws left out: 0.55 (d linear) and 0.42 (nd exp) of the weight
-    # under the constant-D likelihood
+    # the draws left out: 0.73 (d linear) and 0.50 (nd exp) of the weight
+    # under the constant-D likelihood, with the D compensator's alive set
+    # replaying the forward sweep (a legacy tree's observed splits reset no
+    # lineage)
     expect_gt(w2 / (totle + w2), 0)
-    expect_lt(w2 / (totle + w2), 0.60)
+    expect_lt(w2 / (totle + w2), 0.85)
   }
 })
 
