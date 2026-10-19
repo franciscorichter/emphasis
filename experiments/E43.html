@@ -70,7 +70,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>calibration done (2026-10-15); emulators trained (2000 and 5000 clades with 20 seeds, 20 000 with one) on 2026-10-17; the survival references <strong>running</strong>, 1287 of 1600 points at 2026-10-18 01:11</td>
+<td><strong>complete</strong> (2026-10-20). The rule is read: no emulator is adequate for any of the eight lineage-level models at 2000, 5000 or 20 000 training clades, so their conditioned fits use a direct Monte Carlo estimate of <span class="math inline">\(P(S)\)</span>; <code>cr</code> and <code>dd</code> use the exact functions, which the Monte Carlo reference matches</td>
 </tr>
 <tr>
 <td>Package build</td>
@@ -82,7 +82,7 @@ window.MathJax = {
 </tr>
 <tr>
 <td>Data</td>
-<td><code>results/E43/calibration.csv</code>, <code>calibration-scales.csv</code>, <code>points/</code>, <code>cost-survey.csv</code></td>
+<td><code>results/E43/</code>: <code>analysis.txt</code>, <code>summary.csv</code> (one row per model and training size), <code>reference.csv</code> (one row per point), <code>reference-check.csv</code> (<code>cr</code>/<code>dd</code> against the exact value), <code>emulator.csv</code> (one row per training and point), <code>calibration.csv</code>, <code>calibration-scales.csv</code>, <code>cost-survey.csv</code></td>
 </tr>
 </tbody>
 </table>
@@ -90,16 +90,460 @@ window.MathJax = {
 <h2 id="question">Question</h2>
 <p>The likelihood conditioned on survival needs <span class="math inline">\(P(S \mid \theta, T, \rho)\)</span>, the probability that both crown lineages leave a sampled descendant. It does not depend on the observed tree, so one function per model, crown age and sampling fraction serves every fit of a cell. Its accuracy was measured only for <code>cr</code> and <code>dd</code> over the whole box (<a href="E36.html">E36</a>c), and its variability between trainings never. Steps 0.3 and 0.4 of the <a href="../estimability.html">estimability plan</a>.</p>
 <h2 id="design">Design</h2>
-<p>(a) Generators for the estimability study, calibrated so the <strong>median size of surviving trees</strong> equals each target (50, 100, 200, 400), no size window: ten models, turnover 0.10 and 0.40, effects <span class="math inline">\(\pm 0.35\)</span>. (b) Per model, a box spanning the calibrated generating values, widened; 200 points in it. (c) At each point <span class="math inline">\(P(S)\)</span> by direct simulation (a clade reaching the lineage cap of 2000 counts as surviving); for <code>cr</code> and <code>dd</code> also the exact value. (d) The package's survival GAM trained on 2000, 5000 and 20 000 clades, and retrained with 20 seeds.</p>
+<p>(a) Generators for the estimability study, calibrated so the <strong>median size of surviving trees</strong> equals each target (50, 100, 200, 400), no size window: ten models, turnover 0.10 and 0.40, effects <span class="math inline">\(\pm 0.35\)</span>, crown age 15, <span class="math inline">\(\rho = 1\)</span>. (b) Per model, a box spanning the calibrated generating values, widened; 200 points in it by Latin hypercube. (c) At each point <span class="math inline">\(P(S)\)</span> by direct simulation (a clade reaching the lineage cap of 2000 counts as surviving), in chunks of 2000 clades; for <code>cr</code> and <code>dd</code> also the exact value. (d) The package's survival GAM for each of the eight lineage-level models, trained on 2000, 5000 and 20 000 clades drawn over the box (capped clades counted as survived), retrained with 20 seeds at 2000 and 5000 clades and once at 20 000 (328 trainings).</p>
 <h2 id="pre-set-rule">Pre-set rule</h2>
-<p>An emulator is adequate if, at the 200 points, the 90th percentile of <span class="math inline">\(|\log\hat P - \log P_{ref}|\)</span> is at most 0.05 and the median retraining standard deviation of <span class="math inline">\(\log\hat P\)</span> at most 0.02; the smallest adequate size is used, else direct simulation. <code>cr</code> and <code>dd</code> use exact functions. Amendment before any reference run: a point's reference stops once the standard error of its <span class="math inline">\(\log P\)</span> is at most 0.01 (2000 to 20 000 clades), because 20 000 clades everywhere would take six days, mostly at points with <span class="math inline">\(P \approx 1\)</span>.</p>
+<p>An emulator is adequate if, at the 200 points, the 90th percentile of <span class="math inline">\(|\log\hat P - \log P_{ref}|\)</span> is at most 0.05 and the median retraining standard deviation of <span class="math inline">\(\log\hat P\)</span> at most 0.02; the smallest adequate size is used in E45 and E46; if 20 000 clades do not suffice, the conditioned fits of that model use a direct Monte Carlo estimate of <span class="math inline">\(P(S)\)</span>. <code>cr</code> and <code>dd</code> use exact functions. Amendment before any reference run: a point's reference stops once the standard error of its <span class="math inline">\(\log P\)</span> is at most 0.01 (2000 to 20 000 clades), because 20 000 clades everywhere would take six days, mostly at points with <span class="math inline">\(P \approx 1\)</span>.</p>
 <h2 id="results">Results</h2>
-<p>So far: the calibration (<code>results/E43/calibration.csv</code>) and the trained emulators (2000 and 5000 clades with 20 seeds, 20 000 with one, 2026-10-17), whose accuracy waits on the Monte Carlo reference (1287 of 1600 points at 2026-10-18). Targets some generators cannot reach: <code>dd</code>, <code>nd</code>, <code>nedc</code> +0.35 at turnover 0.40 and 400 tips (the <span class="math inline">\(N\)</span> models keep <span class="math inline">\(\lambda_0 = 0.5\)</span> and stop at 250-290 tips); <code>ned</code> -0.35 at turnover 0.40, and at 0.10 and 400 tips; <code>nk</code> -0.35 from 100 tips at 0.10 and at every size at 0.40; <code>k</code> -0.35 at 0.40 (at most 14 tips). The exact survival functions match simulation of <span class="math inline">\(10^5\)</span> clades: <code>cr</code> <span class="math inline">\(\log P\)</span> -1.7222 against -1.7252 (SE 0.0068), <code>dd</code> -1.9920 against -1.9993 (SE 0.0080). The <code>dd</code> function was later reduced exactly to a chain on <span class="math inline">\(N\)</span> alone (100-1000 times faster; <a href="E45.html">E45</a>).</p>
+<p><strong>Calibration.</strong> Targets some generators cannot reach: <code>dd</code>, <code>nd</code>, <code>nedc</code> +0.35 at turnover 0.40 and 400 tips (the <span class="math inline">\(N\)</span> models keep <span class="math inline">\(\lambda_0 = 0.5\)</span> and stop at 250-290 tips); <code>ned</code> -0.35 at turnover 0.40, and at 0.10 and 400 tips; <code>nk</code> -0.35 from 100 tips at 0.10 and at every size at 0.40; <code>k</code> -0.35 at 0.40 (at most 14 tips). The exact survival functions match simulation of <span class="math inline">\(10^5\)</span> clades: <code>cr</code> <span class="math inline">\(\log P\)</span> -1.7222 against -1.7252 (SE 0.0068), <code>dd</code> -1.9920 against -1.9993 (SE 0.0080). The <code>dd</code> function was later reduced exactly to a chain on <span class="math inline">\(N\)</span> alone (100-1000 times faster; <a href="E45.html">E45</a>).</p>
+<p><strong>The reference against the exact value</strong> (<code>cr</code>, <code>dd</code>). At the points with an exact value, the error of the Monte Carlo <span class="math inline">\(\log P\)</span>:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>points</th>
+<th>median error</th>
+<th>90th percentile</th>
+<th>share with <span class="math inline">\(\lvert z \rvert &gt; 2\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code></td>
+<td>200</td>
+<td>0.0070</td>
+<td>0.035</td>
+<td>0.030</td>
+</tr>
+<tr>
+<td><code>dd</code></td>
+<td>152</td>
+<td>0.0079</td>
+<td>0.079</td>
+<td>0.092</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The <code>dd</code> exact value is the midpoint of a truncation bracket; at 48 of the 200 points it was not computed, and at 5 of the 152 the bracket is wider than 0.5 (up to 0.95); those 5 carry errors of 0.59 to 0.71. Without them the <code>dd</code> median error is 0.0078 and the 90th percentile 0.049 (147 points). The mean and spread of <span class="math inline">\(z\)</span> are not read: at points where every clade survived the binomial standard error is 0.</p>
+<p><strong>The emulators against the reference.</strong> The 90th percentile of <span class="math inline">\(|\log\hat P - \log P_{ref}|\)</span> for the first training, its median and range over the trainings, and the median retraining standard deviation of <span class="math inline">\(\log\hat P\)</span> (rule: at most 0.05 and 0.02). Points whose reference is <span class="math inline">\(P = 0\)</span> (1 to 25 a model) have no <span class="math inline">\(\log P\)</span> and are left out.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>clades</th>
+<th>trainings</th>
+<th>90th pct, first</th>
+<th>median over trainings</th>
+<th>range</th>
+<th>retraining SD</th>
+<th>adequate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>d</code></td>
+<td>2000</td>
+<td>20</td>
+<td>1.47</td>
+<td>1.27</td>
+<td>1.12-1.48</td>
+<td>0.068</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>d</code></td>
+<td>5000</td>
+<td>20</td>
+<td>1.34</td>
+<td>1.28</td>
+<td>1.16-1.39</td>
+<td>0.055</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>d</code></td>
+<td>20 000</td>
+<td>1</td>
+<td>1.33</td>
+<td></td>
+<td></td>
+<td></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>nd</code></td>
+<td>2000</td>
+<td>20</td>
+<td>0.80</td>
+<td>0.80</td>
+<td>0.62-0.95</td>
+<td>0.084</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>nd</code></td>
+<td>5000</td>
+<td>20</td>
+<td>0.64</td>
+<td>0.72</td>
+<td>0.63-0.95</td>
+<td>0.059</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>nd</code></td>
+<td>20 000</td>
+<td>1</td>
+<td>0.88</td>
+<td></td>
+<td></td>
+<td></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>ed</code></td>
+<td>2000</td>
+<td>20</td>
+<td>1.01</td>
+<td>1.13</td>
+<td>1.01-1.45</td>
+<td>0.095</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>ed</code></td>
+<td>5000</td>
+<td>20</td>
+<td>1.11</td>
+<td>1.15</td>
+<td>1.03-1.37</td>
+<td>0.067</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>ed</code></td>
+<td>20 000</td>
+<td>1</td>
+<td>1.16</td>
+<td></td>
+<td></td>
+<td></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>edc</code></td>
+<td>2000</td>
+<td>20</td>
+<td>1.98</td>
+<td>1.82</td>
+<td>1.54-2.10</td>
+<td>0.077</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>edc</code></td>
+<td>5000</td>
+<td>20</td>
+<td>1.93</td>
+<td>1.82</td>
+<td>1.67-2.11</td>
+<td>0.055</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>edc</code></td>
+<td>20 000</td>
+<td>1</td>
+<td>1.75</td>
+<td></td>
+<td></td>
+<td></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>ned</code></td>
+<td>2000</td>
+<td>20</td>
+<td>1.26</td>
+<td>1.23</td>
+<td>1.04-1.38</td>
+<td>0.090</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>ned</code></td>
+<td>5000</td>
+<td>20</td>
+<td>1.12</td>
+<td>1.19</td>
+<td>1.12-1.31</td>
+<td>0.059</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>ned</code></td>
+<td>20 000</td>
+<td>1</td>
+<td>1.12</td>
+<td></td>
+<td></td>
+<td></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>nedc</code></td>
+<td>2000</td>
+<td>20</td>
+<td>2.13</td>
+<td>1.82</td>
+<td>1.63-2.13</td>
+<td>0.109</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>nedc</code></td>
+<td>5000</td>
+<td>20</td>
+<td>1.97</td>
+<td>1.90</td>
+<td>1.71-2.03</td>
+<td>0.070</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>nedc</code></td>
+<td>20 000</td>
+<td>1</td>
+<td>1.90</td>
+<td></td>
+<td></td>
+<td></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>2000</td>
+<td>20</td>
+<td>0.55</td>
+<td>0.55</td>
+<td>0.47-0.65</td>
+<td>0.048</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>5000</td>
+<td>20</td>
+<td>0.52</td>
+<td>0.59</td>
+<td>0.44-0.69</td>
+<td>0.029</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>20 000</td>
+<td>1</td>
+<td>0.58</td>
+<td></td>
+<td></td>
+<td></td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>nk</code></td>
+<td>2000</td>
+<td>20</td>
+<td>2.38</td>
+<td>2.35</td>
+<td>2.14-2.56</td>
+<td>0.121</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>nk</code></td>
+<td>5000</td>
+<td>20</td>
+<td>2.29</td>
+<td>2.34</td>
+<td>2.22-2.47</td>
+<td>0.080</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>nk</code></td>
+<td>20 000</td>
+<td>1</td>
+<td>2.39</td>
+<td></td>
+<td></td>
+<td></td>
+<td>no</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Both halves of the rule fail in every row: the error is 9 to 51 times the threshold of 0.05, and the retraining standard deviation 1.4 to 6 times the threshold of 0.02. The error does not fall with the training size: from 2000 to 20 000 clades it moves from 1.47 to 1.33 for <code>d</code> and from 0.80 to 0.88 for <code>nd</code>, and lies within the range of the 20 trainings at 2000 for every model.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E43-emulator-error.png" alt="Emulator error by model and training size" loading="lazy">
+<figcaption><strong>Figure 1.</strong> The 90th percentile of the emulator's error in <span class="math inline">\(\log P\)</span> at the 200 reference points, by model and training size. Every point lies between 0.44 and 2.6, against the adequacy threshold of 0.05 (dashed); the bars, the range over 20 trainings, overlap across training sizes for every model.</figcaption>
+</figure>
+<p><strong>The reference's own precision and cost.</strong> 200 points a model, 2000 to 20 000 clades a point.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>median <span class="math inline">\(P\)</span></th>
+<th>points with <span class="math inline">\(P = 0\)</span></th>
+<th>median SE of <span class="math inline">\(\log P\)</span></th>
+<th>90th pct SE</th>
+<th>share SE &gt; 0.0167</th>
+<th>share of clades capped</th>
+<th>seconds a point, median</th>
+<th>90th pct</th>
+<th>hours, all points</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code></td>
+<td>0.654</td>
+<td>2</td>
+<td>0.0094</td>
+<td>0.058</td>
+<td>0.187</td>
+<td>0.106</td>
+<td>0.6</td>
+<td>1.4</td>
+<td>0.04</td>
+</tr>
+<tr>
+<td><code>dd</code></td>
+<td>0.618</td>
+<td>0</td>
+<td>0.0095</td>
+<td>0.040</td>
+<td>0.225</td>
+<td>0.078</td>
+<td>0.5</td>
+<td>1.0</td>
+<td>0.06</td>
+</tr>
+<tr>
+<td><code>d</code></td>
+<td>0.617</td>
+<td>5</td>
+<td>0.0094</td>
+<td>0.047</td>
+<td>0.190</td>
+<td>0.095</td>
+<td>2.8</td>
+<td>288</td>
+<td>4.8</td>
+</tr>
+<tr>
+<td><code>nd</code></td>
+<td>0.584</td>
+<td>1</td>
+<td>0.0095</td>
+<td>0.036</td>
+<td>0.201</td>
+<td>0.080</td>
+<td>1.8</td>
+<td>214</td>
+<td>10.9</td>
+</tr>
+<tr>
+<td><code>ed</code></td>
+<td>0.655</td>
+<td>25</td>
+<td>0.0093</td>
+<td>0.037</td>
+<td>0.211</td>
+<td>0.106</td>
+<td>28.3</td>
+<td>2600</td>
+<td>45.5</td>
+</tr>
+<tr>
+<td><code>edc</code></td>
+<td>0.594</td>
+<td>6</td>
+<td>0.0094</td>
+<td>0.064</td>
+<td>0.253</td>
+<td>0.101</td>
+<td>13.9</td>
+<td>1391</td>
+<td>28.0</td>
+</tr>
+<tr>
+<td><code>ned</code></td>
+<td>0.620</td>
+<td>5</td>
+<td>0.0095</td>
+<td>0.037</td>
+<td>0.200</td>
+<td>0.062</td>
+<td>6.0</td>
+<td>1757</td>
+<td>171.6</td>
+</tr>
+<tr>
+<td><code>nedc</code></td>
+<td>0.567</td>
+<td>3</td>
+<td>0.0096</td>
+<td>0.055</td>
+<td>0.259</td>
+<td>0.059</td>
+<td>6.2</td>
+<td>990</td>
+<td>104.4</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>0.817</td>
+<td>3</td>
+<td>0.0083</td>
+<td>0.027</td>
+<td>0.127</td>
+<td>0.141</td>
+<td>28.6</td>
+<td>421</td>
+<td>8.9</td>
+</tr>
+<tr>
+<td><code>nk</code></td>
+<td>0.483</td>
+<td>9</td>
+<td>0.0097</td>
+<td>0.066</td>
+<td>0.267</td>
+<td>0.073</td>
+<td>2.0</td>
+<td>427</td>
+<td>13.0</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The median standard error is below 0.01 for every model; the 90th percentile (0.027 to 0.066) comes from points with small <span class="math inline">\(P\)</span>, where 20 000 clades do not reach 0.01 (34 to 75 points a model). The reference's standard error is a fifth of the rule's threshold or less at the median, and 50 to 270 times below the emulators' errors, so the emulators' failure is not reference noise. Seconds are elapsed time per point summed over its chunks (from <code>reference.csv</code>); the heavy tail comes from points where many clades run to the lineage cap.</p>
 <h2 id="conclusion">Conclusion</h2>
-<p>Not yet evaluable. The unreachable targets constrain the design of the lineage-level study (E46).</p>
+<p><strong>Rule read: no emulator is adequate.</strong> For each of <code>d</code>, <code>nd</code>, <code>ed</code>, <code>edc</code>, <code>ned</code>, <code>nedc</code>, <code>k</code> and <code>nk</code>, neither 2000, 5000 nor 20 000 training clades meet either half of the rule, so by the pre-set rule each is conditioned with a direct Monte Carlo estimate of <span class="math inline">\(P(S)\)</span> at the parameter value; <code>cr</code> and <code>dd</code> use the exact functions, against which the Monte Carlo reference agrees (median error 0.007 and 0.008 in <span class="math inline">\(\log P\)</span>).</p>
+<p>What it means: the conditioned likelihood of a lineage-level model needs a Monte Carlo estimate of <span class="math inline">\(P(S)\)</span> at each parameter value the M-step visits. At the standard error of 0.01 used here, one estimate took a median of 2 to 29 seconds and a 90th percentile of 3.6 to 43 minutes of one core, depending on the model, and the M-step evaluates its objective at many parameter values per iteration; each value then also carries Monte Carlo noise of about 0.01 in <span class="math inline">\(\log P\)</span>. E46's design must set the precision of that estimate, its cost per fit, and how the M-step handles the noise. Within the emulator, 20 000 training clades are no closer than 2000, so a larger training set of the same design is not the remedy.</p>
+<p>What it does not show: whether MCEM conditioned by a direct Monte Carlo estimate converges, what a fit then costs, or how the noise in <span class="math inline">\(P(S)\)</span> moves the estimates (E46 measures these); the accuracy of the emulator outside these boxes, at <span class="math inline">\(\rho &lt; 1\)</span> or at other crown ages; or why the GAM fails.</p>
 <h2 id="related">Related</h2>
 <ul>
-<li><a href="../estimability.html">Estimability</a>, <a href="E36.html">E36</a>, <a href="E44.html">E44</a>, <a href="E45.html">E45</a>.</li>
+<li><a href="../estimability.html">Estimability</a>: steps 0.3 and 0.4.</li>
+<li><a href="E36.html">E36</a>: the emulator against the exact value for <code>cr</code>/<code>dd</code>, and the label fix this design starts from.</li>
+<li><a href="E44.html">E44</a>: the complete-data likelihood checked for every model before conditioning.</li>
+<li><a href="E45.html">E45</a>: <code>cr</code> and <code>dd</code> conditioned with the exact functions.</li>
+<li><a href="E48.html">E48</a>: the refit of the <code>nd</code> rung on the real trees, which waited for this run's host.</li>
+<li>E46 (planned): the lineage-level models conditioned by direct Monte Carlo estimation of <span class="math inline">\(P(S)\)</span>.</li>
 </ul>
 
 </article>

@@ -102,8 +102,8 @@ window.MathJax = {
 <td>0.3</td>
 <td>the conditioning factor: exact where possible, emulator validated elsewhere</td>
 <td><a href="experiments/E43.html">E43</a></td>
-<td>exact <code>cr</code>/<code>dd</code> functions done and checked against simulation; emulators trained 2026-10-17; the Monte Carlo reference <strong>running</strong> since 2026-10-17 (1287 of 1600 points at 2026-10-18)</td>
-<td>the exact functions match simulation of <span class="math inline">\(10^5\)</span> clades within 1 SE (<code>cr</code> <span class="math inline">\(\log P\)</span> -1.7222 against -1.7252, <code>dd</code> -1.9920 against -1.9993)</td>
+<td><strong>done</strong> 2026-10-20</td>
+<td><code>cr</code> and <code>dd</code>: the exact functions, which the Monte Carlo reference matches (median error in <span class="math inline">\(\log P\)</span> 0.007 and 0.008). No emulator is adequate for any of the eight lineage-level models at 2000, 5000 or 20 000 training clades (90th-percentile error 0.5 for <code>k</code> to 2.6 for <code>nk</code>, against 0.05; retraining SD 0.03-0.12 against 0.02), so by the rule each is conditioned by a direct Monte Carlo estimate of <span class="math inline">\(P(S)\)</span> at the parameter value</td>
 </tr>
 <tr>
 <td>0.4</td>
@@ -143,15 +143,15 @@ window.MathJax = {
 <tr>
 <td>0.8</td>
 <td>the <code>nd</code> rung on real trees under emphasis <code>4e0b9dd</code>: E40's 170 trees, E28's 29 families and E26's families outside E28, on E40's protocol; then <code>compare_models()</code> with the stored <code>cr</code>/<code>dd</code>/<code>ned</code>/<code>nk</code> fits, the choice tables, the pairs rule and E41's <code>nd</code> edges reread</td>
-<td>E48</td>
-<td><strong>planned</strong>: registered 2026-10-19; runs once <a href="experiments/E43.html">E43</a> finishes (about a day on 24 workers)</td>
+<td><a href="experiments/E48.html">E48</a></td>
+<td><strong>running</strong> since 2026-10-20 00:32 (217 trees, 18 workers, emphasis 1.0.0 at <code>b8d7b10</code>, a six-hour hard limit per tree)</td>
 <td>the stored tables it rereads: E28's parsimonious choice <code>cr</code> 4, <code>dd</code> 5, <code>nd</code> 0, <code>ned</code> 8, <code>nk</code> 8 over 25 usable; the 46-family merged table, 36 usable, 21 lineage-level by minimum AIC (<code>nk</code> 12, <code>ned</code> 9), median D factor 0.83 over 24 read <code>nd</code> fits; E40's 121 of 170 lineage-level, <code>nd</code> 3</td>
 </tr>
 <tr>
 <td>2</td>
 <td>the eight lineage-level models: accuracy by size, turnover and effect</td>
 <td>E46</td>
-<td>planned; the design takes in the D-proposal choice under the corrected likelihood and the E7 cells (see Phase 2)</td>
+<td>planned; the design takes in the D-proposal choice under the corrected likelihood, the E7 cells, and conditioning by a direct Monte Carlo estimate of <span class="math inline">\(P(S)\)</span> (<a href="experiments/E43.html">E43</a>; see Phase 2)</td>
 <td></td>
 </tr>
 <tr>
@@ -167,7 +167,7 @@ window.MathJax = {
 <h2 id="why-the-existing-experiments-do-not-answer-it">Why the existing experiments do not answer it</h2>
 <ul>
 <li><strong>Unconditioned fits.</strong> Every estimation experiment maximised <span class="math inline">\(f(y \mid \theta)\)</span>; only <a href="experiments/E34.html">E34</a> and <a href="experiments/E36.html">E36</a> conditioned, and only to measure the difference.</li>
-<li><strong>The conditioning factor is validated only for <code>cr</code> and <code>dd</code>.</strong> <a href="experiments/E36.html">E36</a>c measured the emulator against the exact survival probability: 90th-percentile error in <span class="math inline">\(\log P\)</span> of 0.26-0.28 at 2000 training clades after the label fix. For the lineage-level models there is no exact value, and against 400-clade Monte Carlo references no learner met the adequacy rule (<a href="experiments/E36.html">E36</a> a). How much the emulator varies between trainings has never been measured.</li>
+<li><strong>The conditioning factor is validated only for <code>cr</code> and <code>dd</code>.</strong> <a href="experiments/E36.html">E36</a>c measured the emulator against the exact survival probability: 90th-percentile error in <span class="math inline">\(\log P\)</span> of 0.26-0.28 at 2000 training clades after the label fix. For the lineage-level models there is no exact value, and against 400-clade Monte Carlo references no learner met the adequacy rule (<a href="experiments/E36.html">E36</a> a). <a href="experiments/E43.html">E43</a> measured the package's emulator for them against a reference with a standard error of 0.01 and across 20 trainings: no training size meets the rule.</li>
 <li><strong>Simulations conditioned on more than survival.</strong> Several designs kept a tree only if its size fell in a window (<a href="experiments/E27.html">E27</a>, <a href="experiments/E38.html">E38</a>); no likelihood carries that condition.</li>
 <li><strong>D was defined two ways (until emphasis <code>4e0b9dd</code>).</strong> The simulator held a lineage's centred pendant age <span class="math inline">\(D\)</span> constant between events, as its definition implies (<span class="math inline">\(D_s = E_s - M\)</span>, and both grow at unit rate); the likelihood held <span class="math inline">\(M\)</span> at its end-of-segment value, so <span class="math inline">\(D\)</span> grew within a segment. <code>d</code> and <code>nd</code> fits before the change therefore estimated a slightly different model from the one that generated the trees, a candidate explanation for <span class="math inline">\(\beta_D\)</span> returning at 0.43-0.82 of its value in every D experiment (<a href="experiments/E19.html">E19</a>, <a href="experiments/E30.html">E30</a>, <a href="experiments/E31.html">E31</a>, <a href="experiments/E37.html">E37</a>); <a href="experiments/E44.html">E44</a> measured the difference on complete trees. The same commit changed <code>lineage_table()</code>'s Poisson rows, which <code>covariate_path()</code> reads: they took <span class="math inline">\(D\)</span> at the segment's midpoint and now take its constant value on the segment, so every path result with a <span class="math inline">\(D\)</span> column (<a href="experiments/E20.html">E20</a>, <a href="experiments/E21.html">E21</a>b, <a href="experiments/E22.html">E22</a>, <a href="experiments/E33.html">E33</a>, and the observed-tree paths of <a href="experiments/E26.html">E26</a>, <a href="experiments/E28.html">E28</a> and <a href="experiments/E40.html">E40</a>) was computed on the earlier rows.</li>
 <li><strong>Unfinished fits and binding boxes.</strong> Most lineage-level fits ended on their iteration cap or clock, and on real trees many parameters end on a box edge (<a href="experiments/E40.html">E40</a>, <a href="experiments/E41.html">E41</a>).</li>
@@ -257,7 +257,7 @@ window.MathJax = {
 </tr>
 <tr>
 <td>fit</td>
-<td>the generating model only (estimation, not selection), conditioned with the E43 factor, Phase 0.5's protocol</td>
+<td>the generating model only (estimation, not selection), Phase 0.5's protocol, conditioned on survival by a direct Monte Carlo estimate of <span class="math inline">\(P(S)\)</span> at each parameter value the M-step visits (<a href="experiments/E43.html">E43</a>: no emulator is adequate)</td>
 </tr>
 <tr>
 <td>read</td>
@@ -267,8 +267,9 @@ window.MathJax = {
 </table>
 </div>
 <p><strong>Folded in.</strong> The ESS at the generating values before each fit, which replaces <a href="experiments/E7.html">E7</a>'s <code>ed</code> and <code>ned</code> cells (as E6b does for E6); the D-proposal question under the corrected likelihood: the 100-tip <code>d</code> and <code>nd</code> cells are fitted on both proposals and <a href="experiments/E19.html">E19</a>b's adoption rule is applied; the <code>ned</code> and <code>nk</code> ratios of <a href="experiments/E27.html">E27</a>. E46 runs effects of ±0.35 only and turnover 0.10 and 0.40, so <a href="experiments/E16.html">E16</a>'s turnover 0.25 and the selection contour go to E47.</p>
+<p><strong>Conditioning.</strong> By <a href="experiments/E43.html">E43</a>, the conditioned likelihood of each of the eight models needs a Monte Carlo estimate of <span class="math inline">\(P(S)\)</span> at every parameter value the M-step evaluates. At a standard error of 0.01 in <span class="math inline">\(\log P\)</span>, one estimate took a median of 2 to 29 seconds and a 90th percentile of 3.6 to 43 minutes of one core in E43's boxes, and each carries noise of about 0.01 in <span class="math inline">\(\log P\)</span>. The design sets the precision of the estimate, how the M-step handles its noise, and the cost per fit that follows.</p>
 <p><strong>Rule.</strong> As Phase 1, with two additions: a slope is reliable only if its sign is right on ≥ 95% of trees; a cell is read only if ≥ 80% of its fits finished and its median effective sample is ≥ 10 (otherwise it is reported as unfinished or sampler-limited, which is itself the answer for that size).</p>
-<p>Cost: 8 models x 4 sizes x 2 turnovers x 2 signs x 30 trees ≈ 3800 fits, fewer once the 400-tip cells are restricted. From <a href="experiments/E40.html">E40</a> and <a href="experiments/E29.html">E29</a>: a lineage-level fit takes about 15 minutes at 60 tips and 1-4 hours at 200. Estimate: 5-8 days, run size by size so the curves fill in from the small end.</p>
+<p>Cost: 8 models x 4 sizes x 2 turnovers x 2 signs x 30 trees ≈ 3800 fits, fewer once the 400-tip cells are restricted. From <a href="experiments/E40.html">E40</a> and <a href="experiments/E29.html">E29</a>: a lineage-level fit takes about 15 minutes at 60 tips and 1-4 hours at 200, unconditioned. Estimate: 5-8 days before the cost of the Monte Carlo conditioning, which is added per M-step evaluation; run size by size so the curves fill in from the small end.</p>
 <h2 id="phase-3--model-choice-e47">Phase 3 — model choice (E47)</h2>
 <p>Once Phase 2 says which parameters are reliable at which size: the conditioned ladder on the same trees and on null trees, read by the parsimony rule. It needs an effect grid for the selection contour, since E46 runs only ±0.35 (<a href="experiments/E12.html">E12</a>, <a href="experiments/E16.html">E16</a>, <a href="experiments/E18.html">E18</a>). Folded in: the path suite under the current <code>lineage_table()</code>, both routes on E46's trees (<a href="experiments/E20.html">E20</a>, <a href="experiments/E21.html">E21</a>b, <a href="experiments/E22.html">E22</a>, <a href="experiments/E33.html">E33</a> (b) at the generating parameters); an alternative-generator bootstrap for K (<a href="experiments/E17.html">E17</a>'s open question); <a href="experiments/E27.html">E27</a>'s <span class="math inline">\(\rho\)</span> 0.75 and 0.50 cells and family-like cell; and <a href="experiments/E35.html">E35</a> (b)'s misstated <span class="math inline">\(\rho\)</span>. Designed after Phase 2.</p>
 <h2 id="order-and-dependencies">Order and dependencies</h2>

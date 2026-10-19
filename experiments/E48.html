@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E48 — the nd rung refitted on the real trees under the current build · emphasis</title>
+<meta name="description" content="Since emphasis 4e0b9dd (2026-10-15) the likelihood holds \(D\) constant between events, as the simulator does (E44).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../covariates/index.html">Covariates</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E48 — the <code>nd</code> rung refitted on the real trees under the current build</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td><strong>running</strong> since 2026-10-20 00:32 CEST: 217 trees, 18 workers; 3 of 217 trees written at 00:43</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis 1.0.0 at main <code>b8d7b10</code> (the build with the E-step clock); the registration names <code>397bf3f</code></td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E48-nd-refit.R</code>, <code>sim/E48-launch.sh</code>, <code>sim/E48-sets.csv</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E48/</code> (<code>build.txt</code>, one fit file per tree), <code>results/E48.log</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Since emphasis <code>4e0b9dd</code> (2026-10-15) the likelihood holds <span class="math inline">\(D\)</span> constant between events, as the simulator does (<a href="E44.html">E44</a>). Every <code>nd</code> fit of <a href="E26.html">E26</a>, <a href="E28.html">E28</a> and <a href="E40.html">E40</a> was made under the earlier likelihood, which the package no longer computes; the choice tables, E40's pairs rule and <a href="E41.html">E41</a>'s reading of <code>nd</code> edges rest on those fits. E48 refits the <code>nd</code> rung alone and rereads them. Step 0.8 of the <a href="../estimability.html">estimability plan</a>.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<tbody>
+<tr>
+<td>trees</td>
+<td>three sets, each with its own stored fits: E40's 170 trees with a stored fit (the five stopped trees left out), <a href="E28.html">E28</a>'s 29 families, and the 18 families of <a href="E26.html">E26</a> not in E28; 217 in all</td>
+</tr>
+<tr>
+<td>reading of a tree</td>
+<td>as <code>sim/E25-real.R</code> reads it: binary, tip edges extended to the deepest tip, at its set's sampling fraction</td>
+</tr>
+<tr>
+<td>families in several sets</td>
+<td>refitted once per set, from that set's own <code>dd</code> fit</td>
+</tr>
+<tr>
+<td>model</td>
+<td><code>nd</code> on the exponential link at the tree's <span class="math inline">\(\rho\)</span></td>
+</tr>
+<tr>
+<td>box</td>
+<td><code>auto_bounds(model = "nd")</code> on the tree</td>
+</tr>
+<tr>
+<td>draws, iterations</td>
+<td>300 draws, 300 iterations as the budget</td>
+</tr>
+<tr>
+<td>clock</td>
+<td>four hours per fit; one tree per process with a hard limit of six hours, so that an E-step that does not return ends as a recorded hang</td>
+</tr>
+<tr>
+<td>start</td>
+<td>nested from the stored <code>dd</code> estimate, as <code>estimate_rates(model = "all")</code> starts it</td>
+</tr>
+<tr>
+<td>ranking</td>
+<td>per tree, <code>compare_models()</code> on the stored <code>cr</code>, <code>dd</code>, <code>ned</code> and <code>nk</code> fits with the new <code>nd</code> fit in place of the stored one; the stored ranking recorded beside it</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The stored rungs' log-likelihoods come from builds whose likelihood for models without <span class="math inline">\(D\)</span> is the current one: the changes since <code>f30a791</code> that touch the likelihood concern <span class="math inline">\(D\)</span> only.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<ol type="1">
+<li>A new <code>nd</code> fit is <strong>read</strong> when its effective sample is at least 10 and it did not end on its clock; otherwise it is sampler-limited or clock-limited, counted and not read. A tree stopped by the hard limit is reported as hung.</li>
+<li>The choice tables, per set and for E28 and E26 merged as in the biology paper: the parsimonious choice (fewest parameters within 2 AIC of the minimum) first and the minimum-AIC model beside it, over the trees whose chosen fit has an effective sample of at least 10, with the number of trees whose choice changes from the stored one in each direction. If the parsimonious choice changes on more than 10% of a set's readable trees, that set's choice table in the papers and on the site is replaced by E48's; otherwise the tables stand with the <code>nd</code> row updated.</li>
+<li>E40's pairs rule recomputed with the new <code>nd</code> fits, thresholds unchanged: agreement on the parsimonious choice on at least 70% of the pairs where both chosen fits are read, and on the sign of each lineage-level coefficient read in both on at least 80%; fewer than 10 readable pairs is not evaluable.</li>
+<li>E41's reading of edges: a parameter of a new <code>nd</code> fit within <span class="math inline">\(10^{-6}\)</span> of the box span of a bound is on an edge, reported as not bounded by the tree in that direction, and not read; the share of read <code>nd</code> fits with <span class="math inline">\(\beta_D\)</span> or <span class="math inline">\(\gamma_D\)</span> on an edge is reported.</li>
+<li>The <code>nd</code> coefficient: over read fits with <span class="math inline">\(\beta_D\)</span> off its edges, the number with <span class="math inline">\(\beta_D &lt; 0\)</span> and the factor per standard deviation of <span class="math inline">\(D\)</span>, replacing the counts the biology paper quotes from the stored fits.</li>
+</ol>
+<h2 id="results">Results</h2>
+<p>Running. At 2026-10-20 00:43, 3 of 217 trees written (two E40 bird clades and one E28 family, 50 to 53 tips, each <code>nd</code> fit at its 300-iteration budget in 485 to 518 s with an effective sample of 122 to 286; the parsimonious choice unchanged on all three). Nothing is read before the run ends.</p>
+<p>The stored values it rereads: E28's parsimonious choice <code>cr</code> 4, <code>dd</code> 5, <code>nd</code> 0, <code>ned</code> 8, <code>nk</code> 8 over 25 usable families; the 46-family merged table, 36 usable, 21 lineage-level by minimum AIC (<code>nk</code> 12, <code>ned</code> 9), median D factor 0.83 over 24 read <code>nd</code> fits; E40's 121 of 170 trees with a lineage-level parsimonious choice, <code>nd</code> on 3.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Not yet evaluable.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="E44.html">E44</a>: the D likelihood checked against the simulator on complete trees.</li>
+<li><a href="E26.html">E26</a>, <a href="E28.html">E28</a>, <a href="E40.html">E40</a>: the stored fits and choice tables it rereads.</li>
+<li><a href="E41.html">E41</a>: the reading of edges applied to the new <code>nd</code> fits.</li>
+<li><a href="E43.html">E43</a>: ran on the same host first.</li>
+<li><a href="../estimability.html">Estimability</a>: step 0.8.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 1.0.0. Francisco Richter, Università della Svizzera italiana.</p>
+</footer>
+</body>
+</html>
