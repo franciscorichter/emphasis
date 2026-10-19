@@ -6,6 +6,7 @@
 Inputs
     site/template.html          the one page template
     site/style.css              the one stylesheet (copied to assets/site.css)
+    site/assets/**              the site's own figures (site/figures/*.R, run on whitebox) -> assets/**
     site/src/index.md           -> index.html
     site/src/usage.md           -> usage.html
     site/src/covariates/*.md    -> covariates/*.html (the biological meaning of N, D, ED and K)
@@ -474,6 +475,14 @@ class Site:
         if not css_src.exists():
             die("site/style.css is missing")
         write(self.root / "assets" / "site.css", read(css_src))
+        # The site's own figures: site/assets/<dir>/<file> -> assets/<dir>/<file>.
+        own = SITE / "assets"
+        if own.is_dir():
+            for p in sorted(own.rglob("*")):
+                if p.is_file() and not p.name.startswith("."):
+                    dest = self.root / "assets" / p.relative_to(own)
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(p, dest)
         if self.wiki:
             img_dir = self.wiki / "images"
             dest = self.root / "assets" / "wiki"
