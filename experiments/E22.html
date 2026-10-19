@@ -70,11 +70,11 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete (60 trees a size, no errors)</td>
+<td>complete (60 trees a size, no errors); the path reads <span class="math inline">\(D\)</span> from <code>lineage_table()</code>, which emphasis <code>4e0b9dd</code> changed, and is rerun on E46's trees within E47 (<a href="../estimability.html">Estimability</a>)</td>
 </tr>
 <tr>
 <td>Package build</td>
-<td>not recorded</td>
+<td>library <code>e21</code>; the build audit's range <code>edce33d</code> … <code>f5bf6f1</code>, identical to clean builds; its install commit is not recorded</td>
 </tr>
 <tr>
 <td>Driver / analysis</td>
@@ -252,6 +252,7 @@ window.MathJax = {
 <li><strong><code>ned</code></strong>: <span class="math inline">\(N + \mathrm{ED}\)</span> is not chosen on <span class="math inline">\(\ge 80\%\)</span> at any size (0.30 at 50, 0.00 at 400), and every cell above 50 tips is sampler-limited — the surrogate proposal's map from <a href="E7.html">E7</a> at -0.35<span class="math inline">\(\lambda\)</span>, read at the path. As the tree grows, <span class="math inline">\(N\)</span> leaves the set (0.75 → 0.30) and <span class="math inline">\(D\)</span> enters (0.25 → 0.75), first to enter on 19 of 20 trees at 400 tips: the path's preference moves from ED toward <span class="math inline">\(D\)</span>, the two still sharing the pendant edge.</li>
 </ul>
 <p>The null and the entry of <span class="math inline">\(N\)</span> hold from 50 to 400 tips; the separation of <span class="math inline">\(D\)</span> and ED does not appear at any size. The <code>ned</code> cells are sampler-limited, so they do not show what the path would do on adequately sampled draws. The cost grows from about a minute to about an hour per path between 100 and 400 tips.</p>
+<p>The path reads <span class="math inline">\(D\)</span> from <code>lineage_table()</code>'s Poisson rows, which took <span class="math inline">\(D\)</span> at the segment's midpoint before emphasis <code>4e0b9dd</code> and take its constant value on the segment from that commit, the same change that moved <code>d</code>'s <span class="math inline">\(\beta_D\)</span> from 0.70 and 1.46 to 0.95 and 1.16 of its value on <a href="E44.html">E44</a>'s complete trees. Every set above was computed on the earlier rows, <span class="math inline">\(D\)</span> being a candidate on every path, and the 400-tip move from ED to <span class="math inline">\(D\)</span> is a reading of those rows; the path suite is rerun on E46's trees within E47.</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E20.html">E20</a> — the 100-tip design E22 extends.</li>

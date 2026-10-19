@@ -70,11 +70,11 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete; 5 cells produced no tree and 1 cell only 2 of 10 (recorded as such)</td>
+<td>complete; 5 cells produced no tree and 1 cell only 2 of 10 (recorded as such); the <code>dd</code> rows hold; the <code>ed</code> and <code>ned</code> rows are superseded by E46 when it reports, which measures the effective sample at the generating values before each fit (<a href="../estimability.html">Estimability</a>)</td>
 </tr>
 <tr>
 <td>Package build</td>
-<td>not recorded (by date <code>4f42b27</code>, or the build <a href="E18.html">E18</a> used)</td>
+<td>library <code>e8</code>, installed at <code>4f42b27</code> on 2026-09-20 (<code>results/E7/LAUNCH.md</code>); the build audit found that library identical to a clean build except <code>ned</code> on the thinning proposal; the <code>ed</code> and <code>ned</code> cells use the surrogate and the thinning proposals</td>
 </tr>
 <tr>
 <td>Driver / analysis</td>
@@ -274,6 +274,7 @@ window.MathJax = {
 </figure>
 <h2 id="conclusion">Conclusion</h2>
 <p>Deliverable: <strong>produced</strong>. The surrogate proposal is usable (median ESS ≥ 10) on every <code>dd</code> cell at every size and turnover, and on <code>ned</code> and <code>ed</code> except under a strong negative ED effect (-0.35<span class="math inline">\(\lambda\)</span>0 or stronger) at turnover 0.25 and above, and at -0.15 with 400 tips and turnover 0.50; its ceiling is set by the ED effect and the turnover, not by tree size, and on <code>dd</code> it improves with size. The thinning proposal is below 10 in 54 of 67 cells. Two qualifications. These are effective samples at the generating values, without fitting, so they are best cases. And the record contains a contradiction now settled by the data: the report says thinning falls below 10 "in twelve, all of them plain DD", the paper says "in 54, twelve of them plain DD"; the data give 54.</p>
+<p>The <code>ed</code> and <code>ned</code> cells were drawn by the raw-ED simulator before <code>f30a791</code>, which made <code>ed</code> clades about 30% too large, on a build the record does not name; E46 measures the effective sample at the generating values again before each fit, on the current build and the exponential link. The <code>dd</code> cells do not involve that simulator and hold.</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="S.html">S</a> — its failed <code>ned</code> arm led to E7.</li>

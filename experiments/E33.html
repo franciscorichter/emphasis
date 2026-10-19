@@ -70,7 +70,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete: (a) 160 paths in two arms, (b) 200 paths in ten arms</td>
+<td>complete: (a) 160 paths in two arms, (b) 200 paths in ten arms; both arms read <span class="math inline">\(D\)</span> from <code>lineage_table()</code>, which emphasis <code>4e0b9dd</code> changed, and are rerun on E46's trees within E47 (<a href="../estimability.html">Estimability</a>)</td>
 </tr>
 <tr>
 <td>Package build</td>
@@ -401,6 +401,7 @@ window.MathJax = {
 <h2 id="conclusion">Conclusion</h2>
 <p><strong>(a) Not usable as a route by its rule</strong> (both arms, verbatim from <code>e33-numbers.tex</code>: "<a href="E20.html">E20</a>'s rule on cr and dd: not met; same set as at the generating parameters on 1 of 1 and 0 of 0 of the same trees: not usable by the rule"). Rule (2) is degenerate on <code>cr</code> and <code>dd</code> here, with 1 and 0 trees identical to E20's, so the verdict rests on rule (1): at a fitted estimate the path keeps the null (1.00 on <code>cr</code>) and loses diversity dependence (<code>dd</code> exact 0.35 and 0.25, absent covariate admitted on 0.45-0.55). On <code>nd</code> trees, where the trees are E20's own, the set equals E20's on 12 and 16 of 20, and <code>nd</code> is never returned. The path agrees with the ladder's model on 0.90 (<code>cr</code>), 0.40, 0.15, 0.45, and the ladder itself names the generator on 0.90, 0.85, 0.10, 0.05.</p>
 <p><strong>(b) Not detected.</strong> By <code>e33-numbers.tex</code>: ED "not detected, not specific" at 100 and 200 tips; <span class="math inline">\(K\)</span> "not detected, not specific" at 100 tips and sampler-limited at 200. With extinction driven by ED the path admits ED on at most 0.10 of trees and <span class="math inline">\(D\)</span> instead on 0.50-0.70 in the positive arm: it reads the pendant edge as raw age rather than as distinctiveness, and only where extinction rises with it. Nothing is admitted to extinction on null trees. The <span class="math inline">\(K\)</span> driver is admitted on 0.10-0.20 at 100 tips; the 200-tip <span class="math inline">\(K\)</span> arms rest on 6 and 3 effective draws. A fact the supplement does not state as a verdict: the <strong>speciation</strong> path on these trees keeps <span class="math inline">\(N\)</span> alone on only 0.35-0.75 and admits an absent lineage-level covariate on 0.15-0.50, above <a href="E20.html">E20</a>'s 0.10 ceiling, at the generating parameters (rule 4 not met).</p>
+<p>The path reads <span class="math inline">\(D\)</span> from <code>lineage_table()</code>'s Poisson rows, which took <span class="math inline">\(D\)</span> at the segment's midpoint before emphasis <code>4e0b9dd</code> and take its constant value on the segment from that commit, the same change that moved <code>d</code>'s <span class="math inline">\(\beta_D\)</span> from 0.70 and 1.46 to 0.95 and 1.16 of its value on <a href="E44.html">E44</a>'s complete trees. The sets of (a) and (b), including <span class="math inline">\(D\)</span> admitted to extinction on 0.50-0.70 of trees in (b), were computed on the earlier rows; the path suite is rerun on E46's trees within E47.</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E20.html">E20</a> — the path at the generating parameters, whose second arm this is.</li>

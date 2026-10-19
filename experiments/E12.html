@@ -72,11 +72,11 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete (E12: 300 trees, 297 fitted; E12b: 30 trees)</td>
+<td>complete (E12: 300 trees, 297 fitted; E12b: 30 trees); superseded by E46 (recovery) and E47 (selection, on an effect grid, since E46 runs only ±0.35) when they report (<a href="../estimability.html">Estimability</a>)</td>
 </tr>
 <tr>
 <td>Package build</td>
-<td>not recorded per run (see Where)</td>
+<td>library <code>e8</code>, installed at <code>4f42b27</code> on 2026-09-20 (<code>results/E12/LAUNCH.md</code>); the build audit found that library identical to a clean build except <code>ned</code> on the thinning proposal</td>
 </tr>
 <tr>
 <td>Driver / analysis</td>
@@ -144,7 +144,7 @@ window.MathJax = {
 </tr>
 <tr>
 <td>clock</td>
-<td>driver default 3600 s; the run's value is not recorded in the CSV</td>
+<td>3600 s as launched (the driver default; E12b 14400 s), not recorded in the CSV</td>
 <td></td>
 </tr>
 <tr>
@@ -157,7 +157,7 @@ window.MathJax = {
 </div>
 <p>Generating <span class="math inline">\(\beta_{ED}\)</span> per cell (raw units): -0.06/-0.03/-0.02/-0.005 at 100 tips; -0.07/-0.04/-0.02/-0.01 at 200; -0.09/-0.06/-0.02/-0.01 at 400 (-0.60 to -0.05<span class="math inline">\(\lambda\)</span>). At 400 tips and -0.60<span class="math inline">\(\lambda\)</span> the capacity sits at the search ceiling (≈ 10000) and 3 of 20 trees could not be drawn ("no ned tree in [240, 640] tips in 400 attempts"); the 17 drawn have a median of 267 tips.</p>
 <h2 id="pre-set-rule">Pre-set rule</h2>
-<p>Per cell, the fraction of trees with <span class="math inline">\(\mathrm{AIC}_{dd} - \mathrm{AIC}_{ned} &gt; 2\)</span>. The deliverable is the contour where that fraction reaches 0.8 (C3's rule) and the false-positive rate at effect 0, which must be <span class="math inline">\(\le 5\%\)</span> for the curve to mean anything. <strong>Any cell whose median effective sample is below 10 is reported with its selection rate but excluded from the contour</strong>, marked sampler-limited. A cell that produces no trees is reported as a cell with no answer, not dropped.</p>
+<p>Per cell, the fraction of trees with <span class="math inline">\(\mathrm{AIC}_{dd} - \mathrm{AIC}_{ned} &gt; 2\)</span>. The deliverable is the contour where that fraction reaches 0.8 (the selection threshold of <a href="E2.html">E2</a>'s rule) and the false-positive rate at effect 0, which must be <span class="math inline">\(\le 5\%\)</span> for the curve to mean anything. <strong>Any cell whose median effective sample is below 10 is reported with its selection rate but excluded from the contour</strong>, marked sampler-limited. A cell that produces no trees is reported as a cell with no answer, not dropped.</p>
 <h2 id="results">Results</h2>
 <p><strong>Selection</strong> (share of trees with <span class="math inline">\(\Delta\)</span>AIC &gt; 2):</p>
 <div class="table-wrap">
@@ -300,6 +300,7 @@ window.MathJax = {
 <p>No E12b fit met the stopping rule. The supplement's "half the fits finished" at 100 tips means 5 of 10 reached the 300-iteration cap. A sentence in <code>methods-study.tex</code> and <code>paper.tex</code> ("where the fit is allowed to finish (a median 262 iterations at -0.35<span class="math inline">\(\lambda\)</span>) it returns at 0.97 of its value") has no source among E12b's files: <code>power.csv</code> has no iteration column, and its 100-tip ratio is 0.96 with no fit converged.</p>
 <h2 id="conclusion">Conclusion</h2>
 <p>By E12's rule the 0.80 contour lies <strong>between -0.35<span class="math inline">\(\lambda\)</span> and -0.60<span class="math inline">\(\lambda\)</span> at every size</strong> (0.70-0.75 at -0.35<span class="math inline">\(\lambda\)</span>, 1.00 at -0.60<span class="math inline">\(\lambda\)</span>), with false positives at 3.3%; the 400-tip -0.60<span class="math inline">\(\lambda\)</span> cell is excluded. Every rate is a floor: no fit at 200 or 400 tips finished, and an unfinished <code>ned</code> carries a worse AIC than it would reach. With 300 iterations (E12b) -0.35<span class="math inline">\(\lambda\)</span> reaches 0.80 at 100 and 400 tips (the 200-tip cell, 0.90, is sampler-limited). The coefficient keeps its sign (≥ 0.95 at |effect| ≥ 0.15 at every size) while its size is attenuated on unfinished fits — 0.69, 0.40 and 0.19 of the value at -0.60<span class="math inline">\(\lambda\)</span> from 100 to 400 tips — and comes back toward its value with more iterations (0.96, 0.67, 0.72 at -0.35<span class="math inline">\(\lambda\)</span> in E12b against 0.865, 0.47, 0.43). E12 does not measure turnover above 0.10 (<a href="E16.html">E16</a> does 0.25), sampling below 1, or a fit that converged.</p>
+<p>Its trees come from linear-link <code>ned</code> generators and the raw-ED simulator before <code>f30a791</code>, whose effect on these generators is not recorded, and its fits are unconditioned and unfinished; E46 measures recovery under the conditioned likelihood and E47 selection on a grid of effects (<a href="../estimability.html">Estimability</a>).</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E8.html">E8</a> — the single point (-0.15<span class="math inline">\(\lambda\)</span>, 100 tips, turnover 0.25) that E12 extends.</li>

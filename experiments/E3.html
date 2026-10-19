@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>E3 — The two thinning proposals for ned at fixed parameters · emphasis</title>
-<meta name="description" content="Claim C4: the ED-aware thinning proposal gives a larger effective sample than the mean-field one on every tree, and for cr/dd the surrogate (then &quot;BDI&quot;) proposal a larger one than thinning, with both estimating the same marginal likelihood.">
+<meta name="description" content="The claim under test: the ED-aware thinning proposal gives a larger effective sample than the mean-field one on every tree, and for cr/dd the surrogate (then &quot;BDI&quot;) proposal a larger one than thinning, with both estimating the same marginal likelihood.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
@@ -70,7 +70,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete</td>
+<td>complete; the ordering rule (ED-aware ≥ mean-field on ≥ 95% of trees) not met; the ED-aware ordering stays the thinning variant for ED models (the author's decision of 2026-10-19, see Conclusion)</td>
 </tr>
 <tr>
 <td>Package build</td>
@@ -88,7 +88,7 @@ window.MathJax = {
 </table>
 </div>
 <h2 id="question">Question</h2>
-<p>Claim C4: the ED-aware thinning proposal gives a larger effective sample than the mean-field one on every tree, and for <code>cr</code>/<code>dd</code> the surrogate (then "BDI") proposal a larger one than thinning, with both estimating the same marginal likelihood. <a href="E2.html">E2</a> measured what a fit makes of the proposals; E3 holds everything else fixed and measures the proposals against each other at the generating values.</p>
+<p>The claim under test: the ED-aware thinning proposal gives a larger effective sample than the mean-field one on every tree, and for <code>cr</code>/<code>dd</code> the surrogate (then "BDI") proposal a larger one than thinning, with both estimating the same marginal likelihood. <a href="E2.html">E2</a> measured what a fit makes of the proposals; E3 holds everything else fixed and measures the proposals against each other at the generating values.</p>
 <h2 id="design">Design</h2>
 <div class="table-wrap">
 <table>
@@ -140,7 +140,7 @@ window.MathJax = {
 </div>
 <p>The <code>cr</code>/<code>dd</code> half (surrogate against thinning at the exact MLE) is not repeated here: the driver header names it as the fixed-<span class="math inline">\(\theta\)</span> arm of <a href="E1.html">E1</a> (table E1-C).</p>
 <h2 id="pre-set-rule">Pre-set rule</h2>
-<p>C4: the ESS ordering (ED-aware ≥ mean-field) holds on <strong>≥ 95% of trees</strong>; surrogate-thinning f̂ agreement within <strong>3 combined SE</strong> for <code>cr</code>/<code>dd</code>.</p>
+<p>The ESS ordering (ED-aware ≥ mean-field) holds on <strong>≥ 95% of trees</strong>; surrogate-thinning f̂ agreement within <strong>3 combined SE</strong> for <code>cr</code>/<code>dd</code>.</p>
 <h2 id="results">Results</h2>
 <p>At complete sampling and turnover 0 both proposals keep all 200 draws at 50, 100 and 200 tips. At turnover 0.5 both fall to 1.6-5.1, and at <span class="math inline">\(\rho\)</span> = 0.7 and 0.4 to 1.3-9.1 (except <code>n050-r70-bm-e00</code>, where the ED-aware proposal keeps 29.8 against 5.1). Where the mean-field proposal fails every set, the ED-aware one completes most:</p>
 <div class="table-wrap">
@@ -206,7 +206,8 @@ window.MathJax = {
 <figcaption><strong>Figure 1.</strong> One row per E3 cell, left without extinction, right at turnover 0.5. A cross at 1 marks a proposal that completed no draw set in that cell: the mean-field proposal in four negative-effect cells at turnover 0.5. Outside complete sampling at turnover 0 both proposals sit between 1 and 10.</figcaption>
 </figure>
 <h2 id="conclusion">Conclusion</h2>
-<p>C4's ordering half is <strong>not met</strong>: 77% of trees against the 95% threshold. The surrogate-thinning agreement half for <code>cr</code>/<code>dd</code> is evaluated in <a href="E1.html">E1</a> (E1-C), not here. What E3 shows is that the ED-aware proposal's advantage is in completing where the mean-field proposal fails (23 trees, four cells with no mean-field set at all), which the ≥ rule does not count; where both complete, both are below 10 effective draws in every cell with extinction or incomplete sampling. These are at the generating values, without fitting, so they are best-case samples. E3 compares only the two thinning variants; the comparison with the surrogate proposal, which became the default, is <a href="E6.html">E6</a> and <a href="E7.html">E7</a>.</p>
+<p>The ordering half of the rule is <strong>not met</strong>: 77% of trees against the 95% threshold. The surrogate-thinning agreement half for <code>cr</code>/<code>dd</code> is evaluated in <a href="E1.html">E1</a> (E1-C), not here. What E3 shows is that the ED-aware proposal's advantage is in completing where the mean-field proposal fails (23 trees, four cells with no mean-field set at all), which the ≥ rule does not count; where both complete, both are below 10 effective draws in every cell with extinction or incomplete sampling. These are at the generating values, without fitting, so they are best-case samples. E3 compares only the two thinning variants; the comparison with the surrogate proposal, which became the default, is <a href="E6.html">E6</a> and <a href="E7.html">E7</a>.</p>
+<p><strong>Decision (2026-10-19).</strong> The ED-aware ordering stays the thinning variant for ED models. The rule failed on the ordering (77% of trees against 95%), but the ED-aware proposal completes where the mean-field one fails (23 trees, four cells with no mean-field set), and thinning is no longer the default proposal for ED models (the surrogate is), so the ordering matters only when thinning is chosen or the surrogate refuses.</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E1.html">E1</a> — its fixed-<span class="math inline">\(\theta\)</span> arm is E3's <code>cr</code>/<code>dd</code> half.</li>

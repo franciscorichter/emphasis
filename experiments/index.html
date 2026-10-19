@@ -51,209 +51,304 @@ window.MathJax = {
 <nav class="toc" aria-label="Contents">
 <p class="toc-title">Contents</p>
 <ul>
-<li><a href="#how-to-read-a-page">How to read a page</a>
+<li><a href="#reading-the-status">Reading the status</a>
 </li>
-<li><a href="#1-does-the-estimator-reach-the-exact-answer-and-with-which-sampler">1. Does the estimator reach the exact answer, and with which sampler?</a>
+<li><a href="#at-a-glance">At a glance</a>
 </li>
-<li><a href="#2-are-lineage-level-coefficients-recovered-and-selected">2. Are lineage-level coefficients recovered and selected?</a>
+<li><a href="#reading-a-page">Reading a page</a>
+</li>
+<li><a href="#in-progress">In progress</a>
+</li>
+<li><a href="#1-the-estimator-against-the-exact-answer-and-the-proposals">1. The estimator against the exact answer, and the proposals</a>
+</li>
+<li><a href="#2-recovery-and-selection-of-the-ed-and-single-covariate-models">2. Recovery and selection of the ED and single-covariate models</a>
 </li>
 <li><a href="#3-the-pendant-age-model-and-the-ancestral-splits-covariate">3. The pendant-age model and the ancestral-splits covariate</a>
 </li>
-<li><a href="#4-model-choice-the-ladder-and-the-path">4. Model choice: the ladder and the path</a>
+<li><a href="#4-model-choice-the-ladder-and-the-covariate-path">4. Model choice: the ladder and the covariate path</a>
 </li>
-<li><a href="#5-the-extinction-side-conditioning-and-the-information-a-tree-carries">5. The extinction side, conditioning and the information a tree carries</a>
+<li><a href="#5-extinction-conditioning-and-what-a-tree-carries">5. Extinction, conditioning and what a tree carries</a>
 </li>
 <li><a href="#6-real-trees">6. Real trees</a>
 </li>
-<li><a href="#7-next-estimability-under-the-conditioned-likelihood">7. Next: estimability under the conditioned likelihood</a>
+<li><a href="#7-estimability-under-the-conditioned-likelihood">7. Estimability under the conditioned likelihood</a>
 </li>
 <li><a href="#chronology">Chronology</a>
 </li>
 </ul>
 </nav>
-<p><code>emphasis</code> fits birth-death diversification models to a dated phylogeny by Monte Carlo EM: the hidden part of the tree (extinct and unsampled lineages) is drawn by importance sampling under one of two proposals, and the expected complete-data log-likelihood is maximised over the draws. Its speciation and extinction rates can depend on the number of lineages <span class="math inline">\(N\)</span> and on three lineage-level covariates: the centred pendant age <span class="math inline">\(D\)</span>, evolutionary distinctiveness ED (raw or centred) and the count of ancestral splits <span class="math inline">\(K\)</span>. That gives ten named models (<code>cr</code>, <code>dd</code>, <code>d</code>, <code>nd</code>, <code>ed</code>, <code>edc</code>, <code>ned</code>, <code>nedc</code>, <code>k</code>, <code>nk</code>; see the <a href="../glossary.html">Glossary</a>). The experiments test whether the estimator returns the exact maximum-likelihood estimate where one exists (<code>cr</code>, <code>dd</code>), with which proposal and at what cost; whether lineage-level coefficients are recovered and selected against their generating values; how a model is chosen (the one-call ladder and the dgLARS covariate path); what a reconstructed tree says about extinction; and what the workflow returns on real family and class-tree clades. The conclusions across all of them are in <a href="../established.html">What we know</a>; the record-versus-data conflicts and pending decisions in <a href="../open-issues.html">Open issues</a>.</p>
-<h2 id="how-to-read-a-page">How to read a page</h2>
-<p>Every experiment page has the same headings, in this order:</p>
+<style>
+.table-wrap:has(th:nth-child(4)) table { table-layout: fixed; }
+.table-wrap:has(th:nth-child(4)) th:nth-child(1) { width: 5.2rem; }
+.table-wrap:has(th:nth-child(4)) th:nth-child(2) { width: 28%; }
+.table-wrap:has(th:nth-child(4)) th:nth-child(3) { width: 11.5rem; }
+.table-wrap:has(th:nth-child(4)) td:nth-child(3) { font-family: var(--sans); font-size: 0.88rem; }
+.table-wrap:not(:has(th:nth-child(3))) td:first-child { white-space: nowrap; width: 1%; padding-right: 1.2rem; }
+@media (min-width: 1040px) {
+  .table-wrap:has(th:nth-child(4)) {
+    width: min(980px, calc(100vw - 2 * var(--gutter)));
+    position: relative; left: 50%; transform: translateX(-50%);
+  }
+}
+@media (max-width: 640px) {
+  .table-wrap:has(th:nth-child(4)) table, .table-wrap:has(th:nth-child(4)) tbody { display: block; }
+  .table-wrap:has(th:nth-child(4)) thead { display: none; }
+  .table-wrap:has(th:nth-child(4)) tr { display: flex; flex-wrap: wrap; gap: 0 0.6rem; padding: 0.55rem 0; border-bottom: 1px solid var(--rule); }
+  .table-wrap:has(th:nth-child(4)) tr:last-child { border-bottom: 0; }
+  .table-wrap:has(th:nth-child(4)) td { display: block; padding: 0; width: auto; }
+  .table-wrap:has(th:nth-child(4)) td:nth-child(1) { order: 1; font-weight: 600; }
+  .table-wrap:has(th:nth-child(4)) td:nth-child(3) { order: 2; color: var(--ink-2); }
+  .table-wrap:has(th:nth-child(4)) td:nth-child(2) { order: 3; flex-basis: 100%; font-style: italic; }
+  .table-wrap:has(th:nth-child(4)) td:nth-child(4) { order: 4; flex-basis: 100%; }
+}
+</style>
+<p>These are the pre-registered experiments behind the <code>emphasis</code> package: each tests the Monte Carlo EM estimator against an exact answer or a generating value, or asks what a dated tree can identify. There are 46 experiment pages, and five more runs are registered or planned. Find a question in the tables below, read its status against the vocabulary, and open the page for the design, the rule and the full results; the conclusions that hold now are collected in <a href="../established.html">What we know</a> and the terms in the <a href="../glossary.html">Glossary</a>.</p>
+<h2 id="reading-the-status">Reading the status</h2>
 <div class="table-wrap">
 <table>
 <thead>
 <tr>
-<th>heading</th>
-<th>what it holds</th>
+<th>status</th>
+<th>meaning</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>(top table)</td>
-<td>status, package build, driver and analysis scripts, data files</td>
+<td>Holds</td>
+<td>the conclusion is a current result</td>
 </tr>
 <tr>
-<td>Question</td>
-<td>why the experiment was run, and which earlier result led to it</td>
+<td>Holds within a scope</td>
+<td>it is a current result within the scope its page states</td>
 </tr>
 <tr>
-<td>Design</td>
-<td>what was simulated or fitted, with a parameter table</td>
+<td>Partly holds</td>
+<td>part of it is a current result; the page says which part</td>
 </tr>
 <tr>
-<td>Pre-set rule</td>
-<td>the decision rule as registered in <code>00-design.md</code> before the data existed</td>
+<td>Superseded by E&lt;n&gt;</td>
+<td>the result will be replaced when E&lt;n&gt; reports; until then it is the measurement on record</td>
 </tr>
 <tr>
-<td>Results</td>
-<td>the numbers, a table, and at least one figure with a caption saying what to read off it</td>
+<td>Historical</td>
+<td>a method-development step, not cited as a result</td>
 </tr>
 <tr>
-<td>Conclusion</td>
-<td>the verdict under the rule (met / not met / not evaluable), what it means, what it does not show</td>
+<td>Merged into E&lt;n&gt;</td>
+<td>its record is carried by another page's table</td>
 </tr>
 <tr>
-<td>Related</td>
-<td>the experiments that led to it and followed from it</td>
+<td>Running</td>
+<td>started; results so far are on its page</td>
+</tr>
+<tr>
+<td>Planned</td>
+<td>registered or designed, not started</td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>Variants of an experiment (E8b, E10b, E12b, E14b, E19b, E21a/b, E24b, E31b, E34r, E36c, …) are sections inside the parent page. Three markings recur in tables and verdicts:</p>
+<p>Conflicts between the record and the data are listed in <a href="../open-issues.html">Open issues</a>.</p>
+<h2 id="at-a-glance">At a glance</h2>
+<p>Holds 10 · Holds within a scope 4 · Partly holds 9 · Superseded 14 · Historical 6 · Merged 1 · Running 3 · Planned 4.</p>
+<h2 id="reading-a-page">Reading a page</h2>
+<p>Every experiment page has the same headings: Question, Design, Pre-set rule (as registered before the data existed), Results, Conclusion, Related. Variants (E8b, E10b, E12b, E19b, E24b, E34r, E36c and others) are sections of the parent page. Three markings recur:</p>
 <ul>
-<li><strong>sampler-limited</strong>: the cell's median effective sample (ESS) is below 10; its rates are reported and not read against the rule.</li>
-<li><strong>clock-limited</strong>: the wall clock ended more than 10% of the fits in the cell (the convention fixed on 2026-10-07 after <a href="E31.html">E31</a>); its rates are floors.</li>
+<li><strong>sampler-limited</strong>: the cell's median effective sample is below 10; its rates are reported, not read against the rule.</li>
+<li><strong>clock-limited</strong>: the wall clock ended more than 10% of the cell's fits; its rates are floors.</li>
 <li><strong>unfinished</strong>: the fits ran to their iteration cap without meeting the stopping rule.</li>
 </ul>
-<h2 id="1-does-the-estimator-reach-the-exact-answer-and-with-which-sampler">1. Does the estimator reach the exact answer, and with which sampler?</h2>
+<h2 id="in-progress">In progress</h2>
 <div class="table-wrap">
 <table>
 <thead>
 <tr>
-<th>experiment</th>
-<th>question</th>
-<th>status</th>
-<th>answer</th>
+<th>Experiment</th>
+<th>Question</th>
+<th>Status</th>
+<th>What it settles</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="E10.html">E10c</a></td>
+<td>Does a relaxation step of ⅛ win at the shipped sweep budget?</td>
+<td>Running</td>
+<td>whether the default changes from <code>"auto"</code> to ⅛</td>
+</tr>
+<tr>
+<td><a href="E43.html">E43</a></td>
+<td>The survival factor of each model: exact or a validated emulator</td>
+<td>Running</td>
+<td>the conditioning factor every conditioned fit uses</td>
+</tr>
+<tr>
+<td><a href="E45.html">E45</a></td>
+<td>Conditioned <code>cr</code> and <code>dd</code> against the exact estimate, 25-800 tips</td>
+<td>Running</td>
+<td>replaces <a href="E1.html">E1</a>'s headline and <a href="S.html">S</a></td>
+</tr>
+<tr>
+<td><a href="E6.html">E6b</a></td>
+<td>Does E6's proposal ranking hold on the current build?</td>
+<td>Planned</td>
+<td>replaces <a href="E6.html">E6</a></td>
+</tr>
+<tr>
+<td><a href="../estimability.html">E48</a></td>
+<td>The <code>nd</code> rung refitted on the real trees</td>
+<td>Planned</td>
+<td>rereads the choice tables of <a href="E26.html">E26</a>, <a href="E28.html">E28</a>, <a href="E40.html">E40</a> and E40's pairs rule</td>
+</tr>
+<tr>
+<td><a href="../estimability.html">E46</a></td>
+<td>Accuracy of the eight lineage-level models by size and turnover</td>
+<td>Planned</td>
+<td>replaces the recovery results of the superseded pages</td>
+</tr>
+<tr>
+<td><a href="../estimability.html">E47</a></td>
+<td>Model choice with the conditioned ladder, on an effect grid</td>
+<td>Planned</td>
+<td>replaces the selection and path results of the superseded pages</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="1-the-estimator-against-the-exact-answer-and-the-proposals">1. The estimator against the exact answer, and the proposals</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Experiment</th>
+<th>Question</th>
+<th>Status</th>
+<th>Finding</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><a href="E1.html">E1</a></td>
-<td>MCEM against the exact MLE under <code>cr</code> and <code>dd</code>, 20-100 tips</td>
-<td>complete</td>
-<td>C1 met on 27 of 30 cell x proposal rows; the surrogate gives up a median 0.00-0.32 nats; its reported log-likelihood equals the exact one to 10<span class="math inline">\(^{-12}\)</span> under <code>cr</code></td>
+<td>Does MCEM reach the exact MLE under <code>cr</code> and <code>dd</code>?</td>
+<td>Holds within a scope</td>
+<td>MCEM at the exact maximum (median deficit ≥ -0.5 nats) on 27 of 30 cell × proposal rows; surrogate shortfall a median 0.00-0.32 nats.</td>
 </tr>
 <tr>
 <td><a href="S.html">S</a></td>
-<td>the same comparison from 25 to 800 tips</td>
-<td>complete (<code>ned</code> arm stopped)</td>
-<td>under <code>cr</code> MCEM lands on the exact MLE within a tenth of that MLE's own spread, offset 1-6% upward; cells from 100 tips clock-limited</td>
+<td>The same comparison from 25 to 800 tips</td>
+<td>Superseded by E45</td>
+<td>Under <code>cr</code> MCEM lies within a tenth of the exact MLE's spread, 1-6% high; cells from 100 tips clock-limited.</td>
 </tr>
 <tr>
 <td><a href="E3.html">E3</a></td>
-<td>ED-aware against mean-field thinning for <code>ned</code></td>
-<td>complete</td>
-<td>ordering holds on 77% of trees, not the 95% required; ED-aware completes where mean-field fails (23 trees)</td>
+<td>ED-aware or mean-field thinning for <code>ned</code>?</td>
+<td>Holds</td>
+<td>ED-aware is ahead on 77% of trees, short of the 95% required; it completes on 23 trees where mean-field fails.</td>
 </tr>
 <tr>
 <td><a href="E4.html">E4</a></td>
-<td>cost of one E-step by model, proposal, size</td>
-<td>complete</td>
-<td>0.06-4 s from 25 to 400 tips; surrogate 4.7-7.0x thinning under <code>cr</code>, but cheaper per effective draw from 100 tips</td>
+<td>What does one E-step cost?</td>
+<td>Partly holds</td>
+<td>0.06-4 s from 25 to 400 tips; the surrogate costs 4.7-7.0× thinning under <code>cr</code>, less per effective draw from 100 tips.</td>
 </tr>
 <tr>
 <td><a href="E6.html">E6</a></td>
-<td>proposal ranking against the sampling fraction</td>
-<td>complete</td>
-<td>surrogate ahead on <code>cr</code>, <code>dd</code>, <code>ned</code> at every <span class="math inline">\(\rho\)</span>; only <code>ed</code> crosses, between <span class="math inline">\(\rho\)</span> 0.8 and 0.6</td>
+<td>Which proposal keeps more draws as sampling falls?</td>
+<td>Superseded by E6b</td>
+<td>The surrogate is ahead for <code>cr</code>, <code>dd</code> and <code>ned</code> at every <span class="math inline">\(\rho\)</span>; <code>ed</code> crosses between <span class="math inline">\(\rho\)</span> 0.8 and 0.6.</td>
 </tr>
 <tr>
 <td><a href="E7.html">E7</a></td>
-<td>where the surrogate proposal is usable</td>
-<td>complete</td>
-<td>ESS ≥ 10 everywhere except strong negative ED effects (-0.35<span class="math inline">\(\lambda\)</span>) at turnover ≥ 0.25; thinning below 10 in 54 of 67 cells</td>
+<td>Where is the surrogate proposal usable?</td>
+<td>Partly holds</td>
+<td>Surrogate ESS below 10 in 7 of 67 cells, all with strong negative ED effects; thinning below 10 in 54.</td>
 </tr>
 <tr>
 <td><a href="E9.html">E9</a></td>
-<td>does <code>mc_error</code> stop where the estimate has settled</td>
-<td>complete</td>
-<td>never stops early (0 of 17 while steps share a sign); lands about 2% from a 400-iteration reference</td>
+<td>Does the <code>mc_error</code> rule stop once the estimate has settled?</td>
+<td>Holds within a scope</td>
+<td>It never stopped while the trace moved (0 of 17) and lands about 2% from a 400-iteration reference.</td>
 </tr>
 <tr>
 <td><a href="E10.html">E10</a></td>
-<td>relaxation of the surrogate's mean field</td>
-<td>complete (with E10b)</td>
-<td>fixed ⅛ converges 107 of 139 diverging units against 77 for <code>"auto"</code> at 1000 sweeps; relaxed mean fields give ESS ≈ 1</td>
+<td>Which relaxation step converges the surrogate's mean field?</td>
+<td>Holds</td>
+<td>At 1000 sweeps a fixed ⅛ converges 107 of 139 diverging units, <code>"auto"</code> 77.</td>
 </tr>
 <tr>
 <td><a href="E13.html">E13</a></td>
-<td>per-iterate noise and settling</td>
-<td>complete</td>
-<td>noise falls as about 1/√draws (1-7%); settling iteration depends on the criterion and is not a scaling</td>
+<td>How noisy is one iterate, and when does a fit settle?</td>
+<td>Holds</td>
+<td>Noise falls about as 1/√draws (1-7%); the settling iteration depends on the criterion and does not scale.</td>
 </tr>
 <tr>
 <td><a href="E15.html">E15</a></td>
-<td>where the time of a <code>ned</code> iteration goes</td>
-<td>profile complete</td>
-<td>the parts take under 2 min; one iteration from the box 77 s, 78 min, 5.1 h at 100/200/400 tips: the cost is the starting point</td>
+<td>Where does the time of a <code>ned</code> iteration go?</td>
+<td>Historical</td>
+<td>One iteration from the box takes 77 s, 78 min and 5.1 h at 100, 200, 400 tips; its parts under 2 min.</td>
 </tr>
 <tr>
 <td><a href="E42.html">E42</a></td>
-<td>MCEM against the exact MLE on E40's real trees</td>
-<td>complete</td>
-<td>on 75 trees MCEM sits at the exact maximum: median deficit -0.079 (<code>cr</code>) and -0.005 (<code>dd</code>) nats on complete trees; the exact <code>dd</code> maximum puts extinction at zero</td>
+<td>MCEM against the exact MLE on real trees</td>
+<td>Holds</td>
+<td>On 75 trees the median deficit is -0.079 nats under <code>cr</code> and -0.005 under <code>dd</code> on complete trees.</td>
 </tr>
 </tbody>
 </table>
 </div>
-<h2 id="2-are-lineage-level-coefficients-recovered-and-selected">2. Are lineage-level coefficients recovered and selected?</h2>
+<h2 id="2-recovery-and-selection-of-the-ed-and-single-covariate-models">2. Recovery and selection of the ED and single-covariate models</h2>
 <div class="table-wrap">
 <table>
 <thead>
 <tr>
-<th>experiment</th>
-<th>question</th>
-<th>status</th>
-<th>answer</th>
+<th>Experiment</th>
+<th>Question</th>
+<th>Status</th>
+<th>Finding</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><a href="E2.html">E2</a></td>
-<td><code>ned</code> recovery and selection over size, <span class="math inline">\(\rho\)</span>, turnover</td>
-<td>complete (main tier)</td>
-<td>C3 met in 1 of 16 effect cells; turnover 0.5 biases <span class="math inline">\(\beta\)</span>_ED by 1-4 SD</td>
+<td><code>ned</code> recovery and selection over size, <span class="math inline">\(\rho\)</span> and turnover</td>
+<td>Historical</td>
+<td><span class="math inline">\(\beta_{ED}\)</span> recovered and detected in 1 of 16 effect cells; turnover 0.5 biases <span class="math inline">\(\beta_{ED}\)</span> by 1-4 SD.</td>
 </tr>
 <tr>
 <td><a href="E14.html">E14</a></td>
-<td>do emphasis and <code>evesim</code> simulate the same trees</td>
-<td>complete (with E14b)</td>
-<td>no KS rejection in 30 comparisons; completion rates match once <code>max_tries = 0</code></td>
+<td>Do emphasis and <code>evesim</code> simulate the same trees?</td>
+<td>Holds</td>
+<td>No KS rejection in 30 comparisons; completion rates match once <code>max_tries = 0</code>.</td>
 </tr>
 <tr>
 <td><a href="E11.html">E11</a></td>
-<td>does the estimator invent an ED effect on <code>evesim</code> trees</td>
-<td>complete, <code>ned</code> fits unfinished</td>
-<td>specificity met: <code>ned</code> selected on 0.05 and 0.00 of null trees</td>
+<td>Does the estimator invent an ED effect on <code>evesim</code> null trees?</td>
+<td>Holds</td>
+<td><code>ned</code> is selected on 0.05 and 0.00 of null trees.</td>
 </tr>
 <tr>
 <td><a href="E12.html">E12</a></td>
-<td>where the ED term becomes selectable (turnover 0.10)</td>
-<td>complete (with E12b)</td>
-<td>0.80 contour between -0.35<span class="math inline">\(\lambda\)</span> and -0.60<span class="math inline">\(\lambda\)</span> at 100-400 tips; false positives 3.3%; all clock-limited</td>
+<td>Where does the ED term become selectable?</td>
+<td>Superseded by E46 and E47</td>
+<td>The 0.80 selection contour lies between -0.35<span class="math inline">\(\lambda\)</span> and -0.60<span class="math inline">\(\lambda\)</span> at 100-400 tips; false positives 3.3%.</td>
 </tr>
 <tr>
 <td><a href="E16.html">E16</a></td>
-<td>the same at turnover 0.25</td>
-<td>complete</td>
-<td>contour between -0.35<span class="math inline">\(\lambda\)</span> (0.67) and -0.60<span class="math inline">\(\lambda\)</span> (1.00); no false positive</td>
+<td>The same at turnover 0.25</td>
+<td>Superseded by E46 and E47</td>
+<td>Selection 0.67 at -0.35<span class="math inline">\(\lambda\)</span> and 1.00 at -0.60<span class="math inline">\(\lambda\)</span>; no false positive.</td>
 </tr>
 <tr>
 <td><a href="E18.html">E18</a></td>
-<td>does a centred ED covariate lift selection</td>
-<td>complete</td>
-<td>rule not met: 0.10-0.20 at -0.15<span class="math inline">\(\lambda\)</span> against 0.5 required; <code>nedc</code> is equivalent to <code>ned</code></td>
+<td>Does centring ED lift selection?</td>
+<td>Superseded by E46 and E47</td>
+<td>No: 0.10-0.20 at -0.15<span class="math inline">\(\lambda\)</span> against 0.5 required; <code>nedc</code> behaves as <code>ned</code>.</td>
 </tr>
 <tr>
 <td><a href="E24.html">E24</a></td>
-<td>the single-covariate models <code>ed</code>, <code>edc</code>, <code>d</code>, <code>k</code></td>
-<td>complete (with E24b)</td>
-<td><code>edc</code> meets every half (ratio 0.96, 1.02; selection 0.95, 0.85); <code>d</code> has 0.15 false positives</td>
+<td>Recovery and selection for <code>ed</code>, <code>edc</code>, <code>d</code> and <code>k</code></td>
+<td>Partly holds</td>
+<td><code>edc</code> meets every half (ratio 0.96, 1.02; selection 0.95, 0.85); <code>d</code> has 0.15 false positives.</td>
 </tr>
 </tbody>
 </table>
@@ -263,248 +358,257 @@ window.MathJax = {
 <table>
 <thead>
 <tr>
-<th>experiment</th>
-<th>question</th>
-<th>status</th>
-<th>answer</th>
+<th>Experiment</th>
+<th>Question</th>
+<th>Status</th>
+<th>Finding</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><a href="E19.html">E19</a></td>
-<td><code>nd</code> recovery and selection, thinning (E19) and surrogate (E19b)</td>
-<td>complete, clock-limited</td>
-<td>sign recovered, size not: ratio 0.30-0.47 (E19), 0.43-0.63 (E19b) at ±0.35</td>
+<td>Is <span class="math inline">\(\beta_D\)</span> recovered, and <code>nd</code> selected over <code>dd</code>?</td>
+<td>Superseded by E46</td>
+<td>Sign recovered, size not: ratio 0.30-0.47 on thinning and 0.43-0.63 on the surrogate at ±0.35.</td>
 </tr>
 <tr>
 <td><a href="E30.html">E30</a></td>
 <td>E19b's design with 300 iterations and a 4-hour clock</td>
-<td>complete, clock-limited</td>
-<td>ratio 0.67 at -0.35; 0 of 39 fits met the stopping rule</td>
+<td>Superseded by E46</td>
+<td>Ratio 0.67 at -0.35; 0 of 39 fits met the stopping rule.</td>
 </tr>
 <tr>
 <td><a href="E37.html">E37</a></td>
-<td>the same trees with 1000 iterations</td>
-<td>stopped 2026-10-15</td>
-<td>stopped after the D fix changed the likelihood it maximises; 6 of 40 fits kept</td>
+<td>Does the pendant-age fit finish within 1000 iterations?</td>
+<td>Historical</td>
+<td>Stopped when the D change altered the likelihood it maximised; 6 of 40 fits written.</td>
 </tr>
 <tr>
 <td><a href="E31.html">E31</a></td>
-<td>can the ladder tell <code>nd</code> from <code>ned</code> at 200 tips</td>
-<td>complete (with E31b)</td>
-<td>no: <code>nd</code> chosen on 5 of 20 own trees, the pair on 9; <span class="math inline">\(\beta\)</span>_D at 0.68</td>
+<td>Can the ladder tell <code>nd</code> from <code>ned</code> at 200 tips?</td>
+<td>Superseded by E46 and E47</td>
+<td>No: <code>nd</code> chosen on 5 of 20 of its own trees, the pair on 9; <span class="math inline">\(\beta_D\)</span> at 0.68.</td>
 </tr>
 <tr>
 <td><a href="E21.html">E21</a></td>
-<td><code>nk</code> recovery by fitting (E21a) and on the path (E21b)</td>
-<td>complete</td>
-<td><span class="math inline">\(\beta\)</span>_K recovered (0.95, 0.92 at ∓0.35); selection 0.15 and 0.60; on the path ED carries K's signal</td>
+<td>Is <span class="math inline">\(\beta_K\)</span> recovered, by fitting and on the path?</td>
+<td>Superseded by E46 and E47</td>
+<td><span class="math inline">\(\beta_K\)</span> at 0.95 and 0.92 at ∓0.35; selection 0.15 and 0.60; on the path ED carries K's signal.</td>
 </tr>
 </tbody>
 </table>
 </div>
-<h2 id="4-model-choice-the-ladder-and-the-path">4. Model choice: the ladder and the path</h2>
+<h2 id="4-model-choice-the-ladder-and-the-covariate-path">4. Model choice: the ladder and the covariate path</h2>
 <div class="table-wrap">
 <table>
 <thead>
 <tr>
-<th>experiment</th>
-<th>question</th>
-<th>status</th>
-<th>answer</th>
+<th>Experiment</th>
+<th>Question</th>
+<th>Status</th>
+<th>Finding</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><a href="E8.html">E8</a></td>
-<td>can Monte Carlo bias reorder an AIC ranking</td>
-<td>complete (with E8b)</td>
-<td>flips 1 of 101 wrong choices (a 0.003-AIC tie); guard flagged 0 of 240; <span class="math inline">\(\beta\)</span>_ED found at 0.75 of its value</td>
+<td>Can Monte Carlo bias reorder an AIC ranking?</td>
+<td>Partly holds</td>
+<td>Correcting it moves rankings by 0.01-0.25 AIC and reverses 1 of 101 wrong choices, a 0.003-AIC tie.</td>
 </tr>
 <tr>
 <td><a href="E20.html">E20</a></td>
-<td>does one dgLARS path select the generating set (100 tips)</td>
-<td>complete</td>
-<td>met for <code>cr</code> only (0.90); D and ED not separable</td>
+<td>Does one dgLARS path select the generating set?</td>
+<td>Superseded by E47</td>
+<td>Met for <code>cr</code> only (0.90) at 100 tips; D and ED are not separable.</td>
 </tr>
 <tr>
 <td><a href="E22.html">E22</a></td>
-<td>the path at 50, 200, 400 tips</td>
-<td>complete</td>
-<td>null 0.85-1.00; <code>dd</code> N alone 0.40-0.70; <code>ned</code> N+ED never ≥ 0.80</td>
+<td>The path at 50, 200 and 400 tips</td>
+<td>Superseded by E47</td>
+<td>Null chosen on 0.85-1.00 of trees; <code>dd</code>'s N alone on 0.40-0.70; <code>ned</code>'s N + ED never on 0.80.</td>
 </tr>
 <tr>
 <td><a href="E23.html">E23</a></td>
-<td>what <code>estimate_rates(model = "all")</code> chooses</td>
-<td>complete</td>
-<td>clade-level half met at 100 tips; <code>nk</code> 0.70, <code>ned</code> 0.20, <code>nd</code> 0.00</td>
+<td>What does the one-call ladder choose?</td>
+<td>Superseded by E47</td>
+<td>The generator is chosen on 0.80 of <code>cr</code> and 0.90 of <code>dd</code> trees; <code>nk</code> 0.70, <code>ned</code> 0.20, <code>nd</code> 0.00.</td>
 </tr>
 <tr>
 <td><a href="E27.html">E27</a></td>
-<td>the ladder across eight conditions</td>
-<td>complete</td>
-<td><code>nk</code> chosen on 11-15 of 20, <code>ned</code> on at most 2; turnover 0.25-0.40 moves null trees to <code>cr</code></td>
+<td>The ladder across eight conditions</td>
+<td>Superseded by E46 and E47</td>
+<td><code>nk</code> chosen on 11-15 of 20 of its trees, <code>ned</code> on at most 2; turnover 0.25-0.40 moves null trees to <code>cr</code>.</td>
 </tr>
 <tr>
 <td><a href="E33.html">E33</a></td>
-<td>the path at a fitted estimate; the extinction path with a driver</td>
-<td>complete</td>
-<td>(a) not usable as a route; (b) extinction driver not detected</td>
+<td>The path at a fitted estimate; the extinction path</td>
+<td>Superseded by E47</td>
+<td>At a fitted estimate <code>dd</code>'s exact set falls to 0.35 and 0.25; an extinction driver is not detected.</td>
 </tr>
 </tbody>
 </table>
 </div>
-<h2 id="5-the-extinction-side-conditioning-and-the-information-a-tree-carries">5. The extinction side, conditioning and the information a tree carries</h2>
+<h2 id="5-extinction-conditioning-and-what-a-tree-carries">5. Extinction, conditioning and what a tree carries</h2>
 <div class="table-wrap">
 <table>
 <thead>
 <tr>
-<th>experiment</th>
-<th>question</th>
-<th>status</th>
-<th>answer</th>
+<th>Experiment</th>
+<th>Question</th>
+<th>Status</th>
+<th>Finding</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><a href="E29.html">E29</a></td>
-<td>on finished fits at 200 tips, is extinction recovered</td>
-<td>complete</td>
-<td>no: rate 26x below 0.05, ED slope on the box limit; <span class="math inline">\(\beta\)</span>_ED 1.02 on the 7 finished fits</td>
+<td>On finished fits at 200 tips, is extinction recovered?</td>
+<td>Partly holds</td>
+<td>No: the fitted rate is a median 26× below 0.05; <span class="math inline">\(\beta_{ED}\)</span> returns at 1.02 on the 7 finished fits.</td>
 </tr>
 <tr>
 <td><a href="E32.html">E32</a></td>
-<td>wider box, extinction driver, exact estimators</td>
-<td>complete</td>
-<td>not identified: estimates follow the box for a 0.01 log-likelihood gain; <code>bd_ML</code> puts <span class="math inline">\(\mu\)</span> at zero on 37 of 40 trees</td>
+<td>Does a wider box or an exact estimator recover extinction?</td>
+<td>Holds</td>
+<td>No: estimates follow the box for a 0.01 log-likelihood gain; <code>bd_ML</code> puts <span class="math inline">\(\mu\)</span> at zero on 37 of 40 trees.</td>
 </tr>
 <tr>
 <td><a href="E34.html">E34</a></td>
-<td>is zero extinction an artefact of not conditioning</td>
-<td>complete (with E34r)</td>
-<td>no: rate within 2x of 0.05 on 1 (E34r: 0) of 20</td>
+<td>Is zero extinction an artefact of not conditioning?</td>
+<td>Holds</td>
+<td>No: conditioned extinction is within 2× of 0.05 on 1 of 20 trees (E34r: 0 of 20).</td>
 </tr>
 <tr>
 <td><a href="E36.html">E36</a></td>
-<td>the survival emulator, and a network against the GAM</td>
-<td>complete (with E36c)</td>
-<td>the package's label for cap-passing clades was a defect; fixed in <code>d3dee92</code> (2000 clades)</td>
+<td>How accurate is the survival emulator?</td>
+<td>Partly holds</td>
+<td>It labelled cap-passing clades as extinct; with that fixed (<code>d3dee92</code>) it meets its rule at 2000 training clades.</td>
 </tr>
 <tr>
 <td><a href="E35.html">E35</a></td>
-<td>(a) K driver at turnover 0.25; (b) misstated <span class="math inline">\(\rho\)</span></td>
-<td>complete</td>
-<td>(a) negative slope at 0.75 of its value, positive arm sampler-limited; (b) selection unchanged by ±0.1 in <span class="math inline">\(\rho\)</span></td>
+<td>A K driver at turnover 0.25; a misstated <span class="math inline">\(\rho\)</span></td>
+<td>Holds within a scope</td>
+<td>The negative K slope returns at 0.75 of its value; <span class="math inline">\(\rho\)</span> off by 0.1 leaves the choice unchanged on ≥ 18 of 20.</td>
 </tr>
 <tr>
 <td><a href="E38.html">E38</a></td>
-<td>exact profile likelihood of extinction by turnover and size</td>
-<td>complete</td>
-<td>at turnover 0.10 extinction is never detected on 80% of <code>cr</code> trees up to 1600 tips; <code>dd</code> detects it on every tree from 100</td>
+<td>How much does a tree say about extinction, by turnover and size?</td>
+<td>Holds within a scope</td>
+<td>At turnover 0.10 the exact <code>cr</code> likelihood excludes zero on fewer than 80% of trees up to 1600 tips; <code>dd</code> from 100.</td>
 </tr>
 </tbody>
 </table>
 </div>
 <h2 id="6-real-trees">6. Real trees</h2>
-<p>The results on the 170 finished of the 175 bird and mammal trees, with figures: <strong><a href="../real-phylogenies.html">Real phylogenies</a></strong>.</p>
+<p>The results on the 170 bird and mammal trees of E40, with figures, are on <a href="../real-phylogenies.html">Real phylogenies</a>.</p>
 <div class="table-wrap">
 <table>
 <thead>
 <tr>
-<th>experiment</th>
-<th>question</th>
-<th>status</th>
-<th>answer</th>
+<th>Experiment</th>
+<th>Question</th>
+<th>Status</th>
+<th>Finding</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><a href="E5.html">E5</a></td>
-<td>does the workflow run on 47 family trees</td>
-<td>complete, superseded by E25/E28</td>
-<td><code>cr</code> within 0.53 nats of <code>bd_ML</code> on all 46 fitted; <code>ned</code> beats <code>dd</code> on Corvidae and Icteridae (linear link)</td>
+<td>Does the workflow run on 47 family trees?</td>
+<td>Historical</td>
+<td><code>cr</code> within 0.53 nats of <code>bd_ML</code> on all 46 fitted trees (linear link).</td>
 </tr>
 <tr>
 <td><a href="E17.html">E17</a></td>
-<td>are those margins what the fitted model predicts of itself</td>
-<td>complete</td>
-<td>all three real margins inside the central 90% of their bootstrap</td>
+<td>Are the families' margins what the fitted model predicts?</td>
+<td>Historical</td>
+<td>All three real <code>ned</code>-over-<code>dd</code> margins lie inside the central 90% of their bootstrap.</td>
 </tr>
 <tr>
 <td><a href="E25.html">E25</a></td>
-<td>the three bird families under ladder and path</td>
-<td>complete, superseded by E28</td>
-<td><code>nk</code> on Corvidae (12.0 AIC), <code>ned</code> on Icteridae, <code>dd</code> on Cotingidae</td>
+<td>Three bird families under the ladder and the path</td>
+<td>Historical</td>
+<td><code>nk</code> on Corvidae (12.0 AIC over <code>ned</code>), <code>ned</code> on Icteridae, <code>dd</code> on Cotingidae.</td>
 </tr>
 <tr>
 <td><a href="E26.html">E26</a></td>
-<td>47 families under the whole workflow</td>
-<td>complete</td>
-<td>a lineage-level model in 21 of 37 usable families (merged table: K 12, ED 9)</td>
+<td>The family trees under the whole workflow</td>
+<td>Merged into E28</td>
+<td>36 of 46 families usable; by minimum AIC 21 choose a lineage-level model (<code>nk</code> 12, <code>ned</code> 9).</td>
 </tr>
 <tr>
 <td><a href="E28.html">E28</a></td>
-<td>the 29 families inside the calibrated range, refitted</td>
-<td>complete</td>
-<td>25 usable; parsimonious choice <code>cr</code> 4, <code>dd</code> 5, <code>nd</code> 1, <code>ned</code> 8, <code>nk</code> 7</td>
+<td>The 29 families in the calibrated range, refitted</td>
+<td>Partly holds</td>
+<td>25 usable; parsimonious choice <code>cr</code> 4, <code>dd</code> 5, <code>nd</code> 1, <code>ned</code> 8, <code>nk</code> 7.</td>
 </tr>
 <tr>
 <td><a href="E39.html">E39</a></td>
-<td>what the covariates share within a tree</td>
-<td>complete</td>
-<td>ED-K median -0.44 on family trees against -0.18 on simulated ones, stronger with imbalance</td>
+<td>What do the covariates share within a tree?</td>
+<td>Holds</td>
+<td>ED-K rank correlation median -0.44 on family trees against -0.18 on simulated ones, stronger with imbalance.</td>
 </tr>
 <tr>
 <td><a href="E40.html">E40</a></td>
-<td>birds and mammals cut into clade-sized trees</td>
-<td>closed 2026-10-18 at 170 of 175</td>
-<td>bird clades choose <code>ned</code> or <code>nk</code> on 72 of 77; ED lowers and K raises speciation on nearly every read fit; the pairs rule fails (same choice on 10 of 29), so the class-tree clades are reported, not read</td>
+<td>Birds and mammals cut into clade-sized trees</td>
+<td>Partly holds</td>
+<td>Bird clades choose <code>ned</code> or <code>nk</code> on 72 of 77; clade and family tree agree on 10 of 29 pairs (rule: 70%).</td>
 </tr>
 <tr>
 <td><a href="E41.html">E41</a></td>
-<td>E40's capped and edge fits continued, edges moved out</td>
-<td>closed at the pilot (16 trees, 2026-10-19)</td>
-<td>neither rule triggers: the parsimonious choice unchanged on 16 of 16 trees, the edge binds on 4 of 63 edge fits (the box stays); <code>nd</code> and <code>nk</code> never meet the stopping rule within 1000 iterations; 0 of 16 trees exclude zero extinction</td>
+<td>Do E40's fits change when continued, with edges moved out?</td>
+<td>Partly holds</td>
+<td>Choice unchanged on 16 of 16 trees; the edge binds on 4 of 63 fits; <code>nd</code> and <code>nk</code> converge on 0 of 32.</td>
 </tr>
 </tbody>
 </table>
 </div>
-<h2 id="7-next-estimability-under-the-conditioned-likelihood">7. Next: estimability under the conditioned likelihood</h2>
-<p>How well each model's parameters are estimated, and from how many tips, with the likelihood conditioned on the survival of the clade: the plan, its prerequisites and its status board are on <a href="../estimability.html">Estimability</a>, updated as each step reports.</p>
+<h2 id="7-estimability-under-the-conditioned-likelihood">7. Estimability under the conditioned likelihood</h2>
+<p>How well each model's parameters are estimated, and from how many tips, with the likelihood conditioned on the survival of the clade: the plan and its status board are on <a href="../estimability.html">Estimability</a>.</p>
 <div class="table-wrap">
 <table>
 <thead>
 <tr>
-<th>experiment</th>
-<th>question</th>
-<th>status</th>
-<th>answer so far</th>
+<th>Experiment</th>
+<th>Question</th>
+<th>Status</th>
+<th>Finding</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><a href="E44.html">E44</a></td>
-<td>on complete trees, is the likelihood the simulator's, for every model?</td>
-<td>complete</td>
-<td>yes once the D likelihood holds D constant between events (emphasis <code>4e0b9dd</code>; before it <code>d</code> returned <span class="math inline">\(\beta_D\)</span> at 0.70 and 1.46); raw ED has no mismatch but a per-tree <span class="math inline">\(\beta_0\)</span>-<span class="math inline">\(\beta_{ED}\)</span> ridge</td>
+<td>On complete trees, is the likelihood the simulator's?</td>
+<td>Holds</td>
+<td>Yes, with D constant between events: <code>d</code>'s <span class="math inline">\(\beta_D\)</span> returns at 0.95 and 1.16 of its value, against 0.70 and 1.46 before.</td>
 </tr>
 <tr>
 <td><a href="E43.html">E43</a></td>
-<td>the survival factor of each model: exact or a validated emulator</td>
-<td>emulators trained; references 80% done</td>
-<td>exact <code>cr</code>/<code>dd</code> survival functions match simulation within 1 SE</td>
+<td>The survival factor of each model, exact or emulated</td>
+<td>Running</td>
+<td>The exact <code>cr</code> and <code>dd</code> survival functions match simulation of <span class="math inline">\(10^5\)</span> clades within 1 SE.</td>
 </tr>
 <tr>
 <td><a href="E45.html">E45</a></td>
-<td><code>cr</code> and <code>dd</code> under the conditioned likelihood, against the exact estimate, 25-800 tips</td>
-<td>running, 643 of 1720 fits at 2026-10-19</td>
-<td>conditioned MCEM reaches the exact maximum in every finished cell; <span class="math inline">\(\lambda\)</span> reliable from 25 tips, <span class="math inline">\(\mu\)</span> not up to 100</td>
+<td>Conditioned <code>cr</code> and <code>dd</code> against the exact estimate</td>
+<td>Running</td>
+<td>643 of 1720 fits: MCEM at the exact maximum in every finished cell; <span class="math inline">\(\lambda\)</span> reliable from 25 tips.</td>
 </tr>
 </tbody>
 </table>
 </div>
 <h2 id="chronology">Chronology</h2>
-<p>The study opened with the exact comparisons <a href="E1.html">E1</a> and <a href="S.html">S</a> and the first <code>ned</code> measurement <a href="E2.html">E2</a>, then turned to the proposals (<a href="E3.html">E3</a>, <a href="E4.html">E4</a>, <a href="E6.html">E6</a>); S's failed <code>ned</code> arm led to the feasibility map <a href="E7.html">E7</a>, and its clocked <code>cr</code> fits to the stopping-rule check <a href="E9.html">E9</a>, the relaxation sweep <a href="E10.html">E10</a> and the noise study <a href="E13.html">E13</a>. <a href="E8.html">E8</a> found ED estimable but not selected at one point, which <a href="E12.html">E12</a> turned into a power map; <a href="E5.html">E5</a>, the first run on real trees, placed three bird families at turnover up to 0.3, so <a href="E16.html">E16</a> repeated the map at 0.25 and <a href="E17.html">E17</a> bootstrapped the families' margins; <a href="E18.html">E18</a> tried centring ED, and <a href="E11.html">E11</a>, gated by <a href="E14.html">E14</a>, tested specificity on another group's simulator. The pendant-age model (<a href="E19.html">E19</a>) and the ancestral-splits covariate (<a href="E21.html">E21</a>) followed, with the covariate path (<a href="E20.html">E20</a>, <a href="E22.html">E22</a>) as a second route to model choice and <a href="E15.html">E15</a>'s profile showing that the time of a fit is in its starting point, which gave the ladder its nested starts. The one-call ladder (<a href="E23.html">E23</a>) and the single-covariate models (<a href="E24.html">E24</a>) preceded the real-data runs <a href="E25.html">E25</a> and <a href="E26.html">E26</a>, which <a href="E27.html">E27</a> calibrated and <a href="E28.html">E28</a> refitted as the analysis of record. Longer budgets at 200 tips (<a href="E29.html">E29</a>, <a href="E31.html">E31</a>) exposed the extinction side on the box limits, which <a href="E32.html">E32</a>, <a href="E34.html">E34</a>, <a href="E36.html">E36</a>, <a href="E35.html">E35</a> and <a href="E38.html">E38</a> traced to the trees' lack of information rather than the box, the conditioning or the emulator; <a href="E30.html">E30</a> and <a href="E37.html">E37</a> ask whether the pendant-age fit ever finishes. <a href="E33.html">E33</a> tested the path as a user runs it, <a href="E39.html">E39</a> measured how K and ED overlap on real trees, and <a href="E40.html">E40</a>, <a href="E41.html">E41</a> and <a href="E42.html">E42</a> carried the workflow to clades cut from the bird and mammal class trees (E40 closed on 2026-10-18, E41 at its pilot on 2026-10-19). The estimability study under the conditioned likelihood opened with <a href="E44.html">E44</a> and <a href="E43.html">E43</a>, and <a href="E45.html">E45</a> is running.</p>
+<ul>
+<li><strong>Exact comparisons and proposals:</strong> <a href="E1.html">E1</a>, <a href="S.html">S</a>, <a href="E2.html">E2</a>, <a href="E3.html">E3</a>, <a href="E4.html">E4</a>, <a href="E6.html">E6</a>.</li>
+<li><strong>Feasibility and convergence:</strong> <a href="E7.html">E7</a> (from S's failed <code>ned</code> arm), <a href="E9.html">E9</a>, <a href="E10.html">E10</a>, <a href="E13.html">E13</a>.</li>
+<li><strong>ED power and specificity:</strong> <a href="E8.html">E8</a>, <a href="E12.html">E12</a>, <a href="E5.html">E5</a>, <a href="E16.html">E16</a>, <a href="E17.html">E17</a>, <a href="E18.html">E18</a>, <a href="E14.html">E14</a>, <a href="E11.html">E11</a>.</li>
+<li><strong>Pendant age, K and the path:</strong> <a href="E19.html">E19</a>, <a href="E21.html">E21</a>, <a href="E20.html">E20</a>, <a href="E22.html">E22</a>, <a href="E15.html">E15</a> (which gave the ladder its nested starts).</li>
+<li><strong>The ladder and the families:</strong> <a href="E23.html">E23</a>, <a href="E24.html">E24</a>, <a href="E25.html">E25</a>, <a href="E26.html">E26</a>, <a href="E27.html">E27</a>, <a href="E28.html">E28</a> (October 2026).</li>
+<li><strong>Extinction and the information in a tree:</strong> <a href="E29.html">E29</a>, <a href="E31.html">E31</a>, <a href="E30.html">E30</a>, <a href="E32.html">E32</a>, <a href="E34.html">E34</a>, <a href="E36.html">E36</a>, <a href="E35.html">E35</a>, <a href="E37.html">E37</a>, <a href="E38.html">E38</a>, <a href="E33.html">E33</a>, <a href="E39.html">E39</a>.</li>
+<li><strong>Class-tree clades:</strong> <a href="E40.html">E40</a> (closed 2026-10-18), <a href="E42.html">E42</a>, <a href="E41.html">E41</a> (closed at the pilot 2026-10-19).</li>
+<li><strong>Estimability under the conditioned likelihood (from 2026-10-15):</strong> <a href="E44.html">E44</a>, <a href="E43.html">E43</a>, <a href="E45.html">E45</a>, then E10c, E6b, E48, E46 and E47.</li>
+</ul>
 
 </article>
 </main>

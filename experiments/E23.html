@@ -70,11 +70,11 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete (second pass, after the 2026-10-01 retry fix). 100-tip arm cap-limited on the lineage-level rungs; 200-tip arm clock-limited on <code>nd</code>, <code>ned</code> and <code>nk</code>. Extended by <a href="E27.html">E27</a> (eight conditions, 20 trees) and <a href="E31.html">E31</a> (the pendant-edge pair at 200 tips)</td>
+<td>complete (second pass, after the 2026-10-01 retry fix). 100-tip arm cap-limited on the lineage-level rungs; 200-tip arm clock-limited on <code>nd</code>, <code>ned</code> and <code>nk</code>. Extended by <a href="E27.html">E27</a> (eight conditions, 20 trees) and <a href="E31.html">E31</a> (the pendant-edge pair at 200 tips). Superseded by E47 (the conditioned ladder) when it reports; its cost numbers describe the build of the run and are historical</td>
 </tr>
 <tr>
 <td>Package build</td>
-<td>the commit after <code>4d6ef7f</code> (the <code>auto_bounds()</code> retry fix); hash not recorded</td>
+<td>library <code>e23</code>, the commit after <code>4d6ef7f</code> (the <code>auto_bounds()</code> retry fix); one rebuild printed <code>f5bf6f1</code>, and the build audit's range for it ends at <code>f5bf6f1</code></td>
 </tr>
 <tr>
 <td>Driver / analysis</td>
@@ -296,6 +296,7 @@ window.MathJax = {
 <h2 id="conclusion">Conclusion</h2>
 <p><strong>100 tips: clade-level half met, lineage-level half not met.</strong> The generator wins on 0.80 of <code>cr</code> and 0.90 of <code>dd</code> trees and a lineage-level model on 1 of 20 null trees (0.05). No lineage-level generator reaches 0.80: <code>nk</code> 0.70, <code>ned</code> 0.20, <code>nd</code> 0.00 (<code>dd</code> on 7 of 10). The ladder offers no superset of any lineage-level model, so "generator or a superset" is the generator alone. <strong>200 tips: not met</strong> under the registered (minimum-AIC) reading: <code>cr</code> 0.67, and a lineage-level model, every time <code>nd</code>, wins on 3 of 12 null trees (0.25); under the parsimonious reading the null half holds (0 of 12, <code>cr</code> 0.83). The lineage-level generators reach 0.50-0.67, with the pendant-edge pair <code>nd</code> + <code>ned</code> chosen on all 6 <code>nd</code> trees. The 200-tip arm is clock-limited and every rate is a floor, on 6 trees a generator.</p>
 <p>What E23 shows at 100 tips is that one call recovers the clade-level answer and a <span class="math inline">\(K\)</span> effect of this size, and returns <code>dd</code> for most trees generated with either pendant-edge covariate at <span class="math inline">\(\log 0.65\)</span>; at 200 tips the lineage-level models separate from <code>dd</code> and the minimum-AIC reading admits <code>nd</code> on null trees. <a href="E27.html">E27</a> and <a href="E31.html">E31</a> repeat the ladder on 20 trees a cell; from emphasis <code>f30a791</code> on, <code>compare_models()</code> reports the parsimonious choice, which is the reading those runs use.</p>
+<p>The <code>nd</code> rung maximised the earlier D likelihood. Emphasis <code>4e0b9dd</code> changed the D likelihood; before it the likelihood held the clade mean pendant age at its segment-end value, so <span class="math inline">\(D\)</span> grew within a segment while the simulator held it constant; from it <span class="math inline">\(D\)</span> is constant between events in both. On complete trees <a href="E44.html">E44</a> measured <code>d</code>'s <span class="math inline">\(\beta_D\)</span> at 0.70 and 1.46 of its value under the earlier likelihood and 0.95 and 1.16 under the current one (<code>nd</code> at -0.35: 0.77 and 1.01). The <code>nd</code> counts here (chosen on 0 of 10 own trees at 100 tips, on 3 of 12 null trees at 200 by minimum AIC) are those of the earlier likelihood; E47 reruns the ladder.</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E20.html">E20</a> — the path, the other route; the generators E23 reuses.</li>

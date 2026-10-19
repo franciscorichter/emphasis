@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>E5 — does the workflow run end to end on real dated trees? · emphasis</title>
-<meta name="description" content="Claim C6 of the design: the workflow runs end to end on real dated trees and returns the diagnostics a user needs to judge a fit (AIC table, effective sample, agreement with an exact reference).">
+<meta name="description" content="The claim under test: the workflow runs end to end on real dated trees and returns the diagnostics a user needs to judge a fit (AIC table, effective sample, agreement with an exact reference).">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
@@ -70,7 +70,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete; its fits are superseded for every reading of the three families by <a href="E25.html">E25</a> and <a href="E28.html">E28</a> (exponential link, the ladder, the parsimonious choice)</td>
+<td>complete; historical: a method-development step; not a current result (its linear-link fits are replaced by <a href="E28.html">E28</a>'s exponential-link ladder, its exact <code>cr</code> check by <a href="E42.html">E42</a>)</td>
 </tr>
 <tr>
 <td>Package build</td>
@@ -88,7 +88,7 @@ window.MathJax = {
 </table>
 </div>
 <h2 id="question">Question</h2>
-<p>Claim C6 of the design: the workflow runs end to end on real dated trees and returns the diagnostics a user needs to judge a fit (AIC table, effective sample, agreement with an exact reference). Every earlier experiment was on simulated trees; E5 is the first contact with deposited phylogenies, and the first place an ED effect could be looked for on data.</p>
+<p>The claim under test: the workflow runs end to end on real dated trees and returns the diagnostics a user needs to judge a fit (AIC table, effective sample, agreement with an exact reference). Every earlier experiment was on simulated trees; E5 is the first contact with deposited phylogenies, and the first place an ED effect could be looked for on data.</p>
 <h2 id="design">Design</h2>
 <p><strong>Trees.</strong> The Condamine et al. (2019) family-level dated trees deposited in the phylo-species-atlas, with 50 to 200 tips and a sampling fraction <span class="math inline">\(\rho = \text{tips} / \text{the family&#39;s species count in the atlas&#39;s class tree}\)</span> of at least 0.5: 47 families (33 bird, 10 mammal, 3 squamate, 1 amphibian; <code>sim/data/atlas-candidates.csv</code>). The deposited tip depths spread by 2 to 19% of the crown age; every tip edge is extended to the deepest tip, and a tree whose spread exceeds 15% is refused (Macropodidae, 19%).</p>
 <p><strong>Stage 1, the screen.</strong> Every candidate fitted with <code>cr</code> (surrogate/BDI proposal, <span class="math inline">\(N = 200\)</span> draws) at its <span class="math inline">\(\rho\)</span>, with <code>DDD::bd_ML</code> (the missing species as <code>missnumspec</code>) as the exact reference.</p>
@@ -131,7 +131,7 @@ window.MathJax = {
 </table>
 </div>
 <h2 id="pre-set-rule">Pre-set rule</h2>
-<p>Descriptive (claim C6): the AIC table, <span class="math inline">\(\hat\beta_{ED}\)</span> with the between-run spread of five seeds, the final effective sample, and the <span class="math inline">\(N = 2000\)</span> agreement. "The section is an illustration of the workflow and its diagnostics; it makes no biological claim, and says so."</p>
+<p>Descriptive: the AIC table, <span class="math inline">\(\hat\beta_{ED}\)</span> with the between-run spread of five seeds, the final effective sample, and the <span class="math inline">\(N = 2000\)</span> agreement. "The section is an illustration of the workflow and its diagnostics; it makes no biological claim, and says so."</p>
 <h2 id="results">Results</h2>
 <p><strong>Screen.</strong> 47 screened, 46 fitted (Macropodidae refused for its 19% tip spread). Every <code>cr</code> fit returned 200 effective draws of 200 (under <code>cr</code> the surrogate is the model), in 1 to 34 s. The MCEM log-likelihood is within 0.53 nats of <code>DDD::bd_ML</code> on every family (largest: Eleutherodactylidae 0.53, Echimyidae 0.42, Varanidae 0.40). <span class="math inline">\(\hat\mu_0 = 0\)</span> on 43 of 46; the three with non-zero turnover are Pipridae 0.112, Rhinolophidae 0.176, Procellariidae 0.220.</p>
 <p><strong>Chosen.</strong> Cotingidae (65 tips, <span class="math inline">\(\rho = 1\)</span>, crown 24.6 Ma), Icteridae (102, 0.971, 14.5 Ma), Corvidae (120, 0.968, 30.5 Ma), all at <span class="math inline">\(\hat\mu_0 = 0\)</span>.</p>
@@ -199,7 +199,7 @@ window.MathJax = {
 </figure>
 <h2 id="conclusion">Conclusion</h2>
 <p>Met as a description: the workflow ran on all 46 accepted trees and returned the AIC table, the effective sample and an exact <code>cr</code> reference within 0.53 nats on every one. On the three fitted clades <code>ned</code> beats <code>dd</code> by 18.6 and 14.7 AIC on Corvidae and Icteridae and loses by 2.7 on Cotingidae; only on Corvidae does <code>ed</code> (no <span class="math inline">\(N\)</span> term) beat <code>dd</code> (by 13.8). The fits are unfinished: 21 of 24 ended on the iteration cap. The record's adversarial pass graded the result "weakened": the three clades were chosen for low turnover and tidy tip depths, and the comparison with <a href="E12.html">E12</a>'s floor crosses turnovers (0.10 there, up to 0.3 here), which is what <a href="E16.html">E16</a> and <a href="E17.html">E17</a> were run to address.</p>
-<p>Two statements in the report about this experiment are off against <code>fits.csv</code>: "every one ending on <code>max_iter</code>" (21 of 24 did), and "over five seeds the NED AIC moves by less than 0.6" (Corvidae moves by 0.64). The extinction slopes on ED in the report's table (-0.008, -0.013, -0.008) do not match seed 1 (-0.0056, -0.0108, -0.0077); which seed or summary the table used is not recorded. These are linear-link fits; the exponential-link numbers of <a href="E25.html">E25</a> and <a href="E28.html">E28</a> are different fits and are not to be set beside these in one sentence.</p>
+<p>Two statements in the report about this experiment are off against <code>fits.csv</code>: "every one ending on <code>max_iter</code>" (21 of 24 did), and "over five seeds the NED AIC moves by less than 0.6" (Corvidae moves by 0.64). The extinction slopes on ED in the report's table (-0.008, -0.013, -0.008) do not match seed 1 (-0.0056, -0.0108, -0.0077); which seed or summary the table used is not recorded. Over seeds 1-5 in <code>fits.csv</code> (<code>ned</code>, <code>N</code> = 200) Corvidae's mean and median both round to -0.008 and Cotingidae gives -0.0077 on every seed, while no seed, median (-0.014) or mean (-0.017) of Icteridae gives -0.013. These are linear-link fits; the exponential-link numbers of <a href="E25.html">E25</a> and <a href="E28.html">E28</a> are different fits and are not to be set beside these in one sentence.</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E12.html">E12</a> — the selection floor at turnover 0.10 the clades were read against.</li>

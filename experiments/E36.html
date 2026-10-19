@@ -76,11 +76,11 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>(a) and (b) ran to completion; no analysis script and no numbers file. (a)'s reference was mislabelled for <code>cr</code> (found by E36c). E36c complete</td>
+<td>(a) ran to completion, its reference mislabelled for <code>cr</code> (found by E36c), and is superseded by <a href="E43.html">E43</a>; (b) ran to completion with no analysis script and no numbers file and is closed as historical: <a href="E45.html">E45</a> answers its question with the exact survival function; E36c complete and holds</td>
 </tr>
 <tr>
 <td>Package build</td>
-<td>(b) emphasis <code>f30a791</code> (the package's survival GAM with the pre-<code>d3dee92</code> label); (a), E36c not recorded</td>
+<td>(a) and E36c emphasis <code>f30a791</code>; (b) emphasis <code>f92cc2f</code> (the package's survival GAM with the pre-<code>d3dee92</code> label) (<code>results/E36/LAUNCH.md</code>)</td>
 </tr>
 <tr>
 <td>Driver / analysis</td>
@@ -239,6 +239,7 @@ window.MathJax = {
 <p><strong>Conclusion (E36c).</strong> By rule (4) the package's label was a defect of the emulator's target: under A no learner is adequate in more than one cell, under B three learners are adequate in all four at 2000 clades. By rule (2) the additive GAM, label B, 2000 clades, is adequate in all four cells and is the smallest adequate size for the package's own learner. Emphasis <code>d3dee92</code> labels clades that pass the cap as survived and trains the GAM on 2000 clades (<code>R/gam.R</code>: <code>survived &lt;- ... s$status %in% c("done", "too_large")</code>). By rule (3), E36 (a)'s <code>cr</code> verdicts measured the wrong probability; its <code>dd</code> reference is within 0.06 of the exact value, so its <code>dd</code> reading (no learner adequate, all trained under label A) stands. <a href="E34.html">E34</a>r reruns E34 (b) under <code>d3dee92</code>.</p>
 <h2 id="conclusion">Conclusion</h2>
 <p>(a) As registered, not evaluable: the <code>cr</code> cells were scored against a mislabelled reference, so neither the 6-of-8 count of rule (2) nor rule (3) can be formed; on the six readable cells no learner is adequate at any size, and the network's median error is 38-65% below the additive GAM's in five. E36c replaces (a) for <code>cr</code> and <code>dd</code> and identifies the cause as the training label rather than the learner. (b) Rule (4): no emulator adequate downstream, but the threshold of 0.01 is below the Monte Carlo spread of a conditioned fit on these trees, which the exact survival function itself shows. Rule (5): <a href="E34.html">E34</a>'s 0.028 is Monte Carlo error of the fit, in a likelihood that is flat over [0, 0.1] on these trees (<a href="E32.html">E32</a> (a), <a href="E38.html">E38</a>). The conditioning machinery is not what keeps the extinction estimate from the generating value at 200 tips and turnover 0.10.</p>
+<p>(b) is closed: it ran with the package's survival GAM before <code>d3dee92</code>, and <a href="E45.html">E45</a> answers its question exactly, fitting the conditioned <code>cr</code> and <code>dd</code> likelihoods through the exact survival function against the exact conditioned MLE. (a) is replaced by <a href="E43.html">E43</a>, which measures each emulator against a 20000-clade Monte Carlo reference and across 20 trainings.</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E34.html">E34</a> — the conditioned fits that raised the question; E34r reruns them with the corrected emulator.</li>

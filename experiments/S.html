@@ -70,11 +70,11 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete for <code>cr</code> and <code>dd</code>; the <code>ned</code> arm stopped (3 usable fits of 23, no merged table)</td>
+<td>complete for <code>cr</code> and <code>dd</code>, superseded by <a href="E45.html">E45</a> (conditioned, against the exact conditioned MLE, 25-800 tips) when it reports; the <code>ned</code> arm stopped (3 usable fits of 23, no merged table) and is historical: it led to <a href="E7.html">E7</a></td>
 </tr>
 <tr>
 <td>Package build</td>
-<td><code>64edf63</code> and <code>a87de1c</code> (the two builds in the 2026-10-02 build audit, which found them identical to a clean build except for the <code>ned</code> thinning random stream; S's <code>cr</code> and <code>dd</code> arms do not use that proposal)</td>
+<td><code>64edf63</code> and <code>a87de1c</code> (the two builds in the 2026-10-02 build audit, which found them identical to a clean build except for the <code>ned</code> thinning random stream; S's <code>cr</code> and <code>dd</code> arms do not use that proposal). Package commit <code>9fdcdbe</code> (2026-10-01 23:51 CEST) says builds from a clean tree were not affected, while the build audit committed two hours later finds <code>64edf63</code> and <code>4f42b27</code> differing from a clean build for <code>ned</code> on thinning and <code>a87de1c</code> on both <code>ned</code> proposals; the record does not reconcile the two</td>
 </tr>
 <tr>
 <td>Driver / analysis</td>

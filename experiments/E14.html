@@ -73,11 +73,11 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete, with E14b (the rerun under matched conditioning)</td>
+<td>complete, with E14b (the rerun under matched conditioning); <a href="E44.html">E44</a> supplies the ED simulator check this page cites without data</td>
 </tr>
 <tr>
 <td>Package build</td>
-<td>not recorded (the build audit finds no surviving launch record for E7-E16)</td>
+<td>E14 library <code>cur</code>, installed at <code>373eec1</code> on 2026-09-24 (<code>results/E14/LAUNCH.md</code>); the build audit puts that host's libraries at <code>373eec1</code> … <code>f0dff93</code>, identical to clean builds; E14b library <code>e18</code>, in the build audit's range <code>373eec1</code> … <code>f0dff93</code></td>
 </tr>
 <tr>
 <td>Driver / analysis</td>
@@ -218,7 +218,7 @@ window.MathJax = {
 <h3 id="e14b--matched-conditioning">E14b — matched conditioning</h3>
 <p>The cause of the completion mismatch: <code>simulate_tree</code> counts <code>max_tries</code> as attempts <em>after</em> the first, so its default of 1 draws twice and completes 1 - (1 - 0.52)<span class="math inline">\(^{2}\)</span> = 0.77 of constant-rate runs where one draw completes 0.52, the closed-form probability that both crown lineages leave descendants. E14b reran the three arms with one draw on each side. Completion rates then match: 108 against 104, 132 against 139, 36 against 37 of 200; on the constant-rate arm both sit near 0.52. All fifteen KS comparisons again have p above 0.002 (smallest 0.145, Colless under <code>cr</code>).</p>
 <h2 id="conclusion">Conclusion</h2>
-<p>The rule is <strong>met</strong> in both runs: no rejection in 30 comparisons, and after matching the conditioning (E14b) the completion rates agree too. <a href="E11.html">E11</a> is therefore interpretable as a test of the estimator. Limits: the check covers <code>cr</code> and <code>dd</code> only, the models the two simulators share, at complete sampling; it says nothing about either simulator's ED models. For those the methods text records a separate internal check (frozen-rate against thinning draws under <code>ned</code>, KS p 0.28 to 0.93; under <code>ed</code> alone at <a href="E24.html">E24</a>'s effect the frozen-rate draw gives clades 30% larger), whose data were not located under <code>results/</code>. The finding about <code>max_tries</code> is a property of the package's simulator: a comparison of completion rates with it has to set <code>max_tries = 0</code>.</p>
+<p>The rule is <strong>met</strong> in both runs: no rejection in 30 comparisons, and after matching the conditioning (E14b) the completion rates agree too. <a href="E11.html">E11</a> is therefore interpretable as a test of the estimator. Limits: the check covers <code>cr</code> and <code>dd</code> only, the models the two simulators share, at complete sampling; it says nothing about either simulator's ED models. For those the methods text records a separate internal check (frozen-rate against thinning draws under <code>ned</code>, KS p 0.28 to 0.93; under <code>ed</code> alone at <a href="E24.html">E24</a>'s effect the frozen-rate draw gives clades 30% larger), whose data were not located under <code>results/</code>. <a href="E44.html">E44</a> supplies such a check with data: an independent R simulator of the raw-ED process agrees with <code>simulate_tree()</code> (KS p 0.14-1 on 17 of 18 comparisons over 400 clades a cell). The finding about <code>max_tries</code> is a property of the package's simulator: a comparison of completion rates with it has to set <code>max_tries = 0</code>.</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E11.html">E11</a> — the estimator on <code>evesim</code>'s trees, which E14 gates.</li>

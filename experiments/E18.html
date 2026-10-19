@@ -70,7 +70,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete (120 trees, all fitted)</td>
+<td>complete (120 trees, all fitted); superseded by E46 (recovery) and E47 (selection) when they report (<a href="../estimability.html">Estimability</a>)</td>
 </tr>
 <tr>
 <td>Package build</td>
@@ -282,6 +282,7 @@ window.MathJax = {
 </figure>
 <h2 id="conclusion">Conclusion</h2>
 <p><strong>Rule not met.</strong> Under the centred fit, selection at -0.15<span class="math inline">\(\lambda\)</span> is 0.10 on raw-generated trees and 0.20 on centred-generated trees, not <span class="math inline">\(\ge 0.5\)</span>. Recovery is no worse (0.88-1.16 for <code>nedc</code> against 1.00-1.28 for <code>ned</code>), and false positives stay at 0 to 1 of 20. The centring moves AIC by under one unit in the predicted direction, so the difficulty at -0.15<span class="math inline">\(\lambda\)</span> is power, not parametrisation, and <code>nedc</code> is an equivalent model, offered in the package but not the default. E18 measures only 100 tips, turnover 0.10, <span class="math inline">\(\rho\)</span> 1 and negative effects; the centred covariate without an <span class="math inline">\(N\)</span> term (<code>edc</code>) is measured in <a href="E24.html">E24</a>.</p>
+<p>Its trees come from linear-link <code>ned</code> generators and the raw-ED simulator before <code>f30a791</code>, whose effect on these generators is not recorded, and its fits are unconditioned and unfinished; E46 measures recovery under the conditioned likelihood and E47 selection on a grid of effects (<a href="../estimability.html">Estimability</a>).</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E12.html">E12</a> — the -0.15<span class="math inline">\(\lambda\)</span> selection rates (0.05-0.55) that E18 tried to lift.</li>

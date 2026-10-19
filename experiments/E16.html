@@ -70,11 +70,11 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete (75 trees, all fitted)</td>
+<td>complete (75 trees, all fitted); superseded by E46 (recovery) and E47 (selection) when they report; E46 does not run turnover 0.25 (<a href="../estimability.html">Estimability</a>)</td>
 </tr>
 <tr>
 <td>Package build</td>
-<td>not recorded</td>
+<td>library <code>e8</code>, installed at <code>4f42b27</code> on 2026-09-20 (<code>results/E16/LAUNCH.md</code>); the build audit found that library identical to a clean build except <code>ned</code> on the thinning proposal</td>
 </tr>
 <tr>
 <td>Driver / analysis</td>
@@ -217,6 +217,7 @@ window.MathJax = {
 </figure>
 <h2 id="conclusion">Conclusion</h2>
 <p>At turnover 0.25 and 100 tips the 0.80 contour lies <strong>between -0.35<span class="math inline">\(\lambda\)</span> (0.67) and -0.60<span class="math inline">\(\lambda\)</span> (1.00)</strong>, as at turnover 0.10, with no false positive in 15 null trees. Corvidae (-0.33<span class="math inline">\(\lambda\)</span>) lies on the weaker side of -0.35<span class="math inline">\(\lambda\)</span>, where selection is 0.67, so it is not on the selectable side. Icteridae (-0.40<span class="math inline">\(\lambda\)</span>) lies between the two grid points, and the grid does not place it on either side. The coefficient is recovered at 0.84 and 1.05 of its value at -0.35 and -0.15<span class="math inline">\(\lambda\)</span>, and at 0.60 at -0.60<span class="math inline">\(\lambda\)</span>, where the effect also shrinks the clades to a median 63 tips. The rates are floors on unfinished fits; the real clades' own question was taken up by the parametric bootstrap (<a href="E17.html">E17</a>).</p>
+<p>Its trees come from linear-link <code>ned</code> generators and the raw-ED simulator before <code>f30a791</code>, whose effect on these generators is not recorded, and its fits are unconditioned and unfinished; E46 measures recovery under the conditioned likelihood and E47 selection on a grid of effects (<a href="../estimability.html">Estimability</a>).</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E12.html">E12</a> — the same grid at turnover 0.10 and 100-400 tips.</li>

@@ -70,11 +70,11 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete; <code>cells.csv</code> re-derived 2026-10-14 with the <code>dd_ML</code> sentinel treated as missing</td>
+<td>complete; <code>cells.csv</code> re-derived 2026-10-14 with the <code>dd_ML</code> sentinel treated as missing; holds for trees kept within 0.6-1.6 times the target size; the <code>cr</code> cells up to 800 tips at turnover up to 0.40 are superseded by <a href="E45.html">E45</a> when it reports</td>
 </tr>
 <tr>
 <td>Package build</td>
-<td>not recorded (emphasis is used only to simulate the <code>cr</code> trees)</td>
+<td>emphasis <code>f30a791</code> (<code>results/E38/LAUNCH.md</code>; emphasis is used only to simulate the <code>cr</code> trees)</td>
 </tr>
 <tr>
 <td>Driver / analysis</td>
@@ -338,6 +338,7 @@ window.MathJax = {
 <h2 id="conclusion">Conclusion</h2>
 <p>The map, by the rule. <strong>Constant rates:</strong> extinction is detected on at least 80% of trees from 1600 tips at turnover 0.25, from 400 at 0.40 and from 100 at 0.50 and 0.60, and never up to 1600 tips at 0.10; it is estimated within a factor of 2 from 1600, 800 and 400 tips at 0.40, 0.50 and 0.60, and never at 0.10 or 0.25. Turnover moves the boundary more than size: at turnover 0.10, going from 200 to 400 tips moves the median LR(0) from 0.45 to 0.39; at 200 tips, going from turnover 0.10 to 0.25 moves it from 0.45 to 2.51. <strong>Diversity dependence:</strong> detected on every tree and estimated within a factor of 2 on 80% to 100% at 100 tips for turnover 0.10 to 0.40; at 0.50 and 0.60 detected on every tree with coverage 0.95 to 1.00, and the factor-of-2 test not evaluable. The supplement's reading of the <code>dd</code> result is that a clade at its carrying capacity has speciation equal to extinction at the present, so the recent part of the tree records extinction; E38 does not test that mechanism.</p>
 <p>For the study: the trees of <a href="E29.html">E29</a>, <a href="E32.html">E32</a> and <a href="E34.html">E34</a> (200 tips, turnover 0.10) sit where the exact constant-rate likelihood detects extinction on 5% of trees and its median LR(0) is 0.45, which is what every estimator found on them. <a href="E35.html">E35</a> (a)'s cell (200 tips, turnover 0.25) sits where detection is 20%. The map is for <code>cr</code> and <code>dd</code> only, at <span class="math inline">\(\rho\)</span> = 1; the lineage-level models have no exact likelihood and are placed on it only by analogy. The "detected" rule is per tree; the size study (<a href="S.html">S</a>), which reads a median over trees, reports extinction recovered in <code>cr</code> from 100 tips at turnover 0.40, where E38 detects it on 40% of trees: the two use different criteria.</p>
+<p>Caveat: a tree was kept only if its size lay within 0.6 to 1.6 times the target, a condition no likelihood carries, so every detection and coverage rate above is that of trees in that window. <a href="E45.html">E45</a>, on trees conditioned on survival only, measures <code>cr</code> up to 800 tips at turnover 0.10-0.40 and replaces those cells when it reports.</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E29.html">E29</a>, <a href="E32.html">E32</a>, <a href="E34.html">E34</a> — the 200-tip, turnover-0.10 results E38 places on the map.</li>

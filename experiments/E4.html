@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>E4 — What one E-step costs, by model, proposal and tree size · emphasis</title>
-<meta name="description" content="Claim C5: cost grows with the augmented tree, and the paper should give the wall-clock a user can expect by model, sampler and size.">
+<meta name="description" content="The question: cost grows with the augmented tree, and the paper should give the wall-clock a user can expect by model, sampler and size.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
@@ -70,11 +70,11 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete</td>
+<td>complete; the <code>cr</code> and <code>dd</code> rows hold; the <code>ned</code> rows cannot be attributed to a build (see Package build)</td>
 </tr>
 <tr>
 <td>Package build</td>
-<td><code>a87de1c</code> (by the build audit; identical to a clean build except the random stream through both <code>ned</code> proposals)</td>
+<td><code>a87de1c</code> by the build audit (identical to a clean build except the random stream through both <code>ned</code> proposals); unresolved: <code>results/E4/cost.csv</code> and <code>cost-bED015.csv</code> were written 2026-09-18 23:05-23:07 (+0200), before <code>a87de1c</code> was committed (2026-09-19 01:01 +0200), and <code>a87de1c</code> precedes <code>cde8339</code>, from which the surrogate proposal takes ED models; which build ran E4 is not recorded</td>
 </tr>
 <tr>
 <td>Driver / analysis</td>
@@ -88,7 +88,7 @@ window.MathJax = {
 </table>
 </div>
 <h2 id="question">Question</h2>
-<p>Claim C5: cost grows with the augmented tree, and the paper should give the wall-clock a user can expect by model, sampler and size. The fits of <a href="E1.html">E1</a>-<a href="E3.html">E3</a> mix hosts, workers and stopping, so a dedicated sweep measures one E-step under identical conditions.</p>
+<p>The question: cost grows with the augmented tree, and the paper should give the wall-clock a user can expect by model, sampler and size. The fits of <a href="E1.html">E1</a>-<a href="E3.html">E3</a> mix hosts, workers and stopping, so a dedicated sweep measures one E-step under identical conditions.</p>
 <h2 id="design">Design</h2>
 <div class="table-wrap">
 <table>
@@ -224,6 +224,7 @@ window.MathJax = {
 </figure>
 <h2 id="conclusion">Conclusion</h2>
 <p>Descriptive rule: <strong>met</strong> (the table is the deliverable). One E-step costs 0.06-4 seconds from 25 to 400 tips across the six pairs, single-threaded. The record's sentence that the surrogate proposal costs "3-10x" the thinning one does not match the data: the ratio is 4.7-7.0 under <code>cr</code> and 2.5-4.7 under <code>dd</code>. Read with the effective sample, the cheaper thinning E-step buys fewer than 10 usable draws from 100-200 tips, so per effective draw (seconds over median ESS, computed from the two tables above) the surrogate is the cheaper proposal under <code>cr</code> from 100 tips (0.0045 against 0.014 s) and the thinning one only at 25 tips (0.0011 against 0.0015 s). E4 does not give the cost of a whole fit: that is set by the number of iterations and, for lineage-level models, by the starting point (<a href="E15.html">E15</a>); per-fit costs are in <a href="S.html">S</a> and on the <a href="E15.html">E15</a> figure.</p>
+<p>The <code>cr</code> and <code>dd</code> rows hold. The <code>ned</code> rows (the ED-aware and mean-field thinning proposals) cannot be attributed to a build: the build audit names <code>a87de1c</code>, which was committed after the result files were written, and the record does not name another.</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E1.html">E1</a>, <a href="E3.html">E3</a> — the fits and proposal sets whose timings E4 was meant to complement.</li>

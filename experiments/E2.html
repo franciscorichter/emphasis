@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>E2 — Recovery and selection for the ED models · emphasis</title>
-<meta name="description" content="Claim C3 of the paper: for the evolutionary-distinctiveness models (ed, ned), \(\beta_{ED}\) is recovered and detected wherever the augmented tree stays small, and the boundary of that region is stated.">
+<meta name="description" content="The claim under test: for the evolutionary-distinctiveness models (ed, ned), \(\beta_{ED}\) is recovered and detected wherever the augmented tree stays small, and the boundary of that region is stated.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
@@ -70,11 +70,11 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete for the main tier (24 cells); the paper tier (200 tips at <span class="math inline">\(\rho\)</span> 1; 100 tips at <span class="math inline">\(\rho\)</span> 0.4) was not run — no data on disk</td>
+<td>complete for the main tier (24 cells); the paper tier (200 tips at <span class="math inline">\(\rho\)</span> 1; 100 tips at <span class="math inline">\(\rho\)</span> 0.4) was not run, no data on disk. Historical: a method-development step; not a current result (linear-link <code>ned</code> on thinning, on trees from the raw-ED simulator before <code>f30a791</code>; <code>ned</code> recovery is measured under the conditioned likelihood by E46, <a href="../estimability.html">Estimability</a>)</td>
 </tr>
 <tr>
 <td>Package build</td>
-<td>emphasis <code>a38a9e8</code></td>
+<td>emphasis <code>a38a9e8</code> by the study's README; unresolved: the run's library was reinstalled at <code>a38a9e8</code> only at 00:36 CEST on 2026-09-19, after the report stamp (<code>results/E2/LAUNCH.md</code>); the install the run used is not recorded</td>
 </tr>
 <tr>
 <td>Driver / analysis</td>
@@ -88,7 +88,7 @@ window.MathJax = {
 </table>
 </div>
 <h2 id="question">Question</h2>
-<p>Claim C3 of the paper: for the evolutionary-distinctiveness models (<code>ed</code>, <code>ned</code>), <span class="math inline">\(\beta_{ED}\)</span> is recovered and detected wherever the augmented tree stays small, and the boundary of that region is stated. E2 is the first measurement of <code>ned</code> against its own generating value, with turnover and sampling fraction as the axes that were expected to break it. It is the starting point for <a href="E8.html">E8</a> (whether the AIC ranking can be trusted) and <a href="E12.html">E12</a> (at which effect size selection starts to work).</p>
+<p>The claim under test: for the evolutionary-distinctiveness models (<code>ed</code>, <code>ned</code>), <span class="math inline">\(\beta_{ED}\)</span> is recovered and detected wherever the augmented tree stays small, and the boundary of that region is stated. E2 is the first measurement of <code>ned</code> against its own generating value, with turnover and sampling fraction as the axes that were expected to break it. It is the starting point for <a href="E8.html">E8</a> (whether the AIC ranking can be trusted) and <a href="E12.html">E12</a> (at which effect size selection starts to work).</p>
 <h2 id="design">Design</h2>
 <p><code>ned</code> generator, linear link, <span class="math inline">\(\lambda_s = \beta_0 + \beta_N N + \beta_{ED}\,\mathrm{ED}_s\)</span>; the effect is stated as <span class="math inline">\(\beta_{ED}\,\overline{\mathrm{ED}}/\beta_0\)</span>, a fraction of the intercept <span class="math inline">\(\lambda_0\)</span> at one clade-mean unit of ED.</p>
 <div class="table-wrap">
@@ -146,9 +146,9 @@ window.MathJax = {
 </div>
 <p>An estimate counts when the fit ended on its own or was stopped by its budget after at least 20 EM iterations (the <code>fits</code> column counts these).</p>
 <h2 id="pre-set-rule">Pre-set rule</h2>
-<p>Rule C3 (<code>00-design.md</code> §1), per cell with an effect: <code>ned</code> over <code>dd</code> by <span class="math inline">\(&gt; 2\)</span> AIC on <span class="math inline">\(\ge 80\%\)</span> of trees; <span class="math inline">\(\le 5\%\)</span> in the <span class="math inline">\(\beta_{ED} = 0\)</span> sibling cell; <span class="math inline">\(|\text{bias}| \le 0.25\)</span> SD (between-tree SD of <span class="math inline">\(\hat\beta_{ED}\)</span>). The paper was to report which cells pass and the effective sample at which they stop passing.</p>
+<p>The rule (<code>00-design.md</code> §1), per cell with an effect: <code>ned</code> over <code>dd</code> by <span class="math inline">\(&gt; 2\)</span> AIC on <span class="math inline">\(\ge 80\%\)</span> of trees; <span class="math inline">\(\le 5\%\)</span> in the <span class="math inline">\(\beta_{ED} = 0\)</span> sibling cell; <span class="math inline">\(|\text{bias}| \le 0.25\)</span> SD (between-tree SD of <span class="math inline">\(\hat\beta_{ED}\)</span>). The paper was to report which cells pass and the effective sample at which they stop passing.</p>
 <h2 id="results">Results</h2>
-<p><strong>1 of 16 effect cells passes C3</strong>: 100 tips, <span class="math inline">\(\rho\)</span> 1, turnover 0, -0.15<span class="math inline">\(\lambda\)</span> (selection 0.90, sibling false positives 0.00, bias 0.21 SD, median ESS 200).</p>
+<p><strong>1 of 16 effect cells passes the rule</strong>: 100 tips, <span class="math inline">\(\rho\)</span> 1, turnover 0, -0.15<span class="math inline">\(\lambda\)</span> (selection 0.90, sibling false positives 0.00, bias 0.21 SD, median ESS 200).</p>
 <p>Cells with an effect (from <code>E2-cells.csv</code>; "sel" = <code>ned</code> over <code>dd</code> by &gt; 2 AIC; "FP" = the same rate in the <span class="math inline">\(\beta\)</span> = 0 sibling; "budget" = share of fits stopped by the budget):</p>
 <div class="table-wrap">
 <table>
@@ -164,7 +164,7 @@ window.MathJax = {
 <th>bias / SD</th>
 <th>median ESS</th>
 <th>budget</th>
-<th>C3</th>
+<th>rule</th>
 </tr>
 </thead>
 <tbody>
@@ -391,7 +391,8 @@ window.MathJax = {
 <figcaption><strong>Figure 1.</strong> Estimated minus generating <span class="math inline">\(\beta_{ED}\)</span> for every tree, in units of the generating speciation rate, by size (rows), turnover and sampling fraction (columns). At turnover 0 and <span class="math inline">\(\rho\)</span> 1 the points are grey (ESS near 200) and centred on zero; at turnover 0.5 they are red (ESS of a few draws) and displaced against the effect: positive for the negative effect, negative for the positive one.</figcaption>
 </figure>
 <h2 id="conclusion">Conclusion</h2>
-<p>Rule C3 is met in 1 of 16 effect cells. Recovery holds at turnover 0 with complete sampling (bias within 0.25 SD in 3 of 4 cells, ESS 200), and selection at -0.15<span class="math inline">\(\lambda\)</span> reaches 0.80 only at 100 tips. At <span class="math inline">\(\rho\)</span> 0.7 the proposal's effective sample drops below 10 outside the -0.15<span class="math inline">\(\lambda\)</span> cells; at turnover 0.5 the estimates are biased by 1 to 4 SD and the null siblings select <code>ned</code> on up to 0.9 of trees, so turnover 0.5 is the boundary of the method, as the design said it would be measured. E2 does not measure the size boundary (200 tips) or the sampling boundary (<span class="math inline">\(\rho\)</span> 0.4): the paper tier was never run. It also keeps no <code>ed</code> recovery: <code>ed</code> was fitted as a candidate but only the <code>ned</code> table was kept, and the first <code>ed</code> recovery is <a href="E24.html">E24b</a>.</p>
+<p>The rule (<span class="math inline">\(&gt; 2\)</span> AIC on <span class="math inline">\(\ge 80\%\)</span> of trees, <span class="math inline">\(\le 5\%\)</span> false positives, <span class="math inline">\(|\text{bias}| \le 0.25\)</span> SD) is met in 1 of 16 effect cells. Recovery holds at turnover 0 with complete sampling (bias within 0.25 SD in 3 of 4 cells, ESS 200), and selection at -0.15<span class="math inline">\(\lambda\)</span> reaches 0.80 only at 100 tips. At <span class="math inline">\(\rho\)</span> 0.7 the proposal's effective sample drops below 10 outside the -0.15<span class="math inline">\(\lambda\)</span> cells; at turnover 0.5 the estimates are biased by 1 to 4 SD and the null siblings select <code>ned</code> on up to 0.9 of trees, so turnover 0.5 is the boundary of the method, as the design said it would be measured. E2 does not measure the size boundary (200 tips) or the sampling boundary (<span class="math inline">\(\rho\)</span> 0.4): the paper tier was never run. It also keeps no <code>ed</code> recovery: <code>ed</code> was fitted as a candidate but only the <code>ned</code> table was kept, and the first <code>ed</code> recovery is <a href="E24.html">E24b</a>.</p>
+<p>E2 is a method-development step: its <code>ned</code> trees were drawn by the raw-ED simulator before <code>f30a791</code>, which made <code>ed</code> clades about 30% too large; how far that change moves these linear-link <code>ned</code> generators is not recorded, and E46 measures <code>ned</code> recovery again under the conditioned likelihood.</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E8.html">E8</a> — the same model family at 100 tips and turnover 0.25: does Monte Carlo bias decide the ranking?</li>

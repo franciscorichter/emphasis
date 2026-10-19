@@ -73,6 +73,33 @@ WIKI_PAGES = {
 
 EXPERIMENT_RE = re.compile(r"^(E\d+|S)$")
 
+INDEX_STYLE = """<style>
+.table-wrap:has(th:nth-child(4)) table { table-layout: fixed; }
+.table-wrap:has(th:nth-child(4)) th:nth-child(1) { width: 5.2rem; }
+.table-wrap:has(th:nth-child(4)) th:nth-child(2) { width: 28%; }
+.table-wrap:has(th:nth-child(4)) th:nth-child(3) { width: 11.5rem; }
+.table-wrap:has(th:nth-child(4)) td:nth-child(3) { font-family: var(--sans); font-size: 0.88rem; }
+.table-wrap:not(:has(th:nth-child(3))) td:first-child { white-space: nowrap; width: 1%; padding-right: 1.2rem; }
+@media (min-width: 1040px) {
+  .table-wrap:has(th:nth-child(4)) {
+    width: min(980px, calc(100vw - 2 * var(--gutter)));
+    position: relative; left: 50%; transform: translateX(-50%);
+  }
+}
+@media (max-width: 640px) {
+  .table-wrap:has(th:nth-child(4)) table, .table-wrap:has(th:nth-child(4)) tbody { display: block; }
+  .table-wrap:has(th:nth-child(4)) thead { display: none; }
+  .table-wrap:has(th:nth-child(4)) tr { display: flex; flex-wrap: wrap; gap: 0 0.6rem; padding: 0.55rem 0; border-bottom: 1px solid var(--rule); }
+  .table-wrap:has(th:nth-child(4)) tr:last-child { border-bottom: 0; }
+  .table-wrap:has(th:nth-child(4)) td { display: block; padding: 0; width: auto; }
+  .table-wrap:has(th:nth-child(4)) td:nth-child(1) { order: 1; font-weight: 600; }
+  .table-wrap:has(th:nth-child(4)) td:nth-child(3) { order: 2; color: var(--ink-2); }
+  .table-wrap:has(th:nth-child(4)) td:nth-child(2) { order: 3; flex-basis: 100%; font-style: italic; }
+  .table-wrap:has(th:nth-child(4)) td:nth-child(4) { order: 4; flex-basis: 100%; }
+}
+</style>
+"""
+
 # Sections of the site that are kept as they are and only linked.
 KEPT = ["simulator.html"]
 
@@ -435,6 +462,10 @@ class Site:
         md = re.sub(r"^## The map\s*$", "", md, flags=re.M)
         md = re.sub(r"^### ", "## ", md, flags=re.M)
         body = pandoc(md)
+        # The four-column tables (experiment, question, status, finding) take a wider measure on
+        # a wide screen and the same column widths in every table; on a phone they keep the
+        # page's measure and scroll inside their own box. Scoped to this page.
+        body = INDEX_STYLE + body
         self.render("experiments/index.html", "Experiments", body,
                     "The experiments behind the emphasis package: the question, the status and the result of each, grouped by the question they answer.")
 

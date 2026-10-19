@@ -74,11 +74,11 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>(a) complete; (b) complete: all three fractions written (<code>rho100</code> last, 2026-10-14 19:23) and read by <code>sim/E35b-analysis.R</code>; the reading below is computed directly from the three <code>ladder.csv</code> files</td>
+<td>(a) complete and holds; (b) complete: all three fractions written (<code>rho100</code> last, 2026-10-14 19:23) and read by <code>sim/E35b-analysis.R</code>, the reading below computed directly from the three <code>ladder.csv</code> files; (b) holds with one caveat: its <code>nd</code> rung maximised the likelihood before emphasis <code>4e0b9dd</code> and nothing replaces it; the misstated-<span class="math inline">\(\rho\)</span> question enters E47's design</td>
 </tr>
 <tr>
 <td>Package build</td>
-<td>(a) emphasis <code>f30a791</code>; (b) not recorded in the results</td>
+<td>(a) emphasis <code>f30a791</code>; (b) emphasis <code>f30a791</code> (<code>results/E35/LAUNCH.md</code>, 2026-10-10)</td>
 </tr>
 <tr>
 <td>Driver / analysis</td>
@@ -309,6 +309,7 @@ window.MathJax = {
 <h2 id="conclusion">Conclusion</h2>
 <p><strong>(a)</strong> By the rule the K slope is <strong>not identified</strong>: the positive arm is sampler-limited (12 of 20 fits below 10 draws) and rule (2) needs both signed arms. On the two arms the rule can read, the negative slope returns at 0.75 of its value with the right sign on 18 of 20, and the zero slope at +0.004, against 0.36 at turnover 0.10 in <a href="E32.html">E32</a>. This is the first extinction slope in the study returned near its size in one direction; the supplement calls it "the first extinction slope recovered in the study", which is stronger than the rule allows. At 200 tips and turnover 0.25 the exact constant-rate profile detects extinction on 20% of trees (<a href="E38.html">E38</a>).</p>
 <p><strong>(b)</strong> Selection is robust to a fraction off by 0.1 in either direction for both generators. Estimation is robust for <code>nk</code>, and for <code>dd</code> when told 1.00, but not when told 0.82: <span class="math inline">\(\beta_N\)</span> shrinks by a median 19% and 5 of 20 trees leave the band. The direction is the one the design predicted for <span class="math inline">\(\beta_N\)</span> only in the sense that its magnitude falls when <span class="math inline">\(\rho\)</span> is told too low; the extinction rate does not rise, because at turnover 0.10 and 88 tips it sits at about 0.0013 whatever the fraction (the region where <a href="E38.html">E38</a> finds no information on extinction). These numbers are computed directly from the three ladders; the README's E35 row carries the same counts, read by <code>sim/E35b-analysis.R</code> from the same files.</p>
+<p>Caveat on (b): its <code>nd</code> rung maximised the earlier D likelihood. Emphasis <code>4e0b9dd</code> changed the D likelihood; before it the likelihood held the clade mean pendant age at its segment-end value, so <span class="math inline">\(D\)</span> grew within a segment while the simulator held it constant; from it <span class="math inline">\(D\)</span> is constant between events in both. On complete trees <a href="E44.html">E44</a> measured <code>d</code>'s <span class="math inline">\(\beta_D\)</span> at 0.70 and 1.46 of its value under the earlier likelihood and 0.95 and 1.16 under the current one (<code>nd</code> at -0.35: 0.77 and 1.01). No experiment refits that rung, and the question of a misstated <span class="math inline">\(\rho\)</span> enters E47's design (<a href="../estimability.html">Estimability</a>).</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E32.html">E32</a> — the K arms at turnover 0.10.</li>

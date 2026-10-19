@@ -72,11 +72,11 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete (240 trees). The <code>ed</code> rows are superseded by E24b (below); the <code>edc</code>, <code>d</code> and <code>k</code> rows stand</td>
+<td>complete (240 trees). The <code>edc</code> and <code>k</code> rows and E24b's <code>ed</code> rows hold until E46 and E47 report; the <code>d</code> arm maximised the likelihood before emphasis <code>4e0b9dd</code> and is superseded by E46 (recovery) and E47 (false positives); the first <code>ed</code> rows, drawn by the simulator before <code>f30a791</code>, are historical (<a href="../estimability.html">Estimability</a>)</td>
 </tr>
 <tr>
 <td>Package build</td>
-<td>E24 not recorded; E24b emphasis <code>f30a791</code></td>
+<td>E24 library <code>e23</code> installed before <code>f5bf6f1</code> (commit not recorded; build-audit range <code>edce33d</code> … <code>f5bf6f1</code>), launched 2026-10-01 with 20 workers and a 1800 s clock (<code>results/E24/LAUNCH.md</code>); E24b emphasis <code>f30a791</code></td>
 </tr>
 <tr>
 <td>Driver / analysis</td>
@@ -338,7 +338,7 @@ window.MathJax = {
 <ul>
 <li><strong><code>edc</code> meets every half of the <a href="E19.html">E19</a> rule at both signs</strong>: ratio 0.96 and 1.02, right sign on every tree, selection 0.95 and 0.85, no false positive. It is the only one of the four that does.</li>
 <li><strong><code>ed</code> (E24b)</strong>: recovery met at both signs (0.85, 1.10); selection met at -0.35 (1.00) and not at +0.35 (0.75); false positives 0. On the old simulator's trees <code>ed</code> had a 0.10 false-positive rate; on exact trees it has none. The fitted extinction slope sits far from its generating zero in every cell.</li>
-<li><strong><code>d</code></strong>: recovery met at +0.35 only (0.67 at -0.35); selection not met (0.70, 0.85); false positives 0.15, three times the ceiling, with the extinction slope fitted at +0.36 and +0.37 (zero and +0.35 cells) where it was generated at zero (the supplement reads the false positives as the slope buying its two parameters).</li>
+<li><strong><code>d</code></strong>: recovery met at +0.35 only (0.67 at -0.35); selection not met (0.70, 0.85); false positives 0.15, three times the ceiling, with the extinction slope fitted at +0.36 and +0.37 (zero and +0.35 cells) where it was generated at zero (the supplement reads the false positives as the slope buying its two parameters). These <code>d</code> fits maximised the earlier D likelihood. Emphasis <code>4e0b9dd</code> changed the D likelihood; before it the likelihood held the clade mean pendant age at its segment-end value, so <span class="math inline">\(D\)</span> grew within a segment while the simulator held it constant; from it <span class="math inline">\(D\)</span> is constant between events in both. On complete trees <a href="E44.html">E44</a> measured <code>d</code>'s <span class="math inline">\(\beta_D\)</span> at 0.70 and 1.46 of its value under the earlier likelihood and 0.95 and 1.16 under the current one (<code>nd</code> at -0.35: 0.77 and 1.01); the <code>d</code> arm is not a current result, and E46 and E47 measure <code>d</code> again.</li>
 <li><strong><code>k</code></strong>: -0.35 meets every half (0.87, sign 1.00, 0.85, FP 0.00); +0.35 is sampler-limited and not read.</li>
 </ul>
 <p>The difference between <code>ed</code> and <code>edc</code> on null trees is the clade-level part of raw ED: <span class="math inline">\(\mathrm{PD}/N\)</span> rises with the clade's age and falls with its diversity, a trend <code>ed</code> can fit on null trees and a covariate that sums to zero at every instant cannot. E24 measures only 100 tips, turnover 0.10 and complete sampling.</p>

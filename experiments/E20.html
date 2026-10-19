@@ -70,7 +70,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete (100 trees, no errors). The second arm (path at the MCEM estimate) was not run here; it became <a href="E33.html">E33</a> (a)</td>
+<td>complete (100 trees, no errors); the path reads <span class="math inline">\(D\)</span> from <code>lineage_table()</code>, which emphasis <code>4e0b9dd</code> changed, and is rerun on E46's trees within E47 (<a href="../estimability.html">Estimability</a>). The second arm (path at the MCEM estimate) was not run here; it became <a href="E33.html">E33</a> (a)</td>
 </tr>
 <tr>
 <td>Package build</td>
@@ -243,6 +243,7 @@ window.MathJax = {
 </figure>
 <h2 id="conclusion">Conclusion</h2>
 <p><strong>Rule met for <code>cr</code> only.</strong> <code>dd</code>'s exact set is 0.55 (<span class="math inline">\(N\)</span> in the set on 0.85, <span class="math inline">\(D\)</span> falsely added on 0.20 against a 0.10 ceiling); <code>nd</code> never gets <span class="math inline">\(N + D\)</span>; <code>ned</code> gets <span class="math inline">\(N + \mathrm{ED}\)</span> on 0.20 on a sampler-limited cell (ESS 5.4); the mixed generator returns <span class="math inline">\(D\)</span> alone on 0.80 and both <span class="math inline">\(D\)</span> and ED on 0.15, so by the design's own reading <strong><span class="math inline">\(D\)</span> and ED are not separable at 100 tips and this effect</strong>. The reason is shared signal: both read the pendant edge (rank correlation 0.545 with each other, 0.85 and 0.83 with pendant age on <code>dd</code> clades, <code>covariate-correlations.csv</code>), and once one is in the set the other's score is close behind. So at 100 tips the path selects and estimates among the null and <span class="math inline">\(N\)</span> (<span class="math inline">\(N\)</span> at 0.85 of its value), and cannot apportion a lineage-level effect between <span class="math inline">\(D\)</span> and ED. The second arm was conditional on a pass and was therefore not run under E20; <a href="E33.html">E33</a> (a) ran it as its own experiment.</p>
+<p>The path reads <span class="math inline">\(D\)</span> from <code>lineage_table()</code>'s Poisson rows, which took <span class="math inline">\(D\)</span> at the segment's midpoint before emphasis <code>4e0b9dd</code> and take its constant value on the segment from that commit, the same change that moved <code>d</code>'s <span class="math inline">\(\beta_D\)</span> from 0.70 and 1.46 to 0.95 and 1.16 of its value on <a href="E44.html">E44</a>'s complete trees. Every set above was computed on the earlier rows, <span class="math inline">\(D\)</span> being a candidate on every path; the path suite is rerun on E46's trees within E47.</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E12.html">E12</a>, <a href="E19.html">E19</a> — the pairwise contests the path was meant to replace.</li>

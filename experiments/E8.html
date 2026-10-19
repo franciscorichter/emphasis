@@ -72,7 +72,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete (E8 and E8b, 120 rankings each; E8b's coefficient arm, 20 fits)</td>
+<td>complete (E8 and E8b, 120 rankings each; E8b's coefficient arm, 20 fits); the bias magnitudes hold; the guard's silence on variance describes the build of the run: from emphasis <code>f30a791</code> the package warns when the chosen fit has an ESS below 10</td>
 </tr>
 <tr>
 <td>Package build</td>
@@ -345,7 +345,7 @@ window.MathJax = {
 </figure>
 <p>E8b's reading: the coefficient is found, at 0.75 of its value with the right sign on 15 of 20 trees, on fits that mostly ended on their clock; <code>ned</code> loses to <code>dd</code> because a -0.15<span class="math inline">\(\lambda\)</span> effect at turnover 0.25 does not pay for two parameters at 100 tips, not because the estimator misses it. That is the question <a href="E12.html">E12</a> and <a href="E16.html">E16</a> take up.</p>
 <h2 id="conclusion">Conclusion</h2>
-<p>Descriptive rule; the readout is complete. The Monte Carlo bias is measurable and does not decide these rankings: corrections are of order 0.01-0.25 AIC against deficits of order 1, and only a tie at 0.003 AIC would flip. The guard's silence on all 240 rankings is consistent with that. The unequal handicap did not lower the rate at which <code>cr</code> and <code>dd</code> were recovered. The <code>ned</code> rows measure something else: at turnover 0.25 an effect of -0.15<span class="math inline">\(\lambda\)</span> is below the power floor (<a href="E12.html">E12</a>, <a href="E16.html">E16</a>), so <code>dd</code> wins on 12 to 17 of 20 <code>ned</code> trees in every arm and those rows are not a test of the guard. What the guard does not cover is variance: leaders on fewer than 10 effective draws occur among wrong choices and pass without a warning.</p>
+<p>Descriptive rule; the readout is complete. The Monte Carlo bias is measurable and does not decide these rankings: corrections are of order 0.01-0.25 AIC against deficits of order 1, and only a tie at 0.003 AIC would flip. The guard's silence on all 240 rankings is consistent with that. The unequal handicap did not lower the rate at which <code>cr</code> and <code>dd</code> were recovered. The <code>ned</code> rows measure something else: at turnover 0.25 an effect of -0.15<span class="math inline">\(\lambda\)</span> is below the power floor (<a href="E12.html">E12</a>, <a href="E16.html">E16</a>), so <code>dd</code> wins on 12 to 17 of 20 <code>ned</code> trees in every arm and those rows are not a test of the guard. In this run the guard did not cover variance: leaders on fewer than 10 effective draws occur among wrong choices and passed without a warning. From emphasis <code>f30a791</code> the package warns when the chosen fit has an ESS below 10, so that statement describes the build E8 ran on.</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E2.html">E2</a> — measured selection without unequal precision.</li>
