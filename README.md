@@ -15,10 +15,11 @@ devtools::install_github("franciscorichter/emphasis")
 | ---- | ----- |
 | Working remote | `forge:pancho/emphasis` (Forgejo, private) |
 | Public remote | `github.com/franciscorichter/emphasis` — the shop window: CI, docs site, wiki, `install_github()` |
-| Docs site | <https://franciscorichter.com/emphasis/> — served from `main` (`index.html`, `D.html`, `simulator.html`, `assets/`; `.nojekyll`) |
-| Simulator | <https://franciscorichter.com/emphasis/simulator.html> — forward simulation of every model and link in the browser; agreement with `simulate_tree()` is checked by `dev/simulator/agreement.R` |
+| Docs site | <https://franciscorichter.github.io/emphasis/> — served by GitHub Pages from `main` (`index.html`, `D.html`, `simulator.html`, `assets/`; `.nojekyll`), rebuilt on every push |
+| Simulator | <https://franciscorichter.github.io/emphasis/simulator.html> — forward simulation of every model and link in the browser; agreement with `simulate_tree()` is checked by `dev/simulator/agreement.R` |
 | Wiki | <https://github.com/franciscorichter/emphasis/wiki> — derivation of the model and inference machinery |
-| Development checkout | `~/Code/emphasis` on `pro`; agent `/emphasis` |
+| Experiments | `forge:pancho/emphasis-paper` (pre-registered designs in `00-design.md`, drivers in `sim/`, results) and its wiki, one page per experiment; the two papers written from them, `forge:pancho/emphasis-methods` and `forge:pancho/emphasis-biology` |
+| Development checkout | `~/Code/emphasis` on `pro` |
 | Paper | Richter et al. (2020), *Statistica Neerlandica* — *A general class of species diversification models for phylogenetic trees* |
 | Used by | `phylo-atlas` (diversification analyses on the atlas trees); `neural-incomplete` (likelihood/MCEM baseline) |
 
