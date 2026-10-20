@@ -32,7 +32,7 @@ A_rows <- c("Speciation rate (cr)",
             "ED effect on speciation (centred)",
             "K effect on speciation",
             "D effect on speciation",
-            "Extinction rate, turnover 0.10",
+            "Extinction rate, constant rates, turnover 0.10",
             "Extinction slopes on covariates",
             "Choice among the ladder's models")
 r <- A_rows
@@ -71,8 +71,9 @@ A <- rbind(
 # ---- panel B: E38's exact profile likelihood. reliable = within a factor of 2 on 80% of
 # trees; partly = zero excluded on 80%, not bounded within 2; not identified = zero not
 # excluded on 80%. The cr cells up to 800 tips at turnover up to 0.40 are being remeasured (E45).
-B_rows <- c("turnover 0.10", "turnover 0.25", "turnover 0.40", "turnover 0.50", "turnover 0.60",
-            "diversity dependence, 0.10-0.40")
+B_rows <- c("constant rates, turnover 0.10", "constant rates, turnover 0.25", "constant rates, turnover 0.40",
+            "constant rates, turnover 0.50", "constant rates, turnover 0.60",
+            "diversity dependence, turnover 0.10-0.40")
 b <- function(row, cats) {
   s <- c(100, 200, 400, 800, 1600)
   ring <- row %in% B_rows[1:3] & s <= 800
@@ -126,7 +127,7 @@ pB <- draw(B, B_rows, "B. The extinction rate by turnover, constant rates and di
 
 p <- (pA / pB) + plot_layout(heights = c(8, 6)) +
   plot_annotation(
-    title = "emphasis estimates speciation and its diversity dependence at 25-100 tips;\nat turnover 0.10 extinction is not identified at any size up to 1600 tips",
+    title = "emphasis estimates speciation and its diversity dependence at 25-100 tips;\nunder constant rates at turnover 0.10, extinction is not identified up to 1600 tips",
     subtitle = "Each cell is what the experiment record says about one quantity at one tree size.",
     theme = theme_emphasis(base_size = 8.5) +
       theme(plot.title = element_text(size = 10, face = "bold", lineheight = 1.05),
