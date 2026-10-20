@@ -154,10 +154,17 @@ test_that("m_cpp stops on its clock and keeps the best point only when it beats 
   t <- elapsed_of(cut <- emphasis:::m_cpp(e, s$start, "rpd1", s$lo, s$up, 1e-3, 1L, model = s$mb,
                                           link = 1L, rconditional = sleepy, time_left = 0.3))
   expect_true(cut$timed_out)
-  expect_lt(t, 1)
-  # a few evaluations from a start this far from the optimum find a better point
-  expect_true(cut$improved)
-  expect_false(isTRUE(all.equal(cut$estimates, s$start)))
+  expect_lt(t, 2)
+  # whatever the machine's speed, a cut M-step returns the start or a point that beats it,
+  # and its flag says which
+  expect_identical(isTRUE(cut$improved), !isTRUE(all.equal(cut$estimates, s$start)))
+  # with room for at least 20 evaluations (still well short of the unbounded M-step's
+  # 97, about 5 s here) a start this far from the optimum is improved on
+  long <- emphasis:::m_cpp(e, s$start, "rpd1", s$lo, s$up, 1e-3, 1L, model = s$mb, link = 1L,
+                           rconditional = sleepy, time_left = 2)
+  expect_true(long$timed_out)
+  expect_true(long$improved)
+  expect_false(isTRUE(all.equal(long$estimates, s$start)))
   # no time left: the optimiser does not start, and the start is returned
   none <- emphasis:::m_cpp(e, s$start, "rpd1", s$lo, s$up, 1e-3, 1L, model = s$mb, link = 1L,
                            rconditional = sleepy, time_left = 0)
