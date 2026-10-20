@@ -26,7 +26,8 @@ IS weights have nonzero variance (importance sampling, not exact).
   step_max = Inf,
   obs_pid = NULL,
   beta_ed = 0,
-  attach_fn = NULL
+  attach_fn = NULL,
+  deadline = Inf
 )
 </code></pre>
 
@@ -93,6 +94,16 @@ rates are re-evaluated.  <code>Inf</code> leaves the step uncapped.</p>
 <p>The ED coefficient, which tilts the attachment choice toward
 the lineages the model gives a higher rate.  Zero attaches uniformly.</p>
 </td></tr>
+<tr><td><code id=".bdi_augment_one_:_attach_fn">attach_fn</code></td>
+<td>
+<p>Exact attachment weights for a D model, or <code>NULL</code>.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_deadline">deadline</code></td>
+<td>
+<p>The fit's clock as an absolute <code>proc.time()</code> elapsed
+value; the draw is abandoned with reason <code>"deadline"</code> once it has
+passed.  <code>Inf</code> (the default) is no deadline.</p>
+</td></tr>
 </table>
 
 <h3>Details</h3>
@@ -110,7 +121,8 @@ sentinel by <code><a href="#dot-bdi_to_tree_df">.bdi_to_tree_df</a></code>, so <
 <p>List with <code>$reason</code>: <code>"accepted"</code> (then also
 <code>$species</code>, <code>$unsampled</code>, <code>$n_alive_at_tp</code>, <code>$logg</code>,
 and the parent records when <code>track_parents</code>), <code>"max_missing"</code>
-(more than <code>max_missing</code> missing lineages drawn) or
+(more than <code>max_missing</code> missing lineages drawn),
+<code>"deadline"</code> (the clock ran out during the draw) or
 <code>"survivor"</code> (a missing lineage still alive at tp; only reachable at
 <code>rho = 1</code>, where such a tree has f = 0).
 </p>

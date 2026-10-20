@@ -17,7 +17,7 @@ augmented with stochastically drawn extinct lineages.
   max_tries = 1,
   useDDD = TRUE,
   n_trees = 1L,
-  link = "linear",
+  link = "exponential",
   max_missing = 10000,
   max_lambda = 500,
   maxN = NULL,
@@ -64,11 +64,16 @@ Default <code>1e6</code>.</p>
 </td></tr>
 <tr><td><code id="simulate_tree_:_max_tries">max_tries</code></td>
 <td>
-<p>Maximum additional attempts after extinction (forward
-simulation only). A clade that overflows <code>max_lin</code> is not retried:
-the overflow is a property of the parameters, not of the draw, and every
-retry would run to the cap again. Retries are tracked at the R level to
-compute <code>survival_prob</code>. Default <code>1</code>.</p>
+<p>Maximum number of forward simulations in all, the first
+included (forward simulation only): a clade that goes extinct is drawn
+again until one survives or <code>max_tries</code> draws have been made, so the
+default <code>1</code> is a single draw, unconditioned on survival. A positive
+integer; <code>0</code>, which asked for a single draw when the argument counted
+the draws after the first, is read as <code>1</code> with a warning. A clade
+that overflows <code>max_lin</code> is not retried: the
+overflow is a property of the parameters, not of the draw, and every
+retry would run to the cap again. The draws are counted at the R level
+(<code>attempts</code>) to compute <code>survival_prob</code>. Default <code>1</code>.</p>
 </td></tr>
 <tr><td><code id="simulate_tree_:_useDDD">useDDD</code></td>
 <td>
@@ -82,8 +87,16 @@ Default <code>1L</code>.</p>
 </td></tr>
 <tr><td><code id="simulate_tree_:_link">link</code></td>
 <td>
-<p>Link function: <code>"linear"</code> (default),
-<code>"exponential"</code>, or <code>"gaussian"</code>.</p>
+<p>Link function: <code>"exponential"</code> (default),
+<code>rate = exp(eta)</code>, under which the intercepts <code>beta_0</code> and
+<code>gamma_0</code> are log rates; <code>"linear"</code>,
+<code>rate = max(0, eta)</code>, under which the parameters are rates and a
+covariate can drive a rate to zero, where it is clipped;
+<code>"gaussian"</code>, <code>beta_0 * exp(-(eta_cov - 1)^2 / 2)</code>, is
+experimental: it has been used only in a convergence study of the
+surrogate proposal's fixed-point iteration, never in an estimation
+experiment; it is not available for ED or K models, and every model
+with a covariate is fitted on it with the thinning proposal.</p>
 </td></tr>
 <tr><td><code id="simulate_tree_:_max_missing">max_missing</code></td>
 <td>
@@ -299,24 +312,30 @@ augmentation the augmented tree(s) and their proposal log-densities
 
 <h3>Examples</h3>
 
-<pre><code class='language-R'># Forward simulation
+<pre><code class='language-R'># Forward simulation.  Under the exponential link (the default) the
+# intercepts are log rates: speciation 0.5, extinction 0.1
 set.seed(1)
-tr &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr &lt;- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 tr$status
 tr$survival_prob
 
 # Batch: 20 constant-rate simulations
-pm &lt;- cbind(beta_0 = runif(20, 0.3, 0.8), gamma_0 = runif(20, 0.05, 0.3))
+pm &lt;- cbind(beta_0  = log(runif(20, 0.3, 0.8)),
+            gamma_0 = log(runif(20, 0.05, 0.3)))
 sims &lt;- simulate_tree(pars = pm, max_t = 4, model = "cr")
 sims$survival_prob
 
 # Augmentation of the extant tree
-aug &lt;- simulate_tree(tree = tr, pars = c(0.5, 0.1), model = "cr")
+aug &lt;- simulate_tree(tree = tr, pars = log(c(0.5, 0.1)), model = "cr")
 aug$log_q
 
 # Many augmented trees
-augN &lt;- simulate_tree(tree = tr, pars = c(0.5, 0.1), model = "cr",
+augN &lt;- simulate_tree(tree = tr, pars = log(c(0.5, 0.1)), model = "cr",
                       n_trees = 20L)
 length(augN$log_q)
+
+# The linear link: the parameters are the rates themselves
+tr_lin &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr",
+                        link = "linear")
 </code></pre>
 

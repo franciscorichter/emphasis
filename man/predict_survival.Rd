@@ -17,9 +17,19 @@ at.  Column names must match those used in \code{train_GAM}.}
 Numeric vector of predicted survival probabilities.
 }
 \description{
-The emulator \code{estimate_rates(cond = )} conditions through.  A \code{gam} from
-\code{\link{train_GAM}} is the default; a \code{nnet} object, or a function that takes
-the parameter data frame and returns probabilities, is carried the same way.
+Evaluates the survival probability \code{estimate_rates(cond = )} conditions
+through, in any of its three forms: a function that takes the parameter
+data frame and returns probabilities, a \code{gam} from
+\code{\link{train_GAM}}, or a \code{nnet} object.
+}
+\details{
+The GAM is not accurate enough to condition on: in experiment E43
+(\url{https://franciscorichter.github.io/emphasis/experiments/E43.html}) its
+90th-percentile error of \eqn{\log P(S)} was 0.44 to 2.56 for every
+lineage-level model, against 0.05 required. Under \code{cr} and \code{dd}
+pass the exact survival probability as a function; the section
+\sQuote{Conditioning on survival} of \code{\link{estimate_rates}} gives the
+\code{cr} formula and the alternatives.
 }
 \examples{
 set.seed(1)

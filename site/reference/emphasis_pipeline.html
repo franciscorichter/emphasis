@@ -11,7 +11,7 @@ returned.
 <pre><code class='language-R'>emphasis_pipeline(
   tree,
   model = "cr",
-  link = "linear",
+  link = "exponential",
   stages = c("bounds", "gam", "cem", "mcem"),
   control = list(),
   verbose = TRUE
@@ -34,7 +34,16 @@ returned.
 </td></tr>
 <tr><td><code id="emphasis_pipeline_:_link">link</code></td>
 <td>
-<p><code>"linear"</code> (default), <code>"exponential"</code>, or <code>"gaussian"</code>.</p>
+<p>Link function: <code>"exponential"</code> (default),
+<code>rate = exp(eta)</code>, under which the intercepts <code>beta_0</code> and
+<code>gamma_0</code> are log rates; <code>"linear"</code>,
+<code>rate = max(0, eta)</code>, under which the parameters are rates and a
+covariate can drive a rate to zero, where it is clipped;
+<code>"gaussian"</code>, <code>beta_0 * exp(-(eta_cov - 1)^2 / 2)</code>, is
+experimental: it has been used only in a convergence study of the
+surrogate proposal's fixed-point iteration, never in an estimation
+experiment; it is not available for ED or K models, and every model
+with a covariate is fitted on it with the thinning proposal.</p>
 </td></tr>
 <tr><td><code id="emphasis_pipeline_:_stages">stages</code></td>
 <td>
@@ -65,7 +74,13 @@ summary log to the console.</p>
 
 <ol>
 <li> <p><strong>Bounds</strong>: <code><a href="#auto_bounds">auto_bounds</a></code> detects parameter bounds
-and trains a survival GAM for conditioning.
+and trains a survival GAM, which the later stages condition on. The
+GAM is not accurate enough for that (experiment E43; see
+<code><a href="#train_GAM">train_GAM</a></code>). To condition on another survival
+probability, or not at all, leave this stage out and give
+<code>control$lower_bound</code>, <code>control$upper_bound</code> and, to
+condition, <code>control$survival_gam</code> in any form
+<code><a href="#estimate_rates">estimate_rates</a>(cond = )</code> accepts.
 </p>
 </li>
 <li> <p><strong>GAM</strong>: Fits a smooth likelihood surface over a grid and
@@ -112,11 +127,12 @@ fhat and parameter values.  <code>NULL</code> otherwise.</p>
 <h3>Examples</h3>
 
 <pre><code class='language-R'>set.seed(1)
-tr  &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr  &lt;- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy &lt;- tr$tes
-# CEM stage only, with the search box given
+# CEM stage only, with the search box given (log rates: the
+# exponential link is the default)
 res &lt;- emphasis_pipeline(phy, model = "cr", stages = "cem",
-  control = list(lower_bound = c(0, 0), upper_bound = c(2, 1),
+  control = list(lower_bound = c(-3, -5), upper_bound = c(1, 0),
                  cem = list(max_iter = 3, num_particles = 10)),
   verbose = FALSE)
 res

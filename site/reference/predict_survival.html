@@ -1,8 +1,9 @@
 <h3>Description</h3>
 
-<p>The emulator <code>estimate_rates(cond = )</code> conditions through.  A <code>gam</code> from
-<code><a href="#train_GAM">train_GAM</a></code> is the default; a <code>nnet</code> object, or a function that takes
-the parameter data frame and returns probabilities, is carried the same way.
+<p>Evaluates the survival probability <code>estimate_rates(cond = )</code> conditions
+through, in any of its three forms: a function that takes the parameter
+data frame and returns probabilities, a <code>gam</code> from
+<code><a href="#train_GAM">train_GAM</a></code>, or a <code>nnet</code> object.
 </p>
 
 <h3>Usage</h3>
@@ -25,6 +26,17 @@ at.  Column names must match those used in <code>train_GAM</code>.</p>
 </td></tr>
 </table>
 
+<h3>Details</h3>
+
+<p>The GAM is not accurate enough to condition on: in experiment E43
+(<a href="https://franciscorichter.github.io/emphasis/experiments/E43.html">https://franciscorichter.github.io/emphasis/experiments/E43.html</a>) its
+90th-percentile error of <span class="reqn">\(\log P(S)\)</span> was 0.44 to 2.56 for every
+lineage-level model, against 0.05 required. Under <code>cr</code> and <code>dd</code>
+pass the exact survival probability as a function; the section
+&lsquo;Conditioning on survival&rsquo; of <code><a href="#estimate_rates">estimate_rates</a></code> gives the
+<code>cr</code> formula and the alternatives.
+</p>
+
 <h3>Value</h3>
 
 <p>Numeric vector of predicted survival probabilities.
@@ -33,12 +45,13 @@ at.  Column names must match those used in <code>train_GAM</code>.</p>
 <h3>Examples</h3>
 
 <pre><code class='language-R'>set.seed(1)
-pars_mat &lt;- cbind(beta_0  = runif(100, 0.3, 1.2),
-                  gamma_0 = runif(100, 0.05, 0.5))
+# Exponential link (the default): the intercepts are log rates
+pars_mat &lt;- cbind(beta_0  = log(runif(100, 0.3, 1.2)),
+                  gamma_0 = log(runif(100, 0.05, 0.5)))
 sims &lt;- simulate_tree(pars = pars_mat, max_t = 4, model = "cr",
-                      max_tries = 0)
+                      max_tries = 1)
 gam_fit &lt;- train_GAM(sims$simulations, pars_mat, model = "cr")
-predict_survival(gam_fit, data.frame(beta_0  = c(0.5, 1.0),
-                                     gamma_0 = c(0.1, 0.3)))
+predict_survival(gam_fit, data.frame(beta_0  = log(c(0.5, 1.0)),
+                                     gamma_0 = log(c(0.1, 0.3))))
 </code></pre>
 

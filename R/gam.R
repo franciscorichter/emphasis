@@ -10,6 +10,16 @@
 #' it as extinct teaches the GAM a survival near zero wherever clades grow
 #' fast, which then rewards the fit for moving there (E36c of the paper).
 #'
+#' The GAM is not accurate enough to condition a fit on. In experiment E43
+#' (\url{https://franciscorichter.github.io/emphasis/experiments/E43.html}), GAMs
+#' trained on 2000, 5000 and 20 000 clades for each of the eight
+#' lineage-level models had a 90th-percentile error of \eqn{\log P(S)} of
+#' 0.44 to 2.56, against the 0.05 its adequacy rule required, and the error
+#' did not fall with the training size. Condition \code{cr} and \code{dd} fits
+#' on the exact survival probability, and lineage-level fits on a direct
+#' Monte Carlo estimate or not at all; the section \sQuote{Conditioning on
+#' survival} of \code{\link{estimate_rates}} shows how.
+#'
 #' @param simulations List of \code{simulate_tree()} outputs (one per row of
 #'   \code{pars_mat}), produced with \code{max_tries = 1}.
 #' @param pars_mat Numeric matrix whose rows are the parameter vectors used to
@@ -78,9 +88,18 @@ train_GAM <- function(simulations, pars_mat, model = "cr",
 
 #' Predict survival probability from a trained emulator
 #'
-#' The emulator \code{estimate_rates(cond = )} conditions through.  A \code{gam} from
-#' \code{\link{train_GAM}} is the default; a \code{nnet} object, or a function that takes
-#' the parameter data frame and returns probabilities, is carried the same way.
+#' Evaluates the survival probability \code{estimate_rates(cond = )} conditions
+#' through, in any of its three forms: a function that takes the parameter
+#' data frame and returns probabilities, a \code{gam} from
+#' \code{\link{train_GAM}}, or a \code{nnet} object.
+#'
+#' The GAM is not accurate enough to condition on: in experiment E43
+#' (\url{https://franciscorichter.github.io/emphasis/experiments/E43.html}) its
+#' 90th-percentile error of \eqn{\log P(S)} was 0.44 to 2.56 for every
+#' lineage-level model, against 0.05 required. Under \code{cr} and \code{dd}
+#' pass the exact survival probability as a function; the section
+#' \sQuote{Conditioning on survival} of \code{\link{estimate_rates}} gives the
+#' \code{cr} formula and the alternatives.
 #'
 #' @param gam_fit A \code{gam} object returned by \code{\link{train_GAM}}, a \code{nnet}
 #'   object trained on the same columns, or a function of a parameter data frame.
@@ -115,11 +134,12 @@ predict_survival <- function(gam_fit, newpars) {
 
 #' Automatically determine parameter bounds via forward simulation
 #'
-#' Starts from a safe center point (low rates, zero covariates) and expands
+#' Starts from a safe centre point (low rates, zero covariates) and expands
 #' outward along each parameter axis using bisection to find the feasibility
 #' boundary --- where trees transition from surviving with sensible size to
 #' going extinct or exploding.  Much more efficient than blanket LHS sampling
-#' over a wide box.  Optionally trains a survival GAM over the detected region.
+#' over a wide box.  Optionally trains a survival GAM over the detected region;
+#' the bounds do not depend on it.
 #'
 #' @param tree A \code{phylo} object or anything accepted by
 #'   \code{\link{estimate_rates}}.
@@ -142,7 +162,9 @@ predict_survival <- function(gam_fit, newpars) {
 #' @param tip_range Multiplier range for acceptable tip counts relative
 #'   to the observed tree.  Default \code{c(0.1, 10)}.
 #' @param train_surv_gam If \code{TRUE} (default), train a survival GAM
-#'   on the detected region.
+#'   on the detected region, from 2000 single forward draws. The GAM is not
+#'   accurate enough to condition a fit on (experiment E43; see
+#'   \code{\link{train_GAM}}).
 #' @param num_threads Parallel threads for batch simulation (default 1).
 #' @param verbose Print progress (default \code{TRUE}).
 #' @param rho Sampling fraction (0, 1]. Default \code{1} (complete sampling).
@@ -155,20 +177,20 @@ predict_survival <- function(gam_fit, newpars) {
 #'     \item{lower_bound}{Numeric vector of lower bounds (compact layout).}
 #'     \item{upper_bound}{Numeric vector of upper bounds (compact layout).}
 #'     \item{survival_gam}{A \code{gam} object if trained, else \code{NULL}.}
-#'     \item{center}{The safe center point used as starting location.}
+#'     \item{center}{The safe centre point used as starting location.}
 #'   }
 #' @examples
 #' set.seed(1)
 #' tr  <- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 #' phy <- tr$tes
 #' # A coarse search without the survival GAM
-#' ab <- auto_bounds(phy, model = "cr", n_test = 3L, bisect_steps = 4L,
+#' ab <- auto_bounds(phy, model = "cr", n_test = 3L, bisect_steps = 3L,
 #'                   train_surv_gam = FALSE, verbose = FALSE)
 #' ab$lower_bound
 #' ab$upper_bound
 #' \donttest{
-#' # The default search, which also trains the survival GAM that
-#' # estimate_rates(cond = ) conditions on
+#' # The default search, which also trains the survival GAM (see train_GAM()
+#' # for why a fit should not be conditioned on it)
 #' ab2 <- auto_bounds(phy, model = "cr", verbose = FALSE)
 #' predict_survival(ab2$survival_gam, as.data.frame(t(ab2$center)))
 #' }

@@ -47,6 +47,17 @@ the conditional likelihood divides by the probability of survival; counting
 it as extinct teaches the GAM a survival near zero wherever clades grow
 fast, which then rewards the fit for moving there (E36c of the paper).
 }
+\details{
+The GAM is not accurate enough to condition a fit on. In experiment E43
+(\url{https://franciscorichter.github.io/emphasis/experiments/E43.html}), GAMs
+trained on 2000, 5000 and 20 000 clades for each of the eight
+lineage-level models had a 90th-percentile error of \eqn{\log P(S)} of
+0.44 to 2.56, against the 0.05 its adequacy rule required, and the error
+did not fall with the training size. Condition \code{cr} and \code{dd} fits
+on the exact survival probability, and lineage-level fits on a direct
+Monte Carlo estimate or not at all; the section \sQuote{Conditioning on
+survival} of \code{\link{estimate_rates}} shows how.
+}
 \examples{
 set.seed(1)
 # Exponential link (the default): the intercepts are log rates

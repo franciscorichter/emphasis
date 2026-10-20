@@ -1,7 +1,8 @@
 <h3>Description</h3>
 
 <p>Fits a binomial GAM to estimate P(survival | parameters) from forward
-simulations run with <code>max_tries = 0</code>.  Each simulation row has a
+simulations run with <code>max_tries = 1</code> (one draw each, unconditioned
+on survival).  Each simulation row has a
 binary outcome: 1 if both crown lineages reached the present (<code>status</code>
 <code>"done"</code>) or the clade passed the lineage cap (<code>"too_large"</code>),
 0 if it went extinct.  A clade stopped at the cap has survived so far, and
@@ -27,7 +28,7 @@ fast, which then rewards the fit for moving there (E36c of the paper).
 <tr><td><code id="train_GAM_:_simulations">simulations</code></td>
 <td>
 <p>List of <code>simulate_tree()</code> outputs (one per row of
-<code>pars_mat</code>), produced with <code>max_tries = 0</code>.</p>
+<code>pars_mat</code>), produced with <code>max_tries = 1</code>.</p>
 </td></tr>
 <tr><td><code id="train_GAM_:_pars_mat">pars_mat</code></td>
 <td>
@@ -55,6 +56,19 @@ predictors, which can capture interaction effects.</p>
 </td></tr>
 </table>
 
+<h3>Details</h3>
+
+<p>The GAM is not accurate enough to condition a fit on. In experiment E43
+(<a href="https://franciscorichter.github.io/emphasis/experiments/E43.html">https://franciscorichter.github.io/emphasis/experiments/E43.html</a>), GAMs
+trained on 2000, 5000 and 20 000 clades for each of the eight
+lineage-level models had a 90th-percentile error of <span class="reqn">\(\log P(S)\)</span> of
+0.44 to 2.56, against the 0.05 its adequacy rule required, and the error
+did not fall with the training size. Condition <code>cr</code> and <code>dd</code> fits
+on the exact survival probability, and lineage-level fits on a direct
+Monte Carlo estimate or not at all; the section &lsquo;Conditioning on
+survival&rsquo; of <code><a href="#estimate_rates">estimate_rates</a></code> shows how.
+</p>
+
 <h3>Value</h3>
 
 <p>A <code>gam</code> object (binomial family) representing
@@ -64,11 +78,12 @@ predictors, which can capture interaction effects.</p>
 <h3>Examples</h3>
 
 <pre><code class='language-R'>set.seed(1)
-pars_mat &lt;- cbind(beta_0  = runif(100, 0.3, 1.2),
-                  gamma_0 = runif(100, 0.05, 0.5))
+# Exponential link (the default): the intercepts are log rates
+pars_mat &lt;- cbind(beta_0  = log(runif(100, 0.3, 1.2)),
+                  gamma_0 = log(runif(100, 0.05, 0.5)))
 sims &lt;- simulate_tree(pars = pars_mat, max_t = 4, model = "cr",
-                      max_tries = 0)
+                      max_tries = 1)
 gam_uni &lt;- train_GAM(sims$simulations, pars_mat, model = "cr")
-predict_survival(gam_uni, data.frame(beta_0 = 0.8, gamma_0 = 0.2))
+predict_survival(gam_uni, data.frame(beta_0 = log(0.8), gamma_0 = log(0.2)))
 </code></pre>
 

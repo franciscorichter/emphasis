@@ -62,7 +62,8 @@ Measured, on 20 trees a cell from a diversity-dependent generator at 50 to
 200 tips: a lineage-level model had the minimum AIC on 2 to 7 of 20, and
 led by more than 2 AIC on 0 to 2 of 20 (E27). The <code>chosen</code> attribute
 is therefore the model with the fewest parameters among those within
-<code>margin</code> AIC units of the minimum, and <code>within_margin</code> marks
+<code>margin</code> AIC units of the minimum, the one with the lower AIC when
+several share that number of parameters, and <code>within_margin</code> marks
 those rows; the full ranking is kept so that the margin can be read.
 </p>
 <p>A warning names the chosen model when its own effective sample is below
@@ -86,14 +87,14 @@ model's effective sample is below 10) and <code>ranking_at_risk</code>.
 <h3>Examples</h3>
 
 <pre><code class='language-R'>set.seed(1)
-tr  &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr  &lt;- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy &lt;- tr$tes
 ctrl &lt;- list(max_iter = 5, num_trees = 30)
 fit_cr &lt;- estimate_rates(phy, method = "mcem", model = "cr",
-  control = c(ctrl, list(lower_bound = c(0, 0), upper_bound = c(2, 1))))
+  control = c(ctrl, list(lower_bound = c(-3, -5), upper_bound = c(1, 0))))
 fit_dd &lt;- estimate_rates(phy, method = "mcem", model = "dd",
-  control = c(ctrl, list(lower_bound = c(0, -0.1, 0, -0.1),
-                         upper_bound = c(2, 0.1, 1, 0.1))))
+  control = c(ctrl, list(lower_bound = c(-3, -0.1, -5, -0.1),
+                         upper_bound = c(1, 0.1, 0, 0.1))))
 compare_models(cr = fit_cr, dd = fit_dd)
 </code></pre>
 

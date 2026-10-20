@@ -16,7 +16,8 @@
   model = as.integer(c(0, 0, 0)),
   link = 0L,
   rho = 1,
-  rconditional = NULL
+  rconditional = NULL,
+  time_left = -1
 )
 </code></pre>
 
@@ -66,6 +67,12 @@ be equal in length to the vector of init_pars</p>
 <td>
 <p>R function that evaluates the GAM function.</p>
 </td></tr>
+<tr><td><code id="m_cpp_:_time_left">time_left</code></td>
+<td>
+<p>seconds the fit has left on its clock; the optimiser
+reads it before every evaluation of the objective and stops once it has
+run out.  Negative (the default) means no deadline.</p>
+</td></tr>
 </table>
 
 <h3>Value</h3>
@@ -79,6 +86,12 @@ be equal in length to the vector of init_pars</p>
 <dt>nlopt</dt><dd><p>nlopt status</p>
 </dd>
 <dt>time</dt><dd><p>used computation time</p>
+</dd>
+<dt>timed_out</dt><dd><p>whether the deadline stopped the optimiser</p>
+</dd>
+<dt>improved</dt><dd><p>when <code>timed_out</code>: whether the best point evaluated
+improves on <code>init_pars</code>; <code>estimates</code> is that point when
+<code>TRUE</code> and <code>init_pars</code> when <code>FALSE</code></p>
 </dd>
 </dl>
 

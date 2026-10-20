@@ -18,7 +18,8 @@ list(trees, logf, logg, weights, fhat), plus the draw counts.
   topology = NULL,
   mesh = NULL,
   attach = c("rate", "uniform"),
-  damping = "auto"
+  damping = "auto",
+  deadline = Inf
 )
 </code></pre>
 
@@ -86,7 +87,13 @@ labelled attachments the thinning sampler makes (audit finding H45).
 (finite-weight draws only), <code>fhat</code>, <code>n_valid</code> (completed
 draws), <code>n_nonfinite</code> (completed draws dropped for a non-finite
 log-weight), <code>n_attempts</code>, <code>n_rejected</code> (survivors at tp),
-<code>n_rejected_max_missing</code>, <code>acc</code>.  <code>trees</code> is empty when
+<code>n_rejected_max_missing</code>, <code>acc</code>, the mean-field diagnostics
+<code>mf_converged</code>, <code>mf_delta</code> (final residual), <code>mf_sweeps</code>,
+<code>mf_omega</code> (relaxation of the last sweep), <code>mf_budget</code> and
+<code>mf_damping</code> (all <code>NA</code> under cr), and <code>timed_out</code> (the
+<code>deadline</code>, an absolute <code>proc.time()</code> elapsed value, passed
+before <code>sample_size</code> draws completed: the draws made are returned
+and no shortfall warning is issued).  <code>trees</code> is empty when
 no draw completed or every completed draw has a non-finite log-weight;
 a warning is issued when fewer than <code>sample_size</code> draws completed.
 </p>

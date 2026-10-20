@@ -32,10 +32,16 @@ the interface is the one described below.
 * Incomplete taxon sampling: the sampling fraction `rho` enters the
   simulator, the likelihood and both augmentation samplers.
 * Conditioning on survival is the `cond` argument of `estimate_rates()`: the
-  likelihood is divided by the survival probability of the clade, read from
-  an emulator. `train_GAM()` now fits that emulator, a binomial GAM of survival
-  on the parameters; in version 0.4 it fitted a GAM to simulated
-  log-likelihoods.
+  likelihood is divided by the survival probability of the clade, given as a
+  function of the parameters, a GAM or an `nnet` object. `train_GAM()` now
+  fits a binomial GAM of survival on the parameters; in version 0.4 it fitted
+  a GAM to simulated log-likelihoods. That GAM is not accurate enough to
+  condition on: in E43 (https://franciscorichter.github.io/emphasis/experiments/E43.html) its
+  90th-percentile error of log P(S) was 0.44 to 2.56 for every lineage-level
+  model at 2000, 5000 and 20 000 training clades, against 0.05 required.
+  Under `cr` and `dd` condition on the exact survival probability, passed as
+  a function (`?estimate_rates` gives the `cr` formula); under lineage-level
+  models on a direct Monte Carlo estimate, or not at all.
 * Lineage-level covariates: the age-imbalance `D`, evolutionary
   distinctiveness `ED` (raw or centred) and the number of ancestral splits `K`
   join diversity `N`. Version 0.4 read diversity and the clade's phylogenetic
@@ -69,8 +75,8 @@ the interface is the one described below.
   each log-likelihood and the downward bias of a log of a Monte Carlo mean.
 * `lineage_table()` returns the per-lineage design the likelihood is built on,
   and `covariate_path()` traces a selection path over the covariates.
-* The survival emulator is a GAM from `train_GAM()`, an `nnet` object or a
-  function, evaluated by `predict_survival()`.
+* The survival probability `cond` takes is a function, a GAM from
+  `train_GAM()` or an `nnet` object, evaluated by `predict_survival()`.
 * `diagnose_mcem()`, `diagnose_cem()` and `diagnose_gam()` report convergence
   and importance-sampling diagnostics.
 

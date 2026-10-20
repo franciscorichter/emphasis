@@ -8,7 +8,13 @@
 #' @section Stages:
 #' \enumerate{
 #'   \item \strong{Bounds}: \code{\link{auto_bounds}} detects parameter bounds
-#'     and trains a survival GAM for conditioning.
+#'     and trains a survival GAM, which the later stages condition on. The
+#'     GAM is not accurate enough for that (experiment E43; see
+#'     \code{\link{train_GAM}}). To condition on another survival
+#'     probability, or not at all, leave this stage out and give
+#'     \code{control$lower_bound}, \code{control$upper_bound} and, to
+#'     condition, \code{control$survival_gam} in any form
+#'     \code{\link{estimate_rates}(cond = )} accepts.
 #'   \item \strong{GAM}: Fits a smooth likelihood surface over a grid and
 #'     optimises it.  Fast, one-shot.
 #'   \item \strong{CEM}: Cross-entropy global search.  Stochastic, no init

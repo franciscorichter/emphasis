@@ -60,11 +60,12 @@ window.MathJax = {
 <h3 id="auto_bounds"><code>auto_bounds</code> <span class="ref-title">Automatically determine parameter bounds via forward simulation</span></h3>
 <h4>Description</h4>
 
-<p>Starts from a safe center point (low rates, zero covariates) and expands
+<p>Starts from a safe centre point (low rates, zero covariates) and expands
 outward along each parameter axis using bisection to find the feasibility
 boundary &mdash; where trees transition from surviving with sensible size to
 going extinct or exploding.  Much more efficient than blanket LHS sampling
-over a wide box.  Optionally trains a survival GAM over the detected region.
+over a wide box.  Optionally trains a survival GAM over the detected region;
+the bounds do not depend on it.
 </p>
 
 <h4>Usage</h4>
@@ -72,7 +73,7 @@ over a wide box.  Optionally trains a survival GAM over the detected region.
 <pre><code class='language-R'>auto_bounds(
   tree,
   model = "cr",
-  link = "linear",
+  link = "exponential",
   n_test = 5L,
   bisect_steps = 8L,
   margin = 0.5,
@@ -100,7 +101,16 @@ over a wide box.  Optionally trains a survival GAM over the detected region.
 </td></tr>
 <tr><td><code id="auto_bounds_:_link">link</code></td>
 <td>
-<p><code>"linear"</code>, <code>"exponential"</code>, or <code>"gaussian"</code>.</p>
+<p>Link function: <code>"exponential"</code> (default),
+<code>rate = exp(eta)</code>, under which the intercepts <code>beta_0</code> and
+<code>gamma_0</code> are log rates; <code>"linear"</code>,
+<code>rate = max(0, eta)</code>, under which the parameters are rates and a
+covariate can drive a rate to zero, where it is clipped;
+<code>"gaussian"</code>, <code>beta_0 * exp(-(eta_cov - 1)^2 / 2)</code>, is
+experimental: it has been used only in a convergence study of the
+surrogate proposal's fixed-point iteration, never in an estimation
+experiment; it is not available for ED or K models, and every model
+with a covariate is fitted on it with the thinning proposal.</p>
 </td></tr>
 <tr><td><code id="auto_bounds_:_n_test">n_test</code></td>
 <td>
@@ -124,7 +134,9 @@ to the observed tree.  Default <code>c(0.1, 10)</code>.</p>
 <tr><td><code id="auto_bounds_:_train_surv_gam">train_surv_gam</code></td>
 <td>
 <p>If <code>TRUE</code> (default), train a survival GAM
-on the detected region.</p>
+on the detected region, from 2000 single forward draws. The GAM is not
+accurate enough to condition a fit on (experiment E43; see
+<code><a href="#train_GAM">train_GAM</a></code>).</p>
 </td></tr>
 <tr><td><code id="auto_bounds_:_num_threads">num_threads</code></td>
 <td>
@@ -140,9 +152,10 @@ on the detected region.</p>
 </td></tr>
 <tr><td><code id="auto_bounds_:_surv_tries">surv_tries</code></td>
 <td>
-<p>Simulations per candidate when judging whether a parameter
-vector produces surviving clades of a usable size (default 20).
-Passed through to IS feasibility diagnostics.</p>
+<p>Draws allowed per simulation, the first included, when
+judging whether a parameter vector produces surviving clades of a usable
+size: an extinct clade is redrawn up to this many times in all (passed to
+<code>simulate_tree</code> as <code>max_tries</code>). Default 20.</p>
 </td></tr>
 </table>
 </div>
@@ -159,23 +172,23 @@ Passed through to IS feasibility diagnostics.</p>
 </dd>
 <dt>survival_gam</dt><dd><p>A <code>gam</code> object if trained, else <code>NULL</code>.</p>
 </dd>
-<dt>center</dt><dd><p>The safe center point used as starting location.</p>
+<dt>center</dt><dd><p>The safe centre point used as starting location.</p>
 </dd>
 </dl>
 
 <h4>Examples</h4>
 
 <pre><code class='language-R'>set.seed(1)
-tr  &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr  &lt;- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy &lt;- tr$tes
 # A coarse search without the survival GAM
-ab &lt;- auto_bounds(phy, model = "cr", n_test = 3L, bisect_steps = 4L,
+ab &lt;- auto_bounds(phy, model = "cr", n_test = 3L, bisect_steps = 3L,
                   train_surv_gam = FALSE, verbose = FALSE)
 ab$lower_bound
 ab$upper_bound
 
-# The default search, which also trains the survival GAM that
-# estimate_rates(cond = ) conditions on
+# The default search, which also trains the survival GAM (see train_GAM()
+# for why a fit should not be conditioned on it)
 ab2 &lt;- auto_bounds(phy, model = "cr", verbose = FALSE)
 predict_survival(ab2$survival_gam, as.data.frame(t(ab2$center)))
 
@@ -251,7 +264,8 @@ Measured, on 20 trees a cell from a diversity-dependent generator at 50 to
 200 tips: a lineage-level model had the minimum AIC on 2 to 7 of 20, and
 led by more than 2 AIC on 0 to 2 of 20 (E27). The <code>chosen</code> attribute
 is therefore the model with the fewest parameters among those within
-<code>margin</code> AIC units of the minimum, and <code>within_margin</code> marks
+<code>margin</code> AIC units of the minimum, the one with the lower AIC when
+several share that number of parameters, and <code>within_margin</code> marks
 those rows; the full ranking is kept so that the margin can be read.
 </p>
 <p>A warning names the chosen model when its own effective sample is below
@@ -275,14 +289,14 @@ model's effective sample is below 10) and <code>ranking_at_risk</code>.
 <h4>Examples</h4>
 
 <pre><code class='language-R'>set.seed(1)
-tr  &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr  &lt;- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy &lt;- tr$tes
 ctrl &lt;- list(max_iter = 5, num_trees = 30)
 fit_cr &lt;- estimate_rates(phy, method = "mcem", model = "cr",
-  control = c(ctrl, list(lower_bound = c(0, 0), upper_bound = c(2, 1))))
+  control = c(ctrl, list(lower_bound = c(-3, -5), upper_bound = c(1, 0))))
 fit_dd &lt;- estimate_rates(phy, method = "mcem", model = "dd",
-  control = c(ctrl, list(lower_bound = c(0, -0.1, 0, -0.1),
-                         upper_bound = c(2, 0.1, 1, 0.1))))
+  control = c(ctrl, list(lower_bound = c(-3, -0.1, -5, -0.1),
+                         upper_bound = c(1, 0.1, 0, 0.1))))
 compare_models(cr = fit_cr, dd = fit_dd)
 </code></pre>
 
@@ -394,7 +408,7 @@ are empty and <code>n_events</code> is 0.
 <h4>Examples</h4>
 
 <pre><code class='language-R'>set.seed(1)
-tr  &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr  &lt;- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy &lt;- tr$tes
 cp &lt;- covariate_path(phy, rate = "speciation")
 cp$speciation$entry_order
@@ -534,15 +548,16 @@ C++ format).
 <h4>Examples</h4>
 
 <pre><code class='language-R'>set.seed(1)
-tr  &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr  &lt;- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy &lt;- tr$tes
-lb &lt;- c(0, 0)
-ub &lt;- c(2, 1)
+# Exponential link (the default): the intercepts are log rates
+lb &lt;- c(-3, -5)
+ub &lt;- c(1, 0)
 fit &lt;- estimate_rates(phy, method = "cem", model = "cr",
   control = list(lower_bound = lb, upper_bound = ub,
                  max_iter = 5, num_particles = 20))
 diag &lt;- diagnose_cem(fit, lower_bound = lb, upper_bound = ub,
-                     true_pars = c(0.5, 0.1))
+                     true_pars = log(c(0.5, 0.1)))
 diag$convergence
 </code></pre>
 
@@ -608,10 +623,10 @@ components <code>surface_summary</code>, <code>gam_summary</code>, and <code>mle
 <h4>Examples</h4>
 
 <pre><code class='language-R'>set.seed(1)
-tr  &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr  &lt;- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy &lt;- tr$tes
 fit &lt;- estimate_rates(phy, method = "gam", model = "cr",
-  control = list(lower_bound = c(0.05, 0), upper_bound = c(2, 1),
+  control = list(lower_bound = c(-3, -5), upper_bound = c(1, 0),
                  grid_points = 8, sample_size = 20))
 diagnose_gam(fit)
 </code></pre>
@@ -719,12 +734,12 @@ components <code>convergence</code>, <code>stop_reason</code>, <code>final_fhat<
 <h4>Examples</h4>
 
 <pre><code class='language-R'>set.seed(1)
-tr  &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr  &lt;- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy &lt;- tr$tes
 fit &lt;- estimate_rates(phy, method = "mcem", model = "cr",
-  control = list(lower_bound = c(0, 0), upper_bound = c(2, 1),
+  control = list(lower_bound = c(-3, -5), upper_bound = c(1, 0),
                  max_iter = 10, num_trees = 50))
-diagnose_mcem(fit, lower_bound = c(0, 0), upper_bound = c(2, 1))
+diagnose_mcem(fit, lower_bound = c(-3, -5), upper_bound = c(1, 0))
 </code></pre>
 
 
@@ -744,7 +759,7 @@ returned.
 <pre><code class='language-R'>emphasis_pipeline(
   tree,
   model = "cr",
-  link = "linear",
+  link = "exponential",
   stages = c("bounds", "gam", "cem", "mcem"),
   control = list(),
   verbose = TRUE
@@ -768,7 +783,16 @@ returned.
 </td></tr>
 <tr><td><code id="emphasis_pipeline_:_link">link</code></td>
 <td>
-<p><code>"linear"</code> (default), <code>"exponential"</code>, or <code>"gaussian"</code>.</p>
+<p>Link function: <code>"exponential"</code> (default),
+<code>rate = exp(eta)</code>, under which the intercepts <code>beta_0</code> and
+<code>gamma_0</code> are log rates; <code>"linear"</code>,
+<code>rate = max(0, eta)</code>, under which the parameters are rates and a
+covariate can drive a rate to zero, where it is clipped;
+<code>"gaussian"</code>, <code>beta_0 * exp(-(eta_cov - 1)^2 / 2)</code>, is
+experimental: it has been used only in a convergence study of the
+surrogate proposal's fixed-point iteration, never in an estimation
+experiment; it is not available for ED or K models, and every model
+with a covariate is fitted on it with the thinning proposal.</p>
 </td></tr>
 <tr><td><code id="emphasis_pipeline_:_stages">stages</code></td>
 <td>
@@ -800,7 +824,13 @@ summary log to the console.</p>
 
 <ol>
 <li> <p><strong>Bounds</strong>: <code><a href="#auto_bounds">auto_bounds</a></code> detects parameter bounds
-and trains a survival GAM for conditioning.
+and trains a survival GAM, which the later stages condition on. The
+GAM is not accurate enough for that (experiment E43; see
+<code><a href="#train_GAM">train_GAM</a></code>). To condition on another survival
+probability, or not at all, leave this stage out and give
+<code>control$lower_bound</code>, <code>control$upper_bound</code> and, to
+condition, <code>control$survival_gam</code> in any form
+<code><a href="#estimate_rates">estimate_rates</a>(cond = )</code> accepts.
 </p>
 </li>
 <li> <p><strong>GAM</strong>: Fits a smooth likelihood surface over a grid and
@@ -847,11 +877,12 @@ fhat and parameter values.  <code>NULL</code> otherwise.</p>
 <h4>Examples</h4>
 
 <pre><code class='language-R'>set.seed(1)
-tr  &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr  &lt;- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy &lt;- tr$tes
-# CEM stage only, with the search box given
+# CEM stage only, with the search box given (log rates: the
+# exponential link is the default)
 res &lt;- emphasis_pipeline(phy, model = "cr", stages = "cem",
-  control = list(lower_bound = c(0, 0), upper_bound = c(2, 1),
+  control = list(lower_bound = c(-3, -5), upper_bound = c(1, 0),
                  cem = list(max_iter = 3, num_particles = 10)),
   verbose = FALSE)
 res
@@ -884,7 +915,7 @@ the chosen optimisation back-end.
   model = "cr",
   init_pars = NULL,
   control = list(),
-  link = "linear",
+  link = "exponential",
   cond = NULL
 )
 </code></pre>
@@ -1014,21 +1045,75 @@ M is internal only).</p>
 </td></tr>
 <tr><td><code id="estimate_rates_:_link">link</code></td>
 <td>
-<p>Link function for rate computation: <code>"linear"</code> (default)
-uses <code>max(0, eta)</code>; <code>"exponential"</code> uses <code>exp(eta)</code>;
-<code>"gaussian"</code> uses <code>beta_0 * exp(-(eta_cov - 1)^2 / 2)</code>.</p>
+<p>Link function: <code>"exponential"</code> (default),
+<code>rate = exp(eta)</code>, under which the intercepts <code>beta_0</code> and
+<code>gamma_0</code> are log rates; <code>"linear"</code>,
+<code>rate = max(0, eta)</code>, under which the parameters are rates and a
+covariate can drive a rate to zero, where it is clipped;
+<code>"gaussian"</code>, <code>beta_0 * exp(-(eta_cov - 1)^2 / 2)</code>, is
+experimental: it has been used only in a convergence study of the
+surrogate proposal's fixed-point iteration, never in an estimation
+experiment; it is not available for ED or K models, and every model
+with a covariate is fitted on it with the thinning proposal.</p>
 </td></tr>
 <tr><td><code id="estimate_rates_:_cond">cond</code></td>
 <td>
-<p>A survival emulator for conditioning on survival: a GAM from
-<code><a href="#train_GAM">train_GAM</a></code>, a <code>nnet</code> object, or a function of the parameter
-data frame (see <code><a href="#predict_survival">predict_survival</a></code>); <code>NULL</code> (default) for no
-conditioning. When provided, the
-log-likelihood is conditioned: <span class="reqn">\(\ell_{\rm cond} = \ell -
-\log\hat{P}_{\rm tree}(\theta)\)</span>.</p>
+<p>The survival probability to condition on, or <code>NULL</code>
+(default) for no conditioning. When provided, the log-likelihood is
+conditioned: <span class="reqn">\(\ell_{\rm cond} = \ell - \log P_\theta(S)\)</span>, where
+<span class="reqn">\(P_\theta(S)\)</span> is the probability that both crown lineages leave a
+sampled descendant at the present. Three forms are accepted: a function
+of the parameter data frame that returns <span class="reqn">\(P_\theta(S)\)</span> (the
+probability, not its log), a GAM from <code><a href="#train_GAM">train_GAM</a></code>, or a
+<code>nnet</code> object (see <code><a href="#predict_survival">predict_survival</a></code>). The GAM is not
+accurate enough to condition on; the section &lsquo;Conditioning on
+survival&rsquo; says what to pass instead.</p>
 </td></tr>
 </table>
 </div>
+
+<h4>Conditioning on survival</h4>
+
+<p>The survival emulator of <code><a href="#train_GAM">train_GAM</a></code> is not adequate for any
+lineage-level model. In experiment E43
+(https://franciscorichter.github.io/emphasis/experiments/E43.html), GAMs
+trained on 2000, 5000 and 20 000 simulated clades for each of <code>d</code>,
+<code>nd</code>, <code>ed</code>, <code>edc</code>, <code>ned</code>, <code>nedc</code>, <code>k</code> and
+<code>nk</code> had a 90th-percentile error of <span class="reqn">\(\log P(S)\)</span> of 0.44 to 2.56,
+against the 0.05 its adequacy rule required, and the error did not fall
+with the training size.
+</p>
+<p>Under <code>cr</code> and <code>dd</code>, condition on the exact survival
+probability. The package does not export a function for it: pass one to
+<code>cond</code>. The function receives a data frame with one row per parameter
+point and columns named as the parameters (<code>beta_0</code>, <code>gamma_0</code>
+under <code>cr</code>), and returns <span class="reqn">\(P_\theta(S)\)</span>, one value per row. Under
+constant rates on the exponential link, with <span class="reqn">\(\lambda = e^{\beta_0}\)</span>,
+<span class="reqn">\(\mu = e^{\gamma_0}\)</span>, <span class="reqn">\(d = \lambda - \mu\)</span>, crown age <span class="reqn">\(T\)</span>
+and sampling fraction <span class="reqn">\(\rho\)</span>, one crown lineage leaves a sampled
+descendant at the present with probability
+</p>
+<p style="text-align: center;"><span class="reqn">\[p = \frac{\rho d}{\rho\lambda + (\lambda(1-\rho) - \mu)e^{-dT}}\]</span>
+</p>
+
+<p>(<span class="reqn">\(p = \rho / (1 + \rho\lambda T)\)</span> when <span class="reqn">\(\lambda = \mu\)</span>); the two
+crown lineages are independent, so <span class="reqn">\(P_\theta(S) = p^2\)</span>. The last
+example below codes it. Under <code>dd</code> the exact value solves the master
+equation of the clade size, which the package does not provide. E43's
+Monte Carlo reference agreed with the exact values to a median error of
+0.007 (<code>cr</code>) and 0.008 (<code>dd</code>) in <span class="reqn">\(\log P\)</span>.
+</p>
+<p>Under a lineage-level model, either fit without conditioning or pass a
+function that returns a direct Monte Carlo estimate of <span class="reqn">\(P_\theta(S)\)</span>
+at each row: the share of single forward draws from
+<code><a href="#simulate_tree">simulate_tree</a></code> (<code>max_tries = 1</code>) in which both crown
+lineages leave a sampled descendant, a clade that reaches the lineage cap
+counted as surviving (at <span class="reqn">\(\rho = 1\)</span>, the share with status
+<code>"done"</code> or <code>"too_large"</code>). At a standard error of 0.01 in
+<span class="reqn">\(\log P\)</span>, one such estimate took E43 a median of 2 to 29 seconds of one
+core, depending on the model, and the M-step evaluates <code>cond</code> at every
+parameter value it tries.
+</p>
 
 <h4>Value</h4>
 
@@ -1070,6 +1155,17 @@ after the control merge.</p>
 <dt><code>n_failed</code></dt><dd><p>Number of E- or M-step failures over the MCEM
 run; <code>NA</code> for other methods.</p>
 </dd>
+<dt><code>notes</code></dt><dd><p>Named character vector of what the measurements
+and the run say about this fit: <code>size</code>, <code>starved</code> and
+<code>turnover</code> (emitted as a warning or messages when the fit is
+made), <code>mean_field</code> (the surrogate proposal's mean-field
+iteration was relaxed below the full step, ran under a
+<code>damping</code> other than <code>"auto"</code>, or did not converge within
+its sweep budget: the setting, the sweeps taken, the relaxation and
+residual of the last E-step, and how many E-steps of the run relaxed
+or failed to converge) and <code>clock</code> (<code>max_time</code> ran out
+inside an E-step or an M-step). <code>print()</code> shows the last two.</p>
+</dd>
 <dt><code>details</code></dt><dd><p>Full output from the back-end function
 (<code>.mcem_dynamic_fresh</code> or <code>emphasis_cem</code>).</p>
 </dd>
@@ -1078,19 +1174,36 @@ run; <code>NA</code> for other methods.</p>
 <h4>Examples</h4>
 
 <pre><code class='language-R'>set.seed(1)
-tr  &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr  &lt;- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy &lt;- tr$tes
+# Exponential link (the default): the intercepts are log rates
 fit &lt;- estimate_rates(phy, method = "mcem", model = "cr",
-  control = list(lower_bound = c(0, 0), upper_bound = c(2, 1),
+  control = list(lower_bound = c(-3, -5), upper_bound = c(1, 0),
                  max_iter = 10, num_trees = 50))
 fit
 
 # Diversity-dependent model on the same tree
 fit_dd &lt;- estimate_rates(phy, method = "mcem", model = "dd",
-  control = list(lower_bound = c(0, -0.1, 0, -0.1),
-                 upper_bound = c(2, 0.1, 1, 0.1),
+  control = list(lower_bound = c(-3, -0.1, -5, -0.1),
+                 upper_bound = c(1, 0.1, 0, 0.1),
                  max_iter = 10, num_trees = 50))
 fit_dd$pars
+
+# Conditioning a cr fit on its exact survival probability, P(S) = p^2
+cond_cr &lt;- function(T, rho = 1) function(pars) {
+  lambda &lt;- exp(pars$beta_0)
+  mu     &lt;- exp(pars$gamma_0)
+  d      &lt;- lambda - mu
+  p &lt;- ifelse(abs(d) &lt; 1e-12, rho / (1 + rho * lambda * T),
+              rho * d / (rho * lambda + (lambda * (1 - rho) - mu) * exp(-d * T)))
+  p^2
+}
+crown_age &lt;- max(ape::branching.times(phy))
+fit_cond &lt;- estimate_rates(phy, method = "mcem", model = "cr",
+  cond = cond_cr(T = crown_age),
+  control = list(lower_bound = c(-3, -5), upper_bound = c(1, 0),
+                 max_iter = 10, num_trees = 50))
+fit_cond
 
 </code></pre>
 
@@ -1139,7 +1252,7 @@ object, which is taken as fully observed.</p>
 <h4>Examples</h4>
 
 <pre><code class='language-R'>set.seed(1)
-tr  &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr  &lt;- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy &lt;- tr$tes
 head(lineage_table(phy))
 </code></pre>
@@ -1150,9 +1263,10 @@ head(lineage_table(phy))
 <h3 id="predict_survival"><code>predict_survival</code> <span class="ref-title">Predict survival probability from a trained emulator</span></h3>
 <h4>Description</h4>
 
-<p>The emulator <code>estimate_rates(cond = )</code> conditions through.  A <code>gam</code> from
-<code><a href="#train_GAM">train_GAM</a></code> is the default; a <code>nnet</code> object, or a function that takes
-the parameter data frame and returns probabilities, is carried the same way.
+<p>Evaluates the survival probability <code>estimate_rates(cond = )</code> conditions
+through, in any of its three forms: a function that takes the parameter
+data frame and returns probabilities, a <code>gam</code> from
+<code><a href="#train_GAM">train_GAM</a></code>, or a <code>nnet</code> object.
 </p>
 
 <h4>Usage</h4>
@@ -1177,6 +1291,17 @@ at.  Column names must match those used in <code>train_GAM</code>.</p>
 </table>
 </div>
 
+<h4>Details</h4>
+
+<p>The GAM is not accurate enough to condition on: in experiment E43
+(https://franciscorichter.github.io/emphasis/experiments/E43.html) its
+90th-percentile error of <span class="reqn">\(\log P(S)\)</span> was 0.44 to 2.56 for every
+lineage-level model, against 0.05 required. Under <code>cr</code> and <code>dd</code>
+pass the exact survival probability as a function; the section
+&lsquo;Conditioning on survival&rsquo; of <code><a href="#estimate_rates">estimate_rates</a></code> gives the
+<code>cr</code> formula and the alternatives.
+</p>
+
 <h4>Value</h4>
 
 <p>Numeric vector of predicted survival probabilities.
@@ -1185,13 +1310,14 @@ at.  Column names must match those used in <code>train_GAM</code>.</p>
 <h4>Examples</h4>
 
 <pre><code class='language-R'>set.seed(1)
-pars_mat &lt;- cbind(beta_0  = runif(100, 0.3, 1.2),
-                  gamma_0 = runif(100, 0.05, 0.5))
+# Exponential link (the default): the intercepts are log rates
+pars_mat &lt;- cbind(beta_0  = log(runif(100, 0.3, 1.2)),
+                  gamma_0 = log(runif(100, 0.05, 0.5)))
 sims &lt;- simulate_tree(pars = pars_mat, max_t = 4, model = "cr",
-                      max_tries = 0)
+                      max_tries = 1)
 gam_fit &lt;- train_GAM(sims$simulations, pars_mat, model = "cr")
-predict_survival(gam_fit, data.frame(beta_0  = c(0.5, 1.0),
-                                     gamma_0 = c(0.1, 0.3)))
+predict_survival(gam_fit, data.frame(beta_0  = log(c(0.5, 1.0)),
+                                     gamma_0 = log(c(0.1, 0.3))))
 </code></pre>
 
 
@@ -1217,7 +1343,7 @@ augmented with stochastically drawn extinct lineages.
   max_tries = 1,
   useDDD = TRUE,
   n_trees = 1L,
-  link = "linear",
+  link = "exponential",
   max_missing = 10000,
   max_lambda = 500,
   maxN = NULL,
@@ -1265,11 +1391,16 @@ Default <code>1e6</code>.</p>
 </td></tr>
 <tr><td><code id="simulate_tree_:_max_tries">max_tries</code></td>
 <td>
-<p>Maximum additional attempts after extinction (forward
-simulation only). A clade that overflows <code>max_lin</code> is not retried:
-the overflow is a property of the parameters, not of the draw, and every
-retry would run to the cap again. Retries are tracked at the R level to
-compute <code>survival_prob</code>. Default <code>1</code>.</p>
+<p>Maximum number of forward simulations in all, the first
+included (forward simulation only): a clade that goes extinct is drawn
+again until one survives or <code>max_tries</code> draws have been made, so the
+default <code>1</code> is a single draw, unconditioned on survival. A positive
+integer; <code>0</code>, which asked for a single draw when the argument counted
+the draws after the first, is read as <code>1</code> with a warning. A clade
+that overflows <code>max_lin</code> is not retried: the
+overflow is a property of the parameters, not of the draw, and every
+retry would run to the cap again. The draws are counted at the R level
+(<code>attempts</code>) to compute <code>survival_prob</code>. Default <code>1</code>.</p>
 </td></tr>
 <tr><td><code id="simulate_tree_:_useDDD">useDDD</code></td>
 <td>
@@ -1283,8 +1414,16 @@ Default <code>1L</code>.</p>
 </td></tr>
 <tr><td><code id="simulate_tree_:_link">link</code></td>
 <td>
-<p>Link function: <code>"linear"</code> (default),
-<code>"exponential"</code>, or <code>"gaussian"</code>.</p>
+<p>Link function: <code>"exponential"</code> (default),
+<code>rate = exp(eta)</code>, under which the intercepts <code>beta_0</code> and
+<code>gamma_0</code> are log rates; <code>"linear"</code>,
+<code>rate = max(0, eta)</code>, under which the parameters are rates and a
+covariate can drive a rate to zero, where it is clipped;
+<code>"gaussian"</code>, <code>beta_0 * exp(-(eta_cov - 1)^2 / 2)</code>, is
+experimental: it has been used only in a convergence study of the
+surrogate proposal's fixed-point iteration, never in an estimation
+experiment; it is not available for ED or K models, and every model
+with a covariate is fitted on it with the thinning proposal.</p>
 </td></tr>
 <tr><td><code id="simulate_tree_:_max_missing">max_missing</code></td>
 <td>
@@ -1503,25 +1642,31 @@ augmentation the augmented tree(s) and their proposal log-densities
 
 <h4>Examples</h4>
 
-<pre><code class='language-R'># Forward simulation
+<pre><code class='language-R'># Forward simulation.  Under the exponential link (the default) the
+# intercepts are log rates: speciation 0.5, extinction 0.1
 set.seed(1)
-tr &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr &lt;- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 tr$status
 tr$survival_prob
 
 # Batch: 20 constant-rate simulations
-pm &lt;- cbind(beta_0 = runif(20, 0.3, 0.8), gamma_0 = runif(20, 0.05, 0.3))
+pm &lt;- cbind(beta_0  = log(runif(20, 0.3, 0.8)),
+            gamma_0 = log(runif(20, 0.05, 0.3)))
 sims &lt;- simulate_tree(pars = pm, max_t = 4, model = "cr")
 sims$survival_prob
 
 # Augmentation of the extant tree
-aug &lt;- simulate_tree(tree = tr, pars = c(0.5, 0.1), model = "cr")
+aug &lt;- simulate_tree(tree = tr, pars = log(c(0.5, 0.1)), model = "cr")
 aug$log_q
 
 # Many augmented trees
-augN &lt;- simulate_tree(tree = tr, pars = c(0.5, 0.1), model = "cr",
+augN &lt;- simulate_tree(tree = tr, pars = log(c(0.5, 0.1)), model = "cr",
                       n_trees = 20L)
 length(augN$log_q)
+
+# The linear link: the parameters are the rates themselves
+tr_lin &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr",
+                        link = "linear")
 </code></pre>
 
 
@@ -1531,7 +1676,8 @@ length(augN$log_q)
 <h4>Description</h4>
 
 <p>Fits a binomial GAM to estimate P(survival | parameters) from forward
-simulations run with <code>max_tries = 0</code>.  Each simulation row has a
+simulations run with <code>max_tries = 1</code> (one draw each, unconditioned
+on survival).  Each simulation row has a
 binary outcome: 1 if both crown lineages reached the present (<code>status</code>
 <code>"done"</code>) or the clade passed the lineage cap (<code>"too_large"</code>),
 0 if it went extinct.  A clade stopped at the cap has survived so far, and
@@ -1558,7 +1704,7 @@ fast, which then rewards the fit for moving there (E36c of the paper).
 <tr><td><code id="train_GAM_:_simulations">simulations</code></td>
 <td>
 <p>List of <code>simulate_tree()</code> outputs (one per row of
-<code>pars_mat</code>), produced with <code>max_tries = 0</code>.</p>
+<code>pars_mat</code>), produced with <code>max_tries = 1</code>.</p>
 </td></tr>
 <tr><td><code id="train_GAM_:_pars_mat">pars_mat</code></td>
 <td>
@@ -1587,6 +1733,19 @@ predictors, which can capture interaction effects.</p>
 </table>
 </div>
 
+<h4>Details</h4>
+
+<p>The GAM is not accurate enough to condition a fit on. In experiment E43
+(https://franciscorichter.github.io/emphasis/experiments/E43.html), GAMs
+trained on 2000, 5000 and 20 000 clades for each of the eight
+lineage-level models had a 90th-percentile error of <span class="reqn">\(\log P(S)\)</span> of
+0.44 to 2.56, against the 0.05 its adequacy rule required, and the error
+did not fall with the training size. Condition <code>cr</code> and <code>dd</code> fits
+on the exact survival probability, and lineage-level fits on a direct
+Monte Carlo estimate or not at all; the section &lsquo;Conditioning on
+survival&rsquo; of <code><a href="#estimate_rates">estimate_rates</a></code> shows how.
+</p>
+
 <h4>Value</h4>
 
 <p>A <code>gam</code> object (binomial family) representing
@@ -1596,12 +1755,13 @@ predictors, which can capture interaction effects.</p>
 <h4>Examples</h4>
 
 <pre><code class='language-R'>set.seed(1)
-pars_mat &lt;- cbind(beta_0  = runif(100, 0.3, 1.2),
-                  gamma_0 = runif(100, 0.05, 0.5))
+# Exponential link (the default): the intercepts are log rates
+pars_mat &lt;- cbind(beta_0  = log(runif(100, 0.3, 1.2)),
+                  gamma_0 = log(runif(100, 0.05, 0.5)))
 sims &lt;- simulate_tree(pars = pars_mat, max_t = 4, model = "cr",
-                      max_tries = 0)
+                      max_tries = 1)
 gam_uni &lt;- train_GAM(sims$simulations, pars_mat, model = "cr")
-predict_survival(gam_uni, data.frame(beta_0 = 0.8, gamma_0 = 0.2))
+predict_survival(gam_uni, data.frame(beta_0 = log(0.8), gamma_0 = log(0.2)))
 </code></pre>
 
 
@@ -2022,7 +2182,8 @@ list(trees, logf, logg, weights, fhat), plus the draw counts.
   topology = NULL,
   mesh = NULL,
   attach = c("rate", "uniform"),
-  damping = "auto"
+  damping = "auto",
+  deadline = Inf
 )
 </code></pre>
 
@@ -2090,7 +2251,13 @@ labelled attachments the thinning sampler makes (audit finding H45).
 (finite-weight draws only), <code>fhat</code>, <code>n_valid</code> (completed
 draws), <code>n_nonfinite</code> (completed draws dropped for a non-finite
 log-weight), <code>n_attempts</code>, <code>n_rejected</code> (survivors at tp),
-<code>n_rejected_max_missing</code>, <code>acc</code>.  <code>trees</code> is empty when
+<code>n_rejected_max_missing</code>, <code>acc</code>, the mean-field diagnostics
+<code>mf_converged</code>, <code>mf_delta</code> (final residual), <code>mf_sweeps</code>,
+<code>mf_omega</code> (relaxation of the last sweep), <code>mf_budget</code> and
+<code>mf_damping</code> (all <code>NA</code> under cr), and <code>timed_out</code> (the
+<code>deadline</code>, an absolute <code>proc.time()</code> elapsed value, passed
+before <code>sample_size</code> draws completed: the draws made are returned
+and no shortfall warning is issued).  <code>trees</code> is empty when
 no draw completed or every completed draw has a non-finite log-weight;
 a warning is issued when fewer than <code>sample_size</code> draws completed.
 </p>
@@ -2127,7 +2294,8 @@ IS weights have nonzero variance (importance sampling, not exact).
   step_max = Inf,
   obs_pid = NULL,
   beta_ed = 0,
-  attach_fn = NULL
+  attach_fn = NULL,
+  deadline = Inf
 )
 </code></pre>
 
@@ -2195,6 +2363,16 @@ rates are re-evaluated.  <code>Inf</code> leaves the step uncapped.</p>
 <p>The ED coefficient, which tilts the attachment choice toward
 the lineages the model gives a higher rate.  Zero attaches uniformly.</p>
 </td></tr>
+<tr><td><code id=".bdi_augment_one_:_attach_fn">attach_fn</code></td>
+<td>
+<p>Exact attachment weights for a D model, or <code>NULL</code>.</p>
+</td></tr>
+<tr><td><code id=".bdi_augment_one_:_deadline">deadline</code></td>
+<td>
+<p>The fit's clock as an absolute <code>proc.time()</code> elapsed
+value; the draw is abandoned with reason <code>"deadline"</code> once it has
+passed.  <code>Inf</code> (the default) is no deadline.</p>
+</td></tr>
 </table>
 </div>
 
@@ -2213,7 +2391,8 @@ sentinel by <code><a href="#dot-bdi_to_tree_df">.bdi_to_tree_df</a></code>, so <
 <p>List with <code>$reason</code>: <code>"accepted"</code> (then also
 <code>$species</code>, <code>$unsampled</code>, <code>$n_alive_at_tp</code>, <code>$logg</code>,
 and the parent records when <code>track_parents</code>), <code>"max_missing"</code>
-(more than <code>max_missing</code> missing lineages drawn) or
+(more than <code>max_missing</code> missing lineages drawn),
+<code>"deadline"</code> (the clock ran out during the draw) or
 <code>"survivor"</code> (a missing lineage still alive at tp; only reachable at
 <code>rho = 1</code>, where such a tree has f = 0).
 </p>
@@ -2363,7 +2542,8 @@ change a run that already converged.
 <h4>Value</h4>
 
 <p>List with p_fun, Nhat_fun, Phat_fun, Ehat_fun, and the fixed-point
-diagnostics converged / delta / iterations.
+diagnostics converged / delta / iterations, with omega (the relaxation
+of the last sweep), damping (the setting) and max_iter (the budget).
 </p>
 
 
@@ -3208,7 +3388,26 @@ to <code>max_iter</code>.
 E-step), <code>pars</code>, <code>iterations</code> (number of completed E+M
 iterations), <code>stop_reason</code>, <code>loglik</code> (fhat at <code>pars</code>,
 <code>NA</code> when the final E-step failed), <code>loglik_var</code>,
-<code>final_IS</code>, <code>n_failed</code> (E- or M-step failures).
+<code>final_IS</code>, <code>n_failed</code> (E- or M-step failures),
+<code>final_truncated</code>, <code>time_note</code> and <code>damping</code> (the
+setting the mean field ran under).  The trace carries the mean field
+of every E-step: <code>mf_converged</code>, <code>mf_delta</code> (final residual),
+<code>mf_sweeps</code>, <code>mf_omega</code> (the relaxation of the last sweep) and
+<code>mf_budget</code> (the sweep budget).
+</p>
+<p>Clock.  <code>max_time</code> binds inside the E-step and the M-step: the
+sampler is given the deadline and stops drawing when it passes, between
+draws and inside one, and <code>m_cpp</code> is given the seconds left and reads
+them before every evaluation of its objective.  An iteration whose E-step
+ran out is discarded and the run stops with <code>"time_budget"</code> and a
+<code>time_note</code>.  An iteration whose M-step ran out keeps the best point
+the M-step had evaluated when that point improves on the current iterate,
+and is discarded otherwise; either way the run stops with
+<code>"time_budget"</code> and a <code>time_note</code> naming the M-step.  The final
+E-step is given a clock of its own, <code>max_time</code> again, and when it
+runs out the log-likelihood rests on the draws it made
+(<code>final_truncated</code>), so a fit returns within about twice
+<code>max_time</code>.
 </p>
 
 
@@ -3305,7 +3504,22 @@ iterations, not loop passes and not <code>nrow(mcem)</code>), <code>n_failed</co
 <code>maxN</code> (the ratcheted attempt cap: doubled on every E-step failure
 up to 50000, never reset after a success), <code>loglik</code> (fhat at
 <code>pars</code>, <code>NA</code> when the final E-step failed), <code>loglik_var</code>,
-<code>final_IS</code>.
+<code>final_IS</code>, <code>final_truncated</code> (the final E-step ran out of its
+clock and <code>loglik</code> rests on the draws it made) and <code>time_note</code>
+(what the clock cut short, or <code>NULL</code>).
+</p>
+<p>Clock.  <code>max_time</code> binds inside the E-step and the M-step:
+<code>em_cpp</code> is given the seconds left, the E-step stops drawing when
+they run out, between draws and inside one, and the M-step reads the same
+deadline before every evaluation of its objective.  An iteration whose
+E-step ran out is discarded and the run stops with <code>"time_budget"</code>.
+An iteration whose M-step ran out keeps the best point the M-step had
+evaluated when that point improves on the current iterate, and is
+discarded otherwise; either way the run stops with <code>"time_budget"</code>
+and a <code>time_note</code> naming the M-step.  The clock is also read between
+iterations.  The final E-step is given a clock of its own,
+<code>max_time</code> again, so a fit returns within about twice
+<code>max_time</code>.
 </p>
 
 
@@ -3736,7 +3950,8 @@ for a lineage not alive), <code>ed</code> the value at <code>t</code>, and
   rconditional = NULL,
   parent_tip_start = as.numeric(c()),
   seed = 0L,
-  parent_id = as.integer(c())
+  parent_id = as.integer(c()),
+  time_left = -1
 )
 </code></pre>
 
@@ -3820,6 +4035,15 @@ every observed event.</p>
 one from R's generator, so set.seed() reaches the sampler whether or not a
 seed is passed.</p>
 </td></tr>
+<tr><td><code id="em_cpp_:_time_left">time_left</code></td>
+<td>
+<p>seconds the fit has left on its clock; the E-step stops
+drawing when they run out, inside a draw as well as between draws, and
+returns the trees it has with <code>timed_out = TRUE</code> and no M-step.  The
+same deadline binds the M-step, which reads it before every evaluation of
+its objective and stops once it has passed (<code>m_timed_out</code>).
+Negative (the default) means no deadline.</p>
+</td></tr>
 </table>
 </div>
 
@@ -3856,6 +4080,16 @@ seed is passed.</p>
 <dt>logf</dt><dd><p>vector of log p(obs, z_i | theta) for each valid tree</p>
 </dd>
 <dt>logg</dt><dd><p>vector of log q(z_i | obs, theta) for each valid tree</p>
+</dd>
+<dt>timed_out</dt><dd><p>whether the deadline passed before sample_size trees
+were drawn; when <code>TRUE</code> no M-step was run and <code>estimates</code> is
+<code>init_pars</code></p>
+</dd>
+<dt>m_timed_out</dt><dd><p>whether the deadline passed during the M-step</p>
+</dd>
+<dt>m_improved</dt><dd><p>when <code>m_timed_out</code>: whether the best point the
+M-step had evaluated improves on <code>init_pars</code>; <code>estimates</code> is
+that point when <code>TRUE</code> and <code>init_pars</code> when <code>FALSE</code></p>
 </dd>
 </dl>
 
@@ -4062,7 +4296,7 @@ ready for <code><a href="#train_likelihood_GAM">train_likelihood_GAM</a></code>.
   pars_mat,
   model = "cr",
   sample_size = 200L,
-  link = "linear",
+  link = "exponential",
   max_missing = 10000,
   max_lambda = 500,
   maxN = NULL,
@@ -4100,7 +4334,8 @@ binary integer vector (length 3 to 5).</p>
 </td></tr>
 <tr><td><code id="estimate_likelihood_surface_:_link">link</code></td>
 <td>
-<p><code>"linear"</code>, <code>"exponential"</code>, or <code>"gaussian"</code>.</p>
+<p><code>"exponential"</code> (default), <code>"linear"</code>, or
+<code>"gaussian"</code> (experimental); see <code><a href="#estimate_rates">estimate_rates</a></code>.</p>
 </td></tr>
 <tr><td><code id="estimate_likelihood_surface_:_max_missing">max_missing</code></td>
 <td>
@@ -4206,6 +4441,21 @@ sampling). Values outside <code>(0, 1]</code> are an error. Under
 well as extinct ones; both samplers do so, and the choice of sampler
 does not depend on <code>rho</code>.</p>
 </dd>
+<dt><code>max_time</code></dt><dd><p>Wall-clock budget of the fit in seconds; <code>NULL</code>
+disables it. Default <code>3600</code>. Under <code>"mcem"</code> the clock binds
+inside the E-step and the M-step, and the fit ends with
+<code>stop_reason = "time_budget"</code> and a <code>clock</code> note naming the
+step it cut. Both samplers stop drawing when it runs out, inside a draw
+as well as between draws, and the iteration in progress is discarded.
+The M-step's optimiser reads it before every evaluation of its
+objective; cut short, the iteration keeps the best point the optimiser
+had evaluated when that point improves on the current iterate, and is
+discarded otherwise. The E-step that evaluates the returned parameters
+then gets <code>max_time</code> again, and when it runs out its
+log-likelihood rests on the draws it made, so an MCEM fit returns
+within about twice <code>max_time</code>. Under <code>"cem"</code> and
+<code>"gam"</code> the clock is read between evaluations.</p>
+</dd>
 </dl>
 
 <p>MCEM-specific parameters:
@@ -4230,14 +4480,30 @@ expands the iteration diverges and a larger budget makes it worse: on a
 416-tip tree at rates whose equilibrium is critical the residual is 305
 after 20 sweeps and 329 after 200. A partial step,
 <span class="reqn">\(x \leftarrow (1-\omega)x + \omega F(x)\)</span>, contracts it.
-<code>"auto"</code> (default) starts at <span class="reqn">\(\omega = 1\)</span> and halves it
+<code>"auto"</code> starts at <span class="reqn">\(\omega = 1\)</span> and halves it
 whenever the residual grows; on that tree it converges in 40 sweeps, and
 where the map already contracts it is the plain iteration to the bit.
 A number in <span class="reqn">\((0, 1]\)</span> fixes <span class="reqn">\(\omega\)</span> instead; <code>1</code> is the
-plain iteration. Relaxation below about <span class="reqn">\(1/20\)</span> converges too slowly
+plain iteration. <code>"default"</code> (the default) is <code>"auto"</code> at
+<code>rho = 1</code> and <span class="reqn">\(\omega = 1/8\)</span> at <code>rho &lt; 1</code>: in
+experiment E10c a fixed 1/8 converged 0 of 192 units within the 20
+sweeps at <code>rho = 1</code> against 131 for <code>"auto"</code>, at 1.4&ndash;3.3
+times the E-step time and no gain in effective sample, and below
+<code>rho = 1</code> it converged more (142 against 131 at <code>rho = 0.2</code>);
+an explicit <code>"auto"</code> or number is used as given. Relaxation below about <span class="reqn">\(1/20\)</span> converges too slowly
 to be useful. It fixes the iteration and nothing else: at 416 tips the
 effective sample is 2.1 of 97 even with a converged mean field, because
-the proposal must invent some 600 missing lineages there (audit H108).</p>
+the proposal must invent some 600 missing lineages there (audit H108).
+Every E-step's mean field is in the trace (<code>mf_converged</code>,
+<code>mf_delta</code>, the final residual, <code>mf_sweeps</code>,
+<code>mf_omega</code>, the relaxation of the last sweep, and
+<code>mf_budget</code>); when some E-step relaxed the iteration below the
+full step or did not converge within its sweep budget, or the setting
+is not <code>"auto"</code>, the fit's <code>notes</code> carry a
+<code>mean_field</code> entry with the resolved setting (and whether it is
+the default for the fit's <code>rho</code>), the sweeps, relaxation and
+residual of the last E-step and whether it converged, and
+<code>print()</code> shows it.</p>
 </dd>
 <dt><code>mesh</code></dt><dd><p>BDI only, and only where its Gillespie branch runs
 (any model but <code>"cr"</code>): the number of steps per crown age the
@@ -4677,7 +4943,8 @@ segment start (ED grows at slope one within the segment).
   model = as.integer(c(0, 0, 0)),
   link = 0L,
   rho = 1,
-  rconditional = NULL
+  rconditional = NULL,
+  time_left = -1
 )
 </code></pre>
 
@@ -4728,6 +4995,12 @@ be equal in length to the vector of init_pars</p>
 <td>
 <p>R function that evaluates the GAM function.</p>
 </td></tr>
+<tr><td><code id="m_cpp_:_time_left">time_left</code></td>
+<td>
+<p>seconds the fit has left on its clock; the optimiser
+reads it before every evaluation of the objective and stops once it has
+run out.  Negative (the default) means no deadline.</p>
+</td></tr>
 </table>
 </div>
 
@@ -4742,6 +5015,12 @@ be equal in length to the vector of init_pars</p>
 <dt>nlopt</dt><dd><p>nlopt status</p>
 </dd>
 <dt>time</dt><dd><p>used computation time</p>
+</dd>
+<dt>timed_out</dt><dd><p>whether the deadline stopped the optimiser</p>
+</dd>
+<dt>improved</dt><dd><p>when <code>timed_out</code>: whether the best point evaluated
+improves on <code>init_pars</code>; <code>estimates</code> is that point when
+<code>TRUE</code> and <code>init_pars</code> when <code>FALSE</code></p>
 </dd>
 </dl>
 

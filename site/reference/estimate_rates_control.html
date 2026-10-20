@@ -55,6 +55,21 @@ sampling). Values outside <code>(0, 1]</code> are an error. Under
 well as extinct ones; both samplers do so, and the choice of sampler
 does not depend on <code>rho</code>.</p>
 </dd>
+<dt><code>max_time</code></dt><dd><p>Wall-clock budget of the fit in seconds; <code>NULL</code>
+disables it. Default <code>3600</code>. Under <code>"mcem"</code> the clock binds
+inside the E-step and the M-step, and the fit ends with
+<code>stop_reason = "time_budget"</code> and a <code>clock</code> note naming the
+step it cut. Both samplers stop drawing when it runs out, inside a draw
+as well as between draws, and the iteration in progress is discarded.
+The M-step's optimiser reads it before every evaluation of its
+objective; cut short, the iteration keeps the best point the optimiser
+had evaluated when that point improves on the current iterate, and is
+discarded otherwise. The E-step that evaluates the returned parameters
+then gets <code>max_time</code> again, and when it runs out its
+log-likelihood rests on the draws it made, so an MCEM fit returns
+within about twice <code>max_time</code>. Under <code>"cem"</code> and
+<code>"gam"</code> the clock is read between evaluations.</p>
+</dd>
 </dl>
 
 <p>MCEM-specific parameters:
@@ -79,14 +94,30 @@ expands the iteration diverges and a larger budget makes it worse: on a
 416-tip tree at rates whose equilibrium is critical the residual is 305
 after 20 sweeps and 329 after 200. A partial step,
 <span class="reqn">\(x \leftarrow (1-\omega)x + \omega F(x)\)</span>, contracts it.
-<code>"auto"</code> (default) starts at <span class="reqn">\(\omega = 1\)</span> and halves it
+<code>"auto"</code> starts at <span class="reqn">\(\omega = 1\)</span> and halves it
 whenever the residual grows; on that tree it converges in 40 sweeps, and
 where the map already contracts it is the plain iteration to the bit.
 A number in <span class="reqn">\((0, 1]\)</span> fixes <span class="reqn">\(\omega\)</span> instead; <code>1</code> is the
-plain iteration. Relaxation below about <span class="reqn">\(1/20\)</span> converges too slowly
+plain iteration. <code>"default"</code> (the default) is <code>"auto"</code> at
+<code>rho = 1</code> and <span class="reqn">\(\omega = 1/8\)</span> at <code>rho &lt; 1</code>: in
+experiment E10c a fixed 1/8 converged 0 of 192 units within the 20
+sweeps at <code>rho = 1</code> against 131 for <code>"auto"</code>, at 1.4&ndash;3.3
+times the E-step time and no gain in effective sample, and below
+<code>rho = 1</code> it converged more (142 against 131 at <code>rho = 0.2</code>);
+an explicit <code>"auto"</code> or number is used as given. Relaxation below about <span class="reqn">\(1/20\)</span> converges too slowly
 to be useful. It fixes the iteration and nothing else: at 416 tips the
 effective sample is 2.1 of 97 even with a converged mean field, because
-the proposal must invent some 600 missing lineages there (audit H108).</p>
+the proposal must invent some 600 missing lineages there (audit H108).
+Every E-step's mean field is in the trace (<code>mf_converged</code>,
+<code>mf_delta</code>, the final residual, <code>mf_sweeps</code>,
+<code>mf_omega</code>, the relaxation of the last sweep, and
+<code>mf_budget</code>); when some E-step relaxed the iteration below the
+full step or did not converge within its sweep budget, or the setting
+is not <code>"auto"</code>, the fit's <code>notes</code> carry a
+<code>mean_field</code> entry with the resolved setting (and whether it is
+the default for the fit's <code>rho</code>), the sweeps, relaxation and
+residual of the last E-step and whether it converged, and
+<code>print()</code> shows it.</p>
 </dd>
 <dt><code>mesh</code></dt><dd><p>BDI only, and only where its Gillespie branch runs
 (any model but <code>"cr"</code>): the number of steps per crown age the

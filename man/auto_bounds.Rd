@@ -48,7 +48,9 @@ to assess feasibility (default 5).}
 to the observed tree.  Default \code{c(0.1, 10)}.}
 
 \item{train_surv_gam}{If \code{TRUE} (default), train a survival GAM
-on the detected region.}
+on the detected region, from 2000 single forward draws. The GAM is not
+accurate enough to condition a fit on (experiment E43; see
+\code{\link{train_GAM}}).}
 
 \item{num_threads}{Parallel threads for batch simulation (default 1).}
 
@@ -67,28 +69,29 @@ A list with components:
     \item{lower_bound}{Numeric vector of lower bounds (compact layout).}
     \item{upper_bound}{Numeric vector of upper bounds (compact layout).}
     \item{survival_gam}{A \code{gam} object if trained, else \code{NULL}.}
-    \item{center}{The safe center point used as starting location.}
+    \item{center}{The safe centre point used as starting location.}
   }
 }
 \description{
-Starts from a safe center point (low rates, zero covariates) and expands
+Starts from a safe centre point (low rates, zero covariates) and expands
 outward along each parameter axis using bisection to find the feasibility
 boundary --- where trees transition from surviving with sensible size to
 going extinct or exploding.  Much more efficient than blanket LHS sampling
-over a wide box.  Optionally trains a survival GAM over the detected region.
+over a wide box.  Optionally trains a survival GAM over the detected region;
+the bounds do not depend on it.
 }
 \examples{
 set.seed(1)
 tr  <- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy <- tr$tes
 # A coarse search without the survival GAM
-ab <- auto_bounds(phy, model = "cr", n_test = 3L, bisect_steps = 4L,
+ab <- auto_bounds(phy, model = "cr", n_test = 3L, bisect_steps = 3L,
                   train_surv_gam = FALSE, verbose = FALSE)
 ab$lower_bound
 ab$upper_bound
 \donttest{
-# The default search, which also trains the survival GAM that
-# estimate_rates(cond = ) conditions on
+# The default search, which also trains the survival GAM (see train_GAM()
+# for why a fit should not be conditioned on it)
 ab2 <- auto_bounds(phy, model = "cr", verbose = FALSE)
 predict_survival(ab2$survival_gam, as.data.frame(t(ab2$center)))
 }

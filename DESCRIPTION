@@ -26,6 +26,7 @@ URL: https://franciscorichter.github.io/emphasis/,
     https://github.com/franciscorichter/emphasis
 BugReports: https://github.com/franciscorichter/emphasis/issues
 Encoding: UTF-8
+Language: en-GB
 Depends: R (>= 3.5.0)
 Imports:
     ape,

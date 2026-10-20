@@ -88,6 +88,21 @@ iterations, not loop passes and not <code>nrow(mcem)</code>), <code>n_failed</co
 <code>maxN</code> (the ratcheted attempt cap: doubled on every E-step failure
 up to 50000, never reset after a success), <code>loglik</code> (fhat at
 <code>pars</code>, <code>NA</code> when the final E-step failed), <code>loglik_var</code>,
-<code>final_IS</code>.
+<code>final_IS</code>, <code>final_truncated</code> (the final E-step ran out of its
+clock and <code>loglik</code> rests on the draws it made) and <code>time_note</code>
+(what the clock cut short, or <code>NULL</code>).
+</p>
+<p>Clock.  <code>max_time</code> binds inside the E-step and the M-step:
+<code>em_cpp</code> is given the seconds left, the E-step stops drawing when
+they run out, between draws and inside one, and the M-step reads the same
+deadline before every evaluation of its objective.  An iteration whose
+E-step ran out is discarded and the run stops with <code>"time_budget"</code>.
+An iteration whose M-step ran out keeps the best point the M-step had
+evaluated when that point improves on the current iterate, and is
+discarded otherwise; either way the run stops with <code>"time_budget"</code>
+and a <code>time_note</code> naming the M-step.  The clock is also read between
+iterations.  The final E-step is given a clock of its own,
+<code>max_time</code> again, so a fit returns within about twice
+<code>max_time</code>.
 </p>
 

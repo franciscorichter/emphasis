@@ -109,12 +109,16 @@ surrogate proposal's fixed-point iteration, never in an estimation
 experiment; it is not available for ED or K models, and every model
 with a covariate is fitted on it with the thinning proposal.}
 
-\item{cond}{A survival emulator for conditioning on survival: a GAM from
-\code{\link{train_GAM}}, a \code{nnet} object, or a function of the parameter
-data frame (see \code{\link{predict_survival}}); \code{NULL} (default) for no
-conditioning. When provided, the
-log-likelihood is conditioned: \eqn{\ell_{\rm cond} = \ell -
-\log\hat{P}_{\rm tree}(\theta)}.}
+\item{cond}{The survival probability to condition on, or \code{NULL}
+(default) for no conditioning. When provided, the log-likelihood is
+conditioned: \eqn{\ell_{\rm cond} = \ell - \log P_\theta(S)}, where
+\eqn{P_\theta(S)} is the probability that both crown lineages leave a
+sampled descendant at the present. Three forms are accepted: a function
+of the parameter data frame that returns \eqn{P_\theta(S)} (the
+probability, not its log), a GAM from \code{\link{train_GAM}}, or a
+\code{nnet} object (see \code{\link{predict_survival}}). The GAM is not
+accurate enough to condition on; the section \sQuote{Conditioning on
+survival} says what to pass instead.}
 }
 \value{
 A list with class \code{"emphasis_fit"} containing:
@@ -162,6 +166,46 @@ diversification model. Accepts a simulated or empirical tree, extracts
 branching times (pruning to extant tips if needed), and dispatches to
 the chosen optimisation back-end.
 }
+\section{Conditioning on survival}{
+
+The survival emulator of \code{\link{train_GAM}} is not adequate for any
+lineage-level model. In experiment E43
+(\url{https://franciscorichter.github.io/emphasis/experiments/E43.html}), GAMs
+trained on 2000, 5000 and 20 000 simulated clades for each of \code{d},
+\code{nd}, \code{ed}, \code{edc}, \code{ned}, \code{nedc}, \code{k} and
+\code{nk} had a 90th-percentile error of \eqn{\log P(S)} of 0.44 to 2.56,
+against the 0.05 its adequacy rule required, and the error did not fall
+with the training size.
+
+Under \code{cr} and \code{dd}, condition on the exact survival
+probability. The package does not export a function for it: pass one to
+\code{cond}. The function receives a data frame with one row per parameter
+point and columns named as the parameters (\code{beta_0}, \code{gamma_0}
+under \code{cr}), and returns \eqn{P_\theta(S)}, one value per row. Under
+constant rates on the exponential link, with \eqn{\lambda = e^{\beta_0}},
+\eqn{\mu = e^{\gamma_0}}, \eqn{d = \lambda - \mu}, crown age \eqn{T}
+and sampling fraction \eqn{\rho}, one crown lineage leaves a sampled
+descendant at the present with probability
+\deqn{p = \frac{\rho d}{\rho\lambda + (\lambda(1-\rho) - \mu)e^{-dT}}}{p = rho d / (rho lambda + (lambda (1 - rho) - mu) exp(-d T))}
+(\eqn{p = \rho / (1 + \rho\lambda T)} when \eqn{\lambda = \mu}); the two
+crown lineages are independent, so \eqn{P_\theta(S) = p^2}. The last
+example below codes it. Under \code{dd} the exact value solves the master
+equation of the clade size, which the package does not provide. E43's
+Monte Carlo reference agreed with the exact values to a median error of
+0.007 (\code{cr}) and 0.008 (\code{dd}) in \eqn{\log P}.
+
+Under a lineage-level model, either fit without conditioning or pass a
+function that returns a direct Monte Carlo estimate of \eqn{P_\theta(S)}
+at each row: the share of single forward draws from
+\code{\link{simulate_tree}} (\code{max_tries = 1}) in which both crown
+lineages leave a sampled descendant, a clade that reaches the lineage cap
+counted as surviving (at \eqn{\rho = 1}, the share with status
+\code{"done"} or \code{"too_large"}). At a standard error of 0.01 in
+\eqn{\log P}, one such estimate took E43 a median of 2 to 29 seconds of one
+core, depending on the model, and the M-step evaluates \code{cond} at every
+parameter value it tries.
+}
+
 \examples{
 set.seed(1)
 tr  <- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
@@ -178,5 +222,21 @@ fit_dd <- estimate_rates(phy, method = "mcem", model = "dd",
                  upper_bound = c(1, 0.1, 0, 0.1),
                  max_iter = 10, num_trees = 50))
 fit_dd$pars
+
+# Conditioning a cr fit on its exact survival probability, P(S) = p^2
+cond_cr <- function(T, rho = 1) function(pars) {
+  lambda <- exp(pars$beta_0)
+  mu     <- exp(pars$gamma_0)
+  d      <- lambda - mu
+  p <- ifelse(abs(d) < 1e-12, rho / (1 + rho * lambda * T),
+              rho * d / (rho * lambda + (lambda * (1 - rho) - mu) * exp(-d * T)))
+  p^2
+}
+crown_age <- max(ape::branching.times(phy))
+fit_cond <- estimate_rates(phy, method = "mcem", model = "cr",
+  cond = cond_cr(T = crown_age),
+  control = list(lower_bound = c(-3, -5), upper_bound = c(1, 0),
+                 max_iter = 10, num_trees = 50))
+fit_cond
 }
 }

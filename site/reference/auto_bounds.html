@@ -1,10 +1,11 @@
 <h3>Description</h3>
 
-<p>Starts from a safe center point (low rates, zero covariates) and expands
+<p>Starts from a safe centre point (low rates, zero covariates) and expands
 outward along each parameter axis using bisection to find the feasibility
 boundary &mdash; where trees transition from surviving with sensible size to
 going extinct or exploding.  Much more efficient than blanket LHS sampling
-over a wide box.  Optionally trains a survival GAM over the detected region.
+over a wide box.  Optionally trains a survival GAM over the detected region;
+the bounds do not depend on it.
 </p>
 
 <h3>Usage</h3>
@@ -12,7 +13,7 @@ over a wide box.  Optionally trains a survival GAM over the detected region.
 <pre><code class='language-R'>auto_bounds(
   tree,
   model = "cr",
-  link = "linear",
+  link = "exponential",
   n_test = 5L,
   bisect_steps = 8L,
   margin = 0.5,
@@ -39,7 +40,16 @@ over a wide box.  Optionally trains a survival GAM over the detected region.
 </td></tr>
 <tr><td><code id="auto_bounds_:_link">link</code></td>
 <td>
-<p><code>"linear"</code>, <code>"exponential"</code>, or <code>"gaussian"</code>.</p>
+<p>Link function: <code>"exponential"</code> (default),
+<code>rate = exp(eta)</code>, under which the intercepts <code>beta_0</code> and
+<code>gamma_0</code> are log rates; <code>"linear"</code>,
+<code>rate = max(0, eta)</code>, under which the parameters are rates and a
+covariate can drive a rate to zero, where it is clipped;
+<code>"gaussian"</code>, <code>beta_0 * exp(-(eta_cov - 1)^2 / 2)</code>, is
+experimental: it has been used only in a convergence study of the
+surrogate proposal's fixed-point iteration, never in an estimation
+experiment; it is not available for ED or K models, and every model
+with a covariate is fitted on it with the thinning proposal.</p>
 </td></tr>
 <tr><td><code id="auto_bounds_:_n_test">n_test</code></td>
 <td>
@@ -63,7 +73,9 @@ to the observed tree.  Default <code>c(0.1, 10)</code>.</p>
 <tr><td><code id="auto_bounds_:_train_surv_gam">train_surv_gam</code></td>
 <td>
 <p>If <code>TRUE</code> (default), train a survival GAM
-on the detected region.</p>
+on the detected region, from 2000 single forward draws. The GAM is not
+accurate enough to condition a fit on (experiment E43; see
+<code><a href="#train_GAM">train_GAM</a></code>).</p>
 </td></tr>
 <tr><td><code id="auto_bounds_:_num_threads">num_threads</code></td>
 <td>
@@ -79,9 +91,10 @@ on the detected region.</p>
 </td></tr>
 <tr><td><code id="auto_bounds_:_surv_tries">surv_tries</code></td>
 <td>
-<p>Simulations per candidate when judging whether a parameter
-vector produces surviving clades of a usable size (default 20).
-Passed through to IS feasibility diagnostics.</p>
+<p>Draws allowed per simulation, the first included, when
+judging whether a parameter vector produces surviving clades of a usable
+size: an extinct clade is redrawn up to this many times in all (passed to
+<code>simulate_tree</code> as <code>max_tries</code>). Default 20.</p>
 </td></tr>
 </table>
 
@@ -97,23 +110,23 @@ Passed through to IS feasibility diagnostics.</p>
 </dd>
 <dt>survival_gam</dt><dd><p>A <code>gam</code> object if trained, else <code>NULL</code>.</p>
 </dd>
-<dt>center</dt><dd><p>The safe center point used as starting location.</p>
+<dt>center</dt><dd><p>The safe centre point used as starting location.</p>
 </dd>
 </dl>
 
 <h3>Examples</h3>
 
 <pre><code class='language-R'>set.seed(1)
-tr  &lt;- simulate_tree(pars = c(0.5, 0.1), max_t = 4, model = "cr")
+tr  &lt;- simulate_tree(pars = log(c(0.5, 0.1)), max_t = 4, model = "cr")
 phy &lt;- tr$tes
 # A coarse search without the survival GAM
-ab &lt;- auto_bounds(phy, model = "cr", n_test = 3L, bisect_steps = 4L,
+ab &lt;- auto_bounds(phy, model = "cr", n_test = 3L, bisect_steps = 3L,
                   train_surv_gam = FALSE, verbose = FALSE)
 ab$lower_bound
 ab$upper_bound
 
-# The default search, which also trains the survival GAM that
-# estimate_rates(cond = ) conditions on
+# The default search, which also trains the survival GAM (see train_GAM()
+# for why a fit should not be conditioned on it)
 ab2 &lt;- auto_bounds(phy, model = "cr", verbose = FALSE)
 predict_survival(ab2$survival_gam, as.data.frame(t(ab2$center)))
 
