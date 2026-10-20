@@ -74,11 +74,18 @@ namespace {
 //' @param model integer vector of length 3: c(use_N, use_P, use_E)
 //' @param link link function: 0 = linear (max(0,...)), 1 = exponential
 //' @param rconditional R function that evaluates the GAM function.
+//' @param time_left seconds the fit has left on its clock; the optimiser
+//' reads it before every evaluation of the objective and stops once it has
+//' run out.  Negative (the default) means no deadline.
 //' @return list with the following entries:
 //' \describe{
 //'  \item{estimates}{vector of estimates}
 //'  \item{nlopt}{nlopt status}
 //'  \item{time}{used computation time}
+//'  \item{timed_out}{whether the deadline stopped the optimiser}
+//'  \item{improved}{when \code{timed_out}: whether the best point evaluated
+//'  improves on \code{init_pars}; \code{estimates} is that point when
+//'  \code{TRUE} and \code{init_pars} when \code{FALSE}}
 //' }
 //' @keywords internal
 // [[Rcpp::export(name = "m_cpp")]]
@@ -92,8 +99,10 @@ List rcpp_mcm(List e_step,
               Rcpp::IntegerVector model = Rcpp::IntegerVector::create(0, 0, 0),
               int link = 0,
               double rho = 1.0,
-              Nullable<Function> rconditional = R_NilValue)
+              Nullable<Function> rconditional = R_NilValue,
+              double time_left = -1.0)
 {
+  const emphasis::deadline_t deadline = emphasis::deadline_t::in_seconds(time_left);
   // The internal parameter layout has 10 slots (the last two the ED
   // coefficients); an 8-element vector means ED absent and is padded.
   const bool ok_len = (init_pars.size() == 8 || init_pars.size() == 10 || init_pars.size() == emphasis::n_params) &&
@@ -143,12 +152,15 @@ List rcpp_mcm(List e_step,
                             upper10,
                             xtol_rel,
                             num_threads,
-                            conditional ? &conditional : nullptr);
+                            conditional ? &conditional : nullptr,
+                            deadline);
   List ret;
   // Returned in the layout the caller used: 8 slots when it passed 8.
   const long n_out = static_cast<long>(std::min(init_pars.size(), M.estimates.size()));
   ret["estimates"] = NumericVector(M.estimates.begin(), M.estimates.begin() + n_out);
   ret["nlopt"] = M.opt;
   ret["time"]  = M.elapsed;
+  ret["timed_out"] = M.timed_out;
+  ret["improved"] = M.improved;
   return ret;
 }

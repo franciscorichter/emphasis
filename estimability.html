@@ -130,15 +130,15 @@ window.MathJax = {
 <td>0.6</td>
 <td>the relaxation default at the shipped budget (20 sweeps at <span class="math inline">\(\rho = 1\)</span>, 200 below), <span class="math inline">\(\omega\)</span> in {1, <code>"auto"</code>, ⅛}, and the surrogate's ESS under ⅛ against <code>"auto"</code> on contracting <code>cr</code>/<code>dd</code> trees</td>
 <td>E10c (<a href="experiments/E10.html">E10</a>)</td>
-<td><strong>running</strong></td>
-<td>decides the default: ⅛ is adopted, as E10b's rule says, only if E10c confirms it</td>
+<td><strong>done</strong> 2026-10-20</td>
+<td>rule met (⅛ converges 48 of 151 diverging units, <code>"auto"</code> 37; ESS ratio 0.987), but at <span class="math inline">\(\rho\)</span> = 1 ⅛ converges 0 of 192 units in 20 sweeps against 131 for <code>"auto"</code>, at 1.4-3.3 times the E-step time; the author's decision: <code>"auto"</code> at <span class="math inline">\(\rho\)</span> = 1, a fixed ⅛ when <span class="math inline">\(\rho\)</span> &lt; 1</td>
 </tr>
 <tr>
 <td>0.7</td>
 <td>proposal ESS at <span class="math inline">\(\rho\)</span> &lt; 1 on the current build, exponential link, the eight lineage-level models, no fitting</td>
 <td>E6b (<a href="experiments/E6.html">E6</a>)</td>
-<td><strong>planned</strong>: registered 2026-10-19, driver written</td>
-<td>E7's <code>ed</code>/<code>ned</code> cells fold into E46 (ESS at the generating values before each fit)</td>
+<td><strong>done</strong> 2026-10-20</td>
+<td>E6's ranking holds in 17 of 20 cells; <code>ed</code> and <code>ned</code> cross between <span class="math inline">\(\rho\)</span> 0.4 and 0.2; <code>ed</code>, <code>ned</code>, <code>nedc</code> below 10 effective draws on both proposals in nearly every cell; the surrogate leads <code>dd</code> 11-68×, <code>d</code> 22-80×, <code>nd</code> 18-40×, <code>edc</code> 2.2-12×; <code>k</code>, <code>nk</code> thinning only. E7's <code>ed</code>/<code>ned</code> cells fold into E46 (ESS at the generating values before each fit)</td>
 </tr>
 <tr>
 <td>0.8</td>

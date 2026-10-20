@@ -71,7 +71,9 @@ seed is passed.}
 
 \item{time_left}{seconds the fit has left on its clock; the E-step stops
 drawing when they run out, inside a draw as well as between draws, and
-returns the trees it has with \code{timed_out = TRUE} and no M-step.
+returns the trees it has with \code{timed_out = TRUE} and no M-step.  The
+same deadline binds the M-step, which reads it before every evaluation of
+its objective and stops once it has passed (\code{m_timed_out}).
 Negative (the default) means no deadline.}
 }
 \value{
@@ -94,6 +96,10 @@ a list with the following components:
  \item{timed_out}{whether the deadline passed before sample_size trees
  were drawn; when \code{TRUE} no M-step was run and \code{estimates} is
  \code{init_pars}}
+ \item{m_timed_out}{whether the deadline passed during the M-step}
+ \item{m_improved}{when \code{m_timed_out}: whether the best point the
+ M-step had evaluated improves on \code{init_pars}; \code{estimates} is
+ that point when \code{TRUE} and \code{init_pars} when \code{FALSE}}
 }
 }
 \description{

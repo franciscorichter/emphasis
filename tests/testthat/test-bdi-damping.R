@@ -157,3 +157,49 @@ test_that("a fit records a relaxed mean field in its notes and print() says so",
   if (all(plain$details$mcem$mf_omega == 1) && all(plain$details$mcem$mf_converged))
     expect_false("mean_field" %in% names(plain$notes))
 })
+
+# The default relaxation depends on the sampling fraction (experiment E10c):
+# "auto" at rho = 1, a fixed 1/8 below it.  An explicit setting wins.
+test_that("the default damping resolves by rho, and an explicit setting is kept", {
+  expect_identical(estimate_rates_control("mcem")$damping, "default")
+  expect_identical(emphasis:::.resolve_damping("default", 1), "auto")
+  expect_identical(emphasis:::.resolve_damping(NULL, 1), "auto")
+  expect_identical(emphasis:::.resolve_damping("default", 0.2), 0.125)
+  expect_identical(emphasis:::.resolve_damping("default", 0.999), 0.125)
+  expect_identical(emphasis:::.resolve_damping("auto", 0.2), "auto")
+  expect_identical(emphasis:::.resolve_damping(0.5, 1), 0.5)
+  expect_identical(emphasis:::.resolve_damping(1, 0.2), 1)
+})
+
+test_that("the mean-field note names the resolved default", {
+  f <- mf_fit(c(0.125, 0.125), c(TRUE, TRUE), damping = 0.125)
+  f$details$damping_default <- TRUE
+  expect_match(emphasis:::.mean_field_note(f), "damping = 0.125, the default at rho < 1")
+  f <- mf_fit(c(1, 0.5), c(TRUE, TRUE), damping = "auto")
+  f$details$damping_default <- TRUE
+  expect_match(emphasis:::.mean_field_note(f), "damping = \"auto\", the default at rho = 1")
+  # set by the user: no "default" in the note
+  f <- mf_fit(c(0.125, 0.125), c(TRUE, TRUE), damping = 0.125)
+  expect_false(grepl("the default", emphasis:::.mean_field_note(f)))
+})
+
+test_that("a fit under rho < 1 runs the mean field at 1/8 and says so", {
+  skip_on_cran()
+  set.seed(21); phy <- ape::rcoal(40)
+  ctrl <- list(lower_bound = c(0.1, -0.05, 0.01, -0.05), upper_bound = c(2, 0.05, 1, 0.05),
+               num_trees = 10L, max_iter = 1L)
+  fit <- suppressWarnings(estimate_rates(phy, method = "mcem", model = "dd", link = "linear",
+                                         init_pars = c(0.7, -0.008, 0.25, 0),
+                                         control = c(ctrl, list(rho = 0.5))))
+  expect_identical(fit$sampling, "bdi")
+  expect_identical(fit$details$damping, 0.125)
+  expect_true(all(fit$details$mcem$mf_omega == 0.125))
+  expect_match(fit$notes[["mean_field"]], "damping = 0.125, the default at rho < 1")
+  fit1 <- suppressWarnings(estimate_rates(phy, method = "mcem", model = "dd", link = "linear",
+                                          init_pars = c(0.7, -0.008, 0.25, 0), control = ctrl))
+  expect_identical(fit1$details$damping, "auto")
+  fit2 <- suppressWarnings(estimate_rates(phy, method = "mcem", model = "dd", link = "linear",
+                                          init_pars = c(0.7, -0.008, 0.25, 0),
+                                          control = c(ctrl, list(rho = 0.5, damping = "auto"))))
+  expect_identical(fit2$details$damping, "auto")
+})

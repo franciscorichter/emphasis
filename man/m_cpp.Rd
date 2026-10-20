@@ -15,7 +15,8 @@ m_cpp(
   model = as.integer(c(0, 0, 0)),
   link = 0L,
   rho = 1,
-  rconditional = NULL
+  rconditional = NULL,
+  time_left = -1
 )
 }
 \arguments{
@@ -41,6 +42,10 @@ be equal in length to the vector of init_pars}
 \item{link}{link function: 0 = linear (max(0,...)), 1 = exponential}
 
 \item{rconditional}{R function that evaluates the GAM function.}
+
+\item{time_left}{seconds the fit has left on its clock; the optimiser
+reads it before every evaluation of the objective and stops once it has
+run out.  Negative (the default) means no deadline.}
 }
 \value{
 list with the following entries:
@@ -48,6 +53,10 @@ list with the following entries:
  \item{estimates}{vector of estimates}
  \item{nlopt}{nlopt status}
  \item{time}{used computation time}
+ \item{timed_out}{whether the deadline stopped the optimiser}
+ \item{improved}{when \code{timed_out}: whether the best point evaluated
+ improves on \code{init_pars}; \code{estimates} is that point when
+ \code{TRUE} and \code{init_pars} when \code{FALSE}}
 }
 }
 \description{

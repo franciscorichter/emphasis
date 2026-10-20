@@ -51,7 +51,7 @@ namespace emphasis {
     // optimize; an E-step cut short by the deadline ends the fit, so its
     // partial sample is not optimised over
     if (!EM.e.trees.empty() && !EM.e.info.timed_out) {
-      EM.m = M_step(pars, EM.e.trees, EM.e.weights, model, lower_bound, upper_bound, xtol, num_threads, conditional);
+      EM.m = M_step(pars, EM.e.trees, EM.e.weights, model, lower_bound, upper_bound, xtol, num_threads, conditional, deadline);
     }
     return EM;
   }

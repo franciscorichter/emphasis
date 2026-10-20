@@ -44,13 +44,18 @@ A list: \code{mcem} (trace, one row per completed iteration plus the
   clock and \code{loglik} rests on the draws it made) and \code{time_note}
   (what the clock cut short, or \code{NULL}).
 
-Clock.  \code{max_time} binds inside the E-step: \code{em_cpp} is given
-the seconds left and stops drawing when they run out, between draws and
-inside one.  An iteration whose E-step ran out is discarded and the run
-stops with \code{"time_budget"}; the clock is also read between
-iterations, as before.  The final E-step is given a clock of its own,
+Clock.  \code{max_time} binds inside the E-step and the M-step:
+\code{em_cpp} is given the seconds left, the E-step stops drawing when
+they run out, between draws and inside one, and the M-step reads the same
+deadline before every evaluation of its objective.  An iteration whose
+E-step ran out is discarded and the run stops with \code{"time_budget"}.
+An iteration whose M-step ran out keeps the best point the M-step had
+evaluated when that point improves on the current iterate, and is
+discarded otherwise; either way the run stops with \code{"time_budget"}
+and a \code{time_note} naming the M-step.  The clock is also read between
+iterations.  The final E-step is given a clock of its own,
 \code{max_time} again, so a fit returns within about twice
-\code{max_time} plus one M-step.
+\code{max_time}.
 }
 \description{
 E-step and M-step of one iteration are a single \code{em_cpp()} call: the

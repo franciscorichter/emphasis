@@ -147,10 +147,19 @@ namespace emphasis {
   }
 
 
+  void sbplx::force_stop()
+  {
+    remp_force_stop(nlopt_);
+  }
+
+
+  // A forced stop is the caller's own request (the deadline passed), not a
+  // failure: it is returned like a success and read from result().
   double sbplx::optimize(std::vector<double>& x)
   {
     double fmin = 0.0;
-    if (NLOPT_SUCCESS > (result_ = remp_optimize(nlopt_, x.data(), &fmin))) {
+    result_ = remp_optimize(nlopt_, x.data(), &fmin);
+    if (NLOPT_SUCCESS > result_ && NLOPT_FORCED_STOP != result_) {
       throw emphasis_error("optimize failed");
     }
     return fmin;

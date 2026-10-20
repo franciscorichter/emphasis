@@ -139,6 +139,8 @@ namespace emphasis {
     int opt = -1;                       // nlopt result
     double minf = 0.0;
     double elapsed = 0.0;               // elapsed runtime [ms]
+    bool timed_out = false;             // the deadline cut the optimiser short
+    bool improved = false;              // timed out, and the best point found beats the start
   };
 
 
@@ -153,7 +155,8 @@ namespace emphasis {
                   const param_t& upper_bound = {}, // overrides model.upper.bound
                   double xtol_rel = 0.001,
                   int num_threads = 0,
-                  conditional_fun_t* conditional = nullptr);
+                  conditional_fun_t* conditional = nullptr,
+                  const deadline_t& deadline = {});  // inactive: no deadline
 
 
   // results from mcem

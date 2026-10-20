@@ -61,6 +61,15 @@ window.MathJax = {
 </li>
 <li><a href="#conclusion">Conclusion</a>
 </li>
+<li><a href="#e6b-the-same-question-on-the-current-build-and-the-exponential-link">E6b: the same question on the current build and the exponential link</a>
+<ol>
+<li><a href="#question-1">Question</a></li>
+<li><a href="#design-1">Design</a></li>
+<li><a href="#pre-set-rule-1">Pre-set rule</a></li>
+<li><a href="#results-1">Results</a></li>
+<li><a href="#conclusion-1">Conclusion</a></li>
+</ol>
+</li>
 <li><a href="#related">Related</a>
 </li>
 </ol>
@@ -70,7 +79,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete</td>
+<td>complete; superseded by E6b (below) where the two differ: the ranking in 3 of the 20 cells (<code>ed</code> at <span class="math inline">\(\rho\)</span> = 0.6 and 0.4, <code>ned</code> at 0.2) and the level of the ED models' effective sample</td>
 </tr>
 <tr>
 <td>Package build</td>
@@ -220,7 +229,197 @@ window.MathJax = {
 <figcaption><strong>Figure 1.</strong> Above 1 the surrogate proposal keeps the larger effective sample. <code>cr</code>, <code>dd</code> and <code>ned</code> stay above 1 at every sampling fraction; only <code>ed</code> crosses, between <span class="math inline">\(\rho\)</span> = 0.8 and 0.6.</figcaption>
 </figure>
 <h2 id="conclusion">Conclusion</h2>
-<p>Decision under the rule: <strong>the README sentence is struck</strong> and replaced by the measured rule — the surrogate proposal is the default, and the exception is <code>ed</code> below <span class="math inline">\(\rho\)</span> ≈ 0.8. The 45-tip case that led to E6 is an <code>ed</code>-type outcome, not an outlier. Two limits: the samples are measured at the generating values without fitting, so they are best cases (early in a fit the parameters are wrong and the samples smaller); and <span class="math inline">\(\rho\)</span> is confounded with tree size in the <code>dd</code> and <code>ned</code> rows, so the fall of the surrogate's sample with <span class="math inline">\(\rho\)</span> there is not separated from the fall in tips.</p>
+<p>Decision under the rule: <strong>the README sentence is struck</strong> and replaced by the measured rule — the surrogate proposal is the default, and the exception is <code>ed</code> below <span class="math inline">\(\rho\)</span> ≈ 0.8. The 45-tip case that led to E6 is an <code>ed</code>-type outcome, not an outlier. Two limits: the samples are measured at the generating values without fitting, so they are best cases (early in a fit the parameters are wrong and the samples smaller); and <span class="math inline">\(\rho\)</span> is confounded with tree size in the <code>dd</code> and <code>ned</code> rows, so the fall of the surrogate's sample with <span class="math inline">\(\rho\)</span> there is not separated from the fall in tips. E6b, on the current build and the exponential link, supersedes this conclusion where they differ: <code>ed</code> crosses between <span class="math inline">\(\rho\)</span> = 0.4 and 0.2, <code>ned</code> crosses at the same place, and the ED models' samples are below 10 effective draws on both proposals in nearly every cell.</p>
+<h2 id="e6b-the-same-question-on-the-current-build-and-the-exponential-link">E6b: the same question on the current build and the exponential link</h2>
+<div class="table-wrap">
+<table>
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td><code>397bf3f</code> (emphasis 1.0.0)</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E6b-proposal-rho.R</code>, <code>sim/E6b-analysis.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E6b/proposal-rho.csv</code> (500 rows, no errors), <code>results/E6b/cells.csv</code>, <code>results/E6b/design.rds</code>, <code>results/E6b/summary.txt</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 id="question-1">Question</h3>
+<p>E6 ran on the linear link, four models, and a build (<code>a87de1c</code>) that predates the ED surrogate commits, the exact ED simulator (<code>f30a791</code>) and the change to the <span class="math inline">\(D\)</span> likelihood (<code>4e0b9dd</code>). The package now defaults to the exponential link, and the methods paper (s4, the proposals paragraph and the caption of <code>fig:proposals</code>) and the docs site (<code>site/src/index.md</code>, "Supported is not the same as better") quoted E6's ranking; the audit of 2026-10-19 asked for this rerun.</p>
+<h3 id="design-1">Design</h3>
+<p>E6's, with the exponential link, the current build, and ten models: <code>cr</code>, <code>dd</code> and the eight lineage-level models.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>value</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>models</td>
+<td><code>cr</code>, <code>dd</code>, <code>d</code>, <code>nd</code>, <code>ed</code>, <code>ned</code>, <code>edc</code>, <code>nedc</code>, <code>k</code>, <code>nk</code></td>
+<td></td>
+</tr>
+<tr>
+<td><span class="math inline">\(\rho\)</span></td>
+<td>1, 0.8, 0.6, 0.4, 0.2</td>
+<td>simulated complete, sampled by <code>simulate_tree</code>; kept between 50<span class="math inline">\(\rho\)</span> and 180 tips</td>
+</tr>
+<tr>
+<td>trees</td>
+<td>10 per cell, about 100 tips at <span class="math inline">\(\rho\)</span> = 1</td>
+<td>crown age 15</td>
+</tr>
+<tr>
+<td>rates, models with <span class="math inline">\(N\)</span></td>
+<td><span class="math inline">\(\lambda_0\)</span> = 0.5, <span class="math inline">\(\mu_0\)</span> = 0.125, <span class="math inline">\(\beta_N\)</span> = log(0.25)/K, <span class="math inline">\(\gamma_N\)</span> = 0</td>
+<td>K bisected to a median clade of 100 tips (141 to 265; <code>nk</code> reached the bracket's end, 1400)</td>
+</tr>
+<tr>
+<td>rates, models without <span class="math inline">\(N\)</span></td>
+<td><span class="math inline">\(\mu_0\)</span> = 0.25 <span class="math inline">\(\lambda_0\)</span></td>
+<td><span class="math inline">\(\lambda_0\)</span> bisected the same way (0.32 to 0.61)</td>
+</tr>
+<tr>
+<td>covariate effect</td>
+<td>−0.15, speciation only</td>
+<td>raw ED: log(0.85)/mean ED at the present (E6's scale); <code>edc</code>, <code>d</code>, <code>k</code>: log(0.85)/sd over the lineages alive at the present (E24's scale)</td>
+</tr>
+<tr>
+<td>proposals</td>
+<td>surrogate (package defaults, where <code>.bdi_supported</code> admits the model) and thinning (<code>.proposal_model(model, "ed")</code>, the ED-aware variant for ED models)</td>
+<td><code>k</code>, <code>nk</code>: thinning only</td>
+</tr>
+<tr>
+<td>draws</td>
+<td>200, at the generating values, no fitting</td>
+<td>same seed for both proposals</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 id="pre-set-rule-1">Pre-set rule</h3>
+<p><em>E6's conclusions hold if, in each of E6's 20 (model, ρ) cells (<code>cr</code>, <code>dd</code>, <code>ed</code>, <code>ned</code>), the proposal with the larger median effective sample is the one E6 found (the surrogate everywhere except <code>ed</code> at ρ ≤ 0.6). Every cell where it differs is listed, and the statements in the paper and on the site are rewritten to the measured ranking.</em></p>
+<h3 id="results-1">Results</h3>
+<p>Median effective sample of 200 draws over 10 trees, surrogate / thinning (bold: the cells whose winner differs from E6):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th><span class="math inline">\(\rho\)</span> = 1</th>
+<th>0.8</th>
+<th>0.6</th>
+<th>0.4</th>
+<th>0.2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code></td>
+<td>200 / 6.4</td>
+<td>200 / 2.8</td>
+<td>200 / 2.7</td>
+<td>200 / 3.8</td>
+<td>200 / 5.4</td>
+</tr>
+<tr>
+<td><code>dd</code></td>
+<td>153 / 2.5</td>
+<td>158 / 2.9</td>
+<td>137 / 2.0</td>
+<td>117 / 3.3</td>
+<td>88 / 8.3</td>
+</tr>
+<tr>
+<td><code>ed</code></td>
+<td>13.0 / 7.0</td>
+<td>9.1 / 3.0</td>
+<td><strong>5.3 / 2.3</strong></td>
+<td><strong>5.1 / 3.9</strong></td>
+<td>5.0 / 10.3</td>
+</tr>
+<tr>
+<td><code>ned</code></td>
+<td>7.6 / 3.6</td>
+<td>6.4 / 2.5</td>
+<td>5.9 / 1.9</td>
+<td>4.9 / 4.1</td>
+<td><strong>1.9 / 6.1</strong></td>
+</tr>
+<tr>
+<td><code>edc</code></td>
+<td>98 / 10.5</td>
+<td>59 / 4.8</td>
+<td>27 / 2.4</td>
+<td>20 / 2.7</td>
+<td>18 / 8.4</td>
+</tr>
+<tr>
+<td><code>nedc</code></td>
+<td>8.2 / 4.7</td>
+<td>4.7 / 2.7</td>
+<td>3.8 / 3.3</td>
+<td>6.4 / 2.9</td>
+<td>5.8 / 11.1</td>
+</tr>
+<tr>
+<td><code>d</code></td>
+<td>134 / 6.0</td>
+<td>127 / 2.8</td>
+<td>109 / 2.0</td>
+<td>125 / 1.6</td>
+<td>125 / 2.6</td>
+</tr>
+<tr>
+<td><code>nd</code></td>
+<td>72 / 1.9</td>
+<td>97 / 2.9</td>
+<td>89 / 2.2</td>
+<td>74 / 4.0</td>
+<td>74 / 4.2</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>n/a / 3.0</td>
+<td>n/a / 2.1</td>
+<td>n/a / 2.8</td>
+<td>n/a / 2.3</td>
+<td>n/a / 3.7</td>
+</tr>
+<tr>
+<td><code>nk</code></td>
+<td>n/a / 2.5</td>
+<td>n/a / 3.9</td>
+<td>n/a / 1.8</td>
+<td>n/a / 3.2</td>
+<td>n/a / 4.5</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The winner is E6's in 17 of E6's 20 cells. It differs in three: <code>ed</code> at <span class="math inline">\(\rho\)</span> = 0.6 and 0.4, where the surrogate now leads (2.3 and 1.3 times), and <code>ned</code> at <span class="math inline">\(\rho\)</span> = 0.2, where thinning now leads (3.3 times). <code>ed</code> therefore crosses between <span class="math inline">\(\rho\)</span> = 0.4 and 0.2 (E6: between 0.8 and 0.6), and <code>ned</code> crosses between 0.4 and 0.2 (E6: no crossing). Across the 40 cells with both proposals the surrogate keeps the larger median in 37; the other three are <code>ed</code>, <code>ned</code> and <code>nedc</code> at <span class="math inline">\(\rho\)</span> = 0.2.</p>
+<p>What moved most is not the ranking but the level of the ED models. On <code>ned</code> the surrogate's median at <span class="math inline">\(\rho\)</span> = 1 is 7.6 (E6: 85), and every <code>ed</code>, <code>ned</code> and <code>nedc</code> cell is below 10 effective draws on both proposals except <code>ed</code> at <span class="math inline">\(\rho\)</span> = 1 (surrogate 13.0) and the two thinning cells at <span class="math inline">\(\rho\)</span> = 0.2 (<code>ed</code> 10.3, <code>nedc</code> 11.1): those cells are sampler-limited, and their ranking is a ranking of two unusable samples. The design changes the link and the build together, so the drop is not attributed to either. The surrogate is below 10 in 14 of 40 cells, all of them ED models with raw or centred ED; thinning is below 10 in 47 of 50.</p>
+<p>The models E6 did not run: the surrogate leads by 22 to 80 times on <code>d</code> and 18 to 40 times on <code>nd</code> at every <span class="math inline">\(\rho\)</span>, keeping 72 to 134 effective draws where thinning keeps 1.6 to 6.0; on <code>edc</code> it leads by 2.2 to 12 times; <code>k</code> and <code>nk</code>, with no surrogate, keep 1.8 to 4.5 on thinning. The surrogate's mean field converged on every tree. Median seconds per E-step (surrogate / thinning): <code>cr</code> 6.4 / 0.48, <code>dd</code> 3.1 / 0.54, <code>nd</code> 10.0 / 0.58, <code>ned</code> 7.1 / 2.3.</p>
+<figure id="figure-2">
+<img src="../assets/wiki/E6-E6b.png" alt="Ratio of the surrogate&#39;s median effective sample to thinning&#39;s against the sampling fraction, per model, E6b solid and E6 dashed" loading="lazy">
+<figcaption><strong>Figure 2.</strong> Above 1 the surrogate keeps the larger sample. <code>cr</code>, <code>dd</code>, <code>d</code>, <code>nd</code> and <code>edc</code> stay well above 1 at every ρ; <code>ed</code>, <code>ned</code> and <code>nedc</code> sit between 1 and 3.2 down to ρ = 0.4 and fall below 1 at ρ = 0.2, where both proposals are below or near 10 effective draws.</figcaption>
+</figure>
+<h3 id="conclusion-1">Conclusion</h3>
+<p>The rule is <strong>not met in 3 of 20 cells</strong>, so E6's conclusions do not hold on the current build and link as stated, and E6b's reading replaces E6's where they differ. Measured at the generating values over the sampling fraction, the surrogate returns all 200 draws under <code>cr</code> at every <span class="math inline">\(\rho\)</span> and leads by 11 to 68 times on <code>dd</code>, 22 to 80 times on <code>d</code>, 18 to 40 times on <code>nd</code> and 2.2 to 12 times on <code>edc</code>. On <code>ed</code>, <code>ned</code> and <code>nedc</code> it leads by at most 3.2 times down to <span class="math inline">\(\rho\)</span> = 0.4 and trails at 0.2 (by 2.0, 3.3 and 1.9 times); those three models keep fewer than 10 effective draws of 200 on both proposals in nearly every cell, so their ranking is a ranking of sampler-limited samples. <code>k</code> and <code>nk</code> have no surrogate and keep 1.8 to 4.5 effective draws on thinning. The paper and the docs site state this reading.</p>
+<p>Two further readings, not part of the rule. On <code>d</code> and <code>nd</code> the surrogate keeps 18 to 80 times thinning's effective sample at the generating values, while D models default to thinning (<a href="E19.html">E19</a>b's adoption rule, measured before the change to the <span class="math inline">\(D\)</span> likelihood); E46 refits the 100-tip <code>d</code> and <code>nd</code> cells on both proposals and settles that default. And the samples are best cases, at the generating values and without fitting, as in E6.</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E3.html">E3</a> — the two thinning variants against each other.</li>

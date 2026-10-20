@@ -14,6 +14,7 @@ nlopt_result(*remp_set_upper_bounds1)(nlopt_opt, double) = NULL;
 nlopt_result(*remp_set_xtol_rel)(nlopt_opt, double) = NULL;
 nlopt_result(*remp_set_xtol_abs)(nlopt_opt, double) = NULL;
 nlopt_result(*remp_set_initial_step)(nlopt_opt, const double *) = NULL;
+nlopt_result(*remp_force_stop)(nlopt_opt) = NULL;
 
 
 // [[Rcpp::init]]
@@ -31,4 +32,5 @@ void remphasis_init(DllInfo *dll)
   remp_set_xtol_rel = (nlopt_result(*)(nlopt_opt, double)) R_GetCCallable("nloptr","nlopt_set_xtol_rel");
   remp_set_xtol_abs = (nlopt_result(*)(nlopt_opt, double)) R_GetCCallable("nloptr","nlopt_set_xtol_abs");
   remp_set_initial_step = (nlopt_result(*)(nlopt_opt, const double *)) R_GetCCallable("nloptr","nlopt_set_initial_step");
+  remp_force_stop = (nlopt_result(*)(nlopt_opt)) R_GetCCallable("nloptr","nlopt_force_stop");
 }

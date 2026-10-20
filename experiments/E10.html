@@ -64,6 +64,15 @@ window.MathJax = {
 </li>
 <li><a href="#conclusion">Conclusion</a>
 </li>
+<li><a href="#e10c-the-default-at-the-sweep-budget-the-package-ships">E10c: the default at the sweep budget the package ships</a>
+<ol>
+<li><a href="#question-1">Question</a></li>
+<li><a href="#design-1">Design</a></li>
+<li><a href="#pre-set-rule-1">Pre-set rule</a></li>
+<li><a href="#results-1">Results</a></li>
+<li><a href="#conclusion-1">Conclusion</a></li>
+</ol>
+</li>
 <li><a href="#related">Related</a>
 </li>
 </ol>
@@ -73,7 +82,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete, with E10b (the 1000-sweep rerun)</td>
+<td>complete, with E10b (the 1000-sweep rerun) and E10c (the shipped budget)</td>
 </tr>
 <tr>
 <td>Package build</td>
@@ -91,7 +100,7 @@ window.MathJax = {
 </table>
 </div>
 <h2 id="question">Question</h2>
-<p>The surrogate proposal needs the expected diversity through time under the current parameters: a fixed point x ← F(x) solved by a backward and a forward Picard sweep. Where the map expands, the sweep diverges and a larger budget makes it worse (audit H108). Under-relaxation takes a partial step, x ← (1 - <span class="math inline">\(\omega\)</span>)x + <span class="math inline">\(\omega\)</span>F(x); <code>damping = "auto"</code> starts at <span class="math inline">\(\omega\)</span> = 1, halves whenever the residual grows, and stops at 1/64. <code>"auto"</code> became the default on one diverging case, one contracting case and three gaussian <code>dd</code> cells. Two of those three gaussian cells converged under relaxation, which raised a second question: can the gate that refuses <code>dd</code> on the gaussian link (<code>.bdi_supported</code>) open? That depends on whether the proposal built on a converged mean field is usable, so E10 also samples from it. A first grid with <span class="math inline">\(\beta\)</span>0 = 0.5 and <span class="math inline">\(\rho\)</span> = 1 converged at <span class="math inline">\(\omega\)</span> = 1 in all 54 cells and could answer neither question; the divergences on record need a high absolute rate and, for the gaussian case, incomplete sampling, so both became axes.</p>
+<p>The surrogate proposal needs the expected diversity through time under the current parameters: a fixed point x ← F(x) solved by a backward and a forward Picard sweep. Where the map expands, the sweep diverges and a larger budget makes it worse (a finding of the package audit). Under-relaxation takes a partial step, x ← (1 - <span class="math inline">\(\omega\)</span>)x + <span class="math inline">\(\omega\)</span>F(x); <code>damping = "auto"</code> starts at <span class="math inline">\(\omega\)</span> = 1, halves whenever the residual grows, and stops at 1/64. <code>"auto"</code> became the default on one diverging case, one contracting case and three gaussian <code>dd</code> cells. Two of those three gaussian cells converged under relaxation, which raised a second question: can the gate that refuses <code>dd</code> on the gaussian link (<code>.bdi_supported</code>) open? That depends on whether the proposal built on a converged mean field is usable, so E10 also samples from it. A first grid with <span class="math inline">\(\beta\)</span>0 = 0.5 and <span class="math inline">\(\rho\)</span> = 1 converged at <span class="math inline">\(\omega\)</span> = 1 in all 54 cells and could answer neither question; the divergences on record need a high absolute rate and, for the gaussian case, incomplete sampling, so both became axes.</p>
 <h2 id="design">Design</h2>
 <div class="table-wrap">
 <table>
@@ -241,12 +250,115 @@ window.MathJax = {
 <figcaption><strong>Figure 3.</strong> At 1000 sweeps every fixed step from ¼ down converges more than at 200, 1/16 most of all; ⅛ stays the highest, above <code>"auto"</code> at both budgets.</figcaption>
 </figure>
 <h2 id="conclusion">Conclusion</h2>
-<p>E10b's rule is <strong>met</strong>: <code>"auto"</code> converges fewer units than ⅛ at 1000 sweeps (77 against 107 of 139), so by the pre-set rule the default changes to a fixed 1/8, and the 200-sweep result is not a budget artefact. The package source still has <code>damping = "auto"</code> (<code>R/inference.R</code>); the README lists the relaxation default as one of two decisions left to the author. The gaussian gate <strong>stays closed</strong>: a mean field that converges only under relaxation leaves a median effective sample of 1.02, so convergence and samplability are different properties and the step decides whether the iteration ends, not whether the draws are usable. Whether relaxation should be reported to the caller: no decision recorded. E10 measures the fixed point at given parameters; it says nothing about how often a fit meets a diverging sweep.</p>
+<p>E10b's rule is <strong>met</strong>: <code>"auto"</code> converges fewer units than ⅛ at 1000 sweeps (77 against 107 of 139), so by the pre-set rule the default changes to a fixed 1/8, and the 200-sweep result is not a budget artefact. The default the package ships was then settled at the shipped sweep budget by E10c (below). The gaussian gate <strong>stays closed</strong>: a mean field that converges only under relaxation leaves a median effective sample of 1.02, so convergence and samplability are different properties and the step decides whether the iteration ends, not whether the draws are usable. Whether relaxation should be reported to the caller: no decision recorded. E10 measures the fixed point at given parameters; it says nothing about how often a fit meets a diverging sweep.</p>
+<h2 id="e10c-the-default-at-the-sweep-budget-the-package-ships">E10c: the default at the sweep budget the package ships</h2>
+<div class="table-wrap">
+<table>
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td><code>397bf3f</code> (emphasis 1.0.0)</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E10c-shipped-budget.R</code>, <code>sim/E10c-analysis.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E10c/relaxation-shipped.csv</code> (arm A), <code>results/E10c/ess-contracting.csv</code> (arm B), <code>results/E10c/summary.txt</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 id="question-1">Question</h3>
+<p>E10b's rule was met at a 1000-sweep cap, but the package calls the sweep with <code>max_iter = NULL</code>, which is 20 sweeps at <span class="math inline">\(\rho\)</span> = 1 and 200 below (<code>R/bdi.R</code>). The author's decision on the relaxation default (audit of 2026-10-19) makes the change to ⅛ conditional on ⅛ also winning at that budget, and on ⅛ not costing effective sample where the iteration contracts: a small step has room for few contractions in 20 sweeps, and a mean field short of its fixed point changes the proposal.</p>
+<h3 id="design-1">Design</h3>
+<p><strong>Arm A.</strong> E10's grid (648 units, the same seeds and rate vectors), with the simulation link named as linear (E10's default; 1.0.0 defaults to exponential), at <span class="math inline">\(\omega\)</span> ∈ {1, <code>"auto"</code>, ⅛}, each at the shipped budget and at E10's 200-sweep cap. The trees are E10's: the same 384 units carry a tree, with the same tip count on all 384, and the 200-sweep counts reproduce E10's exactly (full step 233, <code>"auto"</code> 283, ⅛ 302; 151 units diverge at full step). <strong>Arm B.</strong> The 760 <code>dd</code> trees of <a href="E45.html">E45</a> (19 cells: turnover 0.10, 0.25, 0.40; 25 to 400 tips; <span class="math inline">\(\rho\)</span> = 1 and 0.8; exponential link; generating values stored with each cell), one E-step of 200 draws from the surrogate proposal under <code>"auto"</code>, ⅛ and full step at the shipped budget, the same seed for the three. A tree is <em>contracting</em> when the full-step sweep converges within 200 sweeps: all 760 are. <code>cr</code> is not run; its proposal has no mean-field iteration.</p>
+<h3 id="pre-set-rule-1">Pre-set rule</h3>
+<p><em>The default becomes a fixed ω = 1/8 only if (a) 1/8 converges at least as many of the 151 diverging units as <code>"auto"</code> does at the shipped budget, and (b) on the contracting trees of arm B the median effective sample under 1/8 is at least 0.9 times the median under <code>"auto"</code> (pooled over cells). Otherwise <code>"auto"</code> stays.</em></p>
+<h3 id="results-1">Results</h3>
+<p>Units converged at the shipped budget (arm A):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">full step</th>
+<th style="text-align: right;"><code>"auto"</code></th>
+<th style="text-align: right;">⅛</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>151 diverging units</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">37</td>
+<td style="text-align: right;"><strong>48</strong></td>
+</tr>
+<tr>
+<td>of which linear, <span class="math inline">\(\rho\)</span> = 0.2 (21)</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">21</td>
+</tr>
+<tr>
+<td>of which exponential, <span class="math inline">\(\rho\)</span> = 0.2 (39)</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">21</td>
+<td style="text-align: right;">21</td>
+</tr>
+<tr>
+<td>of which gaussian, <span class="math inline">\(\rho\)</span> = 0.2 (38)</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">6</td>
+</tr>
+<tr>
+<td>of which linear and exponential, <span class="math inline">\(\rho\)</span> = 1 (53)</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>all 192 units at <span class="math inline">\(\rho\)</span> = 1</td>
+<td style="text-align: right;">129</td>
+<td style="text-align: right;">131</td>
+<td style="text-align: right;"><strong>0</strong></td>
+</tr>
+<tr>
+<td>all 192 units at <span class="math inline">\(\rho\)</span> = 0.2</td>
+<td style="text-align: right;">94</td>
+<td style="text-align: right;">131</td>
+<td style="text-align: right;">142</td>
+</tr>
+<tr>
+<td>all 384 units</td>
+<td style="text-align: right;">223</td>
+<td style="text-align: right;">262</td>
+<td style="text-align: right;">142</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The whole gain of ⅛ over <code>"auto"</code> on the diverging units is 11 linear-link units at <span class="math inline">\(\rho\)</span> = 0.2; on the exponential and gaussian links the two converge the same units. At <span class="math inline">\(\rho\)</span> = 1, where the budget is 20 sweeps, ⅛ converges none of the 192 units, including 129 that converge at full step; <code>"auto"</code> converges every unit the full step does.</p>
+<p>Arm B, 760 contracting trees: median effective sample of 200 draws 158.7 under <code>"auto"</code> and under the full step, 156.6 under ⅛ (ratio <strong>0.987</strong>); median paired ratio 1.000 (10th to 90th percentile 0.93 to 1.05), below 0.9 on 39 of 760 trees. Per cell the median ratio lies between 0.978 and 1.007. The mean field converges within the budget on 560 of 560 trees at <span class="math inline">\(\rho\)</span> = 1 under <code>"auto"</code> and on 0 of 560 under ⅛ (median final residual 0.92 against a tolerance of 10⁻⁴); at <span class="math inline">\(\rho\)</span> = 0.8 (200 sweeps) it converges on 200 of 200 under both. On the same draws the log-likelihood estimate under ⅛ differs from <code>"auto"</code>'s by a median of 0.001 nats at <span class="math inline">\(\rho\)</span> = 1 (10th to 90th percentile −0.07 to +0.06) and by 0 at <span class="math inline">\(\rho\)</span> = 0.8; an E-step under ⅛ takes 1.4 times as long at <span class="math inline">\(\rho\)</span> = 1 and 3.3 times at <span class="math inline">\(\rho\)</span> = 0.8.</p>
+<figure id="figure-4">
+<img src="../assets/wiki/E10-E10c.png" alt="Diverging units converged by step at the shipped budget, and the effective sample under 1/8 against &quot;auto&quot; on contracting trees" loading="lazy">
+<figcaption><strong>Figure 4.</strong> Left: of the 151 units that diverge at full step, ⅛ converges 48 and <code>"auto"</code> 37 within the shipped budget, the difference being linear-link units at ρ = 0.2. Right: each point is one E45 tree; the effective sample barely moves between the steps (median ratio 0.99), even though at ρ = 1 no mean field under ⅛ reaches its tolerance.</figcaption>
+</figure>
+<h3 id="conclusion-1">Conclusion</h3>
+<p>The rule is <strong>met</strong>: (a) ⅛ converges 48 of the 151 diverging units against <code>"auto"</code>'s 37, and (b) the median effective sample under ⅛ on contracting trees is 0.987 of <code>"auto"</code>'s, above 0.9. What the rule does not weigh is the complete-sampling case. At $ ho$ = 1 the 20-sweep budget leaves the ⅛ mean field unconverged on all 192 units, against 131 for <code>"auto"</code>, and on all 560 contracting trees of arm B, including every unit and tree that converges at full step; an E-step under ⅛ takes 1.4 times as long there (3.3 times at $ ho$ = 0.8), and the effective sample does not rise (ratio 0.987). Below $ ho$ = 1, where the budget is 200 sweeps, ⅛ converges more units than <code>"auto"</code> (142 against 131 of 192 at $ ho$ = 0.2). The whole gain of ⅛ over <code>"auto"</code> on the diverging units is 11 linear-link units at $ ho$ = 0.2.</p>
+<p><strong>Decision (the author, 2026-10-20).</strong> The default is <code>"auto"</code> at complete sampling ($ ho$ = 1) and a fixed ω = 1/8 when $ ho$ &lt; 1. This departs from the literal wording of the rule, which would make ⅛ the default everywhere; it is taken because at $ ho$ = 1 a fixed ⅛ converges the mean field on 0 of 192 units within the shipped 20 sweeps against 131 for <code>"auto"</code>, costs 1.4 to 3.3 times the E-step time, and gains no effective sample, while below $ ho$ = 1 it converges more than <code>"auto"</code>. Every fit records the relaxation it used and whether the mean field converged.</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E7.html">E7</a> — the threshold of 10 effective draws, and the 416-tip divergence that motivated the high-rate axis.</li>
 <li><a href="E9.html">E9</a>, <a href="E13.html">E13</a> — the other convergence questions: the stopping rule and the per-iterate noise.</li>
 <li><a href="E6.html">E6</a> — the surrogate proposal against thinning across <span class="math inline">\(\rho\)</span>.</li>
+<li><a href="E45.html">E45</a>: the <code>dd</code> trees of E10c's arm B.</li>
 </ul>
 
 </article>

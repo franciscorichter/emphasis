@@ -151,7 +151,7 @@ A list with class \code{"emphasis_fit"} containing:
       its sweep budget: the setting, the sweeps taken, the relaxation and
       residual of the last E-step, and how many E-steps of the run relaxed
       or failed to converge) and \code{clock} (\code{max_time} ran out
-      inside an E-step). \code{print()} shows the last two.}
+      inside an E-step or an M-step). \code{print()} shows the last two.}
     \item{\code{details}}{Full output from the back-end function
       (\code{.mcem_dynamic_fresh} or \code{emphasis_cem}).}
   }

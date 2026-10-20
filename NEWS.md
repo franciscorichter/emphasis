@@ -87,13 +87,17 @@ the interface is the one described below.
   the argument counted the draws after the first, is read as `1` with a
   warning. `auto_bounds()` passes `surv_tries` (default 20) as `max_tries`,
   and the survival GAM is trained on single draws.
-* `control$max_time` binds inside the E-step of an MCEM fit. Both samplers
-  read the clock between draws and inside a draw, stop drawing when it runs
-  out, and the fit ends with `stop_reason = "time_budget"` and a `clock` note;
-  the iteration in progress is discarded. The E-step that evaluates the
-  returned parameters gets `max_time` again and, when it runs out, estimates
-  the log-likelihood from the draws it made, so a fit returns within about
-  twice `max_time` plus one M-step. The M-step is not bounded by the clock.
+* `control$max_time` binds inside the E-step and the M-step of an MCEM fit,
+  and the fit ends with `stop_reason = "time_budget"` and a `clock` note
+  naming the step it cut. Both samplers read the clock between draws and
+  inside a draw and stop drawing when it runs out; the iteration in progress
+  is discarded. The M-step's optimiser (NLopt's sbplx, under both samplers)
+  reads the same deadline before every evaluation of its objective and stops
+  once it has passed; the iteration then keeps the best point the optimiser
+  had evaluated when that point improves on the current iterate, and is
+  discarded otherwise. The E-step that evaluates the returned parameters gets
+  `max_time` again and, when it runs out, estimates the log-likelihood from
+  the draws it made, so a fit returns within about twice `max_time`.
 * A fit carries `notes`, the named notes `estimate_rates()` states about it.
   When the surrogate proposal's mean-field iteration was relaxed below the
   full step, ran under a `damping` other than `"auto"`, or did not converge
@@ -101,6 +105,14 @@ the interface is the one described below.
   taken, the relaxation and the final residual at the last E-step and whether
   it converged, and `print()` shows it. Every E-step's mean field is in the
   trace (`mf_converged`, `mf_delta`, `mf_sweeps`, `mf_omega`, `mf_budget`).
+* `control$damping` defaults to `"default"`, which is `"auto"` at complete
+  sampling (`rho = 1`) and a fixed relaxation of 1/8 when `rho < 1`. In
+  experiment E10c a fixed 1/8 converged 0 of 192 units within the 20 sweeps
+  at `rho = 1` against 131 for `"auto"`, at 1.4--3.3 times the E-step time
+  and no gain in effective sample, and below `rho = 1` it converged more
+  (142 against 131 at `rho = 0.2`). An explicit `"auto"` or number is used as
+  given, and the `mean_field` note names the resolved setting and whether it
+  is the default.
 * `compare_models()` chooses the model with the fewest parameters within
   `margin` of the minimum AIC and, among those, the one with the lower AIC,
   whatever order the fits are passed in.

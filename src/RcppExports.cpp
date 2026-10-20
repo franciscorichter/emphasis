@@ -171,8 +171,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // rcpp_mcm
-List rcpp_mcm(List e_step, const std::vector<double>& init_pars, const std::string& plugin, const std::vector<double>& lower_bound, const std::vector<double>& upper_bound, double xtol_rel, int num_threads, Rcpp::IntegerVector model, int link, double rho, Nullable<Function> rconditional);
-RcppExport SEXP _emphasis_rcpp_mcm(SEXP e_stepSEXP, SEXP init_parsSEXP, SEXP pluginSEXP, SEXP lower_boundSEXP, SEXP upper_boundSEXP, SEXP xtol_relSEXP, SEXP num_threadsSEXP, SEXP modelSEXP, SEXP linkSEXP, SEXP rhoSEXP, SEXP rconditionalSEXP) {
+List rcpp_mcm(List e_step, const std::vector<double>& init_pars, const std::string& plugin, const std::vector<double>& lower_bound, const std::vector<double>& upper_bound, double xtol_rel, int num_threads, Rcpp::IntegerVector model, int link, double rho, Nullable<Function> rconditional, double time_left);
+RcppExport SEXP _emphasis_rcpp_mcm(SEXP e_stepSEXP, SEXP init_parsSEXP, SEXP pluginSEXP, SEXP lower_boundSEXP, SEXP upper_boundSEXP, SEXP xtol_relSEXP, SEXP num_threadsSEXP, SEXP modelSEXP, SEXP linkSEXP, SEXP rhoSEXP, SEXP rconditionalSEXP, SEXP time_leftSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -187,7 +187,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type link(linkSEXP);
     Rcpp::traits::input_parameter< double >::type rho(rhoSEXP);
     Rcpp::traits::input_parameter< Nullable<Function> >::type rconditional(rconditionalSEXP);
-    rcpp_result_gen = Rcpp::wrap(rcpp_mcm(e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, model, link, rho, rconditional));
+    Rcpp::traits::input_parameter< double >::type time_left(time_leftSEXP);
+    rcpp_result_gen = Rcpp::wrap(rcpp_mcm(e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, model, link, rho, rconditional, time_left));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -203,7 +204,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_emphasis_rcpp_pendant_sweep", (DL_FUNC) &_emphasis_rcpp_pendant_sweep, 3},
     {"_emphasis_rcpp_thinning_envelope_violations", (DL_FUNC) &_emphasis_rcpp_thinning_envelope_violations, 1},
     {"_emphasis_rcpp_mcem", (DL_FUNC) &_emphasis_rcpp_mcem, 19},
-    {"_emphasis_rcpp_mcm", (DL_FUNC) &_emphasis_rcpp_mcm, 11},
+    {"_emphasis_rcpp_mcm", (DL_FUNC) &_emphasis_rcpp_mcm, 12},
     {NULL, NULL, 0}
 };
 

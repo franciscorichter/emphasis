@@ -36,14 +36,18 @@ Shared parameters (both methods):
     does not depend on \code{rho}.}
   \item{\code{max_time}}{Wall-clock budget of the fit in seconds; \code{NULL}
     disables it. Default \code{3600}. Under \code{"mcem"} the clock binds
-    inside the E-step: both samplers stop drawing when it runs out, inside
-    a draw as well as between draws, the iteration in progress is
-    discarded, and the fit ends with \code{stop_reason = "time_budget"}
-    and a \code{clock} note. The E-step that evaluates the returned
-    parameters then gets \code{max_time} again, and when it runs out its
+    inside the E-step and the M-step, and the fit ends with
+    \code{stop_reason = "time_budget"} and a \code{clock} note naming the
+    step it cut. Both samplers stop drawing when it runs out, inside a draw
+    as well as between draws, and the iteration in progress is discarded.
+    The M-step's optimiser reads it before every evaluation of its
+    objective; cut short, the iteration keeps the best point the optimiser
+    had evaluated when that point improves on the current iterate, and is
+    discarded otherwise. The E-step that evaluates the returned parameters
+    then gets \code{max_time} again, and when it runs out its
     log-likelihood rests on the draws it made, so an MCEM fit returns
-    within about twice \code{max_time} plus one M-step. Under
-    \code{"cem"} and \code{"gam"} the clock is read between evaluations.}
+    within about twice \code{max_time}. Under \code{"cem"} and
+    \code{"gam"} the clock is read between evaluations.}
 }
 
 MCEM-specific parameters:
@@ -65,11 +69,17 @@ MCEM-specific parameters:
     416-tip tree at rates whose equilibrium is critical the residual is 305
     after 20 sweeps and 329 after 200. A partial step,
     \eqn{x \leftarrow (1-\omega)x + \omega F(x)}, contracts it.
-    \code{"auto"} (default) starts at \eqn{\omega = 1} and halves it
+    \code{"auto"} starts at \eqn{\omega = 1} and halves it
     whenever the residual grows; on that tree it converges in 40 sweeps, and
     where the map already contracts it is the plain iteration to the bit.
     A number in \eqn{(0, 1]} fixes \eqn{\omega} instead; \code{1} is the
-    plain iteration. Relaxation below about \eqn{1/20} converges too slowly
+    plain iteration. \code{"default"} (the default) is \code{"auto"} at
+    \code{rho = 1} and \eqn{\omega = 1/8} at \code{rho < 1}: in
+    experiment E10c a fixed 1/8 converged 0 of 192 units within the 20
+    sweeps at \code{rho = 1} against 131 for \code{"auto"}, at 1.4--3.3
+    times the E-step time and no gain in effective sample, and below
+    \code{rho = 1} it converged more (142 against 131 at \code{rho = 0.2});
+    an explicit \code{"auto"} or number is used as given. Relaxation below about \eqn{1/20} converges too slowly
     to be useful. It fixes the iteration and nothing else: at 416 tips the
     effective sample is 2.1 of 97 even with a converged mean field, because
     the proposal must invent some 600 missing lineages there (audit H108).
@@ -79,7 +89,8 @@ MCEM-specific parameters:
     \code{mf_budget}); when some E-step relaxed the iteration below the
     full step or did not converge within its sweep budget, or the setting
     is not \code{"auto"}, the fit's \code{notes} carry a
-    \code{mean_field} entry with the setting, the sweeps, relaxation and
+    \code{mean_field} entry with the resolved setting (and whether it is
+    the default for the fit's \code{rho}), the sweeps, relaxation and
     residual of the last E-step and whether it converged, and
     \code{print()} shows it.}
   \item{\code{mesh}}{BDI only, and only where its Gillespie branch runs

@@ -43,13 +43,19 @@ A list: \code{mcem} (trace, one row per iteration plus the final
   \code{mf_sweeps}, \code{mf_omega} (the relaxation of the last sweep) and
   \code{mf_budget} (the sweep budget).
 
-Clock.  \code{max_time} binds inside the E-step: the sampler is given the
-deadline and stops drawing when it passes, between draws and inside one.
-An iteration whose E-step ran out is discarded and the run stops with
-\code{"time_budget"} and a \code{time_note}.  The final E-step is given a
-clock of its own, \code{max_time} again, and when it runs out the
-log-likelihood rests on the draws it made (\code{final_truncated}), so a
-fit returns within about twice \code{max_time} plus one M-step.
+Clock.  \code{max_time} binds inside the E-step and the M-step: the
+sampler is given the deadline and stops drawing when it passes, between
+draws and inside one, and \code{m_cpp} is given the seconds left and reads
+them before every evaluation of its objective.  An iteration whose E-step
+ran out is discarded and the run stops with \code{"time_budget"} and a
+\code{time_note}.  An iteration whose M-step ran out keeps the best point
+the M-step had evaluated when that point improves on the current iterate,
+and is discarded otherwise; either way the run stops with
+\code{"time_budget"} and a \code{time_note} naming the M-step.  The final
+E-step is given a clock of its own, \code{max_time} again, and when it
+runs out the log-likelihood rests on the draws it made
+(\code{final_truncated}), so a fit returns within about twice
+\code{max_time}.
 }
 \description{
 Drop-in replacement for .mcem_dynamic_fresh(). Uses BDI exact sampling

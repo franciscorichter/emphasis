@@ -1654,13 +1654,19 @@
 #'   \code{mf_sweeps}, \code{mf_omega} (the relaxation of the last sweep) and
 #'   \code{mf_budget} (the sweep budget).
 #'
-#' Clock.  \code{max_time} binds inside the E-step: the sampler is given the
-#' deadline and stops drawing when it passes, between draws and inside one.
-#' An iteration whose E-step ran out is discarded and the run stops with
-#' \code{"time_budget"} and a \code{time_note}.  The final E-step is given a
-#' clock of its own, \code{max_time} again, and when it runs out the
-#' log-likelihood rests on the draws it made (\code{final_truncated}), so a
-#' fit returns within about twice \code{max_time} plus one M-step.
+#' Clock.  \code{max_time} binds inside the E-step and the M-step: the
+#' sampler is given the deadline and stops drawing when it passes, between
+#' draws and inside one, and \code{m_cpp} is given the seconds left and reads
+#' them before every evaluation of its objective.  An iteration whose E-step
+#' ran out is discarded and the run stops with \code{"time_budget"} and a
+#' \code{time_note}.  An iteration whose M-step ran out keeps the best point
+#' the M-step had evaluated when that point improves on the current iterate,
+#' and is discarded otherwise; either way the run stops with
+#' \code{"time_budget"} and a \code{time_note} naming the M-step.  The final
+#' E-step is given a clock of its own, \code{max_time} again, and when it
+#' runs out the log-likelihood rests on the draws it made
+#' (\code{final_truncated}), so a fit returns within about twice
+#' \code{max_time}.
 #' @keywords internal
 .mcem_bdi <- function(brts,
                       pars,
@@ -1714,6 +1720,9 @@
   t0_mcem  <- proc.time()[[3L]]
   deadline <- if (is.null(max_time)) Inf else t0_mcem + max_time
   time_note <- NULL
+  # The same deadline as the seconds m_cpp has left; -1 is no deadline.
+  m_time_left <- function()
+    if (is.finite(deadline)) max(0, deadline - proc.time()[[3L]]) else -1
 
   # One BDI E-step at `theta`; NULL on error or when no tree was drawn and the
   # clock did not run out.  A sample the clock cut short is returned with
@@ -1875,9 +1884,31 @@
             model      = model_bin,
             link       = link_int,
             rho        = as.numeric(rho),
-            rconditional = conditional),
+            rconditional = conditional,
+            time_left  = m_time_left()),
       error = function(e) NULL
     )
+
+    # The clock ran out inside this M-step.  The best point it had evaluated
+    # is kept when it improves on the current iterate (the iteration is
+    # recorded below and the fit ends there); otherwise the iteration is
+    # discarded and the fit ends at the last completed iterate.
+    m_cut <- !is.null(m_result) && isTRUE(m_result$timed_out)
+    if (m_cut) {
+      stop_reason <- "time_budget"
+      if (verbose) message("Time budget reached inside the M-step of iteration ", i)
+      if (!isTRUE(m_result$improved)) {
+        time_note <- sprintf(paste0(
+          "the clock (max_time = %gs) ran out inside the M-step of iteration %d before it found a ",
+          "point better than its start; that iteration was discarded and the fit ends at the last ",
+          "completed iterate."), max_time, i)
+        break
+      }
+      time_note <- sprintf(paste0(
+        "the clock (max_time = %gs) ran out inside the M-step of iteration %d; that iteration ",
+        "keeps the best point the M-step had found, which improves on its start, and the fit ",
+        "ends there."), max_time, i)
+    }
 
     if (is.null(m_result)) {
       fail_streak <- fail_streak + 1L
@@ -1911,6 +1942,10 @@
         if (m_moved) "" else "  (M-step returned its start)"))
     }
 
+    # An M-step cut short by the clock is not a fixed-point step: the fit
+    # ends at its best point without a convergence test.
+    if (m_cut) break
+
     # Check convergence.  An M-step that returned its start unchanged says
     # nothing about stability (the objective may have been undefined there),
     # so it does not count toward patience under either rule.
@@ -1942,9 +1977,11 @@
           eb <- e_step; eb$trees <- e_step$trees[ii]; eb$weights <- e_step$weights[ii]
           m <- tryCatch(m_cpp(eb, pars, "rpd1", lower_bound, upper_bound, xtol,
                               as.integer(num_threads), model = model_bin, link = link_int,
-                              rho = as.numeric(rho), rconditional = conditional),
+                              rho = as.numeric(rho), rconditional = conditional,
+                              time_left = m_time_left()),
                         error = function(e) NULL)
-          if (is.null(m)) NULL else as.numeric(m$estimates)[seq_along(pars)]
+          # a batch M-step the clock cut short is not an estimate of the batch
+          if (is.null(m) || isTRUE(m$timed_out)) NULL else as.numeric(m$estimates)[seq_along(pars)]
         })
         est <- do.call(rbind, Filter(Negate(is.null), est))
         if (is.null(est) || nrow(est) < 2L) return(NULL)

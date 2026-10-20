@@ -49,14 +49,18 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     does not depend on \code{rho}.}
 #'   \item{\code{max_time}}{Wall-clock budget of the fit in seconds; \code{NULL}
 #'     disables it. Default \code{3600}. Under \code{"mcem"} the clock binds
-#'     inside the E-step: both samplers stop drawing when it runs out, inside
-#'     a draw as well as between draws, the iteration in progress is
-#'     discarded, and the fit ends with \code{stop_reason = "time_budget"}
-#'     and a \code{clock} note. The E-step that evaluates the returned
-#'     parameters then gets \code{max_time} again, and when it runs out its
+#'     inside the E-step and the M-step, and the fit ends with
+#'     \code{stop_reason = "time_budget"} and a \code{clock} note naming the
+#'     step it cut. Both samplers stop drawing when it runs out, inside a draw
+#'     as well as between draws, and the iteration in progress is discarded.
+#'     The M-step's optimiser reads it before every evaluation of its
+#'     objective; cut short, the iteration keeps the best point the optimiser
+#'     had evaluated when that point improves on the current iterate, and is
+#'     discarded otherwise. The E-step that evaluates the returned parameters
+#'     then gets \code{max_time} again, and when it runs out its
 #'     log-likelihood rests on the draws it made, so an MCEM fit returns
-#'     within about twice \code{max_time} plus one M-step. Under
-#'     \code{"cem"} and \code{"gam"} the clock is read between evaluations.}
+#'     within about twice \code{max_time}. Under \code{"cem"} and
+#'     \code{"gam"} the clock is read between evaluations.}
 #' }
 #'
 #' MCEM-specific parameters:
@@ -78,11 +82,17 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     416-tip tree at rates whose equilibrium is critical the residual is 305
 #'     after 20 sweeps and 329 after 200. A partial step,
 #'     \eqn{x \leftarrow (1-\omega)x + \omega F(x)}, contracts it.
-#'     \code{"auto"} (default) starts at \eqn{\omega = 1} and halves it
+#'     \code{"auto"} starts at \eqn{\omega = 1} and halves it
 #'     whenever the residual grows; on that tree it converges in 40 sweeps, and
 #'     where the map already contracts it is the plain iteration to the bit.
 #'     A number in \eqn{(0, 1]} fixes \eqn{\omega} instead; \code{1} is the
-#'     plain iteration. Relaxation below about \eqn{1/20} converges too slowly
+#'     plain iteration. \code{"default"} (the default) is \code{"auto"} at
+#'     \code{rho = 1} and \eqn{\omega = 1/8} at \code{rho < 1}: in
+#'     experiment E10c a fixed 1/8 converged 0 of 192 units within the 20
+#'     sweeps at \code{rho = 1} against 131 for \code{"auto"}, at 1.4--3.3
+#'     times the E-step time and no gain in effective sample, and below
+#'     \code{rho = 1} it converged more (142 against 131 at \code{rho = 0.2});
+#'     an explicit \code{"auto"} or number is used as given. Relaxation below about \eqn{1/20} converges too slowly
 #'     to be useful. It fixes the iteration and nothing else: at 416 tips the
 #'     effective sample is 2.1 of 97 even with a converged mean field, because
 #'     the proposal must invent some 600 missing lineages there (audit H108).
@@ -92,7 +102,8 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     \code{mf_budget}); when some E-step relaxed the iteration below the
 #'     full step or did not converge within its sweep budget, or the setting
 #'     is not \code{"auto"}, the fit's \code{notes} carry a
-#'     \code{mean_field} entry with the setting, the sweeps, relaxation and
+#'     \code{mean_field} entry with the resolved setting (and whether it is
+#'     the default for the fit's \code{rho}), the sweeps, relaxation and
 #'     residual of the last E-step and whether it converged, and
 #'     \code{print()} shows it.}
 #'   \item{\code{mesh}}{BDI only, and only where its Gillespie branch runs
@@ -191,7 +202,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       mc_grow     = 1.5,        # mc_error: factor the draws grow by when a step is noise
       mesh        = NULL,       # bdi: steps per crown age the frozen Gillespie rates are
                                 #   re-evaluated on; NULL leaves the step uncapped
-      damping     = "auto",     # bdi: under-relaxation of the mean-field sweep;
+      damping     = "default",  # bdi: under-relaxation of the mean-field sweep;
+                                #   "default" ("auto" at rho = 1, 1/8 below),
                                 #   "auto", or a number in (0, 1]
       max_draws   = NULL,       # mc_error: cap on the grown draws; NULL -> 8 * num_trees
       sample_size = 200L,       # alias: num_trees
@@ -678,6 +690,18 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   !is_final
 }
 
+# The mean-field relaxation a BDI fit runs under.  "default" (or NULL) is
+# "auto" at complete sampling and a fixed 1/8 below it (experiment E10c); an
+# explicit "auto" or number is the user's and is passed through.
+#' @keywords internal
+.resolve_damping <- function(damping, rho) {
+  if (is.null(damping) || identical(damping, "default")) {
+    rho <- if (is.null(rho)) 1 else as.numeric(rho)
+    return(if (isTRUE(rho < 1)) 0.125 else "auto")
+  }
+  damping
+}
+
 #' @keywords internal
 .run_mcem <- function(brts, init_pars, lower_bound, upper_bound, ctrl,
                       model = c(0L, 0L, 0L), link = 0L, cond_fun = NULL) {
@@ -739,7 +763,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       mc_grow     = ctrl$mc_grow %||% 1.5,
       max_draws   = ctrl$max_draws,
       mesh        = ctrl$mesh,
-      damping     = ctrl$damping %||% "auto"
+      damping     = .resolve_damping(ctrl$damping, ctrl$rho)
     ),
     dynamic_fresh   = .mcem_dynamic_fresh(
       brts        = brts,
@@ -790,6 +814,9 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   iterations <- if (!is.null(raw$iterations)) as.integer(raw$iterations)
                 else as.integer(sum(.mcem_iter_rows(raw$mcem)))
   n_failed <- if (!is.null(raw[["n_failed"]])) as.integer(raw[["n_failed"]]) else NA_integer_
+  # whether the mean field ran under the default setting, so the note can say so
+  if (identical(ctrl$sampling, "bdi"))
+    raw$damping_default <- is.null(ctrl$damping) || identical(ctrl$damping, "default")
   list(pars = raw$pars, loglik = loglik, loglik_var = loglik_var,
        stop_reason = raw$stop_reason, iterations = iterations,
        n_failed = n_failed, details = raw)
@@ -1091,7 +1118,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'       its sweep budget: the setting, the sweeps taken, the relaxation and
 #'       residual of the last E-step, and how many E-steps of the run relaxed
 #'       or failed to converge) and \code{clock} (\code{max_time} ran out
-#'       inside an E-step). \code{print()} shows the last two.}
+#'       inside an E-step or an M-step). \code{print()} shows the last two.}
 #'     \item{\code{details}}{Full output from the back-end function
 #'       (\code{.mcem_dynamic_fresh} or \code{emphasis_cem}).}
 #'   }
@@ -1332,7 +1359,7 @@ estimate_rates <- function(tree,
 #   mean_field  the surrogate proposal's mean-field iteration was relaxed
 #               (damping below the full step), ran under a damping setting
 #               other than "auto", or did not converge within its sweeps;
-#   clock       max_time ran out inside an E-step (the driver's time_note).
+#   clock       max_time ran out inside an E-step or an M-step (the driver's time_note).
 # Returned invisibly as a character vector; estimate_rates() keeps it in the
 # fit as `notes`.
 #' @keywords internal
@@ -1393,9 +1420,14 @@ estimate_rates <- function(tree,
   mc <- mc[ok, , drop = FALSE]
   damping <- fit$details$damping
   if (is.null(damping)) damping <- "auto"
+  by_default <- isTRUE(fit$details$damping_default)
   relaxed <- is.finite(mc$mf_omega) & mc$mf_omega < 1
   nonconv <- !as.logical(mc$mf_converged)
   if (!any(relaxed) && !any(nonconv) && identical(damping, "auto")) return(NULL)
+  setting <- if (is.character(damping)) dQuote(damping, FALSE) else format(damping)
+  if (by_default)
+    setting <- paste0(setting, if (identical(damping, "auto")) ", the default at rho = 1"
+                               else ", the default at rho < 1")
   last <- mc[nrow(mc), , drop = FALSE]
   budget <- if ("mf_budget" %in% names(last) && is.finite(last$mf_budget))
     sprintf(" of %d", as.integer(last$mf_budget)) else ""
@@ -1403,7 +1435,7 @@ estimate_rates <- function(tree,
     "the surrogate proposal's mean field (damping = %s) at the last E-step took %d%s sweeps, ",
     "the last at relaxation %.4g, and ended at residual %.2e: %s. Over the %d E-steps of the ",
     "fit, %d relaxed the iteration below the full step and %d did not converge."),
-    if (is.character(damping)) dQuote(damping, FALSE) else format(damping),
+    setting,
     as.integer(last$mf_sweeps), budget, last$mf_omega, last$mf_delta,
     if (isTRUE(as.logical(last$mf_converged))) "converged" else "not converged",
     nrow(mc), sum(relaxed), sum(nonconv))

@@ -254,7 +254,9 @@ thinning_envelope_violations <- function(reset = FALSE) {
 #' @param rconditional R function that evaluates the GAM function.
 #' @param time_left seconds the fit has left on its clock; the E-step stops
 #' drawing when they run out, inside a draw as well as between draws, and
-#' returns the trees it has with \code{timed_out = TRUE} and no M-step.
+#' returns the trees it has with \code{timed_out = TRUE} and no M-step.  The
+#' same deadline binds the M-step, which reads it before every evaluation of
+#' its objective and stops once it has passed (\code{m_timed_out}).
 #' Negative (the default) means no deadline.
 #' @return a list with the following components:
 #' \describe{
@@ -275,6 +277,10 @@ thinning_envelope_violations <- function(reset = FALSE) {
 #'  \item{timed_out}{whether the deadline passed before sample_size trees
 #'  were drawn; when \code{TRUE} no M-step was run and \code{estimates} is
 #'  \code{init_pars}}
+#'  \item{m_timed_out}{whether the deadline passed during the M-step}
+#'  \item{m_improved}{when \code{m_timed_out}: whether the best point the
+#'  M-step had evaluated improves on \code{init_pars}; \code{estimates} is
+#'  that point when \code{TRUE} and \code{init_pars} when \code{FALSE}}
 #' }
 #' @keywords internal
 em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, lower_bound, upper_bound, xtol_rel, num_threads, copy_trees, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, rconditional = NULL, parent_tip_start = as.numeric( c()), seed = 0L, parent_id = as.integer( c()), time_left = -1.0) {
@@ -295,14 +301,21 @@ em_cpp <- function(brts, init_pars, sample_size, maxN, max_missing, max_lambda, 
 #' @param model integer vector of length 3: c(use_N, use_P, use_E)
 #' @param link link function: 0 = linear (max(0,...)), 1 = exponential
 #' @param rconditional R function that evaluates the GAM function.
+#' @param time_left seconds the fit has left on its clock; the optimiser
+#' reads it before every evaluation of the objective and stops once it has
+#' run out.  Negative (the default) means no deadline.
 #' @return list with the following entries:
 #' \describe{
 #'  \item{estimates}{vector of estimates}
 #'  \item{nlopt}{nlopt status}
 #'  \item{time}{used computation time}
+#'  \item{timed_out}{whether the deadline stopped the optimiser}
+#'  \item{improved}{when \code{timed_out}: whether the best point evaluated
+#'  improves on \code{init_pars}; \code{estimates} is that point when
+#'  \code{TRUE} and \code{init_pars} when \code{FALSE}}
 #' }
 #' @keywords internal
-m_cpp <- function(e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, rconditional = NULL) {
-    .Call('_emphasis_rcpp_mcm', PACKAGE = 'emphasis', e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, model, link, rho, rconditional)
+m_cpp <- function(e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, rconditional = NULL, time_left = -1.0) {
+    .Call('_emphasis_rcpp_mcm', PACKAGE = 'emphasis', e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, model, link, rho, rconditional, time_left)
 }
 

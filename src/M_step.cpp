@@ -40,7 +40,23 @@ namespace emphasis {
       const std::vector<double>& w;
       conditional_fun_t* conditional;
       const double sum_w;   // sum of the weights over the trees passed
+
+      // The fit's clock.  With an active deadline the objective reads it
+      // before every evaluation and, once it has passed, asks the optimiser
+      // to stop; the best point evaluated so far and the value at the start
+      // are kept here, because what NLopt leaves in x on a forced stop is not
+      // documented for sbplx.
+      const deadline_t* deadline = nullptr;
+      sbplx* opt = nullptr;
+      const double* start = nullptr;    // the M-step's starting point
+      bool cut = false;                 // the deadline stopped the optimiser
+      bool have_f_start = false;
+      double f_start = std::numeric_limits<double>::infinity();
+      double best_f = std::numeric_limits<double>::infinity();
+      param_t best_x;
     };
+
+    double objective_value(unsigned int n, const double* x, nlopt_f_data* psd);
 
 
     // Q(pars) = sum_i w_i * loglik(pars, tree_i), a weighted sum with
@@ -57,6 +73,28 @@ namespace emphasis {
     double objective(unsigned int n, const double* x, double*, void* func_data)
     {
       auto psd = reinterpret_cast<nlopt_f_data*>(func_data);
+      if (nullptr == psd->deadline) return objective_value(n, x, psd);
+      constexpr double inf = std::numeric_limits<double>::infinity();
+      if (psd->deadline->passed()) {
+        psd->cut = true;
+        psd->opt->force_stop();
+        return inf;
+      }
+      const double f = objective_value(n, x, psd);
+      if (!psd->have_f_start && std::equal(x, x + n, psd->start)) {
+        psd->have_f_start = true;
+        psd->f_start = f;
+      }
+      if (f < psd->best_f) {
+        psd->best_f = f;
+        psd->best_x.assign(x, x + n);
+      }
+      return f;
+    }
+
+
+    double objective_value(unsigned int n, const double* x, nlopt_f_data* psd)
+    {
       param_t pars(x, x + n);
       constexpr double inf = std::numeric_limits<double>::infinity();
       const double Q = tbb::parallel_reduce(tbb::blocked_range<size_t>(0, psd->trees.size()), 0.0,
@@ -104,7 +142,8 @@ namespace emphasis {
                   const param_t& upper_bound, // overrides model.upper.bound
                   double xtol_rel,
                   int num_threads,
-                  conditional_fun_t* conditional)
+                  conditional_fun_t* conditional,
+                  const deadline_t& deadline)
   {
  //   if (!model.is_threadsafe()) num_threads = 1;
     // A weight multiplies a log-density inside Q and scales the conditional
@@ -159,10 +198,39 @@ namespace emphasis {
       nlopt.set_initial_step(step);
     }
     nlopt.set_min_objective(objective, &sd);
+    // The fit's deadline binds here as it does in the E-step: the objective
+    // reads the clock before every evaluation and stops the optimiser once it
+    // has passed, so the M-step overruns the deadline by at most one
+    // evaluation.  Cut short, the M-step returns the best point it evaluated
+    // when that point is better than the start (improved = true), and the
+    // start otherwise; the driver decides what to do with either.
+    if (deadline.active) {
+      sd.deadline = &deadline;
+      sd.opt = &nlopt;
+      sd.start = pars.data();
+      if (deadline.passed()) {
+        M.timed_out = true;
+        M.opt = static_cast<int>(NLOPT_FORCED_STOP);
+        M.minf = std::numeric_limits<double>::quiet_NaN();
+        M.elapsed = 0.0;
+        return M;
+      }
+    }
     arena.execute([&] {
       M.minf = nlopt.optimize(M.estimates);
       M.opt = static_cast<int>(nlopt.result());
     });
+    if (sd.cut || NLOPT_FORCED_STOP == nlopt.result()) {
+      M.timed_out = true;
+      M.improved = sd.have_f_start && !sd.best_x.empty() && sd.best_f < sd.f_start;
+      if (M.improved) {
+        M.estimates = sd.best_x;
+        M.minf = sd.best_f;
+      } else {
+        M.estimates = pars;
+        M.minf = sd.f_start;
+      }
+    }
     auto T1 = std::chrono::high_resolution_clock::now();
     M.elapsed = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count());
     return M;

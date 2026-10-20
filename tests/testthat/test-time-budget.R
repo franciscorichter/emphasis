@@ -124,3 +124,93 @@ test_that("a thinning fit on a slow E-step stops on its clock, inside the E-step
   expect_lt(t, 5)
   expect_match(fit$notes[["clock"]], "inside the E-step of iteration 1")
 })
+
+# The M-step binds on the same deadline: its optimiser reads the clock before
+# every evaluation of the objective and stops once it has passed.  A
+# conditional that sleeps makes each evaluation slow while the E-step on this
+# four-tip tree stays fast, so the M-step alone runs well past the budget.
+mstep_setup <- function() {
+  mb <- emphasis:::.resolve_model("cr")
+  ex <- function(p) emphasis:::.expand_pars(p, mb)
+  list(mb = mb, start = ex(c(log(1.5), log(0.5))),
+       lo = ex(c(-3, -6)), up = ex(c(1, 0)))
+}
+
+test_that("m_cpp stops on its clock and keeps the best point only when it beats the start", {
+  s <- mstep_setup()
+  e <- emphasis:::em_cpp(brts = small_brts, init_pars = s$start, sample_size = 30L, maxN = 500L,
+                         max_missing = 1e4, max_lambda = 1e6, lower_bound = s$lo, upper_bound = s$up,
+                         xtol_rel = 1e-3, num_threads = 1L, copy_trees = TRUE, model = s$mb,
+                         link = 1L, seed = 3L)
+  counter <- new.env()
+  counter$n <- 0L
+  counting <- function(p) { counter$n <- counter$n + 1L; 0 }
+  full <- emphasis:::m_cpp(e, s$start, "rpd1", s$lo, s$up, 1e-3, 1L, model = s$mb, link = 1L,
+                           rconditional = counting)
+  expect_false(full$timed_out)
+  # at 0.05 s an evaluation the unbounded M-step takes over five times the budget
+  expect_gt(counter$n * 0.05, 5 * 0.3)
+  sleepy <- function(p) { Sys.sleep(0.05); 0 }
+  t <- elapsed_of(cut <- emphasis:::m_cpp(e, s$start, "rpd1", s$lo, s$up, 1e-3, 1L, model = s$mb,
+                                          link = 1L, rconditional = sleepy, time_left = 0.3))
+  expect_true(cut$timed_out)
+  expect_lt(t, 1)
+  # a few evaluations from a start this far from the optimum find a better point
+  expect_true(cut$improved)
+  expect_false(isTRUE(all.equal(cut$estimates, s$start)))
+  # no time left: the optimiser does not start, and the start is returned
+  none <- emphasis:::m_cpp(e, s$start, "rpd1", s$lo, s$up, 1e-3, 1L, model = s$mb, link = 1L,
+                           rconditional = sleepy, time_left = 0)
+  expect_true(none$timed_out)
+  expect_false(none$improved)
+  expect_equal(none$estimates, s$start)
+})
+
+test_that("a fit whose M-step alone exceeds max_time stops within a small multiple of it", {
+  skip_on_cran()
+  s <- mstep_setup()
+  # about a hundred evaluations at 0.1 s each (counted in the test above):
+  # the unbounded M-step alone takes about ten times max_time
+  sleepy <- function(p) { Sys.sleep(0.1); 0 }
+  common <- list(brts = small_brts, pars = s$start, sample_size = 10L, max_missing = 1e4,
+                 lower_bound = s$lo, upper_bound = s$up, max_iter = 50L, xtol = 1e-3,
+                 tol = 1e-3, patience = 3L, num_threads = 1L, conditional = sleepy,
+                 model = s$mb, link = 1L, max_time = 1)
+  t_bdi <- elapsed_of(fit_bdi <- do.call(emphasis:::.mcem_bdi, common))
+  t_thn <- elapsed_of(fit_thn <- do.call(emphasis:::.mcem_dynamic_fresh,
+                                         c(common, list(maxN = 2000L))))
+  for (fit in list(fit_bdi, fit_thn)) {
+    expect_identical(fit$stop_reason, "time_budget")
+    # the cut iteration keeps the better point it had found, and the fit ends there
+    expect_identical(fit$iterations, 1L)
+    expect_match(fit$time_note, "inside the M-step of iteration 1; that iteration keeps")
+    expect_false(isTRUE(all.equal(fit$pars, s$start)))
+  }
+  # the clock, the final E-step's own clock (whose em_cpp call runs a bounded
+  # M-step under the thinning sampler) and one evaluation past each
+  expect_lt(t_bdi, 3.5)
+  expect_lt(t_thn, 3.5)
+})
+
+test_that("an M-step cut before it improves on its start discards the iteration", {
+  skip_on_cran()
+  s <- mstep_setup()
+  # the first evaluation, at the start, outlasts the whole budget
+  counter <- new.env()
+  counter$n <- 0L
+  slow_first <- function(p) {
+    counter$n <- counter$n + 1L
+    if (counter$n == 1L) Sys.sleep(0.8)
+    0
+  }
+  t <- elapsed_of(fit <- emphasis:::.mcem_bdi(
+    brts = small_brts, pars = s$start, sample_size = 30L, max_missing = 1e4,
+    lower_bound = s$lo, upper_bound = s$up, max_iter = 50L, xtol = 1e-3, tol = 1e-3,
+    patience = 3L, num_threads = 1L, conditional = slow_first, model = s$mb, link = 1L,
+    max_time = 0.4))
+  expect_identical(fit$stop_reason, "time_budget")
+  expect_identical(fit$iterations, 0L)
+  expect_equal(fit$pars, s$start)
+  expect_match(fit$time_note, "inside the M-step of iteration 1 before it found a point better")
+  expect_lt(t, 2.5)
+})

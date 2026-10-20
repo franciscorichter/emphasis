@@ -50,6 +50,10 @@ namespace emphasis {
     void set_initial_step(const std::vector<double>&);
     void set_min_objective(nlopt_func, void*);
     void set_max_objective(nlopt_func, void*);
+    // Asks a running optimize() to return after the current evaluation; the
+    // objective calls it when the fit's deadline has passed.  optimize() then
+    // returns normally with result() == NLOPT_FORCED_STOP.
+    void force_stop();
     double optimize(std::vector<double>&);
     nlopt_result result();
 
