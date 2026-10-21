@@ -1,3 +1,12 @@
+## Resubmission
+
+This replaces the emphasis 1.0.0 submitted on 2026-10-21, which has not yet
+been reviewed. The only change is the removal of the experimental gaussian
+link function (`link = "gaussian"`): it made the coefficients poorly
+identified and duplicated the other links where it worked. The package now
+offers the linear and exponential links. The checks below were rerun on the
+resubmitted version.
+
 ## Submission
 
 First submission of emphasis (version 1.0.0).
@@ -19,7 +28,7 @@ First submission of emphasis (version 1.0.0).
 ## R CMD check results
 
 0 errors | 0 warnings | 5 notes (two from the package, three from the test
-machine). Tests: 2334 passed, 0 failed, 89 skipped on CRAN.
+machine). Tests: 2198 passed, 0 failed, 87 skipped on CRAN.
 
 * New submission.
 
