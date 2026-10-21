@@ -52,7 +52,7 @@ Because $N$ is read on the complete tree, its value at a given time is not the n
 
 ![The AIC lead of dd over cr, and of the best lineage-level model over dd, in each of 46 family trees](images/E26-verdict.png)
 
-*The 46 family trees. Left: the AIC lead of `dd` over `cr`, dark where it exceeds 2. Right: the lead of the best of `nd`, `ned` and `nk` over `dd`, dark where the lineage-level model is the family's supported choice; open points rest on fewer than 10 effective draws. From [E26](../experiments/E26.html).*
+*The 46 family trees. Left: the AIC lead of `dd` over `cr`, dark where it exceeds 2. Right: the lead of the best of `nd`, `ned` and `nk` over `dd`, dark where the lineage-level model is the family's supported choice; open points rest on fewer than 10 effective draws. From [E26](../experiments/E26.html), with the `nd` rung refitted in [E48](../experiments/E48.html).*
 
 ## What real phylogenies say
 
