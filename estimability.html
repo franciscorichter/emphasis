@@ -150,8 +150,8 @@ window.MathJax = {
 <tr>
 <td>2</td>
 <td>the eight lineage-level models: accuracy by size, turnover and effect</td>
-<td>E46</td>
-<td>planned; the design takes in the D-proposal choice under the corrected likelihood, the E7 cells, and conditioning by a direct Monte Carlo estimate of <span class="math inline">\(P(S)\)</span> (<a href="experiments/E43.html">E43</a>; see Phase 2)</td>
+<td><a href="experiments/E46.html">E46</a></td>
+<td><strong>registered</strong> 2026-10-21; starts when E45 has finished. Conditioning: the unconditioned fit, then a quadratic surface of <span class="math inline">\(\log P(S)\)</span> by direct simulation around its estimate, then the fit continued conditioned on that surface, rebuilt whenever the iterate leaves the inner half of its box (and also from the nested start when the extinction intercept sits on its edge). Sizes run upwards: 50 and 100 tips for all 57 reachable cells, 200 and 400 only where a parameter is not yet reliable. Budget: about 10 500 CPU-hours for 50 and 100 tips (about 14 days on 24 workers), up to a further 17 500 for 200 tips</td>
 <td></td>
 </tr>
 <tr>
@@ -233,7 +233,7 @@ window.MathJax = {
 </tr>
 <tr>
 <td>tips</td>
-<td>50, 100, 200, 400 (400 only for models reliable at 200)</td>
+<td>50 and 100 for every reachable cell; 200 only where a parameter is not reliable at 100, 400 only where one is still not reliable at 200</td>
 </tr>
 <tr>
 <td>turnover</td>
@@ -245,7 +245,7 @@ window.MathJax = {
 </tr>
 <tr>
 <td>extinction</td>
-<td>constant in the main arm (its covariate slope generated at 0 and estimated); an extinction-driver arm at turnover 0.40 for <code>ned</code> and <code>nk</code></td>
+<td>constant (its covariate slope generated at 0 and estimated); the extinction-driver arm for <code>ned</code> and <code>nk</code> goes to E47</td>
 </tr>
 <tr>
 <td><span class="math inline">\(\rho\)</span></td>
@@ -257,7 +257,7 @@ window.MathJax = {
 </tr>
 <tr>
 <td>fit</td>
-<td>the generating model only (estimation, not selection), Phase 0.5's protocol, conditioned on survival by a direct Monte Carlo estimate of <span class="math inline">\(P(S)\)</span> at each parameter value the M-step visits (<a href="experiments/E43.html">E43</a>: no emulator is adequate)</td>
+<td>the generating model only (estimation, not selection), Phase 0.5's protocol, conditioned on survival through a local surface of direct Monte Carlo estimates of <span class="math inline">\(P(S)\)</span> (<a href="experiments/E43.html">E43</a>: no emulator is adequate; method on <a href="experiments/E46.html">E46</a>)</td>
 </tr>
 <tr>
 <td>read</td>
@@ -267,13 +267,13 @@ window.MathJax = {
 </table>
 </div>
 <p><strong>Folded in.</strong> The ESS at the generating values before each fit, which replaces <a href="experiments/E7.html">E7</a>'s <code>ed</code> and <code>ned</code> cells (as E6b does for E6); the D-proposal question under the corrected likelihood: the 100-tip <code>d</code> and <code>nd</code> cells are fitted on both proposals and <a href="experiments/E19.html">E19</a>b's adoption rule is applied; the <code>ned</code> and <code>nk</code> ratios of <a href="experiments/E27.html">E27</a>. E46 runs effects of ±0.35 only and turnover 0.10 and 0.40, so <a href="experiments/E16.html">E16</a>'s turnover 0.25 and the selection contour go to E47.</p>
-<p><strong>Conditioning.</strong> By <a href="experiments/E43.html">E43</a>, the conditioned likelihood of each of the eight models needs a Monte Carlo estimate of <span class="math inline">\(P(S)\)</span> at every parameter value the M-step evaluates. At a standard error of 0.01 in <span class="math inline">\(\log P\)</span>, one estimate took a median of 2 to 29 seconds and a 90th percentile of 3.6 to 43 minutes of one core in E43's boxes, and each carries noise of about 0.01 in <span class="math inline">\(\log P\)</span>. The design sets the precision of the estimate, how the M-step handles its noise, and the cost per fit that follows.</p>
-<p><strong>Rule.</strong> As Phase 1, with two additions: a slope is reliable only if its sign is right on ≥ 95% of trees; a cell is read only if ≥ 80% of its fits finished and its median effective sample is ≥ 10 (otherwise it is reported as unfinished or sampler-limited, which is itself the answer for that size).</p>
-<p>Cost: 8 models x 4 sizes x 2 turnovers x 2 signs x 30 trees ≈ 3800 fits, fewer once the 400-tip cells are restricted. From <a href="experiments/E40.html">E40</a> and <a href="experiments/E29.html">E29</a>: a lineage-level fit takes about 15 minutes at 60 tips and 1-4 hours at 200, unconditioned. Estimate: 5-8 days before the cost of the Monte Carlo conditioning, which is added per M-step evaluation; run size by size so the curves fill in from the small end.</p>
+<p><strong>Conditioning.</strong> By <a href="experiments/E43.html">E43</a>, the conditioned likelihood of each of the eight models needs a Monte Carlo estimate of <span class="math inline">\(P(S)\)</span> at every parameter value the M-step evaluates. At a standard error of 0.01 in <span class="math inline">\(\log P\)</span>, one estimate took a median of 2 to 29 seconds and a 90th percentile of 3.6 to 43 minutes of one core in E43's boxes, and each carries noise of about 0.01 in <span class="math inline">\(\log P\)</span>, while the M-step evaluates <span class="math inline">\(\log P\)</span> hundreds to thousands of times an iteration. E46 therefore estimates <span class="math inline">\(\log P(S)\)</span> at a few dozen points around the unconditioned estimate and fits a quadratic surface to them, rebuilding the surface whenever the fit moves out of its range; the surfaces cost 0.4-9% of a fit's time in the pilot.</p>
+<p><strong>Rule.</strong> As Phase 1 without the coverage condition (an MCEM fit returns no interval), with two additions: a coefficient is identified only if its sign is right on ≥ 95% of trees; a cell is read only if ≥ 80% of its fits finished and its median effective sample is ≥ 10 (otherwise it is reported as clock-limited, unfinished or sampler-limited, which is itself the answer for that size). The registered rules, including the noise of the conditioning itself, are on <a href="experiments/E46.html">E46</a>.</p>
+<p>Cost: about 10 500 CPU-hours for the 50- and 100-tip cells (about 14 days on 24 workers), each 200-tip cell 3.1 times its 100-tip cell; the sizes run upwards so the curves fill in from the small end.</p>
 <h2 id="phase-3--model-choice-e47">Phase 3 — model choice (E47)</h2>
 <p>Once Phase 2 says which parameters are reliable at which size: the conditioned ladder on the same trees and on null trees, read by the parsimony rule. It needs an effect grid for the selection contour, since E46 runs only ±0.35 (<a href="experiments/E12.html">E12</a>, <a href="experiments/E16.html">E16</a>, <a href="experiments/E18.html">E18</a>). Folded in: the path suite under the current <code>lineage_table()</code>, both routes on E46's trees (<a href="experiments/E20.html">E20</a>, <a href="experiments/E21.html">E21</a>b, <a href="experiments/E22.html">E22</a>, <a href="experiments/E33.html">E33</a> (b) at the generating parameters); an alternative-generator bootstrap for K (<a href="experiments/E17.html">E17</a>'s open question); <a href="experiments/E27.html">E27</a>'s <span class="math inline">\(\rho\)</span> 0.75 and 0.50 cells and family-like cell; and <a href="experiments/E35.html">E35</a> (b)'s misstated <span class="math inline">\(\rho\)</span>. Designed after Phase 2.</p>
 <h2 id="order-and-dependencies">Order and dependencies</h2>
-<p>0.1 (decision) → 0.2 (minutes) → 0.3 (a day) and 0.4 (calibration, hours) → Phase 1 (a day) → Phase 2 (5-8 days, size by size). Phase 0 ran (<a href="experiments/E44.html">E44</a>, <a href="experiments/E43.html">E43</a>) while <a href="experiments/E40.html">E40</a> finished; Phase 1 (<a href="experiments/E45.html">E45</a>) runs on the workers <a href="experiments/E37.html">E37</a> released on 2026-10-15.</p>
+<p>0.1 (decision) → 0.2 (minutes) → 0.3 (a day) and 0.4 (calibration, hours) → Phase 1 (a day) → Phase 2 (about 14 days for 50 and 100 tips, then larger sizes where needed). Phase 0 ran (<a href="experiments/E44.html">E44</a>, <a href="experiments/E43.html">E43</a>) while <a href="experiments/E40.html">E40</a> finished; Phase 1 (<a href="experiments/E45.html">E45</a>) runs on the workers <a href="experiments/E37.html">E37</a> released on 2026-10-15.</p>
 <h2 id="what-each-result-page-will-add">What each result page will add</h2>
 <p>Each step's page follows the wiki's template (question, design, pre-set rule, results, conclusion). The summary that answers the question will be a table here, filled as results arrive:</p>
 <div class="table-wrap">

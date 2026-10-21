@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E46 — the eight lineage-level models under the conditioned likelihood: accuracy by size, turnover and effect · emphasis</title>
+<meta name="description" content="Phase 2 of the estimability plan.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../covariates/index.html">Covariates</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>E46 — the eight lineage-level models under the conditioned likelihood: accuracy by size, turnover and effect</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#budget">Budget</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td><strong>registered</strong> 2026-10-21, before any run; starts when <a href="E45.html">E45</a> has finished on both of its hosts. A test of the driver on two trees with a short clock checks the code and is not read</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis 1.0.0, the main branch of 2026-10-21 (<code>2143bde</code>)</td>
+</tr>
+<tr>
+<td>Driver / analysis</td>
+<td><code>sim/E46-lib.R</code>, <code>sim/E46-trees.R</code>, <code>sim/E46-run-claimed.R</code>, <code>sim/E46-launch.sh</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/E46/</code> (trees, one CSV and one record per job, the decisions the queue takes)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Phase 2 of the <a href="../estimability.html">estimability plan</a>. For <code>d</code>, <code>nd</code>, <code>ed</code>, <code>edc</code>, <code>ned</code>, <code>nedc</code>, <code>k</code> and <code>nk</code> there is no exact likelihood, so the reference is the generating value. Per model, coefficient, turnover and effect: from how many tips is each parameter of the conditioned MCEM estimate reliable, and from how many is the lineage-level coefficient identified. E46 replaces the recovery results of <a href="E12.html">E12</a>, <a href="E16.html">E16</a>, <a href="E18.html">E18</a>, <a href="E19.html">E19</a> (with E19b), <a href="E21.html">E21</a> (E21a), <a href="E24.html">E24</a>'s <code>d</code> arm, <a href="E27.html">E27</a>'s <code>ned</code> and <code>nk</code> ratios, <a href="E29.html">E29</a>'s <span class="math inline">\(\beta_{ED}\)</span> recovery, <a href="E30.html">E30</a>, <a href="E31.html">E31</a> at 200 tips, and <a href="E7.html">E7</a>'s <code>ed</code> and <code>ned</code> cells.</p>
+<p><a href="E43.html">E43</a> found no survival emulator accurate enough for any of these models, so each conditioned fit needs a direct Monte Carlo estimate of <span class="math inline">\(P(S)\)</span>, the probability that both crown lineages survive. Supplying one at every parameter value the M-step evaluates (about 1300-2900 evaluations an iteration under <code>ned</code>) would cost 0.7-1.6 hours of simulation an iteration. A pilot on 2026-10-20/21, not a registered experiment, compared ways of supplying it and chose the one described below.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<tbody>
+<tr>
+<td>generators</td>
+<td><a href="E43.html">E43</a>'s calibrated generators: exponential link, crown age 15, kept if both crown lineages survive, no size window, calibrated to the median surviving size, E43's lineage cap</td>
+</tr>
+<tr>
+<td>models</td>
+<td><code>d</code>, <code>ed</code>, <code>edc</code>, <code>k</code> (one covariate); <code>nd</code>, <code>ned</code>, <code>nedc</code>, <code>nk</code> (<span class="math inline">\(N\)</span> plus one)</td>
+</tr>
+<tr>
+<td>turnover at the crown</td>
+<td>0.10, 0.40</td>
+</tr>
+<tr>
+<td>lineage-level speciation coefficient</td>
+<td><span class="math inline">\(-0.35\)</span> and <span class="math inline">\(+0.35\)</span> per scale unit of its covariate</td>
+</tr>
+<tr>
+<td>extinction slope</td>
+<td>generated at 0, estimated</td>
+</tr>
+<tr>
+<td><span class="math inline">\(\rho\)</span></td>
+<td>1</td>
+</tr>
+<tr>
+<td>tips</td>
+<td>50 and 100 for every cell the generator reaches (57 cells); 200 only where a parameter is not reliable at 100; 400 only where one is still not reliable at 200</td>
+</tr>
+<tr>
+<td>not run (the generator cannot reach the size)</td>
+<td><code>ned</code> and <code>k</code> at <span class="math inline">\(-0.35\)</span>, turnover 0.40; <code>nk</code> at <span class="math inline">\(-0.35\)</span> from 100 tips at turnover 0.10 and at every size at 0.40; at 400 tips <code>nd</code> at 0.40, <code>ned</code> at <span class="math inline">\(-0.35\)</span> and 0.10, <code>nedc</code> at <span class="math inline">\(+0.35\)</span> and 0.40</td>
+</tr>
+<tr>
+<td>trees per cell</td>
+<td>30</td>
+</tr>
+<tr>
+<td>effective sample before the fit</td>
+<td>one E-step of 2400 draws at the generating values on every tree, on the fit's proposal; a cell whose median is below 10 is sampler-limited and not fitted</td>
+</tr>
+<tr>
+<td>proposal</td>
+<td>the package default (surrogate for the ED models, thinning for <code>d</code>, <code>nd</code>, <code>k</code>, <code>nk</code>); the 100-tip <code>d</code> and <code>nd</code> cells on both, and E19b's adoption rule picks the proposal of the other <code>d</code> and <code>nd</code> cells</td>
+</tr>
+<tr>
+<td>fit</td>
+<td>the generating model only; <code>mc_error</code> (300 draws grown by 1.5 up to 2400); at most 1000 iterations a stage; box from <code>auto_bounds()</code>; started from the exact conditioned <code>cr</code> estimate (one-covariate models) or <code>dd</code> estimate (<span class="math inline">\(N\)</span> models) with zero lineage-level slopes</td>
+</tr>
+<tr>
+<td>clock</td>
+<td>24 hours for the first three trees of each cell; four times the longest of those three for the rest</td>
+</tr>
+<tr>
+<td>box edges</td>
+<td>a parameter on an edge has that edge moved out (an intercept by 4 log units, a slope to three times its distance from zero) and the conditioned stage is rerun; a parameter on the moved edge is reported as not bounded by the tree</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Conditioning.</strong> Four steps per tree.</p>
+<ol type="1">
+<li>The unconditioned fit, to the stopping rule.</li>
+<li><span class="math inline">\(\log P(S)\)</span> by direct simulation at <span class="math inline">\(2p + 1\)</span> points around that estimate (<span class="math inline">\(p\)</span> the number of coefficients of a quadratic in the parameters: 31 points for four parameters, 57 for six), in a box of half-width 0.03 of the fit's box per coordinate, the same clade seeds at every point, enough clades for a standard error of 0.02 at the centre; a quadratic fitted by weighted least squares, with the tangent plane outside the box.</li>
+<li>The fit continued from the unconditioned estimate with that surface as the conditioning factor, in segments of 25 iterations; whenever the iterate leaves the inner half of the surface's box, the surface is rebuilt around it. It ends when the stopping rule is met inside the inner half.</li>
+<li>When the unconditioned extinction intercept is on its box edge, step 3 also runs from the nested start, and the higher conditioned log-likelihood is kept.</li>
+</ol>
+<p>The conditioned log-likelihood reported uses a direct <span class="math inline">\(\log P(S)\)</span> at the estimate (standard error 0.01). In the pilot, on 100-tip <code>cr</code> and <code>dd</code> trees where the exact conditioned maximum is known, steps 1-3 inside MCEM ended a median 0.0011 nats below it (worst 0.13), against 0.0074 for MCEM with the exact factor and 0.26 for the unconditioned fit; without step 4, a second, lower maximum on the extinction edge was kept on 4 of 10 <code>cr</code> trees at turnover 0.10. The surfaces cost under 0.3% of a <code>cr</code> or <code>dd</code> fit's time, 0.4-1.8% under <code>ned</code> and 3-9% under <code>nk</code>.</p>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<ol type="1">
+<li>A cell is read only if at least 80% of its fits finished (both stages) and its median final effective sample is at least 10; otherwise it is reported as clock-limited (more than 10% of fits on the clock), sampler-limited or unfinished, and that is the answer at that size. For <code>nd</code> and <code>nk</code>, a fit on the iteration cap is also counted as finished if its speciation coefficients alone meet the stopping rule over its last 50 iterations (all at 2400 draws, and the means of the first and last 25 iterates of each speciation coefficient differing by less than one standard error of that difference); its extinction parameters are then reported, not read. Both readings are reported.</li>
+<li>A parameter is <strong>reliable at a size</strong> when its median ratio to the generating value lies in [0.8, 1.25] and the central 80% of ratios within [0.5, 2]. The extinction slope, generated at 0, is read on its difference from 0 in units of the speciation slope's generating size, with the same band widths. There is no coverage condition: the package returns no interval for an MCEM fit.</li>
+<li>A lineage-level coefficient is <strong>identified at a size</strong> when it is reliable and its sign is right on at least 95% of trees. The answer is the smallest size from which rules 2 and 3 hold at every size run above it.</li>
+<li>The conditioning's own noise: on 3 trees a cell, step 3 is repeated with other surface seeds; a coefficient whose spread across seeds exceeds a tenth of its spread across the cell's trees makes the cell limited by the conditioning, reported and not read.</li>
+<li>A tree whose conditioned maximum lies where the direct estimate of <span class="math inline">\(P(S)\)</span> found no surviving clade is reported, not read.</li>
+</ol>
+<p>A cell not read at a size is not run at a larger one. The <code>d</code> and <code>nd</code> proposal is chosen by E19b's rule: the surrogate if its median effective sample is above 10 in every 100-tip cell where thinning's is below 10, and no cell's median ratio of <span class="math inline">\(\beta_D\)</span> is further from 1 on the surrogate than on thinning.</p>
+<h2 id="budget">Budget</h2>
+<p>From the pilot, per tree on one core at 100 tips with both stages and the nested start: <code>nk</code> about 7 hours, <code>ned</code> at least 10; taken for the others: <code>nd</code> 7, <code>nedc</code> 10, <code>ed</code> and <code>edc</code> 6, <code>d</code> and <code>k</code> 4. At 50 tips 0.6 of that, at 200 tips 3.1 times (from <a href="E27.html">E27</a>'s size ladders). The 50- and 100-tip cells with the second <code>d</code>/<code>nd</code> proposal: about 10 500 CPU-hours, about 14 days on 24 workers. Each 200-tip cell costs 3.1 times its 100-tip cell (at most a further 17 500 CPU-hours if no parameter is reliable at 100), a 400-tip cell about 10 times. These are lower bounds where the pilot's fits ended on their clock.</p>
+<h2 id="results">Results</h2>
+<p>Not started.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Not evaluable until the run reports.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="../estimability.html">Estimability</a>: the plan, Phase 2.</li>
+<li><a href="E43.html">E43</a>: the generators, and why the conditioning is a direct Monte Carlo estimate.</li>
+<li><a href="E45.html">E45</a>: Phase 1, <code>cr</code> and <code>dd</code> against the exact conditioned estimate.</li>
+<li><a href="E41.html">E41</a>: the fit protocol and the box edges; <code>nd</code> and <code>nk</code> unfinished at 1000 iterations.</li>
+<li><a href="E6.html">E6</a> (E6b) and <a href="E7.html">E7</a>: the effective sample of the proposals.</li>
+<li><a href="E19.html">E19</a> (E19b): the adoption rule for the <code>d</code> and <code>nd</code> proposal.</li>
+<li>E47: model choice on E46's trees, the effect grid, turnover 0.25, <span class="math inline">\(\rho\)</span> below 1, and the extinction-driver arm (<code>ned</code> and <code>nk</code> at turnover 0.40), deferred from E46 because no generator with an extinction driver has been calibrated.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 1.0.0. Francisco Richter, Università della Svizzera italiana.</p>
+</footer>
+</body>
+</html>
