@@ -9,7 +9,7 @@ First submission of emphasis (version 1.0.0).
 * GitHub Actions (`r-lib/actions`), all passing at commit 63fadf6 and later:
   macOS (latest) R release; Windows (latest) R release; Ubuntu (latest)
   R devel, R release and R oldrel-1.
-* win-builder: R-devel and R-release (submitted; results pending).
+* win-builder: R-devel and R-release.
 * macOS builder (mac.r-project.org/macbuilder, R 4.6.1 Patched, macOS 26.6,
   arm64): the check stopped at "checking package dependencies" because the
   builder had none of the CRAN packages emphasis imports (ape, DDD, nloptr,
@@ -18,7 +18,7 @@ First submission of emphasis (version 1.0.0).
 
 ## R CMD check results
 
-0 errors | 0 warnings | 4 notes (two from the package, two from the test
+0 errors | 0 warnings | 5 notes (two from the package, three from the test
 machine). Tests: 2334 passed, 0 failed, 89 skipped on CRAN.
 
 * New submission.
@@ -40,6 +40,8 @@ These come from the test machine, not from the package:
   (Windows) and the RcppParallel link flags.
 * "unable to verify current time": the machine had no access to a time
   server during the check.
+* "Files 'README.md' or 'NEWS.md' cannot be checked without 'pandoc' being
+  installed": pandoc is not installed on the test machine.
 
 ## Reverse dependencies
 
