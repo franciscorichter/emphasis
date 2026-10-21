@@ -148,12 +148,7 @@ predict_survival <- function(gam_fit, newpars) {
 #'   \code{rate = exp(eta)}, under which the intercepts \code{beta_0} and
 #'   \code{gamma_0} are log rates; \code{"linear"},
 #'   \code{rate = max(0, eta)}, under which the parameters are rates and a
-#'   covariate can drive a rate to zero, where it is clipped;
-#'   \code{"gaussian"}, \code{beta_0 * exp(-(eta_cov - 1)^2 / 2)}, is
-#'   experimental: it has been used only in a convergence study of the
-#'   surrogate proposal's fixed-point iteration, never in an estimation
-#'   experiment; it is not available for ED or K models, and every model
-#'   with a covariate is fitted on it with the thinning proposal.
+#'   covariate can drive a rate to zero, where it is clipped.
 #' @param n_test Number of replicate simulations per candidate point
 #'   to assess feasibility (default 5).
 #' @param bisect_steps Number of bisection steps per axis direction
@@ -250,7 +245,7 @@ auto_bounds <- function(tree, model = "cr", link = "exponential",
   if (verbose) .vcat(sprintf(
     "auto_bounds: %s link=%s (%d pars)\n",
     paste(model_bin, collapse = ","),
-    c("linear", "exponential", "gaussian")[link_int + 1L],
+    c("linear", "exponential")[link_int + 1L],
     n_pars
   ))
   if (verbose) .vcat(sprintf(
@@ -528,18 +523,9 @@ auto_bounds <- function(tree, model = "cr", link = "exponential",
 # of the linear predictor is zero.
 #
 #   linear (0)      rate = max(0, beta_0)                 -> beta_0 = rate
-#   exponential (1) rate = exp(beta_0)                    -> handled by the
-#                                                            caller's log()
-#   gaussian (2)    rate = beta_0 * exp(-(eta_cov - 1)^2 / 2)
-#                        = beta_0 * exp(-1/2) at eta_cov = 0
-#                                                         -> beta_0 = rate*e^(1/2)
-#
-# Under the gaussian link beta_0 is the peak rate on the natural scale
-# (general_tree.hpp:110-113, model.hpp:134-137), not a log rate, so the
-# log-scale branch belongs to the exponential link alone.
+#   exponential (1) rate = exp(beta_0)                    -> beta_0 = log(rate)
 .rate_intercept <- function(rate, link_int) {
   if (link_int == 1L) return(log(rate))
-  if (link_int == 2L) return(rate * exp(0.5))
   rate
 }
 
@@ -551,16 +537,12 @@ auto_bounds <- function(tree, model = "cr", link = "exponential",
 # The simulator starts here, and rnd_t::expon returns 1e20 for a non-positive
 # total rate (general_tree.hpp:45-47), so the run ends at once with the 2-row
 # crown L-table and status "done".  A parameter value that does that is not
-# feasible; without this check it was counted as feasible, which is how the
-# gaussian box could sit entirely at negative beta_0.
+# feasible, and without this check it would be counted as feasible.
 .crown_rate_positive <- function(pars, model_bin, link_int) {
   p8      <- .expand_pars(pars, model_bin)
   eta_lam <- 2 * p8[2L]        # beta_N * N with M = D = 0
   eta_mu  <- 2 * p8[6L]        # gamma_N * N
-  if (link_int == 2L) {
-    lam <- p8[1L] * exp(-0.5 * (eta_lam - 1)^2)
-    mu  <- p8[5L] * exp(-0.5 * (eta_mu  - 1)^2)
-  } else if (link_int == 1L) {
+  if (link_int == 1L) {
     lam <- exp(p8[1L] + eta_lam)
     mu  <- exp(p8[5L] + eta_mu)
   } else {
@@ -930,10 +912,8 @@ auto_bounds <- function(tree, model = "cr", link = "exponential",
     lb_mu  <- c(log(lam_lo) - 3, -cov_hi)
     ub_mu  <- c(log(lam_hi), cov_hi)
   } else {
-    # Linear and gaussian links: the intercept is a rate, so the box is on the
-    # natural scale and non-negative.  The gaussian intercept is the peak of
-    # beta_0 * exp(-(eta_cov - 1)^2 / 2), which at eta_cov = 0 is beta_0*e^(-1/2),
-    # so each rate bound is carried to the intercept by .rate_intercept().
+    # Linear link: the intercept is a rate, so the box is on the natural
+    # scale and non-negative.
     lb_lam <- c(.rate_intercept(lam_lo, link_int), -cov_hi)
     ub_lam <- c(.rate_intercept(lam_hi, link_int), cov_hi)
     lb_mu  <- c(0.0, -cov_hi)
@@ -974,8 +954,8 @@ auto_bounds <- function(tree, model = "cr", link = "exponential",
 #'   \code{"nd"}, \code{"ed"}, \code{"ned"}, \code{"k"}, \code{"nk"}, or a
 #'   binary integer vector (length 3 to 5).
 #' @param sample_size Number of augmented trees per grid point (default 200).
-#' @param link \code{"exponential"} (default), \code{"linear"}, or
-#'   \code{"gaussian"} (experimental); see \code{\link{estimate_rates}}.
+#' @param link \code{"exponential"} (default) or \code{"linear"}; see
+#'   \code{\link{estimate_rates}}.
 #' @param max_missing Maximum missing lineages per augmentation (default 1e4).
 #' @param max_lambda Maximum speciation rate (default 500).
 #' @param maxN Total augmentation attempts per grid point.  If \code{NULL},

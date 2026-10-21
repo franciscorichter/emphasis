@@ -86,15 +86,14 @@ $$
 \mu(s,t) = f\!\bigl(\gamma_0,\; \gamma_N N(t) + \gamma_D D_s(t) + \gamma_{ED}\,\mathrm{ED}_s(t) + \gamma_K K_s(t)\bigr)
 $$
 
-Three link functions $f$ are available:
+Two link functions $f$ are available:
 
 | Link | Formula | Properties |
 | ---- | ------- | ---------- |
 | **Exponential** (default) | $f(\beta_0, \eta) = \exp(\beta_0 + \eta)$ | Positive; unbounded; monotonic; $\beta_0$, $\gamma_0$ are log rates |
 | **Linear** | $f(\beta_0, \eta) = \max(0,\; \beta_0 + \eta)$ | Non-smooth at zero; monotonic; a rate driven below zero is clipped at zero |
-| **Quadratic exponential** (experimental) | $f(\beta_0, \eta) = \beta_0 \cdot \exp(-(\eta - 1)^2/2)$ | Bounded; smooth; bell-shaped; $\beta_0$ = peak rate |
 
-The link is selected with `link = "exponential"` (the default), `"linear"`, or `"gaussian"` (the quadratic-exponential form). The linear link is supported. The gaussian link is experimental: it has been used in one convergence study of the surrogate proposal and in no estimation experiment, it is not available for $\mathrm{ED}$ or $K$ models, and every model with a covariate is fitted on it with the thinning proposal.
+The link is selected with `link = "exponential"` (the default) or `"linear"`. The linear link is supported.
 
 Four lineage-level covariates are read on the complete tree, the first from its branching times and the others from its topology:
 
@@ -156,7 +155,7 @@ Every fit therefore records `details$final_IS$ESS` and `$gap`, and `compare_mode
 
 **The chosen model is not the lowest AIC.** Among nested models the richer one has the lower AIC whenever its two extra parameters raise the log-likelihood by more than 2, which under the null happens on about 13% of trees (the likelihood-ratio statistic is $\chi^2_2$), and more often with several richer models offered beside the null. `compare_models()` therefore reports `chosen`: the model with the fewest parameters among those within `margin = 2` AIC of the minimum and, among those, the one with the lower AIC, whatever order the fits are passed in; `within_margin` marks the rows that qualify, and the full ranking is kept.
 
-**Three routes to a model.** `estimate_rates()` fits one named model. `estimate_rates(model = "all")` fits the nested ladder `cr`, `dd`, `nd`, `ned`, `nk` (the last two need a `phylo` and are left out on the gaussian link), each started from the estimate of the model it nests and boxed by `auto_bounds()` unless `control$bounds` names a box per model, and returns the fits with their `compare_models()` table and its `chosen` model; `control$models` restricts the ladder. `covariate_path()` selects and estimates at once, along one dgLARS path (Augugliaro, Mineo & Wit 2013) over the covariates, on the segment-level Poisson form of the log-linear point process (`lineage_table()` is that form, one row per lineage and segment), choosing a point by BIC or AIC for speciation and extinction separately. Called on a `phylo`, it treats the tree as fully observed; the augmented route, with the hidden lineages entering at their importance weights, runs on the draws of an E-step.
+**Three routes to a model.** `estimate_rates()` fits one named model. `estimate_rates(model = "all")` fits the nested ladder `cr`, `dd`, `nd`, `ned`, `nk` (the last two need a `phylo`), each started from the estimate of the model it nests and boxed by `auto_bounds()` unless `control$bounds` names a box per model, and returns the fits with their `compare_models()` table and its `chosen` model; `control$models` restricts the ladder. `covariate_path()` selects and estimates at once, along one dgLARS path (Augugliaro, Mineo & Wit 2013) over the covariates, on the segment-level Poisson form of the log-linear point process (`lineage_table()` is that form, one row per lineage and segment), choosing a point by BIC or AIC for speciation and extinction separately. Called on a `phylo`, it treats the tree as fully observed; the augmented route, with the hidden lineages entering at their importance weights, runs on the draws of an E-step.
 
 **What a fit records about itself.** A fit carries `notes`, each stating the number it rests on: a lineage-level covariate on fewer than 50 tips; an effective sample below 10 at the last E-step; turnover above 0.5 at the intercepts; under `model = "all"` with both `nd` and `ned` in the ladder, that the two read the same pendant edge; `clock` when `max_time` cut a step short; and `mean_field` when the surrogate proposal's mean-field iteration was relaxed below the full step (which the default does at every sweep when $\rho < 1$), ran under a `damping` the user set, or did not converge within its sweep budget; the note names the setting and whether it was the default. `print()` shows them.
 
@@ -166,7 +165,7 @@ Two proposals $q$ are available, selected with `simulate_tree(method = )` for co
 
 | Sampler | Where | Scope | Property |
 | ------- | ----- | ----- | -------- |
-| `"bdi"`, the surrogate (default) | `R/bdi.R` | `cr` and `dd` on the linear and exponential links, `cr` also on the gaussian link; $\mathrm{ED}$ models on the linear and exponential links; $D$ models on request; any $\rho \in (0,1]$ | Draws from the exact conditional distribution under constant rates (ESS = sample size); under diversity dependence, $D$ or $\mathrm{ED}$ it is a mean-field proposal built on a self-consistent backward-forward iteration, and the weights carry the approximation |
+| `"bdi"`, the surrogate (default) | `R/bdi.R` | `cr`, `dd` and $\mathrm{ED}$ models on the linear and exponential links; $D$ models on request; any $\rho \in (0,1]$ | Draws from the exact conditional distribution under constant rates (ESS = sample size); under diversity dependence, $D$ or $\mathrm{ED}$ it is a mean-field proposal built on a self-consistent backward-forward iteration, and the weights carry the approximation |
 | `"thinning"` (`sampling = "dynamic_fresh"`) | `src/augment_tree.cpp` | Every model and link | Poisson-thinning proposal, C++ with TBB parallelism |
 
 `.bdi_supported(model_bin, link, rho)` gates both entry points, and `.bdi_unsupported_reason()` supplies the phrase the fallback message carries. What runs on thinning:
@@ -174,7 +173,6 @@ Two proposals $q$ are available, selected with `simulate_tree(method = )` for co
 - **$K$ models**, since the mean field does not carry $K$.
 - **$D$ models, unless `control$sampling` names `"bdi"`.** Under the surrogate the average lineage has $D = 0$, so the mean field is the `dd` one and $\beta_D$ enters only the attachment of hidden births, which is exact: each candidate parent is weighted by the model's own speciation rate at that instant. The pre-registered condition for making it the $D$ default is not met.
 - **A model with an $M$ term.** The iteration carries $\hat N$ and $\hat P$ but not the mean pendant age an $M$ model would close on. ($\mathrm{ED}$ is admitted because its clade mean is $\hat P / \hat N$, and $D$ because its clade mean is zero.)
-- **`dd` and $\mathrm{ED}$ models on the gaussian link.** There the rate is not monotone in the covariate, and the mean-field iteration does not contract past its peak: on a 20-tip tree over 128 cells in $(\beta_0, \beta_N, \rho)$ with a 200-sweep budget it failed to reach tolerance in 36, with the failing cells interleaved with converging ones. `cr` on the gaussian link is admitted because $\lambda = \beta_0 e^{-1/2}$ is constant there.
 
 The surrogate's mean field is a Picard iteration, and where its map expands it diverges; `control$damping` under-relaxes the sweep. By default the step is `"auto"` at complete sampling ($\rho = 1$), which halves the relaxation whenever the residual grows, and a fixed ⅛ when $\rho < 1$. At the shipped sweep budget (20 sweeps at $\rho = 1$, 200 below) a fixed ⅛ converges more diverging cases below $\rho = 1$ (142 against 131 of 192 units at $\rho = 0.2$) but none of 192 at $\rho = 1$, against 131 for `"auto"`, at 1.4 to 3.3 times the E-step time and with no gain in effective sample ([E10](https://franciscorichter.github.io/emphasis/experiments/E10.html)). A mean field that converges only under relaxation leaves an effective sample of about 1 either way. Every E-step's mean field is in the trace (`mf_converged`, `mf_delta`, `mf_sweeps`, `mf_omega`, `mf_budget`), and `fit$notes$mean_field` records the relaxation used.
 
@@ -266,7 +264,7 @@ sim <- simulate_tree(
   pars  = c(log(0.5), -0.02, log(0.1), 0),
   max_t = 10,
   model = "dd",
-  link  = "exponential"   # the default; or "linear", "gaussian"
+  link  = "exponential"   # the default; or "linear"
 )
 sim$status    # "done", "extinct", or "too_large"
 plot(sim$tes) # reconstructed (extant-only) tree
@@ -336,7 +334,7 @@ These files hold the likelihood and the proposals to a computation written indep
 
 | File | What it checks |
 | ---- | -------------- |
-| `test-d-bookkeeping.R` | the $D$ compensator on a fully observed tree against pendant ages read off the edge list, under all three links, and the `d`/`nd` complete-data log-likelihood of simulated trees against one computed in R |
+| `test-d-bookkeeping.R` | the $D$ compensator on a fully observed tree against pendant ages read off the edge list, under both links, and the `d`/`nd` complete-data log-likelihood of simulated trees against one computed in R |
 | `test-ed-complete.R` | the raw-$\mathrm{ED}$ complete-data log-likelihood of simulated `ed` trees against one computed in R from the definition of fair proportion |
 | `test-d-compensator.R` | the linear-link $D$ compensator against quadrature over the instantaneous $D$, and the pendant PD the thinning sampler reads against a replay of the tree |
 | `test-ed.R` | $\mathrm{ED}$ against a fair-proportion computation on `ape` trees, its sum against Faith's PD, and `ned` at $\beta_{ED} = 0$ against `dd` |

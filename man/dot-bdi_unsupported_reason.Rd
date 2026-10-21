@@ -9,7 +9,7 @@
 \arguments{
 \item{model_bin}{Length-3 binary model vector \code{c(use_N, use_M, use_D)}.}
 
-\item{link}{Integer link code: 0 linear, 1 exponential, 2 gaussian.}
+\item{link}{Integer link code: 0 linear, 1 exponential.}
 
 \item{rho}{Sampling fraction in \code{(0, 1]}. Default \code{1}.}
 }

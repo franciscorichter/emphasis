@@ -9,7 +9,7 @@
 \arguments{
 \item{model_bin}{Length-3 binary model vector \code{c(use_N, use_M, use_D)}.}
 
-\item{link}{Integer link code: 0 linear, 1 exponential, 2 gaussian.}
+\item{link}{Integer link code: 0 linear, 1 exponential.}
 
 \item{rho}{Sampling fraction in \code{(0, 1]}. Default \code{1}.}
 }
@@ -34,29 +34,13 @@ available on the linear and exponential links.  The M covariate
 would have to be closed on \code{P} as well as \code{N}, which is written
 but not gated.
 
-Under the \code{gaussian} link the rate is
-\code{beta_0 * exp(-(beta_N*N - 1)^2 / 2)}, still a function of \code{N}
-alone.  For \code{cr} the covariate part is zero and the rate is the
-constant \code{beta_0 * exp(-1/2)}, so constant rates on the gaussian link
-are the constant-rates case under a reparameterisation and are sampled
-exactly, as they are on the other two links.  For \code{dd} they are not:
-\code{lambda(N)} rises to a peak at \code{N = 1/beta_N} and falls after it,
-and the Picard iteration of \code{\link{.bdi_iterate}} does not contract on
-the far side.  Measured on a 20-tip tree over a 4 x 8 x 4 grid in
-\code{(beta_0, beta_N, rho)} with a 200-sweep budget -- more than three times
-what this function allows -- it failed to reach \code{tol} in 36 of 128
-cells, with \code{delta} running to 104.  That is divergence, not slow
-convergence.  The failing region is not an interval that could be excluded:
-at \code{rho = 0.5, beta_0 = 1} the iteration converges at
-\code{beta_N = 0.08}, fails at 0.1, and converges again at 0.2, 0.3 and 0.5;
-and the whole pattern moves with \code{rho}.  Where it does converge it can
-take 164 sweeps.  \code{dd} on the gaussian link therefore stays on the
-thinning proposal.  The linear and exponential \code{dd} rates are monotone
-in \code{N} and reached the fixed point in every cell of the same sweep, in
-at most 27 iterations at \code{rho = 1}.  They are slower below it: an
-exponential \code{dd} cell needs 63 sweeps at \code{rho = 0.2}, and
-converging linear \code{dd} cells have needed 126 and 134, which is what
-sets the \code{rho < 1} budget.
+The linear and exponential \code{dd} rates are monotone in \code{N}.  On a
+20-tip tree over a 4 x 8 x 4 grid in \code{(beta_0, beta_N, rho)} with a
+200-sweep budget, the Picard iteration of \code{\link{.bdi_iterate}} reached
+the fixed point for both in every cell, in at most 27 iterations at
+\code{rho = 1}.  It is slower below it: an exponential \code{dd} cell needs
+63 sweeps at \code{rho = 0.2}, and converging linear \code{dd} cells have
+needed 126 and 134, which is what sets the \code{rho < 1} budget.
 
 Incomplete sampling is in scope for every model and link the gate otherwise
 accepts.  \code{p(t)} becomes the probability of leaving a \emph{sampled}

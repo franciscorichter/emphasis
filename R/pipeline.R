@@ -32,12 +32,7 @@
 #'   \code{rate = exp(eta)}, under which the intercepts \code{beta_0} and
 #'   \code{gamma_0} are log rates; \code{"linear"},
 #'   \code{rate = max(0, eta)}, under which the parameters are rates and a
-#'   covariate can drive a rate to zero, where it is clipped;
-#'   \code{"gaussian"}, \code{beta_0 * exp(-(eta_cov - 1)^2 / 2)}, is
-#'   experimental: it has been used only in a convergence study of the
-#'   surrogate proposal's fixed-point iteration, never in an estimation
-#'   experiment; it is not available for ED or K models, and every model
-#'   with a covariate is fitted on it with the thinning proposal.
+#'   covariate can drive a rate to zero, where it is clipped.
 #' @param stages Character vector of stages to run.  Default
 #'   \code{c("bounds", "gam", "cem", "mcem")}.  Remove stages to skip them,
 #'   e.g. \code{c("bounds", "gam")} for a quick exploratory fit.
@@ -94,7 +89,7 @@ emphasis_pipeline <- function(tree,
   model_bin <- .resolve_model(model)
   model_str <- .model_label(model_bin)
   link_int  <- .resolve_link(link)
-  link_str  <- c("linear", "exponential", "gaussian")[link_int + 1L]
+  link_str  <- c("linear", "exponential")[link_int + 1L]
   brts      <- .extract_brts(tree)
   n_brts    <- length(brts)
 

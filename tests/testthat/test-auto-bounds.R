@@ -20,8 +20,7 @@ ab_test_brts <- c(
 ab_intercept <- function(rate, link) {
   switch(link,
          linear      = rate,
-         exponential = log(rate),
-         gaussian    = rate * exp(0.5))
+         exponential = log(rate))
 }
 
 
@@ -33,23 +32,6 @@ test_that(".rate_intercept inverts each link at a zero covariate term", {
   expect_equal(emphasis:::.rate_intercept(rate, 0L), rate)
   # exponential: rate = exp(beta_0)
   expect_equal(exp(emphasis:::.rate_intercept(rate, 1L)), rate)
-  # gaussian: rate = beta_0 * exp(-(eta_cov - 1)^2 / 2), eta_cov = 0
-  expect_equal(emphasis:::.rate_intercept(rate, 2L) * exp(-0.5), rate)
-})
-
-test_that(".wide_bounds puts the gaussian intercepts on the natural scale", {
-  model_bin <- c(0L, 0L, 0L)
-  lin <- emphasis:::.wide_bounds(model_bin, 0L, max_t = 20, n_tips = 23)
-  gau <- emphasis:::.wide_bounds(model_bin, 2L, max_t = 20, n_tips = 23)
-
-  # beta_0 above zero, gamma_0 at zero
-  expect_gt(gau$lb[1], 0)
-  expect_equal(gau$lb[2], 0)
-
-  # Under cr the covariate term is zero on both links and both entries are
-  # intercepts, so the gaussian box is the linear box scaled by exp(1/2).
-  expect_equal(gau$lb, lin$lb * exp(0.5))
-  expect_equal(gau$ub, lin$ub * exp(0.5))
 })
 
 test_that(".wide_bounds leaves the linear and exponential boxes alone", {
@@ -71,24 +53,10 @@ test_that(".wide_bounds leaves the linear and exponential boxes alone", {
   expect_equal(unname(exps$ub), c(log(lam_hi), log(lam_hi)))
 })
 
-test_that("the gaussian covariate bounds are untouched by the rescaling", {
-  # Only the intercepts are rates; the slopes are slopes on both links.
-  lin <- emphasis:::.wide_bounds(c(1L, 0L, 0L), 0L, max_t = 20, n_tips = 23)
-  gau <- emphasis:::.wide_bounds(c(1L, 0L, 0L), 2L, max_t = 20, n_tips = 23)
-  expect_equal(gau$lb[c(2, 4)], lin$lb[c(2, 4)])   # beta_N, gamma_N
-  expect_equal(gau$ub[c(2, 4)], lin$ub[c(2, 4)])
-})
-
-
 # --- the feasibility hole --------------------------------------------------
 
 test_that(".crown_rate_positive rejects a non-positive total rate", {
   cr <- c(0L, 0L, 0L)
-  # gaussian: beta_0 is the peak rate, so beta_0 <= 0 is a non-positive rate
-  expect_false(emphasis:::.crown_rate_positive(c(-2.257, -4.049), cr, 2L))
-  expect_false(emphasis:::.crown_rate_positive(c(0, 0), cr, 2L))
-  expect_true(emphasis:::.crown_rate_positive(c(0.1726, 0.0288), cr, 2L))
-
   # linear: max(0, eta) on both rates
   expect_false(emphasis:::.crown_rate_positive(c(-0.1, -0.02), cr, 0L))
   expect_true(emphasis:::.crown_rate_positive(c(0.1, 0), cr, 0L))
@@ -104,16 +72,6 @@ test_that(".crown_rate_positive reads the N slope at the crown", {
   expect_true(emphasis:::.crown_rate_positive(c(0.4, -0.1, 0.1, -0.1), dd, 0L))
 })
 
-test_that(".test_feasibility rejects a gaussian negative-rate point", {
-  skip_on_cran()
-  # This is the point auto_bounds used to pick as its centre on bird.orders:
-  # the log-scale intercept read as a natural-scale peak rate. Every draw ends
-  # at once with the 2-row crown L-table and status "done".
-  expect_false(emphasis:::.test_feasibility(
-    c(-2.257, -4.049), "cr", "gaussian", max_t = 20, max_lin = 500L,
-    n_test = 5L, tip_lo = 2, tip_hi = 230, num_threads = 1L))
-})
-
 test_that(".test_feasibility rejects a rate that yields only the crown", {
   skip_on_cran()
   # Positive but negligible rates: the simulator does reach the present, and
@@ -126,27 +84,7 @@ test_that(".test_feasibility rejects a rate that yields only the crown", {
 
 # --- auto_bounds end to end ------------------------------------------------
 
-test_that("auto_bounds returns a positive gaussian box", {
-  skip_on_cran()
-  skip_if_not_installed("ape")
-  data(bird.orders, package = "ape", envir = environment())
-
-  for (md in c("cr", "dd")) {
-    ab <- auto_bounds(bird.orders, model = md, link = "gaussian",
-                      n_test = 3L, bisect_steps = 4L, train_surv_gam = FALSE,
-                      verbose = FALSE, num_threads = 1L)
-    expect_gt(ab$lower_bound["beta_0"], 0)
-    expect_gt(ab$upper_bound["beta_0"], ab$lower_bound["beta_0"])
-    expect_gte(ab$lower_bound["gamma_0"], 0)
-    # The centre is the observed net rate carried onto the peak scale.
-    max_t   <- max(ape::branching.times(bird.orders))
-    r_hat   <- log(ape::Ntip(bird.orders) / 2) / max_t
-    lam_hat <- r_hat + 0.2 * r_hat
-    expect_equal(unname(ab$center[1]) * exp(-0.5), lam_hat)
-  }
-})
-
-test_that("the exact MLE lies inside the box on all three links", {
+test_that("the exact MLE lies inside the box on both links", {
   skip_on_cran()
   skip_if_not_installed("DDD")
 
@@ -158,7 +96,7 @@ test_that("the exact MLE lies inside the box on all three links", {
                       tdmodel = 0, verbose = FALSE)))
   expect_gt(mle$mu0, 0)   # a log-link box cannot contain mu = 0
 
-  for (lk in c("linear", "exponential", "gaussian")) {
+  for (lk in c("linear", "exponential")) {
     ab <- auto_bounds(ab_test_brts, model = "cr", link = lk,
                       n_test = 5L, bisect_steps = 6L, train_surv_gam = FALSE,
                       verbose = FALSE, num_threads = 1L)

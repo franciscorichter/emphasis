@@ -105,12 +105,7 @@ the bounds do not depend on it.
 <code>rate = exp(eta)</code>, under which the intercepts <code>beta_0</code> and
 <code>gamma_0</code> are log rates; <code>"linear"</code>,
 <code>rate = max(0, eta)</code>, under which the parameters are rates and a
-covariate can drive a rate to zero, where it is clipped;
-<code>"gaussian"</code>, <code>beta_0 * exp(-(eta_cov - 1)^2 / 2)</code>, is
-experimental: it has been used only in a convergence study of the
-surrogate proposal's fixed-point iteration, never in an estimation
-experiment; it is not available for ED or K models, and every model
-with a covariate is fitted on it with the thinning proposal.</p>
+covariate can drive a rate to zero, where it is clipped.</p>
 </td></tr>
 <tr><td><code id="auto_bounds_:_n_test">n_test</code></td>
 <td>
@@ -787,12 +782,7 @@ returned.
 <code>rate = exp(eta)</code>, under which the intercepts <code>beta_0</code> and
 <code>gamma_0</code> are log rates; <code>"linear"</code>,
 <code>rate = max(0, eta)</code>, under which the parameters are rates and a
-covariate can drive a rate to zero, where it is clipped;
-<code>"gaussian"</code>, <code>beta_0 * exp(-(eta_cov - 1)^2 / 2)</code>, is
-experimental: it has been used only in a convergence study of the
-surrogate proposal's fixed-point iteration, never in an estimation
-experiment; it is not available for ED or K models, and every model
-with a covariate is fitted on it with the thinning proposal.</p>
+covariate can drive a rate to zero, where it is clipped.</p>
 </td></tr>
 <tr><td><code id="emphasis_pipeline_:_stages">stages</code></td>
 <td>
@@ -995,8 +985,8 @@ centred covariate).
 </li></ul>
 
 <p><code>model = "all"</code> fits the nested ladder <code>cr</code>, <code>dd</code>,
-<code>nd</code>, <code>ned</code>, <code>nk</code> (the last two need a <code>phylo</code> and
-are left out on the gaussian link), each started from the estimate of the
+<code>nd</code>, <code>ned</code>, <code>nk</code> (the last two need a <code>phylo</code>),
+each started from the estimate of the
 model it nests, with each model's box from <code><a href="#auto_bounds">auto_bounds</a></code>
 unless <code>control$bounds</code> names one per model, and returns the fits
 with their <code><a href="#compare_models">compare_models</a></code> table and its <code>chosen</code>
@@ -1049,12 +1039,7 @@ M is internal only).</p>
 <code>rate = exp(eta)</code>, under which the intercepts <code>beta_0</code> and
 <code>gamma_0</code> are log rates; <code>"linear"</code>,
 <code>rate = max(0, eta)</code>, under which the parameters are rates and a
-covariate can drive a rate to zero, where it is clipped;
-<code>"gaussian"</code>, <code>beta_0 * exp(-(eta_cov - 1)^2 / 2)</code>, is
-experimental: it has been used only in a convergence study of the
-surrogate proposal's fixed-point iteration, never in an estimation
-experiment; it is not available for ED or K models, and every model
-with a covariate is fitted on it with the thinning proposal.</p>
+covariate can drive a rate to zero, where it is clipped.</p>
 </td></tr>
 <tr><td><code id="estimate_rates_:_cond">cond</code></td>
 <td>
@@ -1418,12 +1403,7 @@ Default <code>1L</code>.</p>
 <code>rate = exp(eta)</code>, under which the intercepts <code>beta_0</code> and
 <code>gamma_0</code> are log rates; <code>"linear"</code>,
 <code>rate = max(0, eta)</code>, under which the parameters are rates and a
-covariate can drive a rate to zero, where it is clipped;
-<code>"gaussian"</code>, <code>beta_0 * exp(-(eta_cov - 1)^2 / 2)</code>, is
-experimental: it has been used only in a convergence study of the
-surrogate proposal's fixed-point iteration, never in an estimation
-experiment; it is not available for ED or K models, and every model
-with a covariate is fitted on it with the thinning proposal.</p>
+covariate can drive a rate to zero, where it is clipped.</p>
 </td></tr>
 <tr><td><code id="simulate_tree_:_max_missing">max_missing</code></td>
 <td>
@@ -1541,8 +1521,7 @@ shortcuts or a formula:
 
 <p>Formulas <code>~ N</code>, <code>~ N + D</code>, <code>~ N + ED</code>, <code>~ N + EDc</code> and <code>~ N + K</code>
 are also accepted (<code>ep</code> is a legacy alias for <code>d</code>).  An <code>ED</code> or <code>K</code>
-model needs the tree's topology (a <code>phylo</code>, not a branching-time vector) and is not
-available under the gaussian link.
+model needs the tree's topology (a <code>phylo</code>, not a branching-time vector).
 </p>
 
 <h4>Parameter vector</h4>
@@ -2317,7 +2296,7 @@ IS weights have nonzero variance (importance sampling, not exact).
 </td></tr>
 <tr><td><code id=".bdi_augment_one_:_link">link</code></td>
 <td>
-<p>Link index: 0 linear, 1 exponential, 2 gaussian.</p>
+<p>Link index: 0 linear, 1 exponential.</p>
 </td></tr>
 <tr><td><code id=".bdi_augment_one_:_tp">tp</code></td>
 <td>
@@ -2687,7 +2666,7 @@ with one pair of rates.  That is what an N-only model gives it.
 </td></tr>
 <tr><td><code id=".bdi_supported_:_link">link</code></td>
 <td>
-<p>Integer link code: 0 linear, 1 exponential, 2 gaussian.</p>
+<p>Integer link code: 0 linear, 1 exponential.</p>
 </td></tr>
 <tr><td><code id=".bdi_supported_:_rho">rho</code></td>
 <td>
@@ -2711,29 +2690,13 @@ available on the linear and exponential links.  The M covariate
 would have to be closed on <code>P</code> as well as <code>N</code>, which is written
 but not gated.
 </p>
-<p>Under the <code>gaussian</code> link the rate is
-<code>beta_0 * exp(-(beta_N*N - 1)^2 / 2)</code>, still a function of <code>N</code>
-alone.  For <code>cr</code> the covariate part is zero and the rate is the
-constant <code>beta_0 * exp(-1/2)</code>, so constant rates on the gaussian link
-are the constant-rates case under a reparameterisation and are sampled
-exactly, as they are on the other two links.  For <code>dd</code> they are not:
-<code>lambda(N)</code> rises to a peak at <code>N = 1/beta_N</code> and falls after it,
-and the Picard iteration of <code><a href="#dot-bdi_iterate">.bdi_iterate</a></code> does not contract on
-the far side.  Measured on a 20-tip tree over a 4 x 8 x 4 grid in
-<code>(beta_0, beta_N, rho)</code> with a 200-sweep budget &ndash; more than three times
-what this function allows &ndash; it failed to reach <code>tol</code> in 36 of 128
-cells, with <code>delta</code> running to 104.  That is divergence, not slow
-convergence.  The failing region is not an interval that could be excluded:
-at <code>rho = 0.5, beta_0 = 1</code> the iteration converges at
-<code>beta_N = 0.08</code>, fails at 0.1, and converges again at 0.2, 0.3 and 0.5;
-and the whole pattern moves with <code>rho</code>.  Where it does converge it can
-take 164 sweeps.  <code>dd</code> on the gaussian link therefore stays on the
-thinning proposal.  The linear and exponential <code>dd</code> rates are monotone
-in <code>N</code> and reached the fixed point in every cell of the same sweep, in
-at most 27 iterations at <code>rho = 1</code>.  They are slower below it: an
-exponential <code>dd</code> cell needs 63 sweeps at <code>rho = 0.2</code>, and
-converging linear <code>dd</code> cells have needed 126 and 134, which is what
-sets the <code>rho &lt; 1</code> budget.
+<p>The linear and exponential <code>dd</code> rates are monotone in <code>N</code>.  On a
+20-tip tree over a 4 x 8 x 4 grid in <code>(beta_0, beta_N, rho)</code> with a
+200-sweep budget, the Picard iteration of <code><a href="#dot-bdi_iterate">.bdi_iterate</a></code> reached
+the fixed point for both in every cell, in at most 27 iterations at
+<code>rho = 1</code>.  It is slower below it: an exponential <code>dd</code> cell needs
+63 sweeps at <code>rho = 0.2</code>, and converging linear <code>dd</code> cells have
+needed 126 and 134, which is what sets the <code>rho &lt; 1</code> budget.
 </p>
 <p>Incomplete sampling is in scope for every model and link the gate otherwise
 accepts.  <code>p(t)</code> becomes the probability of leaving a <em>sampled</em>
@@ -2799,7 +2762,7 @@ so that the first thing wrong with the call is the one reported.
 </td></tr>
 <tr><td><code id=".bdi_unsupported_reason_:_link">link</code></td>
 <td>
-<p>Integer link code: 0 linear, 1 exponential, 2 gaussian.</p>
+<p>Integer link code: 0 linear, 1 exponential.</p>
 </td></tr>
 <tr><td><code id=".bdi_unsupported_reason_:_rho">rho</code></td>
 <td>
@@ -3711,7 +3674,7 @@ the rates are expressed in another unit of time.
 <h3 id="dot-rel_floor"><code>.rel_floor</code> <span class="ref-title">Floor of the relative-change denominator</span></h3>
 <h4>Description</h4>
 
-<p>Under the linear and gaussian links the parameters are rates, of dimension
+<p>Under the linear link the parameters are rates, of dimension
 1/time, and the only rate scale in the problem is the inverse crown age:
 the floor is <code>rel_floor / crown_age</code>, which rescales with the rates
 themselves.  Under the exponential link the parameters are log-rates, where
@@ -3734,7 +3697,7 @@ an absolute step already is a relative change of the rate, so the floor is
 </td></tr>
 <tr><td><code id=".rel_floor_:_link">link</code></td>
 <td>
-<p>Integer link code: 0 linear, 1 exponential, 2 gaussian.</p>
+<p>Integer link code: 0 linear, 1 exponential.</p>
 </td></tr>
 <tr><td><code id=".rel_floor_:_rel_floor">rel_floor</code></td>
 <td>
@@ -4334,8 +4297,8 @@ binary integer vector (length 3 to 5).</p>
 </td></tr>
 <tr><td><code id="estimate_likelihood_surface_:_link">link</code></td>
 <td>
-<p><code>"exponential"</code> (default), <code>"linear"</code>, or
-<code>"gaussian"</code> (experimental); see <code><a href="#estimate_rates">estimate_rates</a></code>.</p>
+<p><code>"exponential"</code> (default) or <code>"linear"</code>; see
+<code><a href="#estimate_rates">estimate_rates</a></code>.</p>
 </td></tr>
 <tr><td><code id="estimate_likelihood_surface_:_max_missing">max_missing</code></td>
 <td>
@@ -4464,7 +4427,7 @@ within about twice <code>max_time</code>. Under <code>"cem"</code> and
 <dl>
 <dt><code>sampling</code></dt><dd><p>Sampling scheme: <code>"bdi"</code> (default), the
 birth-death-with-immigration sampler, which covers the cr and dd models
-on the linear and exponential links and cr on the gaussian link, at any
+on the linear and exponential links, at any
 <code>rho</code> in <code>(0, 1]</code>; or <code>"dynamic_fresh"</code>, the thinning
 sampler, which covers every model, link and <code>rho</code>. Under constant
 rates the BDI proposal is the exact conditional distribution, so its
@@ -4472,7 +4435,7 @@ weights are constant and its effective sample size is the number of
 draws; under diversity dependence and under ED it is a mean-field
 approximation and the weights vary. <code>"bdi"</code> falls back to
 <code>"dynamic_fresh"</code>, with a message naming the reason, for a D- or
-M-dependent model and for dd or ED on the gaussian link.</p>
+M-dependent model.</p>
 </dd>
 <dt><code>damping</code></dt><dd><p>BDI only: under-relaxation of the mean-field sweep,
 which is a Picard iteration <span class="reqn">\(x \leftarrow F(x)\)</span>. Where its map
@@ -4546,7 +4509,7 @@ is considered converged when the largest relative parameter change,
 is below <code>tol</code> for <code>patience</code> consecutive iterations. The
 bound box does not enter. The floor <span class="reqn">\(c\)</span> carries the units of the
 parameters (see <code>.rel_floor</code>): <code>tol / crown_age</code> where
-they are rates (linear and gaussian links) and <code>tol</code> where they
+they are rates (linear link) and <code>tol</code> where they
 are log-rates (exponential link), so the statistic does not change
 when the tree is expressed in another unit of time. Default
 <code>1e-2</code>: every coordinate must move by less than 1% of its own
@@ -4761,7 +4724,7 @@ over a segment to check that its value at the segment start dominates it.
 </td></tr>
 <tr><td><code id="eval_nh_rate_:_link">link</code></td>
 <td>
-<p>Link function: 0 = linear, 1 = exponential, 2 = gaussian.</p>
+<p>Link function: 0 = linear, 1 = exponential.</p>
 </td></tr>
 <tr><td><code id="eval_nh_rate_:_rho">rho</code></td>
 <td>

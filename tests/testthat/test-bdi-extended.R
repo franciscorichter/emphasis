@@ -1,4 +1,4 @@
-# The widened BDI proposal: the gaussian link and incomplete sampling.
+# The widened BDI proposal: incomplete sampling.
 #
 # What the widening claims, and what each block here checks:
 #
@@ -9,9 +9,8 @@
 #      rho, the log-weights are constant and fhat is the closed-form likelihood
 #   4  the augmentation emits unsampled extant lineages at rho < 1 and none at
 #      rho = 1, and the tree data frame counts them in N(t)
-#   5  diversity dependence: the DDD gate at rho = 1 is untouched, the mean-field
-#      iteration converges at rho < 1 on the monotone links, and does not on the
-#      gaussian one -- which is why the gate refuses it
+#   5  diversity dependence: the DDD gate at rho = 1 is untouched, and the
+#      mean-field iteration converges at rho < 1 on the linear and exponential links
 #   6  the gate: what is newly accepted, what is still refused, and the reason
 #
 # All sampling in .augment_tree_bdi is pure R (stats::rexp / runif), so set.seed
@@ -59,11 +58,9 @@ ll_cr_nee_rho <- function(lam, mu, rho, brts) {
   2 * logp1[1] + sum(log(lam) + logp1[-1])
 }
 
-# pars for a constant-rates model reaching (lam, mu) on each link.  On the
-# gaussian link the covariate part of eta is zero, so the rate is the constant
-# beta_0 * exp(-1/2) and beta_0 = lam * exp(1/2).
+# pars for a constant-rates model reaching (lam, mu) on each link.
 cr_pars <- function(lam, mu, link) switch(as.character(link),
-  "0" = c(lam, mu), "1" = log(c(lam, mu)), "2" = c(lam, mu) * exp(0.5))
+  "0" = c(lam, mu), "1" = log(c(lam, mu)))
 
 
 # ---------------------------------------------------------------------------
@@ -164,12 +161,11 @@ test_that("the extinction integral diverges at tp only at rho = 1", {
 
 test_that("cr: zero-variance weights and fhat = the closed form, every link, every rho", {
   # The gate that holds today for links 0 and 1 at rho = 1 (test-bdi-cr.R,
-  # dev/validation/R/00-selfcheck.R assertions c1/c1b) must hold for the
-  # gaussian link and at rho < 1 as well.  Measured here: sd(lw) <= 2.4e-12 and
-  # |fhat - closed form| <= 2.2e-12 over 3 trees x 3 links x 4 rho x 3 theta.
+  # dev/validation/R/00-selfcheck.R assertions c1/c1b) must hold at rho < 1
+  # as well.
   trees <- list(t11 = brts_t11, dd20 = brts_dd20)
   for (brts in trees) {
-    for (link in c(0L, 1L, 2L)) {
+    for (link in c(0L, 1L)) {
       for (rho in c(1, 0.9, 0.5, 0.2)) {
         for (tgt in list(c(0.5, 0.3), c(0.9, 0.1))) {
           lam <- tgt[1]; mu <- tgt[2]
@@ -192,7 +188,7 @@ test_that("cr at mu > lam and at lam = mu is exact too, at every rho", {
   # (H12); the critical case lam = mu is the 0/0 limit of both.
   for (tgt in list(c(0.3, 0.5), c(0.4, 0.4))) {
     lam <- tgt[1]; mu <- tgt[2]
-    for (link in c(0L, 1L, 2L)) for (rho in c(1, 0.5)) {
+    for (link in c(0L, 1L)) for (rho in c(1, 0.5)) {
       set.seed(3)
       e <- .augment_tree_bdi(brts_t11, cr_pars(lam, mu, link), cr_bin,
                              sample_size = 40L, link = link, rho = rho)
@@ -201,21 +197,6 @@ test_that("cr at mu > lam and at lam = mu is exact too, at every rho", {
     }
   }
 })
-
-test_that("the gaussian link is the other two under a reparameterisation", {
-  # beta_0 * exp(-1/2) = lam, so the same (lam, mu) reached through any link
-  # gives the same likelihood.  This is what makes cr on the gaussian link
-  # exact rather than merely available.
-  for (rho in c(1, 0.5)) {
-    f <- sapply(c(0L, 1L, 2L), function(link) {
-      set.seed(21)
-      .augment_tree_bdi(brts_dd20, cr_pars(0.7, 0.25, link), cr_bin,
-                        sample_size = 40L, link = link, rho = rho)$fhat
-    })
-    expect_equal(diff(range(f)), 0, tolerance = 1e-9)
-  }
-})
-
 
 # ---------------------------------------------------------------------------
 # 4. unsampled extant lineages
@@ -320,60 +301,6 @@ test_that("the sweep budget is what small rho needs, not what rho = 1 needs", {
   expect_identical(a$delta, b$delta)
 })
 
-test_that("the mean-field iteration DIVERGES for gaussian dd, and not merely slowly", {
-  # lambda(N) = beta_0*exp(-(beta_N*N - 1)^2/2) peaks at N = 1/beta_N and falls
-  # after it, so the map N -> rate -> N can oscillate past the peak.  This is
-  # the measurement behind .bdi_supported refusing dd on the gaussian link.
-  #
-  # The budget is deliberately 200 here -- more than three times what
-  # .bdi_iterate allows -- so that the failure cannot be read as "the cap is
-  # too low".  delta grows into the tens: these are divergent, not slow.
-  bt <- sort(brts_dd20[1] - brts_dd20[-1]); tp <- brts_dd20[1]
-  gp <- function(b0, bN) .expand_pars(c(b0 * exp(0.5), bN, 0.3 * exp(0.5), 0),
-                                      dd_bin)
-  # `auto` is the relaxed sweep.  It rescues the first two cases and only
-  # shrinks the third, which is why the gate on this link stays shut: a
-  # relaxation that fixes most of a region is not a licence to admit the region.
-  for (cse in list(list(b0 = 4, bN = 0.20, rho = 1,   auto_ok = TRUE),
-                   list(b0 = 2, bN = 0.10, rho = 0.5, auto_ok = TRUE),
-                   list(b0 = 4, bN = 0.10, rho = 0.2, auto_ok = FALSE))) {
-    # damping = 1 is the plain Picard iteration, which is what this measures.
-    s <- .bdi_iterate(gp(cse$b0, cse$bN), dd_bin, 2L, bt, tp, rho = cse$rho,
-                      max_iter = 200L, damping = 1)
-    expect_false(s$converged)
-    expect_gt(s$delta, 1)
-    expect_identical(s$iterations, 200L)
-    sd <- .bdi_iterate(gp(cse$b0, cse$bN), dd_bin, 2L, bt, tp, rho = cse$rho,
-                       max_iter = 200L, damping = "auto")
-    expect_identical(sd$converged, cse$auto_ok)
-    # and it never leaves the residual larger than the plain iteration did
-    expect_lte(sd$delta, s$delta)
-  }
-  # And the failing region is not an interval that could be carved out: at
-  # rho = 0.5, beta_0 = 1 the iteration converges at beta_N = 0.08, fails at
-  # 0.1, and converges again at 0.2.  A static gate on the link is the only
-  # honest one.
-  conv <- vapply(c(0.08, 0.1, 0.2), function(bN)
-    .bdi_iterate(gp(1, bN), dd_bin, 2L, bt, tp, rho = 0.5,
-                 max_iter = 200L, damping = 1)$converged, logical(1))
-  expect_identical(conv, c(TRUE, FALSE, TRUE))
-  # Relaxed, the hole closes: all three converge.  So "the failing region is
-  # not an interval" is a statement about the plain iteration only.
-  convd <- vapply(c(0.08, 0.1, 0.2), function(bN)
-    .bdi_iterate(gp(1, bN), dd_bin, 2L, bt, tp, rho = 0.5,
-                 max_iter = 200L, damping = "auto")$converged, logical(1))
-  expect_identical(convd, c(TRUE, TRUE, TRUE))
-
-  # A non-converged mean field is announced rather than used silently -- the
-  # gate keeps dd/gaussian out of estimate_rates, but .augment_tree_bdi is
-  # callable directly and must not stay quiet about it.  With the relaxation
-  # off, so that there is a non-convergence left to announce.
-  expect_warning(
-    .augment_tree_bdi(brts_dd20, c(4 * exp(0.5), 0.1, 0.3 * exp(0.5), 0), dd_bin,
-                      sample_size = 5L, link = 2L, rho = 0.2, damping = 1),
-    "mean-field iteration did not converge")
-})
-
 test_that("dd at rho = 1 on the linear link still matches DDD::dd_loglik", {
   # The existing gate, re-run here: the widening must not move it.
   skip_if_not_installed("DDD")
@@ -436,7 +363,6 @@ test_that(".bdi_supported accepts the widened scope", {
   for (rho in c(1, 0.9, 0.5, 1e-3)) {
     expect_true(.bdi_supported(c(0L, 0L, 0L), 0L, rho))   # cr linear
     expect_true(.bdi_supported(c(0L, 0L, 0L), 1L, rho))   # cr exponential
-    expect_true(.bdi_supported(c(0L, 0L, 0L), 2L, rho))   # cr gaussian  (new)
     expect_true(.bdi_supported(c(1L, 0L, 0L), 0L, rho))   # dd linear
     expect_true(.bdi_supported(c(1L, 0L, 0L), 1L, rho))   # dd exponential
   }
@@ -445,27 +371,23 @@ test_that(".bdi_supported accepts the widened scope", {
 test_that(".bdi_supported still refuses what is unsupported, and names the reason", {
   # M-dependent: out of reach by construction, not by omission.  D-dependent
   # models are admitted on the linear and exponential links (mean field D = 0,
-  # the coefficient in the attachment tilt) and refused on the gaussian one.
-  for (link in c(0L, 1L, 2L)) for (rho in c(1, 0.5)) {
+  # the coefficient in the attachment tilt).
+  for (link in c(0L, 1L)) for (rho in c(1, 0.5)) {
     expect_false(.bdi_supported(c(0L, 1L, 0L), link, rho))
-    expect_equal(.bdi_supported(c(0L, 0L, 1L), link, rho), link != 2L)
-    expect_equal(.bdi_supported(c(1L, 0L, 1L), link, rho), link != 2L)
+    expect_true(.bdi_supported(c(0L, 0L, 1L), link, rho))
+    expect_true(.bdi_supported(c(1L, 0L, 1L), link, rho))
   }
-  # dd on the gaussian link: the Picard iteration does not converge there.
-  expect_false(.bdi_supported(c(1L, 0L, 0L), 2L, 1))
-  expect_false(.bdi_supported(c(1L, 0L, 0L), 2L, 0.5))
+  # a link code outside 0 and 1
+  expect_false(.bdi_supported(c(0L, 0L, 0L), 2L, 1))
   # rho out of range
   expect_false(.bdi_supported(c(0L, 0L, 0L), 0L, 0))
   expect_false(.bdi_supported(c(0L, 0L, 0L), 0L, 1.5))
   expect_false(.bdi_supported(c(0L, 0L, 0L), 0L, NA_real_))
 
   expect_null(.bdi_unsupported_reason(c(0L, 0L, 1L), 0L, 1))
-  expect_match(.bdi_unsupported_reason(c(0L, 0L, 1L), 2L, 1), "gaussian")
   expect_match(.bdi_unsupported_reason(c(0L, 1L, 0L), 0L, 1), "M-dependent")
-  expect_match(.bdi_unsupported_reason(c(1L, 0L, 0L), 2L, 1), "gaussian")
-  expect_match(.bdi_unsupported_reason(c(1L, 0L, 0L), 2L, 1), "not monotone")
+  expect_match(.bdi_unsupported_reason(c(1L, 0L, 0L), 2L, 1), "link code 2")
   expect_match(.bdi_unsupported_reason(c(0L, 0L, 0L), 0L, 2), "outside")
-  expect_null(.bdi_unsupported_reason(c(0L, 0L, 0L), 2L, 0.5))
   expect_null(.bdi_unsupported_reason(c(1L, 0L, 0L), 1L, 0.5))
 })
 
@@ -480,28 +402,7 @@ test_that("estimate_rates routes to BDI where the gate now allows it", {
                                          upper_bound = c(3, 3)), link = "linear"),
     NA)
   expect_equal(fit$rho, 0.5)
-  # the gaussian link for cr, likewise
-  expect_message(
-    estimate_rates(brts_t11, model = "cr", link = "gaussian",
-                   init_pars = c(0.5, 0.2) * exp(0.5), method = "mcem",
-                   control = list(sampling = "bdi", num_trees = 20L,
-                                  max_iter = 3L, rho = 1,
-                                  lower_bound = c(1e-3, 0) * exp(0.5),
-                                  upper_bound = c(3, 3) * exp(0.5))),
-    NA)
 })
-
-test_that("estimate_rates still falls back for dd on the gaussian link, with the reason", {
-  expect_message(
-    estimate_rates(brts_t11, model = "dd", link = "gaussian",
-                   init_pars = c(0.8, 0.02, 0.2, 0), method = "mcem",
-                   control = list(sampling = "bdi", num_trees = 10L,
-                                  max_iter = 2L, maxN = 500L,
-                                  lower_bound = c(1e-3, 0, 0, 0),
-                                  upper_bound = c(3, 0.5, 3, 0))),
-    "gaussian link")
-})
-
 
 # ---------------------------------------------------------------------------
 # 7. the complete-sampling path the validation study measured is unchanged

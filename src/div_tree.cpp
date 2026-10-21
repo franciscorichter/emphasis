@@ -39,6 +39,9 @@ Rcpp::List simulate_div_tree_cpp(Rcpp::NumericVector  pars,
   if (model.size() < 3 || model.size() > 5) {
     Rcpp::stop("simulate_div_tree_cpp: model must have length 3, 4 or 5 (got %d)", (int) model.size());
   }
+  if (link != 0 && link != 1) {
+    Rcpp::stop("simulate_div_tree_cpp: link must be 0 (linear) or 1 (exponential) (got %d)", link);
+  }
   std::array<double, 12> p{};
   for (int i = 0; i < pars.size(); ++i) p[static_cast<size_t>(i)] = pars[i];
   std::array<int, 5> m{};

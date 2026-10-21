@@ -47,7 +47,6 @@ scen <- list(
   list(name = "cr_linear",    model = "cr",  link = "linear",      pars = c(0.8, 0.3),                      maxT = 7,  rho = 1),
   list(name = "cr_linear_rho",model = "cr",  link = "linear",      pars = c(0.8, 0.3),                      maxT = 7,  rho = 0.5),
   list(name = "dd_linear",    model = "dd",  link = "linear",      pars = c(1.0, -0.015, 0.1, 0),           maxT = 10, rho = 1),
-  list(name = "dd_gaussian",  model = "dd",  link = "gaussian",    pars = c(1.2, 0.02, 0.2, 0),             maxT = 8,  rho = 1),
   list(name = "d_linear",     model = "d",   link = "linear",      pars = c(0.6, -0.3, 0.15, 0),            maxT = 7,  rho = 1),
   list(name = "nd_exp",       model = "nd",  link = "exponential", pars = c(0, -0.02, -0.3, log(0.1), 0, 0.2), maxT = 8, rho = 1),
   list(name = "ed_linear",    model = "ed",  link = "linear",      pars = c(0.9, -0.1, 0.2, 0.02),          maxT = 6,  rho = 1),

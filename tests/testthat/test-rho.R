@@ -66,15 +66,10 @@ test_that(".bdi_supported does not depend on rho (H2)", {
   expect_true(emphasis:::.bdi_supported(dd_bin, 0L))
   expect_true(emphasis:::.bdi_supported(dd_bin, 1L))
   # D models are admitted on the linear and exponential links (mean field
-  # D = 0, exact attachment) and refused on the gaussian one; rho plays no part
+  # D = 0, exact attachment); rho plays no part
   expect_true(emphasis:::.bdi_supported(nd_bin, 0L))
   expect_true(emphasis:::.bdi_supported(d_bin,  0L))
   expect_equal(emphasis:::.bdi_supported(nd_bin, 0L, 0.5), emphasis:::.bdi_supported(nd_bin, 0L, 1))
-  expect_false(emphasis:::.bdi_supported(nd_bin, 2L))
-  # cr on the gaussian link is in scope (the covariate part of eta is zero
-  # there, so the rate is the constant beta_0*exp(-1/2)); dd on it is not.
-  expect_true(emphasis:::.bdi_supported(cr_bin, 2L))
-  expect_false(emphasis:::.bdi_supported(dd_bin, 2L))
 
   # The verdict is the same at every rho in range: the sampler conditions on
   # the rho-sampled survival probability rather than routing around it.
@@ -192,22 +187,26 @@ test_that("estimate_rates(rho < 1) keeps the BDI sampler and says nothing (H2)",
 
 
 test_that("the fallback still fires, unconditionally, for what is out of scope", {
-  # dd on the gaussian link at rho < 1 goes to thinning (the mean-field
-  # iteration does not converge past the rate's peak), and the message names
-  # the reason rather than only the fact.
+  # A K model at rho < 1 goes to thinning (the sampler's mean field does not
+  # carry the ancestral-split count), and the message names the reason rather
+  # than only the fact.
+  set.seed(11)
+  phy  <- ape::rphylo(16, 0.5, 0.3)
   ctrl <- list(rho = 0.5, sampling = "bdi", sample_size = 20L, max_iter = 2L,
                maxN = 2000L, num_threads = 1L,
-               lower_bound = c(1e-3, -1, 0, 0),
-               upper_bound = c(3, 1, 3, 0))
-  init <- c(0.4, 0.01, 0.2, 0)
-  expect_message(
-    fit <- estimate_rates(brts16, method = "mcem", model = "dd", link = "gaussian",
-                          init_pars = init, control = ctrl),
-    "gaussian")
+               lower_bound = c(log(1e-3), -0.5, log(1e-3), -0.5),
+               upper_bound = c(log(3), 0.5, log(3), 0.5))
+  init <- c(log(0.4), 0, log(0.2), 0)
+  # Two iterations on 20 draws leave a small effective sample, which is
+  # warned about and is not what this checks.
+  expect_message(suppressWarnings(
+    fit <- estimate_rates(phy, method = "mcem", model = "k", link = "exponential",
+                          init_pars = init, control = ctrl)),
+    "K-dependent")
   # Not gated on verbose, and it names the sampler that ran.
-  expect_message(
-    estimate_rates(brts16, method = "mcem", model = "dd", link = "gaussian", init_pars = init,
-                   control = utils::modifyList(ctrl, list(verbose = FALSE))),
+  expect_message(suppressWarnings(
+    estimate_rates(phy, method = "mcem", model = "k", link = "exponential", init_pars = init,
+                   control = utils::modifyList(ctrl, list(verbose = FALSE)))),
     "dynamic_fresh")
   expect_true(all(c("maxN", "rejected_errors") %in% names(fit$details$mcem)))
   expect_equal(fit$rho, 0.5)

@@ -298,10 +298,6 @@ test_that("beta_M = beta_D = gamma_M = gamma_D = 0 reproduces cr and dd", {
   # The D coefficients are the only thing switched off, so the D branch has to
   # collapse onto dt * n * (lambda + mu) — the same number the model it extends
   # computes without ever entering the branch.
-  #
-  # Links 0 and 1 only.  The gaussian branch counts the two crown lineages out
-  # of its alive set (H99, untouched here), so it does not reduce; see the
-  # commit message.
   for (link in c(0L, 1L)) {
     grid <- if (link == 0L)
       list(list(c(0L, 0L, 0L), c(0.90,  0.00, 0, 0, 0.35, 0, 0, 0)),
@@ -326,7 +322,7 @@ test_that("cr and dd never enter the D branch", {
   # model_bin[2] == 0 is the gate; the D coefficients are ignored entirely, so
   # moving them may not move a cr or dd log f by a bit.
   df <- .hand_tree2()
-  for (link in c(0L, 1L, 2L)) {
+  for (link in c(0L, 1L)) {
     for (mb in list(c(0L, 0L, 0L), c(1L, 0L, 0L))) {
       p0 <- c(0.9, -0.02, 0, 0.00, 0.35, 0, 0, 0.00)
       p1 <- c(0.9, -0.02, 0, 0.77, 0.35, 0, 0, -0.41)

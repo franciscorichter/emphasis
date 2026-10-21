@@ -93,8 +93,8 @@ centred covariate).
 </li></ul>
 
 <p><code>model = "all"</code> fits the nested ladder <code>cr</code>, <code>dd</code>,
-<code>nd</code>, <code>ned</code>, <code>nk</code> (the last two need a <code>phylo</code> and
-are left out on the gaussian link), each started from the estimate of the
+<code>nd</code>, <code>ned</code>, <code>nk</code> (the last two need a <code>phylo</code>),
+each started from the estimate of the
 model it nests, with each model's box from <code><a href="#auto_bounds">auto_bounds</a></code>
 unless <code>control$bounds</code> names one per model, and returns the fits
 with their <code><a href="#compare_models">compare_models</a></code> table and its <code>chosen</code>
@@ -147,12 +147,7 @@ M is internal only).</p>
 <code>rate = exp(eta)</code>, under which the intercepts <code>beta_0</code> and
 <code>gamma_0</code> are log rates; <code>"linear"</code>,
 <code>rate = max(0, eta)</code>, under which the parameters are rates and a
-covariate can drive a rate to zero, where it is clipped;
-<code>"gaussian"</code>, <code>beta_0 * exp(-(eta_cov - 1)^2 / 2)</code>, is
-experimental: it has been used only in a convergence study of the
-surrogate proposal's fixed-point iteration, never in an estimation
-experiment; it is not available for ED or K models, and every model
-with a covariate is fitted on it with the thinning proposal.</p>
+covariate can drive a rate to zero, where it is clipped.</p>
 </td></tr>
 <tr><td><code id="estimate_rates_:_cond">cond</code></td>
 <td>

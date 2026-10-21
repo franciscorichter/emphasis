@@ -78,7 +78,7 @@ within about twice <code>max_time</code>. Under <code>"cem"</code> and
 <dl>
 <dt><code>sampling</code></dt><dd><p>Sampling scheme: <code>"bdi"</code> (default), the
 birth-death-with-immigration sampler, which covers the cr and dd models
-on the linear and exponential links and cr on the gaussian link, at any
+on the linear and exponential links, at any
 <code>rho</code> in <code>(0, 1]</code>; or <code>"dynamic_fresh"</code>, the thinning
 sampler, which covers every model, link and <code>rho</code>. Under constant
 rates the BDI proposal is the exact conditional distribution, so its
@@ -86,7 +86,7 @@ weights are constant and its effective sample size is the number of
 draws; under diversity dependence and under ED it is a mean-field
 approximation and the weights vary. <code>"bdi"</code> falls back to
 <code>"dynamic_fresh"</code>, with a message naming the reason, for a D- or
-M-dependent model and for dd or ED on the gaussian link.</p>
+M-dependent model.</p>
 </dd>
 <dt><code>damping</code></dt><dd><p>BDI only: under-relaxation of the mean-field sweep,
 which is a Picard iteration <span class="reqn">\(x \leftarrow F(x)\)</span>. Where its map
@@ -160,7 +160,7 @@ is considered converged when the largest relative parameter change,
 is below <code>tol</code> for <code>patience</code> consecutive iterations. The
 bound box does not enter. The floor <span class="reqn">\(c\)</span> carries the units of the
 parameters (see <code>.rel_floor</code>): <code>tol / crown_age</code> where
-they are rates (linear and gaussian links) and <code>tol</code> where they
+they are rates (linear link) and <code>tol</code> where they
 are log-rates (exponential link), so the statistic does not change
 when the tree is expressed in another unit of time. Default
 <code>1e-2</code>: every coordinate must move by less than 1% of its own

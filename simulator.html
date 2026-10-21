@@ -149,10 +149,8 @@ const COV = { dd: ['N'], d: ['D'], nd: ['N', 'D'], ed: ['ED'], ned: ['N', 'ED'],
 const RANGE = {
   linear:      { i0: [0, 3, 0.01],     m0: [0, 2, 0.01] },
   exponential: { i0: [-4, 1.5, 0.01],  m0: [-5, 1, 0.01] },
-  gaussian:    { i0: [0, 3, 0.01],     m0: [0, 2, 0.01] },
 };
 const CRANGE = { N: [-0.1, 0.1, 0.001], D: [-1, 1, 0.01], ED: [-1, 1, 0.01], EDc: [-1, 1, 0.01] };
-const hasEd = m => COV[m].some(c => c.startsWith('ED'));
 const L = Math.log;
 // compact vectors c(beta_0, betas..., gamma_0, gammas...) and crown age
 const PRESET = {
@@ -168,15 +166,10 @@ const PRESET = {
     ned: [[0, -0.015, -0.15, L(0.15), 0, 0.05], 7],
     edc: [[0, -0.2, L(0.2), 0.05], 6], nedc: [[0, -0.015, -0.2, L(0.15), 0, 0.05], 7],
   },
-  gaussian: {
-    cr: [[1.2, 0.5], 7], dd: [[1.2, 0.02, 0.2, 0], 8], d: [[1.0, 0.5, 0.2, 0], 7],
-    nd: [[1.2, 0.02, 0.3, 0.2, 0, 0], 8],
-  },
 };
 const LINKHINT = {
   linear: 'λ = max(0, β₀ + β·x). A rate that the covariates push below zero is zero.',
   exponential: 'λ = exp(β₀ + β·x). β₀ is the log of the rate when the covariates are zero.',
-  gaussian: 'λ = β₀ · exp(−(β·x − 1)² / 2). β₀ is the peak rate, reached where β·x = 1. Not available with ED.',
 };
 
 const st = {
@@ -198,10 +191,9 @@ function seg(el, items, get, set, disabled) {
 }
 function renderSegs() {
   seg($('models'), [['cr', 'cr'], ['dd', 'dd'], ['d', 'd'], ['nd', 'nd'], ['ed', 'ed'], ['ned', 'ned'], ['edc', 'edc'], ['nedc', 'nedc']],
-      () => st.model, k => { st.model = k; loadPreset(); }, k => st.link === 'gaussian' && hasEd(k));
-  seg($('links'), [['linear', 'linear'], ['exponential', 'exponential'], ['gaussian', 'gaussian']],
-      () => st.link, k => { st.link = k; if (!PRESET[k][st.model]) st.model = 'dd'; loadPreset(); },
-      k => k === 'gaussian' && hasEd(st.model));
+      () => st.model, k => { st.model = k; loadPreset(); });
+  seg($('links'), [['linear', 'linear'], ['exponential', 'exponential']],
+      () => st.link, k => { st.link = k; loadPreset(); });
   seg($('views'), [['complete', 'complete'], ['recon', 'reconstructed'], ['sampled', 'sampled']],
       () => st.view, k => { st.view = k; renderSegs(); });
   $('linkhint').textContent = LINKHINT[st.link];

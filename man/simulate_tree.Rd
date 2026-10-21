@@ -66,12 +66,7 @@ Default \code{1L}.}
 \code{rate = exp(eta)}, under which the intercepts \code{beta_0} and
 \code{gamma_0} are log rates; \code{"linear"},
 \code{rate = max(0, eta)}, under which the parameters are rates and a
-covariate can drive a rate to zero, where it is clipped;
-\code{"gaussian"}, \code{beta_0 * exp(-(eta_cov - 1)^2 / 2)}, is
-experimental: it has been used only in a convergence study of the
-surrogate proposal's fixed-point iteration, never in an estimation
-experiment; it is not available for ED or K models, and every model
-with a covariate is fitted on it with the thinning proposal.}
+covariate can drive a rate to zero, where it is clipped.}
 
 \item{max_missing}{Maximum extinct lineages per augmented tree.
 Default \code{1e4}.}
@@ -148,8 +143,7 @@ shortcuts or a formula:
 }
 Formulas \code{~ N}, \code{~ N + D}, \code{~ N + ED}, \code{~ N + EDc} and \code{~ N + K}
 are also accepted (\code{ep} is a legacy alias for \code{d}).  An \code{ED} or \code{K}
-model needs the tree's topology (a \code{phylo}, not a branching-time vector) and is not
-available under the gaussian link.
+model needs the tree's topology (a \code{phylo}, not a branching-time vector).
 }
 
 \section{Parameter vector}{

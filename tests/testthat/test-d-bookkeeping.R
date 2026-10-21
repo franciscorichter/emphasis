@@ -5,7 +5,7 @@
 # every pendant age E_s(u) = u - ts_s and their mean M(u) grow at unit rate, so
 # D_s(u) = E_s(u) - M(u) is constant on a segment; the forward simulator holds
 # it there, and the compensator has to integrate the rate at that D over the
-# alive set the event terms and M are computed from, under all three links.
+# alive set the event terms and M are computed from, under both links.
 # Two references are what the check must reject: one that never resets a start
 # (each lineage keeps the time it was born), and one that holds M at its value
 # at the segment's end and lets D = (u - ts_s) - M grow within the segment (the
@@ -21,8 +21,7 @@
 
 .rate <- function(link, intercept, arg) {
   if (link == 0L) pmax(0, intercept + arg)
-  else if (link == 1L) exp(intercept + arg)
-  else intercept * exp(-0.5 * (arg - 1)^2)
+  else exp(intercept + arg)
 }
 
 # log f for the model c(0, 0, 1) with beta_N = beta_M = gamma_* = 0 (so mu = 0
@@ -64,7 +63,7 @@ test_that("the D compensator holds D constant on a segment, over pendant ages th
     phy <- ape::rphylo(12L, 0.6, 0)
     fr  <- .observed_frame(phy); df <- fr$df; pts <- fr$pts
     expect_equal(nrow(df), length(emphasis:::.extract_brts(phy)))
-    for (link in 0:2) {
+    for (link in 0:1) {
       b0 <- if (link == 1L) log(0.4) else 0.4
       for (bD in c(-0.05, 0.05, 0.15)) {
         got <- eval_logf(c(b0, 0, 0, bD, if (link == 1L) -30 else 0, 0, 0, 0), list(df),

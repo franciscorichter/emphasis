@@ -67,7 +67,7 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #' \describe{
 #'   \item{\code{sampling}}{Sampling scheme: \code{"bdi"} (default), the
 #'     birth-death-with-immigration sampler, which covers the cr and dd models
-#'     on the linear and exponential links and cr on the gaussian link, at any
+#'     on the linear and exponential links, at any
 #'     \code{rho} in \code{(0, 1]}; or \code{"dynamic_fresh"}, the thinning
 #'     sampler, which covers every model, link and \code{rho}. Under constant
 #'     rates the BDI proposal is the exact conditional distribution, so its
@@ -75,7 +75,7 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     draws; under diversity dependence and under ED it is a mean-field
 #'     approximation and the weights vary. \code{"bdi"} falls back to
 #'     \code{"dynamic_fresh"}, with a message naming the reason, for a D- or
-#'     M-dependent model and for dd or ED on the gaussian link.}
+#'     M-dependent model.}
 #'   \item{\code{damping}}{BDI only: under-relaxation of the mean-field sweep,
 #'     which is a Picard iteration \eqn{x \leftarrow F(x)}. Where its map
 #'     expands the iteration diverges and a larger budget makes it worse: on a
@@ -141,7 +141,7 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     is below \code{tol} for \code{patience} consecutive iterations. The
 #'     bound box does not enter. The floor \eqn{c} carries the units of the
 #'     parameters (see \code{.rel_floor}): \code{tol / crown_age} where
-#'     they are rates (linear and gaussian links) and \code{tol} where they
+#'     they are rates (linear link) and \code{tol} where they
 #'     are log-rates (exponential link), so the statistic does not change
 #'     when the tree is expressed in another unit of time. Default
 #'     \code{1e-2}: every coordinate must move by less than 1\% of its own
@@ -513,7 +513,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 
 #' Floor of the relative-change denominator
 #'
-#' Under the linear and gaussian links the parameters are rates, of dimension
+#' Under the linear link the parameters are rates, of dimension
 #' 1/time, and the only rate scale in the problem is the inverse crown age:
 #' the floor is \code{rel_floor / crown_age}, which rescales with the rates
 #' themselves.  Under the exponential link the parameters are log-rates, where
@@ -521,7 +521,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #' \code{rel_floor}.
 #'
 #' @param brts Branching times (crown age first, or any order).
-#' @param link Integer link code: 0 linear, 1 exponential, 2 gaussian.
+#' @param link Integer link code: 0 linear, 1 exponential.
 #' @param rel_floor Dimensionless floor. Default \code{1e-2}.
 #' @return A positive scalar.
 #' @keywords internal
@@ -705,11 +705,10 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #' @keywords internal
 .run_mcem <- function(brts, init_pars, lower_bound, upper_bound, ctrl,
                       model = c(0L, 0L, 0L), link = 0L, cond_fun = NULL) {
-  # BDI covers the N-only models (cr, dd) on the linear and exponential links,
-  # cr also on the gaussian link, and the D and ED models through their clade
-  # mean on the linear and exponential links, at any rho in (0, 1].  What is
-  # left -- M-dependent models, dd on the gaussian link, and D or ED there --
-  # uses the thinning proposal.  The message is unconditional and names the
+  # BDI covers the N-only models (cr, dd) and the D and ED models through
+  # their clade mean, on the linear and exponential links, at any rho in
+  # (0, 1].  What is left -- M- and K-dependent models -- uses the thinning
+  # proposal.  The message is unconditional and names the
   # reason: the sampler the user asked for is not the sampler that runs.
   if (identical(ctrl$sampling, "bdi") && !.bdi_supported(model, link, ctrl$rho)) {
     reason <- .bdi_unsupported_reason(model, link, ctrl$rho)
@@ -921,7 +920,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
     pars_mat    = pars_grid,
     model       = model_bin,
     sample_size = as.integer(ctrl$sample_size),
-    link        = c("linear", "exponential", "gaussian")[link_int + 1L],
+    link        = c("linear", "exponential")[link_int + 1L],
     max_missing = ctrl$max_missing,
     max_lambda  = ctrl$max_lambda,
     maxN        = ctrl$maxN,
@@ -1032,8 +1031,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'       centred covariate).
 #'   }
 #'   \code{model = "all"} fits the nested ladder \code{cr}, \code{dd},
-#'   \code{nd}, \code{ned}, \code{nk} (the last two need a \code{phylo} and
-#'   are left out on the gaussian link), each started from the estimate of the
+#'   \code{nd}, \code{ned}, \code{nk} (the last two need a \code{phylo}),
+#'   each started from the estimate of the
 #'   model it nests, with each model's box from \code{\link{auto_bounds}}
 #'   unless \code{control$bounds} names one per model, and returns the fits
 #'   with their \code{\link{compare_models}} table and its \code{chosen}
@@ -1072,12 +1071,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'   \code{rate = exp(eta)}, under which the intercepts \code{beta_0} and
 #'   \code{gamma_0} are log rates; \code{"linear"},
 #'   \code{rate = max(0, eta)}, under which the parameters are rates and a
-#'   covariate can drive a rate to zero, where it is clipped;
-#'   \code{"gaussian"}, \code{beta_0 * exp(-(eta_cov - 1)^2 / 2)}, is
-#'   experimental: it has been used only in a convergence study of the
-#'   surrogate proposal's fixed-point iteration, never in an estimation
-#'   experiment; it is not available for ED or K models, and every model
-#'   with a covariate is fitted on it with the thinning proposal.
+#'   covariate can drive a rate to zero, where it is clipped.
 #' @param cond The survival probability to condition on, or \code{NULL}
 #'   (default) for no conditioning. When provided, the log-likelihood is
 #'   conditioned: \eqn{\ell_{\rm cond} = \ell - \log P_\theta(S)}, where
@@ -1294,7 +1288,7 @@ estimate_rates <- function(tree,
     .vcat(sprintf(
       "[estimate_rates] method=%s  model=%s  n_brts=%d  link=%s\n",
       toupper(method), model_str, length(brts),
-      c("linear", "exponential", "gaussian")[link_int + 1L]
+      c("linear", "exponential")[link_int + 1L]
     ))
     if (method == "cem") {
       ss   <- ctrl$num_trees
@@ -1505,8 +1499,8 @@ estimate_rates <- function(tree,
 #   cr -> dd -> {nd, ned, nk}
 #
 # The lineage-level models need the tree's topology (a phylo or a
-# simulate_tree() result) and are left out on a bare branching-time vector;
-# ned and nk are left out on the gaussian link.  Each model's box is
+# simulate_tree() result) and are left out on a bare branching-time vector.
+# Each model's box is
 # auto_bounds() on the tree unless control$bounds names one per model
 # (list(dd = list(lower_bound, upper_bound), ...)); control$models restricts
 # the ladder.  The nested start is what the README recommends: an ED fit
@@ -1522,7 +1516,6 @@ estimate_rates <- function(tree,
     message("Note: the tree carries no topology (a phylo is needed), so ned and nk are left out.")
     ladder <- setdiff(ladder, c("ned", "nk"))
   }
-  if (link_int == 2L) ladder <- setdiff(ladder, c("ned", "nk"))
   if (!is.null(control$models)) {
     keep <- vapply(control$models, function(m) .model_label(.resolve_model(m)), "")
     ladder <- ladder[vapply(ladder, function(m) .model_label(.resolve_model(m)), "") %in% keep]

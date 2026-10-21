@@ -142,7 +142,7 @@ test_that("the ED model at beta_ED = 0 reproduces the dd log-likelihood exactly"
   expect_false(isTRUE(all.equal(lf_ned1$logf, lf_dd$logf)))
 })
 
-test_that("the ED model refuses a bare branching-time vector and the gaussian link", {
+test_that("the ED model refuses a bare branching-time vector", {
   set.seed(6)
   phy  <- ape::rcoal(8)
   brts <- sort(as.numeric(ape::branching.times(phy)), decreasing = TRUE)   # no topology
@@ -152,15 +152,6 @@ test_that("the ED model refuses a bare branching-time vector and the gaussian li
                              max_lambda = 1e6, num_threads = 1L,
                              model = emphasis:::.resolve_model("ed"), link = 0L, rho = 1.0),
     "topology")
-  b <- emphasis:::.extract_brts(phy)
-  expect_error(
-    emphasis:::augment_trees(b,
-                             emphasis:::.expand_pars(c(0.5, 0.0, 0.1, 0.0), emphasis:::.resolve_model("ed")),
-                             sample_size = 5L, maxN = 50L, max_missing = 100L,
-                             max_lambda = 1e6, num_threads = 1L,
-                             model = emphasis:::.resolve_model("ed"), link = 2L, rho = 1.0,
-                             parent_tip_start = emphasis:::.pts(b), parent_id = emphasis:::.pid(b)),
-    "gaussian")
 })
 
 test_that("the simulator runs an ED model, and a negative beta_ED slows distinct lineages", {

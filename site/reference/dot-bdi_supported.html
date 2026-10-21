@@ -21,7 +21,7 @@ with one pair of rates.  That is what an N-only model gives it.
 </td></tr>
 <tr><td><code id=".bdi_supported_:_link">link</code></td>
 <td>
-<p>Integer link code: 0 linear, 1 exponential, 2 gaussian.</p>
+<p>Integer link code: 0 linear, 1 exponential.</p>
 </td></tr>
 <tr><td><code id=".bdi_supported_:_rho">rho</code></td>
 <td>
@@ -44,29 +44,13 @@ available on the linear and exponential links.  The M covariate
 would have to be closed on <code>P</code> as well as <code>N</code>, which is written
 but not gated.
 </p>
-<p>Under the <code>gaussian</code> link the rate is
-<code>beta_0 * exp(-(beta_N*N - 1)^2 / 2)</code>, still a function of <code>N</code>
-alone.  For <code>cr</code> the covariate part is zero and the rate is the
-constant <code>beta_0 * exp(-1/2)</code>, so constant rates on the gaussian link
-are the constant-rates case under a reparameterisation and are sampled
-exactly, as they are on the other two links.  For <code>dd</code> they are not:
-<code>lambda(N)</code> rises to a peak at <code>N = 1/beta_N</code> and falls after it,
-and the Picard iteration of <code><a href="#dot-bdi_iterate">.bdi_iterate</a></code> does not contract on
-the far side.  Measured on a 20-tip tree over a 4 x 8 x 4 grid in
-<code>(beta_0, beta_N, rho)</code> with a 200-sweep budget &ndash; more than three times
-what this function allows &ndash; it failed to reach <code>tol</code> in 36 of 128
-cells, with <code>delta</code> running to 104.  That is divergence, not slow
-convergence.  The failing region is not an interval that could be excluded:
-at <code>rho = 0.5, beta_0 = 1</code> the iteration converges at
-<code>beta_N = 0.08</code>, fails at 0.1, and converges again at 0.2, 0.3 and 0.5;
-and the whole pattern moves with <code>rho</code>.  Where it does converge it can
-take 164 sweeps.  <code>dd</code> on the gaussian link therefore stays on the
-thinning proposal.  The linear and exponential <code>dd</code> rates are monotone
-in <code>N</code> and reached the fixed point in every cell of the same sweep, in
-at most 27 iterations at <code>rho = 1</code>.  They are slower below it: an
-exponential <code>dd</code> cell needs 63 sweeps at <code>rho = 0.2</code>, and
-converging linear <code>dd</code> cells have needed 126 and 134, which is what
-sets the <code>rho &lt; 1</code> budget.
+<p>The linear and exponential <code>dd</code> rates are monotone in <code>N</code>.  On a
+20-tip tree over a 4 x 8 x 4 grid in <code>(beta_0, beta_N, rho)</code> with a
+200-sweep budget, the Picard iteration of <code><a href="#dot-bdi_iterate">.bdi_iterate</a></code> reached
+the fixed point for both in every cell, in at most 27 iterations at
+<code>rho = 1</code>.  It is slower below it: an exponential <code>dd</code> cell needs
+63 sweeps at <code>rho = 0.2</code>, and converging linear <code>dd</code> cells have
+needed 126 and 134, which is what sets the <code>rho &lt; 1</code> budget.
 </p>
 <p>Incomplete sampling is in scope for every model and link the gate otherwise
 accepts.  <code>p(t)</code> becomes the probability of leaving a <em>sampled</em>

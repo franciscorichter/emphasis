@@ -247,7 +247,7 @@ test_that("beta_D = gamma_D = beta_M = gamma_M = 0 gives the cr / dd log q", {
   }
   skip_if(length(trees) == 0L, "augmentation drew no tree")
 
-  for (link in c(0L, 1L, 2L)) {
+  for (link in c(0L, 1L)) {
     for (rho in c(1, 0.8)) {
       for (g in list(list(c(0L, 0L, 0L), c(0.90,  0.00, 0, 0, 0.35, 0, 0, 0)),
                      list(c(1L, 0L, 0L), c(0.90, -0.02, 0, 0, 0.35, 0, 0, 0)))) {
@@ -276,7 +276,7 @@ test_that("log q does not read the D coefficients at all", {
   skip_if(length(a$trees) == 0L, "augmentation drew no tree")
   p0 <- c(0.9, -0.02, 0,  0.00, 0.35, 0, 0,  0.00)
   p1 <- c(0.9, -0.02, 0,  0.77, 0.35, 0, 0, -0.41)
-  for (link in c(0L, 1L, 2L)) {
+  for (link in c(0L, 1L)) {
     for (rho in c(1, 0.8)) {
       for (mb in list(c(0L, 0L, 0L), c(1L, 0L, 0L), c(0L, 0L, 1L), c(1L, 0L, 1L))) {
         expect_identical(

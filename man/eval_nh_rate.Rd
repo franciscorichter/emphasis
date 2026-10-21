@@ -22,7 +22,7 @@ eval_nh_rate(
 
 \item{model}{Integer vector \code{c(use_N, use_M, use_D)}.}
 
-\item{link}{Link function: 0 = linear, 1 = exponential, 2 = gaussian.}
+\item{link}{Link function: 0 = linear, 1 = exponential.}
 
 \item{rho}{Sampling fraction.}
 }

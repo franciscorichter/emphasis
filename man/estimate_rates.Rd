@@ -59,8 +59,8 @@ from branching times.}
     centred covariate).
 }
 \code{model = "all"} fits the nested ladder \code{cr}, \code{dd},
-\code{nd}, \code{ned}, \code{nk} (the last two need a \code{phylo} and
-are left out on the gaussian link), each started from the estimate of the
+\code{nd}, \code{ned}, \code{nk} (the last two need a \code{phylo}),
+each started from the estimate of the
 model it nests, with each model's box from \code{\link{auto_bounds}}
 unless \code{control$bounds} names one per model, and returns the fits
 with their \code{\link{compare_models}} table and its \code{chosen}
@@ -102,12 +102,7 @@ Key entries:
 \code{rate = exp(eta)}, under which the intercepts \code{beta_0} and
 \code{gamma_0} are log rates; \code{"linear"},
 \code{rate = max(0, eta)}, under which the parameters are rates and a
-covariate can drive a rate to zero, where it is clipped;
-\code{"gaussian"}, \code{beta_0 * exp(-(eta_cov - 1)^2 / 2)}, is
-experimental: it has been used only in a convergence study of the
-surrogate proposal's fixed-point iteration, never in an estimation
-experiment; it is not available for ED or K models, and every model
-with a covariate is fitted on it with the thinning proposal.}
+covariate can drive a rate to zero, where it is clipped.}
 
 \item{cond}{The survival probability to condition on, or \code{NULL}
 (default) for no conditioning. When provided, the log-likelihood is

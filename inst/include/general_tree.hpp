@@ -96,7 +96,7 @@ struct general_div {
   //  appended, as in model.hpp.
   std::array<double, 12> pars;
   std::array<int, 5>     model;  // {use_N, use_M, use_D, use_ED, use_K}
-  int    link;                   // 0 = linear, 1 = exponential, 2 = gaussian
+  int    link;                   // 0 = linear, 1 = exponential
 
   std::vector<gbranch> ltable;
   breaks break_type;
@@ -155,12 +155,6 @@ struct general_div {
     return eta < 0.0 ? 0.0 : eta;
   }
 
-  // Gaussian link: rate = intercept * exp(-(eta_cov - 1)^2 / 2)
-  double gaussian_rate(double intercept, double eta_cov) const {
-    const double d = eta_cov - 1.0;
-    return intercept * std::exp(-0.5 * d * d);
-  }
-
   // Orthogonal covariate basis {N, M=P/N, D=E-M}. Inputs are still (N, P, E);
   // the transform to (M, D) happens here so callers pass raw covariates.
 
@@ -170,10 +164,6 @@ struct general_div {
                         double Kval = 0.0) const {
     const double M = (Nval > 0.0) ? Pval / Nval : 0.0;
     const double D = Eval - M;
-    if (link == 2) {
-      double eta_cov = pars[1] * Nval + pars[2] * M + pars[3] * D;
-      return gaussian_rate(pars[0], eta_cov);
-    }
     double eta = pars[0] + pars[1] * Nval + pars[2] * M + pars[3] * D + pars[8] * EDval
                + pars[10] * Kval;
     return apply_link(eta);
@@ -184,10 +174,6 @@ struct general_div {
                     double Kval = 0.0) const {
     const double M = (Nval > 0.0) ? Pval / Nval : 0.0;
     const double D = Eval - M;
-    if (link == 2) {
-      double eta_cov = pars[5] * Nval + pars[6] * M + pars[7] * D;
-      return gaussian_rate(pars[4], eta_cov);
-    }
     double eta = pars[4] + pars[5] * Nval + pars[6] * M + pars[7] * D + pars[9] * EDval
                + pars[11] * Kval;
     return apply_link(eta);
@@ -309,14 +295,9 @@ struct general_div {
               const double g = Nval * (bpos + gpos);
               if (g > 0.0) h = std::min(h, std::max(0.5 * (L0 + M0), 1.0) / g);
             }
-            double bound;
-            if (link == 2) {
-              bound = Nval * (std::max(pars[0], 0.0) + std::max(pars[4], 0.0));
-            } else {
-              double Lh = L0, Mh = M0;
-              if (bpos > 0.0 || gpos > 0.0) sums_at(off + h, Lh, Mh);
-              bound = (bpos > 0.0 ? Lh : L0) + (gpos > 0.0 ? Mh : M0);
-            }
+            double Lh = L0, Mh = M0;
+            if (bpos > 0.0 || gpos > 0.0) sums_at(off + h, Lh, Mh);
+            const double bound = (bpos > 0.0 ? Lh : L0) + (gpos > 0.0 ? Mh : M0);
             if (bound <= 0.0) { if (h >= remain) break; off += h; continue; }
             const double dt = rndgen.expon(bound);
             if (dt > h) { off += h; continue; }

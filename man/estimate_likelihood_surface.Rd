@@ -33,8 +33,8 @@ binary integer vector (length 3 to 5).}
 
 \item{sample_size}{Number of augmented trees per grid point (default 200).}
 
-\item{link}{\code{"exponential"} (default), \code{"linear"}, or
-\code{"gaussian"} (experimental); see \code{\link{estimate_rates}}.}
+\item{link}{\code{"exponential"} (default) or \code{"linear"}; see
+\code{\link{estimate_rates}}.}
 
 \item{max_missing}{Maximum missing lineages per augmentation (default 1e4).}
 

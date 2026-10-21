@@ -173,8 +173,7 @@ namespace emphasis {
   // Link functions for rate computation
   // 0 = linear:      rate = max(0, eta)
   // 1 = exponential: rate = exp(eta)
-  // 2 = gaussian:    rate = beta_0 * exp(-(eta_cov - 1)^2 / 2)
-  enum class LinkType : int { linear = 0, exponential = 1, gaussian = 2 };
+  enum class LinkType : int { linear = 0, exponential = 1 };
 
   // General diversification model
   //
@@ -206,10 +205,6 @@ namespace emphasis {
   //   lambda = exp(beta_0  + beta_N*N  + beta_M*M  + beta_D*D)
   //   mu     = exp(gamma_0 + gamma_N*N + gamma_M*M + gamma_D*D)
   //
-  // Gaussian link (eta_cov excludes the intercept):
-  //   lambda = beta_0  * exp(-( beta_N*N +  beta_M*M +  beta_D*D - 1)^2 / 2)
-  //   mu     = gamma_0 * exp(-(gamma_N*N + gamma_M*M + gamma_D*D - 1)^2 / 2)
-  //
   class Model
   {
   public:
@@ -223,14 +218,11 @@ namespace emphasis {
         link_(static_cast<LinkType>(link)), rho_(rho)
     {
       if (model_bin_.size() != n_covariates) model_bin_ = std::vector<int>(n_covariates, 0);
-      // ED and K have no closed-form segment integral under the gaussian link
-      // (the per-lineage argument is affine in t, but the rate is not the
-      // exponential of it), and the exact proposal excludes gaussian dd
-      // already; the combination is refused rather than approximated.
-      if ((model_bin_[3] || model_bin_[4]) && link_ == LinkType::gaussian) {
-        throw std::invalid_argument(
-          "the ED and K covariates are not available under the gaussian link; "
-          "use the linear or the exponential link");
+      // Every rate below branches on linear or exponential only, so any other
+      // code would be read as linear; it is refused instead.
+      if (link != 0 && link != 1) {
+        throw std::invalid_argument("link must be 0 (linear) or 1 (exponential) (got " +
+          std::to_string(link) + ")");
       }
       // Substituting 1 here made an out-of-range rho return the complete-
       // sampling likelihood with no signal; eval_logf, augment_trees and
@@ -291,15 +283,7 @@ namespace emphasis {
       if (link_ == LinkType::exponential) {
         return std::exp(eta);
       }
-      // For gaussian, apply_link should not be called directly — use gaussian_rate
       return std::max(0.0, eta);
-    }
-
-    // Gaussian link: rate = intercept * exp(-(eta_cov - 1)^2 / 2)
-    // where eta_cov = covariate terms only (no intercept)
-    double gaussian_rate(double intercept, double eta_cov) const {
-      const double d = eta_cov - 1.0;
-      return intercept * std::exp(-0.5 * d * d);
     }
 
     // ---------------------------------------------------------------------
@@ -322,10 +306,6 @@ namespace emphasis {
     // Speciation rate (no-D path: eta = beta_0 + beta_N*N + beta_M*M)
     double speciation_rate(const param_t& pars, const node_t& node) const {
       const double M = m_cov(node);
-      if (link_ == LinkType::gaussian) {
-        const double eta_cov = pars[1] * node.n + pars[2] * M;
-        return gaussian_rate(pars[0], eta_cov);
-      }
       const double eta = pars[0] + pars[1] * node.n + pars[2] * M;
       return apply_link(eta);
     }
@@ -333,10 +313,6 @@ namespace emphasis {
     // Extinction rate (no-D path)
     double extinction_rate(const param_t& pars, const node_t& node) const {
       const double M = m_cov(node);
-      if (link_ == LinkType::gaussian) {
-        const double eta_cov = pars[5] * node.n + pars[6] * M;
-        return gaussian_rate(pars[4], eta_cov);
-      }
       const double eta = pars[4] + pars[5] * node.n + pars[6] * M;
       return apply_link(eta);
     }
@@ -378,10 +354,6 @@ namespace emphasis {
                               double kk = 0.0) const {
       const double M = m_cov(node);
       const double D = e_s(node) - M;
-      if (link_ == LinkType::gaussian) {
-        const double eta_cov = pars[1] * node.n + pars[2] * M + pars[3] * D;
-        return gaussian_rate(pars[0], eta_cov);
-      }
       return apply_link(pars[0] + pars[1] * node.n + pars[2] * M + pars[3] * D
                         + beta_ed(pars) * ed + beta_k(pars) * kk);
     }
@@ -392,10 +364,6 @@ namespace emphasis {
                               double kk = 0.0) const {
       const double M = m_cov(node);
       const double D = e_s(node) - M;
-      if (link_ == LinkType::gaussian) {
-        const double eta_cov = pars[5] * node.n + pars[6] * M + pars[7] * D;
-        return gaussian_rate(pars[4], eta_cov);
-      }
       return apply_link(pars[4] + pars[5] * node.n + pars[6] * M + pars[7] * D
                         + gamma_ed(pars) * ed + gamma_k(pars) * kk);
     }
@@ -1016,17 +984,6 @@ namespace emphasis {
       return (hi - lo) * (c + b * (0.5 * (lo + hi)));
     }
 
-    static double gauss_integral(double intercept, double A, double b, double t1, double t2) {
-      if (std::abs(b) < 1e-12) {
-        double d = A - 1.0;
-        return intercept * std::exp(-0.5 * d * d) * (t2 - t1);
-      }
-      const double inv_sqrt2 = 1.0 / std::sqrt(2.0);
-      double z1 = (A + b * t1 - 1.0) * inv_sqrt2;
-      double z2 = (A + b * t2 - 1.0) * inv_sqrt2;
-      return intercept * std::sqrt(M_PI / 2.0) / b * (std::erf(z2) - std::erf(z1));
-    }
-
     // log f(y, z | theta) when the ED covariate is active.
     //
     // The structure is loglik's below: event terms at the nodes, a compensator
@@ -1050,8 +1007,7 @@ namespace emphasis {
     // that with beta_ED = 0 the two agree with the linear and exponential
     // branches of loglik term by term.
     // The linear link integrates the clipped line (relu_integral), the
-    // exponential link the exponential of it (exp_integral); the gaussian link
-    // is refused at construction.
+    // exponential link the exponential of it (exp_integral).
     // Everything the ED likelihood needs from a tree and nothing it needs from
     // the parameters: per segment i, over the alive lineages, the constant
     // k_s = c_s - ts_s of the affine argument and the tip start ts^D_s the D
@@ -1371,7 +1327,6 @@ namespace emphasis {
     double loglik(const param_t& pars, const tree_t& tree) const {
       if (lineage_loglik()) return loglik_ed(pars, tree);
       const bool ep_exp = model_bin_[2] && (link_ == LinkType::exponential);
-      const bool ep_gauss = model_bin_[2] && (link_ == LinkType::gaussian);
       const bool ep_linear = model_bin_[2] && (link_ == LinkType::linear);
 
       log_sum log_lambda{};
@@ -1443,7 +1398,7 @@ namespace emphasis {
         const auto& node = tree[i];
         const double dt = node.brts - prev_brts;
 
-        if ((ep_exp || ep_gauss || ep_linear) && dt > 0.0) {
+        if ((ep_exp || ep_linear) && dt > 0.0) {
           // Orthogonal basis {N, M=P/N, D=E-M}.  Between events every alive
           // lineage's pendant age E_s(u) = u - ts_s and their mean M(u) grow at
           // unit rate, so each D_s(u) = E_s(u) - M(u) = tsbar - ts_s is constant
@@ -1474,13 +1429,8 @@ namespace emphasis {
           } else {
             for (const auto& l : alive) {
               const double D = (node.brts - l.ts) - M_seg;
-              if (ep_gauss) {
-                seg += gaussian_rate(pars[0], pars[1]*N_seg + pars[2]*M_seg + pars[3]*D);
-                seg += gaussian_rate(pars[4], pars[5]*N_seg + pars[6]*M_seg + pars[7]*D);
-              } else {
-                seg += std::max(0.0, pars[0] + pars[1]*N_seg + pars[2]*M_seg + pars[3]*D);
-                seg += std::max(0.0, pars[4] + pars[5]*N_seg + pars[6]*M_seg + pars[7]*D);
-              }
+              seg += std::max(0.0, pars[0] + pars[1]*N_seg + pars[2]*M_seg + pars[3]*D);
+              seg += std::max(0.0, pars[4] + pars[5]*N_seg + pars[6]*M_seg + pars[7]*D);
             }
           }
           inte += dt * seg;

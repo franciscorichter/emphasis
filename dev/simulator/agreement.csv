@@ -26,15 +26,6 @@
 "dd_linear","n_complete_half",42.4,42.281,-0.35,NA
 "dd_linear","n_recon_half",30.317,30.206,-0.5,NA
 "dd_linear","n_recon_80",48.254,48.164,-0.69,NA
-"dd_gaussian","attempts",1.4095,1.388,-0.92,NA
-"dd_gaussian","n_extant",150.35,149.92,-0.88,0.391
-"dd_gaussian","n_sampled",150.35,149.92,-0.88,NA
-"dd_gaussian","n_rows",213.52,212.34,-1.18,NA
-"dd_gaussian","n_extinct",63.176,62.417,-1.17,NA
-"dd_gaussian","pendant_mean",1.8936,1.8641,-1.8,NA
-"dd_gaussian","n_complete_half",53.692,52.031,-1.37,NA
-"dd_gaussian","n_recon_half",41.795,40.506,-1.51,NA
-"dd_gaussian","n_recon_80",112.06,110.74,-1.58,NA
 "d_linear","attempts",2.204,2.1745,-0.59,NA
 "d_linear","n_extant",67.975,70.894,1.96,0.436
 "d_linear","n_sampled",67.975,70.894,1.96,NA

@@ -13,10 +13,7 @@ the interface is the one described below.
   real-tree analyses, the exact comparison on real trees and the conditioned
   estimability study use the exponential link; the earlier simulation studies
   ran on the linear link and remain valid for it. Scripts relying on the linear default
-  must pass `link = "linear"`, which stays supported. The `"gaussian"` link
-  is experimental: it has been used in one convergence study of the surrogate
-  proposal and in no estimation experiment, and it is not available for `ED`
-  or `K` models.
+  must pass `link = "linear"`, which stays supported.
 * A tree that is not ultrametric (one with branching times after the present)
   is refused with a message, instead of being scored with the present read as
   an observed split.
@@ -60,8 +57,7 @@ the interface is the one described below.
   distinctiveness `ED` (raw or centred, `EDc`) and the number of ancestral
   splits `K`. Models are named (`"cr"`, `"dd"`, `"d"`, `"nd"`, `"ed"`,
   `"ned"`, `"edc"`, `"nedc"`, `"k"`, `"nk"`) or given as a formula such as
-  `~ N + ED`, on an exponential (the default), linear or gaussian
-  (experimental) link.
+  `~ N + ED`, on an exponential (the default) or linear link.
 
 ## Estimation
 

@@ -75,7 +75,7 @@ lineage_table_cpp <- function(tree) {
 #' @param tree One augmented-tree data frame.
 #' @param times Numeric vector of times at which to evaluate.
 #' @param model Integer vector \code{c(use_N, use_M, use_D)}.
-#' @param link Link function: 0 = linear, 1 = exponential, 2 = gaussian.
+#' @param link Link function: 0 = linear, 1 = exponential.
 #' @param rho Sampling fraction.
 #' @return A named list with \code{pd} (the pendant PD used) and \code{nh}
 #'   (the non-homogeneous thinning rate) at each time.

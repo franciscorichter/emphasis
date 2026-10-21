@@ -52,7 +52,7 @@
     nd: [1, 0, 1, 0], ed: [0, 0, 0, 1], ned: [1, 0, 0, 1],
     edc: [0, 0, 0, 3], nedc: [1, 0, 0, 3],     // slot 4 = 3: ED centred on its mean over the living
   };
-  const LINKS = { linear: 0, exponential: 1, gaussian: 2 };
+  const LINKS = { linear: 0, exponential: 1 };
 
   // Compact user vector -> the 10-slot layout (.expand_pars()).
   const SLOT_BETA = [1, 2, 3, 8], SLOT_GAMMA = [5, 6, 7, 9];
@@ -72,10 +72,6 @@
     const f = (i0, iN, iM, iD, iED) => (N, P, E, ED) => {
       const M = N > 0 ? P / N : 0;
       const D = E - M;
-      if (link === 2) {
-        const d = p[iN] * N + p[iM] * M + p[iD] * D - 1;
-        return p[i0] * Math.exp(-0.5 * d * d);
-      }
       const eta = p[i0] + p[iN] * N + p[iM] * M + p[iD] * D + p[iED] * ED;
       return link === 1 ? Math.exp(eta) : (eta < 0 ? 0 : eta);
     };
@@ -192,13 +188,9 @@
           let h = remain;
           if (link === 1) { const hp = Math.max(bpos, gpos); if (hp > 0) h = Math.min(h, Math.log(1.5) / hp); }
           else if (link === 0) { const g = N * (bpos + gpos); if (g > 0) h = Math.min(h, Math.max(0.5 * (L0 + M0), 1) / g); }
-          let bound;
-          if (link === 2) bound = N * (Math.max(p[0], 0) + Math.max(p[4], 0));
-          else {
-            let Lh = L0, Mh = M0;
-            if (bpos > 0 || gpos > 0) [Lh, Mh] = sumsAt(off + h);
-            bound = (bpos > 0 ? Lh : L0) + (gpos > 0 ? Mh : M0);
-          }
+          let Lh = L0, Mh = M0;
+          if (bpos > 0 || gpos > 0) [Lh, Mh] = sumsAt(off + h);
+          const bound = (bpos > 0 ? Lh : L0) + (gpos > 0 ? Mh : M0);
           if (bound <= 0) { if (h >= remain) break; off += h; continue; }
           const dt = rng.expon(bound);
           if (dt > h) { off += h; continue; }
@@ -283,6 +275,7 @@
   function simulate(opt) {
     const model = MODELS[opt.model] || opt.model;
     const link = typeof opt.link === 'number' ? opt.link : LINKS[opt.link || 'linear'];
+    if (link !== 0 && link !== 1) throw new Error('link must be "linear" or "exponential"');
     const p = opt.pars.length === 10 ? opt.pars.slice() : expandPars(opt.pars, model);
     const maxT = opt.maxT, maxLin = opt.maxLin || 1e6, maxTries = opt.maxTries || 1;
     const rho = opt.rho == null ? 1 : opt.rho;

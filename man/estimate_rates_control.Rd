@@ -54,7 +54,7 @@ MCEM-specific parameters:
 \describe{
   \item{\code{sampling}}{Sampling scheme: \code{"bdi"} (default), the
     birth-death-with-immigration sampler, which covers the cr and dd models
-    on the linear and exponential links and cr on the gaussian link, at any
+    on the linear and exponential links, at any
     \code{rho} in \code{(0, 1]}; or \code{"dynamic_fresh"}, the thinning
     sampler, which covers every model, link and \code{rho}. Under constant
     rates the BDI proposal is the exact conditional distribution, so its
@@ -62,7 +62,7 @@ MCEM-specific parameters:
     draws; under diversity dependence and under ED it is a mean-field
     approximation and the weights vary. \code{"bdi"} falls back to
     \code{"dynamic_fresh"}, with a message naming the reason, for a D- or
-    M-dependent model and for dd or ED on the gaussian link.}
+    M-dependent model.}
   \item{\code{damping}}{BDI only: under-relaxation of the mean-field sweep,
     which is a Picard iteration \eqn{x \leftarrow F(x)}. Where its map
     expands the iteration diverges and a larger budget makes it worse: on a
@@ -128,7 +128,7 @@ MCEM-specific parameters:
     is below \code{tol} for \code{patience} consecutive iterations. The
     bound box does not enter. The floor \eqn{c} carries the units of the
     parameters (see \code{.rel_floor}): \code{tol / crown_age} where
-    they are rates (linear and gaussian links) and \code{tol} where they
+    they are rates (linear link) and \code{tol} where they
     are log-rates (exponential link), so the statistic does not change
     when the tree is expressed in another unit of time. Default
     \code{1e-2}: every coordinate must move by less than 1\% of its own

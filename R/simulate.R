@@ -28,8 +28,7 @@
 #' }
 #' Formulas \code{~ N}, \code{~ N + D}, \code{~ N + ED}, \code{~ N + EDc} and \code{~ N + K}
 #' are also accepted (\code{ep} is a legacy alias for \code{d}).  An \code{ED} or \code{K}
-#' model needs the tree's topology (a \code{phylo}, not a branching-time vector) and is not
-#' available under the gaussian link.
+#' model needs the tree's topology (a \code{phylo}, not a branching-time vector).
 #'
 #' @section Parameter vector:
 #' Compact layout; \code{beta_D} is the age-imbalance coefficient and
@@ -131,12 +130,7 @@
 #'   \code{rate = exp(eta)}, under which the intercepts \code{beta_0} and
 #'   \code{gamma_0} are log rates; \code{"linear"},
 #'   \code{rate = max(0, eta)}, under which the parameters are rates and a
-#'   covariate can drive a rate to zero, where it is clipped;
-#'   \code{"gaussian"}, \code{beta_0 * exp(-(eta_cov - 1)^2 / 2)}, is
-#'   experimental: it has been used only in a convergence study of the
-#'   surrogate proposal's fixed-point iteration, never in an estimation
-#'   experiment; it is not available for ED or K models, and every model
-#'   with a covariate is fitted on it with the thinning proposal.
+#'   covariate can drive a rate to zero, where it is clipped.
 #' @param max_missing Maximum extinct lineages per augmented tree.
 #'   Default \code{1e4}.
 #' @param max_lambda Maximum speciation rate (thinning bound) for augmentation.
@@ -346,9 +340,13 @@ simulate_tree <- function(tree        = NULL,
 
 #' @keywords internal
 .resolve_link <- function(link) {
-  if (is.numeric(link)) return(as.integer(link))
-  link <- match.arg(link, c("linear", "exponential", "gaussian"))
-  switch(link, linear = 0L, exponential = 1L, gaussian = 2L)
+  if (is.numeric(link)) {
+    if (length(link) != 1L || !(link %in% c(0, 1)))
+      stop("link must be \"linear\" (0) or \"exponential\" (1)")
+    return(as.integer(link))
+  }
+  link <- match.arg(link, c("linear", "exponential"))
+  switch(link, linear = 0L, exponential = 1L)
 }
 
 #' @keywords internal

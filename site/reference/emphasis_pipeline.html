@@ -38,12 +38,7 @@ returned.
 <code>rate = exp(eta)</code>, under which the intercepts <code>beta_0</code> and
 <code>gamma_0</code> are log rates; <code>"linear"</code>,
 <code>rate = max(0, eta)</code>, under which the parameters are rates and a
-covariate can drive a rate to zero, where it is clipped;
-<code>"gaussian"</code>, <code>beta_0 * exp(-(eta_cov - 1)^2 / 2)</code>, is
-experimental: it has been used only in a convergence study of the
-surrogate proposal's fixed-point iteration, never in an estimation
-experiment; it is not available for ED or K models, and every model
-with a covariate is fitted on it with the thinning proposal.</p>
+covariate can drive a rate to zero, where it is clipped.</p>
 </td></tr>
 <tr><td><code id="emphasis_pipeline_:_stages">stages</code></td>
 <td>

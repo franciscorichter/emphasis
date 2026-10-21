@@ -9,7 +9,7 @@
 \arguments{
 \item{brts}{Branching times (crown age first, or any order).}
 
-\item{link}{Integer link code: 0 linear, 1 exponential, 2 gaussian.}
+\item{link}{Integer link code: 0 linear, 1 exponential.}
 
 \item{rel_floor}{Dimensionless floor. Default \code{1e-2}.}
 }
@@ -17,7 +17,7 @@
 A positive scalar.
 }
 \description{
-Under the linear and gaussian links the parameters are rates, of dimension
+Under the linear link the parameters are rates, of dimension
 1/time, and the only rate scale in the problem is the inverse crown age:
 the floor is \code{rel_floor / crown_age}, which rescales with the rates
 themselves.  Under the exponential link the parameters are log-rates, where

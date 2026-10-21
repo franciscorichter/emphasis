@@ -271,29 +271,13 @@
 #' would have to be closed on \code{P} as well as \code{N}, which is written
 #' but not gated.
 #'
-#' Under the \code{gaussian} link the rate is
-#' \code{beta_0 * exp(-(beta_N*N - 1)^2 / 2)}, still a function of \code{N}
-#' alone.  For \code{cr} the covariate part is zero and the rate is the
-#' constant \code{beta_0 * exp(-1/2)}, so constant rates on the gaussian link
-#' are the constant-rates case under a reparameterisation and are sampled
-#' exactly, as they are on the other two links.  For \code{dd} they are not:
-#' \code{lambda(N)} rises to a peak at \code{N = 1/beta_N} and falls after it,
-#' and the Picard iteration of \code{\link{.bdi_iterate}} does not contract on
-#' the far side.  Measured on a 20-tip tree over a 4 x 8 x 4 grid in
-#' \code{(beta_0, beta_N, rho)} with a 200-sweep budget -- more than three times
-#' what this function allows -- it failed to reach \code{tol} in 36 of 128
-#' cells, with \code{delta} running to 104.  That is divergence, not slow
-#' convergence.  The failing region is not an interval that could be excluded:
-#' at \code{rho = 0.5, beta_0 = 1} the iteration converges at
-#' \code{beta_N = 0.08}, fails at 0.1, and converges again at 0.2, 0.3 and 0.5;
-#' and the whole pattern moves with \code{rho}.  Where it does converge it can
-#' take 164 sweeps.  \code{dd} on the gaussian link therefore stays on the
-#' thinning proposal.  The linear and exponential \code{dd} rates are monotone
-#' in \code{N} and reached the fixed point in every cell of the same sweep, in
-#' at most 27 iterations at \code{rho = 1}.  They are slower below it: an
-#' exponential \code{dd} cell needs 63 sweeps at \code{rho = 0.2}, and
-#' converging linear \code{dd} cells have needed 126 and 134, which is what
-#' sets the \code{rho < 1} budget.
+#' The linear and exponential \code{dd} rates are monotone in \code{N}.  On a
+#' 20-tip tree over a 4 x 8 x 4 grid in \code{(beta_0, beta_N, rho)} with a
+#' 200-sweep budget, the Picard iteration of \code{\link{.bdi_iterate}} reached
+#' the fixed point for both in every cell, in at most 27 iterations at
+#' \code{rho = 1}.  It is slower below it: an exponential \code{dd} cell needs
+#' 63 sweeps at \code{rho = 0.2}, and converging linear \code{dd} cells have
+#' needed 126 and 134, which is what sets the \code{rho < 1} budget.
 #'
 #' Incomplete sampling is in scope for every model and link the gate otherwise
 #' accepts.  \code{p(t)} becomes the probability of leaving a \emph{sampled}
@@ -303,7 +287,7 @@
 #' unsampled extant lineages and \code{N(t)} counts them.
 #'
 #' @param model_bin Length-3 binary model vector \code{c(use_N, use_M, use_D)}.
-#' @param link Integer link code: 0 linear, 1 exponential, 2 gaussian.
+#' @param link Integer link code: 0 linear, 1 exponential.
 #' @param rho Sampling fraction in \code{(0, 1]}. Default \code{1}.
 #' @keywords internal
 .bdi_supported <- function(model_bin, link, rho = 1.0) {
@@ -329,10 +313,7 @@
   # weights; the attachment of a birth is tilted by the lineage's pendant
   # age, which is where D and ED read the tree.
   if (model_bin[2L] != 0L) return(FALSE)
-  if (model_bin[3L] != 0L || model_bin[4L] != 0L) return(link %in% c(0L, 1L))
-  if (link %in% c(0L, 1L)) return(TRUE)
-  # gaussian: constant rates only (see above).
-  link == 2L && model_bin[1L] == 0L
+  link %in% c(0L, 1L)
 }
 
 #' Why \code{\link{.bdi_supported}} refused, as a phrase for a message.
@@ -353,44 +334,22 @@
   if (model_bin[5L] != 0L)
     return(paste0("a K-dependent model: the sampler's mean field does not carry ",
                   "the ancestral-split count; the thinning proposal reads K per lineage"))
-  if ((model_bin[3L] != 0L || model_bin[4L] != 0L) && !(link %in% c(0L, 1L)))
-    return(paste0("a lineage-level (D or ED) model on the gaussian link: the ",
-                  "mean-field rate the proposal is built on is not available there"))
   if (model_bin[2L] != 0L)
     return(paste0("an M-dependent model: the sampler's mean-field state would ",
                   "have to be closed on the clade-mean pendant age as well as ",
                   "on N"))
-  if (!(link %in% c(0L, 1L, 2L)))
+  if (!(link %in% c(0L, 1L)))
     return(sprintf("link code %d", link))
-  if (link == 2L && model_bin[1L] != 0L)
-    return(paste0("a diversity-dependent model on the gaussian link: ",
-                  "lambda(N) = beta_0*exp(-(beta_N*N - 1)^2/2) is not monotone ",
-                  "in N and the sampler's Picard iteration does not converge ",
-                  "on the far side of its peak"))
   NULL
 }
 
 # Compute speciation rate from 8-param vector + model.
-#
-# The gaussian link is the package's quadratic-exponential rate
-# (inst/include/model.hpp): beta_0 is the peak rate and the intercept is
-# excluded from the quadratic, so the covariate part alone enters it.  For an
-# N-only model that leaves beta_N*N, and for cr it leaves 0 -- a constant rate
-# beta_0*exp(-1/2).
 .bdi_lam <- function(pars8, N, P, E, model_bin, link) {
-  if (link == 2L) {
-    eta_cov <- pars8[2] * N + pars8[3] * P + pars8[4] * E
-    return(pars8[1] * exp(-0.5 * (eta_cov - 1)^2))
-  }
   eta <- pars8[1] + pars8[2] * N + pars8[3] * P + pars8[4] * E
   if (link == 0L) max(0, eta) else exp(eta)
 }
 
 .bdi_mu <- function(pars8, N, P, E, model_bin, link) {
-  if (link == 2L) {
-    eta_cov <- pars8[6] * N + pars8[7] * P + pars8[8] * E
-    return(pars8[5] * exp(-0.5 * (eta_cov - 1)^2))
-  }
   eta <- pars8[5] + pars8[6] * N + pars8[7] * P + pars8[8] * E
   if (link == 0L) max(0, eta) else exp(eta)
 }
@@ -749,33 +708,12 @@
        #
        # On a 20-tip tree the linear and exponential dd rates, which are
        # monotone in N, converged in every cell of a sweep over slope and rho
-       # (rho down to 0.2), in 3 to 15 sweeps; the gaussian dd rate
-       # lambda(N) = beta_0*exp(-(beta_N*N - 1)^2/2) peaks at N = 1/beta_N and
-       # falls after it, the map N -> rate -> N then oscillates, and delta grew
-       # to 20 in 25 of 84 cells.  That is why .bdi_supported refuses dd on the
-       # gaussian link outright rather than trusting this flag per theta: the
-       # failing region moves with rho, and an MCEM run walks through it.
-       #
-       # That reading held only at the tier it was measured on.  Over a sweep
-       # spanning beta_0 in {0.5, 2, 4} and rho in {1, 0.2} at 50 to 400 tips
-       # (paper E10, 648 cells), 151 of the 384 cells carrying a tree fail to
-       # converge at full step, and they are spread over all three links: 75
-       # exponential, 38 gaussian, 38 linear.  So the linear and exponential
-       # rates do NOT always contract, and the gate's asymmetry does not rest
-       # on their doing so.  What the 20-tip tier does show is that the
-       # gaussian rate fails at ordinary rates, where the other two do not.
-       # The counts are not comparable link for link -- the gaussian arm of
-       # that sweep is parameterised so that its rate AT the peak equals
-       # beta_0 -- so this is a reason to re-derive the gate, not a
-       # measurement that moves it.
-       #
-       # The gate stays shut for a reason that is now measured rather than
-       # assumed.  On the cells where under-relaxation is what makes the
-       # iteration converge at all, 200 draws from the resulting proposal leave
-       # a median effective sample of 1.12 and a maximum of 4.98.  Converging
-       # the mean field and being able to sample from it are different
-       # properties, so convergence under damping is not grounds to admit a
-       # link.
+       # (rho down to 0.2), in 3 to 15 sweeps.  That held only at the tier it
+       # was measured on: over a sweep spanning beta_0 in {0.5, 2, 4} and rho
+       # in {1, 0.2} at 50 to 400 tips (paper E10), 75 exponential and 38
+       # linear cells fail to converge at full step.  So the linear and
+       # exponential rates do not always contract, and a fixed point is read
+       # from this flag rather than assumed.
        converged = isTRUE(delta < tol),
        delta     = delta,
        iterations = n_iter_used,
@@ -837,7 +775,7 @@
 #' @param bt Branching times, measured forward from the crown.
 #' @param pars8 The rate vector in the packed slot layout.
 #' @param model_bin Which covariate slots the model uses.
-#' @param link Link index: 0 linear, 1 exponential, 2 gaussian.
+#' @param link Link index: 0 linear, 1 exponential.
 #' @param tp The present, as a time from the crown.
 #' @param p_fun,Nhat_fun,Phat_fun,Ehat_fun The converged mean field, as
 #'   functions of time; \code{NULL} under CR, where the rates are exact.

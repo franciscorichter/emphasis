@@ -91,12 +91,7 @@ Default <code>1L</code>.</p>
 <code>rate = exp(eta)</code>, under which the intercepts <code>beta_0</code> and
 <code>gamma_0</code> are log rates; <code>"linear"</code>,
 <code>rate = max(0, eta)</code>, under which the parameters are rates and a
-covariate can drive a rate to zero, where it is clipped;
-<code>"gaussian"</code>, <code>beta_0 * exp(-(eta_cov - 1)^2 / 2)</code>, is
-experimental: it has been used only in a convergence study of the
-surrogate proposal's fixed-point iteration, never in an estimation
-experiment; it is not available for ED or K models, and every model
-with a covariate is fitted on it with the thinning proposal.</p>
+covariate can drive a rate to zero, where it is clipped.</p>
 </td></tr>
 <tr><td><code id="simulate_tree_:_max_missing">max_missing</code></td>
 <td>
@@ -211,8 +206,7 @@ shortcuts or a formula:
 
 <p>Formulas <code>~ N</code>, <code>~ N + D</code>, <code>~ N + ED</code>, <code>~ N + EDc</code> and <code>~ N + K</code>
 are also accepted (<code>ep</code> is a legacy alias for <code>d</code>).  An <code>ED</code> or <code>K</code>
-model needs the tree's topology (a <code>phylo</code>, not a branching-time vector) and is not
-available under the gaussian link.
+model needs the tree's topology (a <code>phylo</code>, not a branching-time vector).
 </p>
 
 <h3>Parameter vector</h3>

@@ -224,3 +224,18 @@ test_that("a clade that churns under max_lin stops at ten times max_lin lineages
                       max_lin = 1000L, max_tries = 20L)
   expect_identical(s2$status, "done")
 })
+
+test_that("the links are linear and exponential, and any other is refused", {
+  expect_error(simulate_tree(pars = c(0.4, 0.1), max_t = 5, model = "cr", link = "gaussian"),
+               "should be one of")
+  expect_error(estimate_rates(c(5, 4, 3, 2, 1), model = "cr", link = "gaussian"),
+               "should be one of")
+  expect_error(emphasis:::.resolve_link(2L), "linear")
+  # the C++ layer refuses a code outside 0 and 1 rather than reading it as linear
+  expect_error(emphasis:::simulate_div_tree_cpp(c(0.4, 0, 0, 0, 0.1, 0, 0, 0), c(0L, 0L, 0L),
+                                                5, 1000L, 1L, link = 2L, seed = 1L),
+               "link must be 0")
+  expect_error(emphasis:::eval_logf(c(0.4, 0, 0, 0, 0.1, 0, 0, 0), list(),
+                                    model = c(0L, 0L, 0L), link = 2L, rho = 1),
+               "link must be 0")
+})

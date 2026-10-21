@@ -32,7 +32,7 @@
 
 \item{model_bin}{Which covariate slots the model uses.}
 
-\item{link}{Link index: 0 linear, 1 exponential, 2 gaussian.}
+\item{link}{Link index: 0 linear, 1 exponential.}
 
 \item{tp}{The present, as a time from the crown.}
 
