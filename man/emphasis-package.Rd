@@ -51,11 +51,11 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Francisco Richter \email{richtf@usi.ch}
+\strong{Maintainer}: Francisco Richter \email{franciscorichter@gmail.com}
 
 Authors:
 \itemize{
-  \item Francisco Richter \email{richtf@usi.ch}
+  \item Francisco Richter \email{franciscorichter@gmail.com}
 }
 
 Other contributors:

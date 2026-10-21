@@ -3,7 +3,7 @@ Type: Package
 Title: Monte Carlo Inference for Phylogenetic Diversification Models
 Version: 1.0.0
 Authors@R: c(
-    person("Francisco", "Richter", email = "richtf@usi.ch",
+    person("Francisco", "Richter", email = "franciscorichter@gmail.com",
            role = c("aut", "cre")),
     person("Thijs", "Janzen", role = "ctb",
            comment = "earlier C++ implementation"),

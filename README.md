@@ -365,7 +365,7 @@ It writes the root pages (`index.html`, `usage.html`, `reference.html`, `establi
 
 ## Author
 
-**Francisco Richter** (author and maintainer), richtf@usi.ch
+**Francisco Richter** (author and maintainer), franciscorichter@gmail.com
 
 Thijs Janzen and Hanno Hildenbrandt contributed to an earlier C++ implementation, parts of which remain in `src/` and `inst/include/`.
 
