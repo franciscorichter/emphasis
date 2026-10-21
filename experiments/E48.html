@@ -70,7 +70,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td><strong>running</strong> since 2026-10-20 00:32 CEST: 217 trees, 18 workers; 210 of 217 trees written at 2026-10-20 18:50</td>
+<td><strong>complete</strong> (217 of 217 trees, none hung, none failed). The parsimonious choice changes on 5 of 155 readable E40 trees, 1 of 25 E28 families and 1 of 9 readable E26 families; the E26 set alone crosses the 10% threshold. The pairs rule still fails on the choice. The pendant-age speciation coefficient is negative on 28 of 30 read family fits and 92 of 109 read E40 fits</td>
 </tr>
 <tr>
 <td>Package build</td>
@@ -78,11 +78,11 @@ window.MathJax = {
 </tr>
 <tr>
 <td>Driver / analysis</td>
-<td><code>sim/E48-nd-refit.R</code>, <code>sim/E48-launch.sh</code>, <code>sim/E48-sets.csv</code></td>
+<td><code>sim/E48-nd-refit.R</code>, <code>sim/E48-launch.sh</code>, <code>sim/E48-sets.csv</code> / <code>sim/E48-analysis.R</code></td>
 </tr>
 <tr>
 <td>Data</td>
-<td><code>results/E48/</code> (<code>build.txt</code>, one fit file per tree), <code>results/E48.log</code></td>
+<td><code>results/E48/</code>: <code>trees.csv</code> (one row per tree), <code>fits.csv</code> (the five rungs per tree, stored and new <code>nd</code>), <code>choices.csv</code>, <code>choice-table.csv</code>, <code>nd-coefficients.csv</code>, <code>analysis.txt</code> (every number on this page), <code>build.txt</code>; <code>results/E48.log</code>. The per-tree fit files are kept outside the repository</td>
 </tr>
 </tbody>
 </table>
@@ -95,7 +95,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>trees</td>
-<td>three sets, each with its own stored fits: E40's 170 trees with a stored fit (the five stopped trees left out), <a href="E28.html">E28</a>'s 29 families, and the 18 families of <a href="E26.html">E26</a> not in E28; 217 in all</td>
+<td>three sets, each with its own stored fits: E40's 170 trees with a stored fit (the five stopped trees left out), <a href="E28.html">E28</a>'s 29 families, and the 18 families of <a href="E26.html">E26</a> not in E28; 217 in all. Macropodidae, one of the 18, was refused by E26's reading for a tip spread of 19% (limit 15%); it was refitted and is left out of every table here, as it is from E26's</td>
 </tr>
 <tr>
 <td>reading of a tree</td>
@@ -141,18 +141,207 @@ window.MathJax = {
 <li>E41's reading of edges: a parameter of a new <code>nd</code> fit within <span class="math inline">\(10^{-6}\)</span> of the box span of a bound is on an edge, reported as not bounded by the tree in that direction, and not read; the share of read <code>nd</code> fits with <span class="math inline">\(\beta_D\)</span> or <span class="math inline">\(\gamma_D\)</span> on an edge is reported.</li>
 <li>The <code>nd</code> coefficient: over read fits with <span class="math inline">\(\beta_D\)</span> off its edges, the number with <span class="math inline">\(\beta_D &lt; 0\)</span> and the factor per standard deviation of <span class="math inline">\(D\)</span>, replacing the counts the biology paper quotes from the stored fits.</li>
 </ol>
+<p>How the analysis applies rule 2: the parsimonious choice is recomputed from the five AIC values (ties between models with the same number of parameters go to the lower AIC) and agrees with the driver's <code>compare_models()</code> on all 217 trees, new and stored; a tree is readable when the chosen fit has an effective sample of at least 10 and, when the choice is <code>nd</code>, the <code>nd</code> fit is read under rule 1. The stored tables of E26 and E28 applied the effective-sample test to the minimum-AIC fit, not the parsimonious one; <code>analysis.txt</code> gives every count under that denominator too, which reproduces the published stored counts (E28: 25 usable; merged: 36), and no verdict differs between the two.</p>
 <h2 id="results">Results</h2>
-<p>Running: 210 of 217 trees written at 2026-10-20 18:50. Nothing is read before the run ends; the reading follows the pre-set rule above.</p>
-<p>The stored values it rereads: E28's parsimonious choice <code>cr</code> 4, <code>dd</code> 5, <code>nd</code> 0, <code>ned</code> 8, <code>nk</code> 8 over 25 usable families; the 46-family merged table, 36 usable, 21 lineage-level by minimum AIC (<code>nk</code> 12, <code>ned</code> 9), median D factor 0.83 over 24 read <code>nd</code> fits; E40's 121 of 170 trees with a lineage-level parsimonious choice, <code>nd</code> on 3.</p>
+<p><strong>Rule 1, the new fits.</strong> No tree hung and no fit failed. 145 of 217 <code>nd</code> fits are read; 69 are sampler-limited and 3 clock-limited. By set: E40 113 read of 170 (54 sampler-limited, 3 clock-limited; 25 ended on the clock, 22 of them also below 10 effective draws), E28 24 of 29, E26 8 of 18. Seven fits met the stopping rule, all on E40 trees; the rest ran to the 300-iteration cap (182) or the clock (28). The median effective sample is 29.3 on E40, 32.7 on E28 and 9.0 on the 18 E26 trees; 17 of the 94 trees below 100 tips are sampler-limited against 52 of the 123 from 100 tips. The new <code>nd</code> AIC is lower than the stored one on 178 of 217 trees (median change -3.5 on E40 and E28, -3.7 on E26). Under the stored fits E40's <code>nd</code> was not read on 111 of 170 trees; under the new ones on 57.</p>
+<p><strong>Rule 2, the choice tables.</strong> Readable trees, parsimonious choice and minimum AIC, new (stored):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>set</th>
+<th>readable</th>
+<th><code>cr</code></th>
+<th><code>dd</code></th>
+<th><code>nd</code></th>
+<th><code>ned</code></th>
+<th><code>nk</code></th>
+<th>lineage-level</th>
+<th>minimum AIC: <code>nd</code> / lineage-level</th>
+<th>changed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E40</td>
+<td>155 (156)</td>
+<td>15 (17)</td>
+<td>30 (32)</td>
+<td>5 (1)</td>
+<td>48 (49)</td>
+<td>57 (57)</td>
+<td>110 (107)</td>
+<td>7 (2) / 123 (123)</td>
+<td>5 of 155, 3.2%</td>
+</tr>
+<tr>
+<td>E28</td>
+<td>25 (26)</td>
+<td>4 (4)</td>
+<td>6 (6)</td>
+<td>1 (0)</td>
+<td>6 (8)</td>
+<td>8 (8)</td>
+<td>15 (16)</td>
+<td>1 (0) / 19 (20)</td>
+<td>1 of 25, 4.0%</td>
+</tr>
+<tr>
+<td>E26, other 17</td>
+<td>9 (11)</td>
+<td>3 (4)</td>
+<td>3 (4)</td>
+<td>1 (0)</td>
+<td>0 (1)</td>
+<td>2 (2)</td>
+<td>3 (3)</td>
+<td>1 (0) / 3 (4)</td>
+<td>1 of 9, 11.1%</td>
+</tr>
+<tr>
+<td>E28 and E26 merged</td>
+<td>34 (37)</td>
+<td>7 (8)</td>
+<td>9 (10)</td>
+<td>2 (0)</td>
+<td>6 (9)</td>
+<td>10 (10)</td>
+<td>18 (19)</td>
+<td>2 (0) / 22 (24)</td>
+<td>2 of 34, 5.9%</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The changes among readable trees, all to or from <code>nd</code>:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>set</th>
+<th>family</th>
+<th>stored</th>
+<th>new</th>
+<th>new <code>nd</code> fit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E40</td>
+<td>Acanthizidae (63 tips)</td>
+<td><code>cr</code></td>
+<td><code>nd</code></td>
+<td>ESS 110, cap</td>
+</tr>
+<tr>
+<td>E40</td>
+<td>Dasyuridae (63)</td>
+<td><code>dd</code></td>
+<td><code>nd</code></td>
+<td>ESS 14, cap</td>
+</tr>
+<tr>
+<td>E40</td>
+<td>Meliphagidae (177)</td>
+<td><code>dd</code></td>
+<td><code>nd</code></td>
+<td>ESS 37, cap</td>
+</tr>
+<tr>
+<td>E40</td>
+<td>Procellariidae (81)</td>
+<td><code>dd</code></td>
+<td><code>nd</code></td>
+<td>ESS 16, cap; <span class="math inline">\(\beta_D\)</span> on its lower edge</td>
+</tr>
+<tr>
+<td>E40</td>
+<td>Ctenomyidae</td>
+<td><code>nd</code></td>
+<td><code>dd</code></td>
+<td>the stored <code>nd</code> was not read</td>
+</tr>
+<tr>
+<td>E28</td>
+<td>Meliphagidae (177)</td>
+<td><code>ned</code></td>
+<td><code>nd</code></td>
+<td>ESS 25, cap</td>
+</tr>
+<tr>
+<td>E26</td>
+<td>Procellariidae (81)</td>
+<td><code>cr</code></td>
+<td><code>nd</code></td>
+<td>ESS 14, cap; <span class="math inline">\(\beta_D\)</span> on its lower edge</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Seven trees choose <code>nd</code> on a sampler-limited fit and are not readable: five moved to it and left the readable count, Ardeidae (E40, from <code>cr</code>), Sturnidae (E40 and E28, from <code>ned</code>), Dasyuridae and Strigidae (E26, from <code>ned</code> and <code>dd</code>); Chamaeleonidae (E26) and bird-048-Tyrannidae (E40) chose <code>nd</code> before and after. Of the 14 trees whose new parsimonious choice is <code>nd</code>, 7 rest on a read fit and 1 of those met the stopping rule (bird-056-Phylloscopidae, ESS 257); the other 6 ran to the 300-iteration cap. By minimum AIC <code>nd</code> also wins on Motacillidae and Mustelidae (E40), where the parsimonious choice stays <code>cr</code> and <code>dd</code>.</p>
+<p>On every E40 tree, as E40's table counts them, the parsimonious choice is <code>cr</code> 15, <code>dd</code> 30, <code>nd</code> 8, <code>ned</code> 50, <code>nk</code> 67: a lineage-level model on 125 of 170 (stored 121); by set and class, class-tree bird clades 0, 3, 2, 36, 36 (unchanged), class-tree mammal clades 6, 11, 0, 6, 12 (unchanged), family trees of birds 6, 10, 5, 6, 17 (stored 8, 12, 0, 7, 17), of mammals 3, 6, 1, 2, 2 (unchanged). The minimum-AIC rule gives <code>nk</code> 77, <code>ned</code> 51, <code>dd</code> 23, <code>nd</code> 10, <code>cr</code> 9 and differs from the parsimonious choice on 17 trees (stored 20). The chosen fit is not read (below 10 effective draws or on the clock) on 21 trees (stored 20). On the merged table, read as the biology paper reads it (minimum AIC; a lineage-level winner must lead <code>dd</code> by more than 2), 33 families are usable and 20 have a lineage-level verdict (<code>nk</code> 12, <code>ned</code> 6, <code>nd</code> 2), 9 diversity-dependent and 4 undecided, against 36, 21 (<code>nk</code> 12, <code>ned</code> 9), 10 and 5 stored; on E28 alone 24 usable, 17 lineage-level (<code>nk</code> 10, <code>ned</code> 6, <code>nd</code> 1), against 25 and 18.</p>
+<figure id="figure-1">
+<img src="../assets/wiki/E48-nd-lead.png" alt="nd lead before and after the refit" loading="lazy">
+<figcaption><strong>Figure 1.</strong> One point per tree: the AIC of <code>nd</code> minus the lowest AIC among <code>cr</code>, <code>dd</code>, <code>ned</code> and <code>nk</code>, under the stored <code>nd</code> fit (horizontal) and E48's (vertical); below the dashed line <code>nd</code> has the lowest AIC, and in the shaded band it lies within 2 AIC of the best other rung. Most points fall below the diagonal, the new <code>nd</code> AIC being lower on 178 of 217 trees, but few cross into the band: the choice moves on the handful of trees that were already near it. Open circles are sampler- or clock-limited <code>nd</code> fits, which carry no choice; 31 points beyond -15 or 40 are drawn on the edge, Macropodidae is left out.</figcaption>
+</figure>
+<p><strong>Rule 3, E40's pairs.</strong> On the 29 pairs with both members fitted, both chosen fits are read on 18 (as before), and the clade and its family tree make the same parsimonious choice on 3 of the 18 (17%), unchanged; over all 29 the count is 10 (34%), also unchanged. The one pair whose choice moved is Meliphagidae, where the family tree went from <code>dd</code> to <code>nd</code> and the clade stays <code>ned</code>. On the sign, with the new <code>nd</code> fits read off their <span class="math inline">\(\beta_D\)</span> edge: <span class="math inline">\(D\)</span> is read on both members of 9 pairs and falls on the same side of 1 on 8; <span class="math inline">\(\mathrm{ED}\)</span> 10 of 10 and <span class="math inline">\(K\)</span> 11 of 11 as before; pooled 29 of 30 (97%).</p>
+<p><strong>Rule 4, edges.</strong> Of the 145 read <code>nd</code> fits, 47 (32%) hold <span class="math inline">\(\beta_D\)</span> or <span class="math inline">\(\gamma_D\)</span> on an edge: E40 36 of 113, E28 7 of 24, E26 4 of 8. <span class="math inline">\(\beta_D\)</span> is on an edge on 6, all lower edges; <span class="math inline">\(\gamma_D\)</span> on 42, 30 of them upper edges. Beside them, <span class="math inline">\(\gamma_N\)</span> is on its lower edge on 54 read fits and <span class="math inline">\(\gamma_0\)</span> on 45, the extinction edges <a href="E41.html">E41</a> found flat on the stored rungs.</p>
+<p><strong>Rule 5, the pendant-age coefficient.</strong> Over read fits with <span class="math inline">\(\beta_D\)</span> off its edges, the speciation factor per standard deviation of <span class="math inline">\(D\)</span>:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>set</th>
+<th>read, <span class="math inline">\(\beta_D\)</span> off edge</th>
+<th><span class="math inline">\(\beta_D &lt; 0\)</span></th>
+<th>median factor (range)</th>
+<th>stored: read, <span class="math inline">\(&lt; 0\)</span>, median</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E40</td>
+<td>109</td>
+<td>92</td>
+<td>0.78 (0.37 to 1.72)</td>
+<td>59, 41, 0.92</td>
+</tr>
+<tr>
+<td>E28</td>
+<td>23</td>
+<td>21</td>
+<td>0.72 (0.38 to 1.06)</td>
+<td>19, 15, 0.86</td>
+</tr>
+<tr>
+<td>E26, other 17</td>
+<td>7</td>
+<td>7</td>
+<td>0.66 (0.55 to 0.96)</td>
+<td>5, 4, 0.80</td>
+</tr>
+<tr>
+<td>E28 and E26 merged</td>
+<td>30</td>
+<td>28</td>
+<td>0.69 (0.38 to 1.06)</td>
+<td>24, 19, 0.83</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The stored column applies each record's own rule (effective sample at least 10, and for E40 not on the clock), with no edge rule. On the 75 trees read under both, the sign agrees on 58 and the rank correlation of the two factors is 0.93. Where <code>nd</code> is the new parsimonious choice and its <span class="math inline">\(\beta_D\)</span> is read, the factor is 0.48 (Acanthizidae), 0.52 (Dasyuridae), 0.72 (Meliphagidae, E40 and E28) and 1.72 (bird-056-Phylloscopidae). The extinction coefficient <span class="math inline">\(\gamma_D\)</span>, off its edge on 103 read fits, is negative on 31.</p>
 <h2 id="conclusion">Conclusion</h2>
-<p>Not yet evaluable.</p>
+<p><strong>Rule 1</strong> leaves 145 of 217 <code>nd</code> fits read, against 59 of E40's 170 under the stored fits; the <code>nd</code> rung is still the one most often sampler-limited (69 of 217), mostly on trees from 100 tips. <strong>Rule 2: below the threshold on E40 (3.2%), E28 (4.0%) and the merged table (5.9%), so those tables stand with the <code>nd</code> row updated; above it on the E26 set of 17 (1 of 9, 11.1%), so that set's table is replaced by E48's.</strong> The E26 trigger rests on one family, Procellariidae, whose new <code>nd</code> choice holds <span class="math inline">\(\beta_D\)</span> on its lower edge. <strong>Rule 3: not met</strong>, as before: the choice agrees on 3 of 18 readable pairs (17% against 70%) and the sign on 29 of 30 (97% against 80%), so the class-tree clades are reported and not read. <strong>Rule 4:</strong> 32% of read <code>nd</code> fits hold <span class="math inline">\(\beta_D\)</span> or <span class="math inline">\(\gamma_D\)</span> on an edge, almost all of them <span class="math inline">\(\gamma_D\)</span>. <strong>Rule 5:</strong> the pendant-age coefficient on speciation is negative on 28 of 30 read family fits (median factor 0.69) and on 92 of 109 read E40 fits (median 0.78), where the stored fits gave 19 of 24 (0.83) and 41 of 59 (0.92).</p>
+<p>What it shows: the change of likelihood moves <code>nd</code>'s AIC by a few units and its coefficient toward a lower speciation rate for lineages older than their contemporaries; the choice tables move by one to seven trees a set (one to five among readable trees), all to or from <code>nd</code>, and the count of trees with a lineage-level parsimonious choice changes by at most four. The statement that <span class="math inline">\(D\)</span> has no sign on real trees, made from the stored fits, does not hold under the current likelihood: the sign is negative on 84% of read E40 fits and 93% of read family fits. What it does not show: the fits are unconditioned on survival and the <code>nd</code> budget is the stored one, so 69 of the 72 unread fits are sampler-limited, and only 7 of 217 met the stopping rule; under the earlier likelihood <code>nd</code> returned <span class="math inline">\(\beta_D\)</span> on simulated trees with the right sign and short of its size (<a href="E19.html">E19</a>, <a href="E31.html">E31</a>), and whether the current one removes that shortfall is E46's question. A negative <span class="math inline">\(\beta_D\)</span> is also what inherited rates produce without any effect of age, and <span class="math inline">\(D\)</span> and <span class="math inline">\(\mathrm{ED}\)</span> share the pendant edge (<a href="E39.html">E39</a>), so a sign is not a mechanism. The paths, which also read <span class="math inline">\(D\)</span>, are rerun within E47, and the accuracy of <code>nd</code> under the current likelihood is E46's.</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="E44.html">E44</a>: the D likelihood checked against the simulator on complete trees.</li>
 <li><a href="E26.html">E26</a>, <a href="E28.html">E28</a>, <a href="E40.html">E40</a>: the stored fits and choice tables it rereads.</li>
 <li><a href="E41.html">E41</a>: the reading of edges applied to the new <code>nd</code> fits.</li>
 <li><a href="E43.html">E43</a>: ran on the same host first.</li>
-<li><a href="../estimability.html">Estimability</a>: step 0.8.</li>
+<li><a href="../real-phylogenies.html">Real phylogenies</a>: the 170 trees, with the <code>nd</code> counts now E48's.</li>
+<li><a href="../estimability.html">Estimability</a>: step 0.8; E46 measures <code>nd</code>'s accuracy under the current likelihood.</li>
 </ul>
 
 </article>

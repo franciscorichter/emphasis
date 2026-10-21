@@ -23,7 +23,7 @@ $N$ says when the clade diversifies; $D$, ED and $K$ say which of its lineages d
 | needs a topology | no | yes | yes | yes |
 | cannot be separated from | time since the crown, on one tree | ED (shared pendant edge, within-tree rank correlation 0.57 to 0.74) | $D$; and $K$ on unbalanced trees | ED on unbalanced trees (correlation $-0.18$ on simulated, $-0.44$ median on family trees); time, through its clade mean |
 | simulation | estimated against an exact maximum; `dd` chosen on 0.90 of its own trees at 100 tips | sign recovered, size short on every fit made before the likelihood fix of `4e0b9dd`; not yet remeasured | sign on at least 0.95 of trees; selection over `dd` needs an effect of 0.35 to 0.60 of the speciation rate | recovered at 0.92 to 0.95 by fitting, 0.65 to 0.76 on budget-stopped ladder fits; `nk` chosen on 11 to 15 of 20 of its trees |
-| real trees | `dd` leads `cr` in 32 of 46 families, $\beta_N < 0$ in all 46 | no sign (factor 0.92, 18 of 59 above 1), on the old likelihood | factor below 1 on all 46 read trees that chose `ned`, median 0.49 | factor above 1 on all 54 read trees that chose `nk`, median 1.63 |
+| real trees | `dd` leads `cr` in 32 of 46 families, $\beta_N < 0$ in all 46 | factor below 1 on 92 of 109 read fits, median 0.78, from fits of which 7 of 170 met the stopping rule | factor below 1 on all 45 read trees that chose `ned`, median 0.49 | factor above 1 on all 54 read trees that chose `nk`, median 1.63 |
 
 The within-tree correlations are from [E39](../experiments/E39.html); the simulation and real-tree numbers are from the experiments each page cites, summarised on [What is established](../established.html) and [Real phylogenies](../real-phylogenies.html).
 
