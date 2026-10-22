@@ -7,7 +7,7 @@
 #   Rscript capability-map.R <out.png>
 #
 # Categories (ordered): reliable (the experiment's rule is met), partly (met for one sign, one
-# direction or a subset of fits), not identified (the tree does not carry the quantity),
+# direction or a subset of fits), not estimable (trees of that size do not carry the quantity),
 # not measured (no current measurement; the label names the experiment that will make it).
 # A ring marks a cell whose measurement E45 is repeating under the conditioned likelihood.
 suppressPackageStartupMessages({ library(ggplot2); library(patchwork) })
@@ -16,15 +16,15 @@ args <- commandArgs(TRUE)
 out <- if (length(args)) args[1] else "capability-map.png"
 
 sizes <- c(25, 50, 100, 200, 400, 800, 1600)
-LEV <- c("reliable", "partly", "not identified", "not measured")
+LEV <- c("reliable", "partly", "not estimable", "not measured")
 FILL <- c("reliable" = DIVERGING[7], "partly" = DIVERGING[5],
-          "not identified" = DIVERGING[2], "not measured" = PANEL)
-TXT <- c("reliable" = "#FFFFFF", "partly" = INK, "not identified" = INK, "not measured" = GREY)
+          "not estimable" = DIVERGING[2], "not measured" = PANEL)
+TXT <- c("reliable" = "#FFFFFF", "partly" = INK, "not estimable" = INK, "not measured" = GREY)
 
 cell <- function(row, size, cat, lab, ring = FALSE)
   data.frame(row = row, size = size, cat = cat, lab = lab, ring = ring)
 nm <- function(row, sz, lab) do.call(rbind, lapply(sz, function(s) cell(row, s, "not measured", lab)))
-R <- "reliable"; P <- "partly"; NI <- "not identified"
+R <- "reliable"; P <- "partly"; NI <- "not estimable"
 
 # ---- panel A: one row per question a user asks
 A_rows <- c("Speciation rate (cr)",
@@ -60,7 +60,7 @@ A <- rbind(
   cell(r[6], 400, NI, "E38", TRUE), cell(r[6], 800, NI, "E38", TRUE),
   cell(r[6], 1600, NI, "E38"),
   # E41: slopes run to the box edge; E24: fitted slopes far from their generating zero;
-  # E32/E35: slope on the box limit at 0.10, not identified by rule at 0.25.
+  # E32/E35: slope on the box limit at 0.10, not estimable by rule at 0.25.
   nm(r[7], 25, ""), cell(r[7], 50, NI, "E41"), cell(r[7], 100, NI, "E24"),
   cell(r[7], 200, NI, "E32\nE35"), nm(r[7], 400, "E46"), nm(r[7], c(800, 1600), ""),
   # E24 and E11 at 100 tips: edc and k selected, no invented ED effect; ned, nd and the
@@ -69,7 +69,7 @@ A <- rbind(
   nm(r[8], 200, "E47"), nm(r[8], c(400, 800, 1600), ""))
 
 # ---- panel B: E38's exact profile likelihood. reliable = within a factor of 2 on 80% of
-# trees; partly = zero excluded on 80%, not bounded within 2; not identified = zero not
+# trees; partly = zero excluded on 80%, not bounded within 2; not estimable = zero not
 # excluded on 80%. The cr cells up to 800 tips at turnover up to 0.40 are being remeasured (E45).
 B_rows <- c("constant rates, turnover 0.10", "constant rates, turnover 0.25", "constant rates, turnover 0.40",
             "constant rates, turnover 0.50", "constant rates, turnover 0.60",
@@ -127,7 +127,7 @@ pB <- draw(B, B_rows, "B. The extinction rate by turnover, constant rates and di
 
 p <- (pA / pB) + plot_layout(heights = c(8, 6)) +
   plot_annotation(
-    title = "emphasis estimates speciation and its diversity dependence at 25-100 tips;\nunder constant rates at turnover 0.10, extinction is not identified up to 1600 tips",
+    title = "emphasis estimates speciation and its diversity dependence at 25-100 tips;\nunder constant rates at turnover 0.10, extinction is not estimable up to 1600 tips",
     subtitle = "Each cell is what the experiment record says about one quantity at one tree size.",
     theme = theme_emphasis(base_size = 8.5) +
       theme(plot.title = element_text(size = 10, face = "bold", lineheight = 1.05),

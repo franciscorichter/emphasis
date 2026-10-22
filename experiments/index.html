@@ -51,6 +51,8 @@ window.MathJax = {
 <nav class="toc" aria-label="Contents">
 <p class="toc-title">Contents</p>
 <ul>
+<li><a href="#identifiable-estimable-informative">Identifiable, estimable, informative</a>
+</li>
 <li><a href="#reading-the-status">Reading the status</a>
 </li>
 <li><a href="#at-a-glance">At a glance</a>
@@ -102,7 +104,15 @@ window.MathJax = {
   .table-wrap:has(th:nth-child(4)) td:nth-child(4) { order: 4; flex-basis: 100%; }
 }
 </style>
-<p>These are the pre-registered experiments behind the <code>emphasis</code> package: each tests the Monte Carlo EM estimator against an exact answer or a generating value, or asks what a dated tree can identify. There are 48 experiment pages; E46 is registered and E47 planned. Find a question in the tables below, read its status against the vocabulary, and open the page for the design, the rule and the full results; the conclusions that hold now are collected in <a href="../established.html">What we know</a> and the terms in the <a href="../glossary.html">Glossary</a>.</p>
+<p>These are the pre-registered experiments behind the <code>emphasis</code> package: each tests the Monte Carlo EM estimator against an exact answer or a generating value, or asks what a dated tree can estimate. There are 48 experiment pages; E46 is registered and E47 planned. Find a question in the tables below, read its status against the vocabulary, and open the page for the design, the rule and the full results; the conclusions that hold now are collected in <a href="../established.html">What we know</a> and the terms in the <a href="../glossary.html">Glossary</a>.</p>
+<h2 id="identifiable-estimable-informative">Identifiable, estimable, informative</h2>
+<p>These pages keep three properties apart, because each belongs to a different thing.</p>
+<ul>
+<li><strong>Identifiable</strong> is a property of the model together with what is observed: a reconstructed tree of the sampled extant lineages, the sampling fraction <span class="math inline">\(\rho\)</span>, conditioning on survival. Distinct parameter values give distinct distributions of trees. It holds or fails for every tree at once, and no tree size repairs a failure: rates that vary freely in time are not identifiable from a reconstructed tree (Louca and Pennell 2020).</li>
+<li><strong>Estimable at <span class="math inline">\(n\)</span> tips</strong> is a property of the model and the design (size, turnover, effect size, <span class="math inline">\(\rho\)</span>): an identifiable parameter is recovered within an experiment's rule on trees of that design. This is what the simulation experiments measure. Extinction under constant rates is identifiable, and at turnover 0.10 it is not estimable up to 1600 tips (<a href="E38.html">E38</a>).</li>
+<li><strong>The information a tree carries</strong> is a property of one tree under a model: how sharply its likelihood falls away from the maximum, read from a profile or from a fit that ends on the edge of the parameter box. A tree with little spread in pendant ages says little about <span class="math inline">\(\beta_D\)</span> even at a size where <span class="math inline">\(\beta_D\)</span> is estimable, and one such tree is not evidence that the parameter is not identifiable.</li>
+</ul>
+<p>The simulation experiments report the second, the real-tree analyses (<a href="E26.html">E26</a>, <a href="E28.html">E28</a>, <a href="E40.html">E40</a>, <a href="E48.html">E48</a>) the third. Experiment pages say "identified at <span class="math inline">\(n\)</span> tips" in the second sense.</p>
 <h2 id="reading-the-status">Reading the status</h2>
 <div class="table-wrap">
 <table>
