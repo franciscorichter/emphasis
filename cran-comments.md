@@ -28,9 +28,15 @@ First submission of emphasis (version 1.0.0).
 ## R CMD check results
 
 0 errors | 0 warnings | 5 notes (two from the package, three from the test
-machine). Tests: 2198 passed, 0 failed, 87 skipped on CRAN.
+machine). CRAN's incoming pre-tests (Windows and Debian, r-devel) gave 1 note,
+the spelling note below. Tests: 2198 passed, 0 failed, 87 skipped on CRAN.
 
 * New submission.
+
+* Possibly misspelled words in DESCRIPTION: Etienne, Haegeman, phylogenies,
+  speciation. These are spelled correctly: Etienne and Haegeman are the
+  authors of the cited reference, and phylogenies and speciation are standard
+  terms in evolutionary biology.
 
 * Installed size is 12.5 Mb, of which the shared library is 11.7 Mb.
   The size is debugging information: R's default flags on the test machine
