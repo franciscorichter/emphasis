@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Real phylogenies - what the workflow returns on 170 bird and mammal trees · emphasis</title>
+<title>Phylogeny analyses - what the workflow returns on 170 bird and mammal trees · emphasis</title>
 <meta name="description" content="E40 closed on 2026-10-18 at 170 of 175 trees: the five remaining fits had run 42 hours past their clocks and were stopped by hand (E40).">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,8 +35,8 @@ window.MathJax = {
 <li><a href="reference.html">Reference</a></li>
 <li><a href="established.html">What is established</a></li>
 <li><a href="estimability.html">Estimability</a></li>
-<li><a href="real-phylogenies.html" aria-current="page">Real phylogenies</a></li>
-<li><a href="https://franciscorichter.github.io/phylo-species-atlas/" rel="external">Phylo-Atlas</a></li>
+<li><a href="real-phylogenies.html" aria-current="page">Phylogeny analyses</a></li>
+<li><a href="https://franciscorichter.github.io/phylo-species-atlas/" rel="external">Phylogeny catalogue</a></li>
 <li><a href="experiments/index.html">Experiments</a></li>
 <li><a href="glossary.html">Glossary</a></li>
 <li><a href="simulator.html">Simulator</a></li>
@@ -47,7 +47,7 @@ window.MathJax = {
 <main>
 <article class="numbered">
 <header class="page-header">
-<h1>Real phylogenies - what the workflow returns on 170 bird and mammal trees</h1>
+<h1>Phylogeny analyses - what the workflow returns on 170 bird and mammal trees</h1>
 </header>
 <nav class="toc" aria-label="Contents">
 <p class="toc-title">Contents</p>
@@ -79,7 +79,7 @@ window.MathJax = {
 </ol>
 </nav>
 <p><em>E40 closed on 2026-10-18 at 170 of 175 trees: the five remaining fits had run 42 hours past their clocks and were stopped by hand (<a href="experiments/E40.html">E40</a>). Under the pre-set pairs rule, read on the 29 complete pairs, the class-tree clades and their family trees agree on the chosen model on 10 of 29, below the 70% required, so the figures below show the class-tree clades but the across-tree statements of this page rest on the Condamine family trees and on what the two sets share.</em></p>
-<p>The trees are those of <a href="experiments/E40.html">E40</a>: the bird and mammal class trees of the atlas (McTavish et al. 2025, 10,824 tips; Upham et al. 2019, 5,912 tips) cut from the root into disjoint clades of 50 to 200 tips (116 clades, <span class="math inline">\(\rho = 1\)</span>), and the Condamine et al. (2019) family trees of 50 to 400 tips whose sampling fraction against the class tree lies between 0.5 and 1.10 (59 trees, <span class="math inline">\(\rho\)</span> taken as <span class="math inline">\(\min(\rho, 1)\)</span>); 30 clades stand for a family that also has a Condamine tree, and make the pairs. Every tree was fitted with the one-call ladder <code>cr</code> → <code>dd</code> → {<code>nd</code>, <code>ned</code>, <code>nk</code>} (exponential link, <code>auto_bounds()</code> box, 300 draws, 300 iterations, a 4-hour clock per fit, emphasis <code>f30a791</code>; the <code>nd</code> rung refitted in <a href="experiments/E48.html">E48</a> under emphasis 1.0.0 at <code>b8d7b10</code>, same budget and clock), unconditioned on survival, and the model was chosen by the parsimony rule: fewest parameters within 2 AIC of the minimum. When E40 closed on 2026-10-18, 170 of the 175 trees were finished (77 of 77 bird clades, 35 of 39 mammal clades, 44 of 45 bird family trees, 14 of 14 mammal family trees; stopped by hand with no fit written: mamm-020-Cheirogaleidae, mamm-028-Heteromyidae, mamm-031-Delphinidae, mamm-033-Leporidae, Picidae), 850 fits in all, none failed. The exact checks come from <a href="experiments/E42.html">E42</a> (the exact <code>cr</code> and <code>dd</code> maximum on the 75 trees finished by 2026-10-15) and <a href="experiments/E41.html">E41</a> (the exact <code>cr</code> profile for zero extinction and the continuation of E40's capped and edge fits on the 16 smallest trees, all 135 pilot jobs written; closed at the pilot). The tables behind every figure were regenerated from the fits by <code>sim/E40-report.R</code> over the 170 trees (<code>results/E40/report/</code>), with each tree's <code>nd</code> row replaced by its E48 refit and the choice recomputed (<code>sim/E48-carry.R</code> in the paper repository, <code>results/E48/carry/</code>); the figures are drawn by <code>wiki-figs/real/figs.R</code> (<code>routes.R</code> for the ladder-against-path figure, from those choices and <code>results/E40/paths.csv</code>).</p>
+<p>The trees are those of <a href="experiments/E40.html">E40</a>: the bird and mammal class trees of the phylogeny catalogue (McTavish et al. 2025, 10,824 tips; Upham et al. 2019, 5,912 tips) cut from the root into disjoint clades of 50 to 200 tips (116 clades, <span class="math inline">\(\rho = 1\)</span>), and the Condamine et al. (2019) family trees of 50 to 400 tips whose sampling fraction against the class tree lies between 0.5 and 1.10 (59 trees, <span class="math inline">\(\rho\)</span> taken as <span class="math inline">\(\min(\rho, 1)\)</span>); 30 clades stand for a family that also has a Condamine tree, and make the pairs. Every tree was fitted with the one-call ladder <code>cr</code> → <code>dd</code> → {<code>nd</code>, <code>ned</code>, <code>nk</code>} (exponential link, <code>auto_bounds()</code> box, 300 draws, 300 iterations, a 4-hour clock per fit, emphasis <code>f30a791</code>; the <code>nd</code> rung refitted in <a href="experiments/E48.html">E48</a> under emphasis 1.0.0 at <code>b8d7b10</code>, same budget and clock), unconditioned on survival, and the model was chosen by the parsimony rule: fewest parameters within 2 AIC of the minimum. When E40 closed on 2026-10-18, 170 of the 175 trees were finished (77 of 77 bird clades, 35 of 39 mammal clades, 44 of 45 bird family trees, 14 of 14 mammal family trees; stopped by hand with no fit written: mamm-020-Cheirogaleidae, mamm-028-Heteromyidae, mamm-031-Delphinidae, mamm-033-Leporidae, Picidae), 850 fits in all, none failed. The exact checks come from <a href="experiments/E42.html">E42</a> (the exact <code>cr</code> and <code>dd</code> maximum on the 75 trees finished by 2026-10-15) and <a href="experiments/E41.html">E41</a> (the exact <code>cr</code> profile for zero extinction and the continuation of E40's capped and edge fits on the 16 smallest trees, all 135 pilot jobs written; closed at the pilot). The tables behind every figure were regenerated from the fits by <code>sim/E40-report.R</code> over the 170 trees (<code>results/E40/report/</code>), with each tree's <code>nd</code> row replaced by its E48 refit and the choice recomputed (<code>sim/E48-carry.R</code> in the paper repository, <code>results/E48/carry/</code>); the figures are drawn by <code>wiki-figs/real/figs.R</code> (<code>routes.R</code> for the ladder-against-path figure, from those choices and <code>results/E40/paths.csv</code>).</p>
 <h2 id="the-trees">The trees</h2>
 <figure id="figure-1">
 <img src="assets/wiki/real-trees.png" alt="the 175 trees" loading="lazy">
