@@ -47,6 +47,7 @@ import public   # the public filter and audit (site/public.py)
 ROOT_DEFAULT = SITE.parent
 
 GITHUB = "https://github.com/franciscorichter/emphasis"
+ATLAS = "https://franciscorichter.github.io/phylo-species-atlas/"
 
 NAV = [
     ("Overview", "index.html"),
@@ -56,6 +57,7 @@ NAV = [
     ("What is established", "established.html"),
     ("Estimability", "estimability.html"),
     ("Real phylogenies", "real-phylogenies.html"),
+    ("Phylo-Atlas", ATLAS),
     ("Experiments", "experiments/index.html"),
     ("Glossary", "glossary.html"),
     ("Simulator", "simulator.html"),
