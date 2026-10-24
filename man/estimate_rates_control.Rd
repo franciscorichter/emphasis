@@ -143,6 +143,35 @@ MCEM-specific parameters:
     \code{3}.}
 }
 
+Read only under \code{estimate_rates(cond = "surface")}, and not in the
+list this function returns (the default is used when an entry is absent):
+\describe{
+  \item{\code{surface_radius}}{Half-width of a surface's box, as a share of
+    the fit's box per coordinate. Default \code{0.03}.}
+  \item{\code{surface_se}}{Standard error of \eqn{\log P(S)} at a surface's
+    centre that its clade count is set for. Default \code{0.02}.}
+  \item{\code{surface_final_se}}{Standard error of the direct
+    \eqn{\log P(S)} at the estimate that the reported log-likelihood
+    subtracts. Default \code{0.01}.}
+  \item{\code{surface_segment}}{MCEM iterations per segment of the
+    conditioned continuation. Default \code{25}.}
+  \item{\code{surface_max_lin}}{Lineage cap of a simulated clade; a clade
+    that passes it counts as surviving. Default \code{NULL}, which is
+    \code{max(1000, 20 * n_tips)}.}
+  \item{\code{surface_edge}}{The unconditioned \code{gamma_0} within this
+    share of the box span of an edge triggers the run from the nested start.
+    Default \code{1e-3}.}
+  \item{\code{surface_restart}}{Whether that run is made. Default
+    \code{TRUE}.}
+  \item{\code{surface_max_clades}}{Cap on the clades per surface point.
+    Default \code{40000}.}
+  \item{\code{surface_final_max_clades}}{Cap on the clades of the direct
+    estimate at the estimate. Default \code{1e5}.}
+  \item{\code{surface_seed}}{Seed of the simulated clades, or \code{NULL}
+    (default) to draw one from R's generator, so that \code{set.seed()}
+    reproduces them.}
+}
+
 CEM-specific parameters:
 \describe{
   \item{\code{max_iter}}{Maximum CEM iterations (hard cap). Default \code{20}.}

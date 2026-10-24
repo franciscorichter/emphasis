@@ -108,12 +108,15 @@ covariate can drive a rate to zero, where it is clipped.}
 (default) for no conditioning. When provided, the log-likelihood is
 conditioned: \eqn{\ell_{\rm cond} = \ell - \log P_\theta(S)}, where
 \eqn{P_\theta(S)} is the probability that both crown lineages leave a
-sampled descendant at the present. Three forms are accepted: a function
-of the parameter data frame that returns \eqn{P_\theta(S)} (the
-probability, not its log), a GAM from \code{\link{train_GAM}}, or a
-\code{nnet} object (see \code{\link{predict_survival}}). The GAM is not
-accurate enough to condition on; the section \sQuote{Conditioning on
-survival} says what to pass instead.}
+sampled descendant at the present. \code{"surface"} (MCEM only) estimates
+\eqn{P_\theta(S)} by direct simulation on local surfaces around the
+iterate, for any model; the section \sQuote{Conditioning on survival}
+describes it. The other forms give \eqn{P_\theta(S)} directly: a
+function of the parameter data frame that returns it (the probability,
+not its log), a surface from \code{\link{survival_surface}}, a GAM from
+\code{\link{train_GAM}}, or a \code{nnet} object (see
+\code{\link{predict_survival}}). The GAM is not accurate enough to
+condition on.}
 }
 \value{
 A list with class \code{"emphasis_fit"} containing:
@@ -152,7 +155,23 @@ A list with class \code{"emphasis_fit"} containing:
       or failed to converge) and \code{clock} (\code{max_time} ran out
       inside an E-step or an M-step). \code{print()} shows the last two.}
     \item{\code{details}}{Full output from the back-end function
-      (\code{.mcem_dynamic_fresh} or \code{emphasis_cem}).}
+      (\code{.mcem_dynamic_fresh} or \code{emphasis_cem}); under
+      \code{cond = "surface"}, that of the last segment of the run kept.}
+    \item{\code{conditioning}}{Under \code{cond = "surface"} only: what the
+      conditioning did. \code{surfaces} built, \code{clades} simulated and
+      \code{seconds} spent simulating, over every run; \code{logP} and
+      \code{logP_se}, the direct \eqn{\log P(S)} at the estimate and its
+      standard error, with \code{logP_clades}; \code{loglik_uncond}, the
+      unconditioned log-likelihood at the estimate (\code{loglik} is it
+      minus \code{logP}); \code{start}, the start of the run kept
+      (\code{"unconditioned"}, \code{"nested"}, or \code{"none"} when no
+      conditioned segment finished within \code{max_time} and the fit is
+      the unconditioned one, conditioned at its estimate); \code{restart},
+      whether the run from the nested start was made; \code{surface}, the
+      last surface of the run kept; \code{runs}, the estimate, stop reason,
+      iterations, segments, surfaces, trace and conditioned log-likelihood
+      of each run; \code{settings}, \code{seed} and
+      \code{seconds_total}.}
   }
 }
 \description{
@@ -189,16 +208,49 @@ equation of the clade size, which the package does not provide. E43's
 Monte Carlo reference agreed with the exact values to a median error of
 0.007 (\code{cr}) and 0.008 (\code{dd}) in \eqn{\log P}.
 
-Under a lineage-level model, either fit without conditioning or pass a
-function that returns a direct Monte Carlo estimate of \eqn{P_\theta(S)}
-at each row: the share of single forward draws from
-\code{\link{simulate_tree}} (\code{max_tries = 1}) in which both crown
-lineages leave a sampled descendant, a clade that reaches the lineage cap
-counted as surviving (at \eqn{\rho = 1}, the share with status
-\code{"done"} or \code{"too_large"}). At a standard error of 0.01 in
-\eqn{\log P}, one such estimate took E43 a median of 2 to 29 seconds of one
-core, depending on the model, and the M-step evaluates \code{cond} at every
-parameter value it tries.
+Under a lineage-level model (\code{d}, \code{nd}, \code{ed}, \code{edc},
+\code{ned}, \code{nedc}, \code{k}, \code{nk}), condition with
+\code{cond = "surface"}. A direct Monte Carlo estimate of
+\eqn{P_\theta(S)} (\code{\link{survival_mc}}) at a standard error of
+0.01 in \eqn{\log P} took E43 a median of 2 to 29 seconds of one core,
+depending on the model, and the M-step evaluates \code{cond} at every
+parameter value it tries, so the surface method estimates it on a local
+quadratic instead, in four steps:
+\enumerate{
+  \item The unconditioned fit, from \code{init_pars}, to the stopping rule.
+  \item A surface of \eqn{\log P(S)} around its estimate
+    (\code{\link{survival_surface}}): direct simulation at \eqn{2p + 1}
+    points (\eqn{p} the coefficients of a full quadratic in the
+    parameters: 31 points for four parameters, 57 for six) in a box of
+    half-width \code{surface_radius} (0.03) of the fit's box per
+    coordinate, the same clades at every point, as many as give a standard
+    error of \code{surface_se} (0.02) at the centre, a clade past the
+    lineage cap counted as surviving; a quadratic by weighted least
+    squares, the tangent plane outside the box.
+  \item MCEM continued from the unconditioned estimate (clamped
+    \eqn{10^{-3}} of the box span inside the box) with the surface as
+    \code{cond}, in segments of \code{surface_segment} (25) iterations
+    that carry the draw count forward; the surface is rebuilt at the
+    iterate whenever the iterate leaves the inner half of its box, and the
+    run ends when the stopping rule is met inside the inner half, or on
+    \code{max_iter} iterations of the run or \code{max_time}.
+  \item When the unconditioned \code{gamma_0} is within
+    \code{surface_edge} (\eqn{10^{-3}}) of the box span of an edge, step 3
+    is also run from \code{init_pars} (the nested start: the estimate of
+    the nested model with the lineage-level coefficients at zero), and the
+    run with the higher conditioned log-likelihood is kept.
+}
+The reported log-likelihood is the run's unconditioned value minus a
+direct \eqn{\log P(S)} at its estimate (standard error
+\code{surface_final_se}, 0.01), and \code{loglik_var} adds that error's
+square. \code{max_time} bounds steps 1 to 4 together; the direct estimate
+at the estimate then gets \code{max_time} again, as the final E-step does.
+What the conditioning did is in the fit's \code{conditioning}. In the
+pilot that chose the method for experiment E46 (100 tips, \code{cr} and \code{dd}, where the
+exact conditioned maximum is known), steps 1 to 3 reached a median deficit
+of 0.0011 nats against the exact conditioned maximum (worst 0.13), and
+without step 4 a second, lower maximum on the extinction edge was kept on
+4 of 10 \code{cr} trees at turnover 0.10.
 }
 
 \examples{
@@ -233,5 +285,13 @@ fit_cond <- estimate_rates(phy, method = "mcem", model = "cr",
   control = list(lower_bound = c(-3, -5), upper_bound = c(1, 0),
                  max_iter = 10, num_trees = 50))
 fit_cond
+
+# The same fit conditioned on local surfaces of a direct estimate, the
+# route for the lineage-level models
+fit_surf <- estimate_rates(phy, method = "mcem", model = "cr",
+  cond = "surface",
+  control = list(lower_bound = c(-3, -5), upper_bound = c(1, 0),
+                 max_iter = 10, num_trees = 50, max_time = 20))
+fit_surf$conditioning[c("surfaces", "clades", "logP", "logP_se", "start")]
 }
 }

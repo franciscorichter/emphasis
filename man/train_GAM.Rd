@@ -54,9 +54,9 @@ trained on 2000, 5000 and 20 000 clades for each of the eight
 lineage-level models had a 90th-percentile error of \eqn{\log P(S)} of
 0.44 to 2.56, against the 0.05 its adequacy rule required, and the error
 did not fall with the training size. Condition \code{cr} and \code{dd} fits
-on the exact survival probability, and lineage-level fits on a direct
-Monte Carlo estimate or not at all; the section \sQuote{Conditioning on
-survival} of \code{\link{estimate_rates}} shows how.
+on the exact survival probability, and lineage-level fits with
+\code{estimate_rates(cond = "surface")}; the section \sQuote{Conditioning
+on survival} of \code{\link{estimate_rates}} shows how.
 }
 \examples{
 set.seed(1)

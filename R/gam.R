@@ -16,9 +16,9 @@
 #' lineage-level models had a 90th-percentile error of \eqn{\log P(S)} of
 #' 0.44 to 2.56, against the 0.05 its adequacy rule required, and the error
 #' did not fall with the training size. Condition \code{cr} and \code{dd} fits
-#' on the exact survival probability, and lineage-level fits on a direct
-#' Monte Carlo estimate or not at all; the section \sQuote{Conditioning on
-#' survival} of \code{\link{estimate_rates}} shows how.
+#' on the exact survival probability, and lineage-level fits with
+#' \code{estimate_rates(cond = "surface")}; the section \sQuote{Conditioning
+#' on survival} of \code{\link{estimate_rates}} shows how.
 #'
 #' @param simulations List of \code{simulate_tree()} outputs (one per row of
 #'   \code{pars_mat}), produced with \code{max_tries = 1}.
@@ -89,20 +89,23 @@ train_GAM <- function(simulations, pars_mat, model = "cr",
 #' Predict survival probability from a trained emulator
 #'
 #' Evaluates the survival probability \code{estimate_rates(cond = )} conditions
-#' through, in any of its three forms: a function that takes the parameter
-#' data frame and returns probabilities, a \code{gam} from
+#' through, in any of its four forms: a function that takes the parameter
+#' data frame and returns probabilities, a surface from
+#' \code{\link{survival_surface}}, a \code{gam} from
 #' \code{\link{train_GAM}}, or a \code{nnet} object.
 #'
 #' The GAM is not accurate enough to condition on: in experiment E43
 #' (\url{https://franciscorichter.github.io/emphasis/experiments/E43.html}) its
 #' 90th-percentile error of \eqn{\log P(S)} was 0.44 to 2.56 for every
 #' lineage-level model, against 0.05 required. Under \code{cr} and \code{dd}
-#' pass the exact survival probability as a function; the section
+#' pass the exact survival probability as a function, and under a
+#' lineage-level model use \code{cond = "surface"}; the section
 #' \sQuote{Conditioning on survival} of \code{\link{estimate_rates}} gives the
 #' \code{cr} formula and the alternatives.
 #'
 #' @param gam_fit A \code{gam} object returned by \code{\link{train_GAM}}, a \code{nnet}
-#'   object trained on the same columns, or a function of a parameter data frame.
+#'   object trained on the same columns, an \code{"emphasis_surface"} from
+#'   \code{\link{survival_surface}}, or a function of a parameter data frame.
 #' @param newpars Numeric matrix or data frame of parameter values to predict
 #'   at.  Column names must match those used in \code{train_GAM}.
 #' @return Numeric vector of predicted survival probabilities.
@@ -123,6 +126,7 @@ predict_survival <- function(gam_fit, newpars) {
   # data frame (one row a point, columns named as the parameters) is carried the same
   # way, so that estimate_rates(cond = ) can condition through either.
   if (is.function(gam_fit)) return(as.numeric(gam_fit(nd)))
+  if (inherits(gam_fit, "emphasis_surface")) return(predict.emphasis_surface(gam_fit, nd, type = "P"))
   if (inherits(gam_fit, "nnet")) return(as.numeric(stats::predict(gam_fit, newdata = nd, type = "raw")))
   as.numeric(stats::predict(gam_fit, newdata = nd, type = "response"))
 }
