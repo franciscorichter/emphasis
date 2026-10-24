@@ -1,7 +1,7 @@
 Package: emphasis
 Type: Package
 Title: Monte Carlo Inference for Phylogenetic Diversification Models
-Version: 1.0.0
+Version: 1.0.0.9000
 Authors@R: c(
     person("Francisco", "Richter", email = "franciscorichter@gmail.com",
            role = c("aut", "cre")),

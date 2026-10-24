@@ -3,7 +3,7 @@
 [![R-CMD-check](https://github.com/franciscorichter/emphasis/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/franciscorichter/emphasis/actions/workflows/R-CMD-check.yaml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-Monte Carlo conditional-likelihood inference for endogenous-covariate diversification models on phylogenetic trees. R package, version 1.0.0, not yet on CRAN.
+Monte Carlo conditional-likelihood inference for endogenous-covariate diversification models on phylogenetic trees. R package, development version 1.0.0.9000; version 1.0.0 is under CRAN review.
 
 ```r
 devtools::install_github("franciscorichter/emphasis")
@@ -21,7 +21,7 @@ devtools::install_github("franciscorichter/emphasis")
 
 ## Build and test
 
-Toolchain: R ≥ 3.5, a C++ compiler, and the packages in `DESCRIPTION` (`Rcpp`, `RcppParallel` for TBB parallelism, `nloptr`, `BH` headers, `ape`, `DDD`, `progress`; `mgcv` for the optional survival surface).
+Toolchain: R ≥ 3.5, a C++ compiler, and the packages in `DESCRIPTION` (`Rcpp`, `RcppParallel` for TBB parallelism, `nloptr`, `BH` headers, `ape`, `DDD`, `progress`; `mgcv` for the optional survival GAM).
 
 ```r
 devtools::load_all()    # compiles src/ and loads the package
@@ -48,6 +48,7 @@ R/
   covariate_path.R  lineage_table(), covariate_path()
   de.R              cross-entropy method (CEM) and importance-sampling utilities
   gam.R             auto_bounds(), train_GAM(), predict_survival(), likelihood-surface GAM
+  survival.R        survival_mc(), survival_surface(), and estimate_rates(cond = "surface")
   pipeline.R        emphasis_pipeline(): the bounds → GAM → CEM → MCEM chain, kept for compatibility
   diagnostics.R     diagnose_mcem/cem/gam + print methods
 src/
@@ -71,7 +72,7 @@ dev/                excluded from the package build
   simulator/        the check that the simulator page draws from the distribution simulate_tree() does
 ```
 
-Exported functions: `simulate_tree`, `estimate_rates`, `compare_models`, `covariate_path`, `lineage_table`, `auto_bounds`, `diagnose_mcem`; and, kept for compatibility, `emphasis_pipeline`, `train_GAM`, `predict_survival`, `diagnose_cem`, `diagnose_gam`.
+Exported functions: `simulate_tree`, `estimate_rates`, `compare_models`, `covariate_path`, `lineage_table`, `auto_bounds`, `diagnose_mcem`, `survival_mc`, `survival_surface`; and, kept for compatibility, `emphasis_pipeline`, `train_GAM`, `predict_survival`, `diagnose_cem`, `diagnose_gam`.
 
 ## Data
 
@@ -188,7 +189,7 @@ Two stopping rules: `rel_change` (default) stops once the relative step, in unit
 
 `control$max_time` bounds the E-step and the M-step: both samplers read the clock between draws and inside a draw, the M-step's optimiser reads the same deadline before every evaluation of its objective and keeps its best point only if it improves on the current iterate, and the fit ends with `stop_reason = "time_budget"` and a `clock` note. After the loop one more E-step runs at the returned point, with `max_time` again, so that the reported log-likelihood, effective sample and gap describe the estimate and a fit returns within about twice `max_time`.
 
-`estimate_rates(method = "cem" | "gam")` and `emphasis_pipeline()` are further estimators (a cross-entropy search, a likelihood surface fitted on a grid); nothing above depends on them. `train_GAM()` and `predict_survival()` are the survival emulator of the next section.
+`estimate_rates(method = "cem" | "gam")` and `emphasis_pipeline()` are further estimators (a cross-entropy search, a likelihood surface fitted on a grid); nothing above depends on them. `survival_mc()`, `survival_surface()`, `train_GAM()` and `predict_survival()` are the survival probabilities of the next section.
 
 ### Conditioning on survival
 
@@ -198,14 +199,42 @@ $$
 \ell_{\text{cond}}(\theta) = \ell(\theta) - \log P_\theta(\text{survival})
 $$
 
-The likelihood is not conditioned by default (`cond = NULL`), and neither is the ladder. `cond` takes the survival probability in one of three forms: a function of the parameter data frame returning $P_\theta$; a binomial GAM from `train_GAM()`, which simulates 2000 clades at Latin-hypercube points of the box and counts a clade that reaches the lineage cap as surviving (`auto_bounds(train_surv_gam = TRUE)` returns one); or an `nnet` object. $P_\theta$ does not depend on the observed tree, so one function per model, crown age and $\rho$ serves every fit of a cell.
+Survival is crown survival: both crown lineages leave a sampled descendant at the present. The likelihood is not conditioned by default (`cond = NULL`), and neither is the ladder. `cond` takes one of:
 
-The GAM is not accurate enough to condition on. In [E43](https://franciscorichter.github.io/emphasis/experiments/E43.html), GAMs trained on 2000, 5000 and 20 000 clades for each of the eight lineage-level models had a 90th-percentile error of $\log P(S)$ of 0.44 to 2.56, against the 0.05 its rule required, and the error did not fall with the training size. What to pass instead:
+- **`"surface"`**: $\log P_\theta$ estimated by direct simulation on local quadratic surfaces around the iterate, for any model and link, under MCEM. The recommendation for the lineage-level models.
+- **a function** of the parameter data frame returning $P_\theta$ (the probability, not its log). The recommendation for `cr` and `dd`, with the exact value: under `cr` on the exponential link one crown lineage leaves a sampled descendant with probability $p = \rho d / (\rho\lambda + (\lambda(1-\rho) - \mu)e^{-dT})$, $d = \lambda - \mu$, and $P_\theta = p^2$; the example in `?estimate_rates` codes it. Under `dd` it is the solution of the master equation on the clade size. Neither function is in the package.
+- **a surface** from `survival_surface()`, held fixed through the fit.
+- **a binomial GAM** from `train_GAM()`, which simulates clades at Latin-hypercube points of the box and counts a clade that reaches the lineage cap as surviving (`auto_bounds(train_surv_gam = TRUE)` returns one), or an **`nnet`** object. In [E43](https://franciscorichter.github.io/emphasis/experiments/E43.html), GAMs trained on 2000, 5000 and 20 000 clades for each of the eight lineage-level models had a 90th-percentile error of $\log P(S)$ of 0.44 to 2.56, against the 0.05 its rule required, and the error did not fall with the training size; the emulator is not accurate enough to condition on. Its accuracy under `cr` and `dd` over the whole box is measured in [E36](https://franciscorichter.github.io/emphasis/experiments/E36.html).
 
-- **`cr` and `dd`: the exact survival probability**, as a function. Neither is in the package. Under `cr` on the exponential link one crown lineage leaves a sampled descendant with probability $p = \rho d / (\rho\lambda + (\lambda(1-\rho) - \mu)e^{-dT})$, $d = \lambda - \mu$, and $P_\theta = p^2$; the example in `?estimate_rates` codes it. Under `dd` it is the solution of the master equation on the clade size. E43's Monte Carlo reference agrees with both exact values (median error 0.007 and 0.008 in $\log P$).
-- **Lineage-level models: a direct Monte Carlo estimate** of $P_\theta$ at each parameter value, passed as a function, or no conditioning. At a standard error of 0.01 in $\log P$ one estimate took a median of 2 to 29 s of one core in E43, depending on the model, and the M-step evaluates it at every value it tries.
+$P_\theta$ does not depend on the observed tree, so one function per model, crown age and $\rho$ serves every fit of a cell.
 
-`emphasis_pipeline()` conditions on the GAM that its bounds stage trains; leaving that stage out, with `control$lower_bound`, `control$upper_bound` and optionally `control$survival_gam`, conditions on another survival probability or on none. The emulator's accuracy under `cr` and `dd` over the whole box is measured in [E36](https://franciscorichter.github.io/emphasis/experiments/E36.html).
+**The direct estimate.** `survival_mc()` draws clades forward to the crown age, clade $i$ from seed `seed + i`, so that two calls with the same seed draw the same clades at different parameters (common random numbers). A clade that passes the lineage cap counts as surviving, as in `train_GAM()`. Under $\rho < 1$ a clade that reaches the present with $n_1$ and $n_2$ extant descendants of its two crown lineages contributes $(1-(1-\rho)^{n_1})(1-(1-\rho)^{n_2})$, the probability that sampling each extant tip with probability $\rho$ keeps one on both sides. The estimate is $\log((k + 1/2)/(n + 1))$ over $n$ clades of total contribution $k$, with the delta-method standard error. Against the exact `cr` value it agrees within its error at $\rho = 1$ and $\rho = 0.7$ (`tests/testthat/test-survival-surface.R`). At a standard error of 0.01 one estimate took E43 a median of 2 to 29 s of one core under the lineage-level models, and the M-step evaluates `cond` at every value it tries, which is why `"surface"` does not call it there.
+
+**`cond = "surface"`** runs four steps (`R/survival.R`, `.fit_surface_cond()`):
+
+1. The unconditioned fit, from `init_pars`, to the stopping rule.
+2. A surface of $\log P(S)$ around its estimate (`survival_surface()`): direct estimates at $2p + 1$ points, $p$ the coefficients of a full quadratic in the $d$ parameters (31 points for $d = 4$, 57 for $d = 6$), the centre and a Latin hypercube of a box of half-width 0.03 of the fit's box per coordinate; the same clades at every point, as many as give a standard error of 0.02 at the centre; a quadratic fitted by weighted least squares, the tangent plane outside the box, capped at $\log P = 0$.
+3. MCEM continued from the unconditioned estimate (clamped $10^{-3}$ of the box span inside the box) with the surface as `cond`, in segments of 25 iterations that carry the draw count forward. The surface is rebuilt at the iterate whenever the iterate leaves the inner half of its box; the run ends when the stopping rule is met inside the inner half, or on `max_iter` iterations or `max_time`.
+4. When the unconditioned $\gamma_0$ is within $10^{-3}$ of the box span of an edge, step 3 is also run from `init_pars`, the nested start (the nested model's estimate, lineage-level coefficients at zero), and the run with the higher conditioned log-likelihood is kept.
+
+The reported `loglik` is the kept run's unconditioned log-likelihood minus a direct $\log P(S)$ at its estimate, at a standard error of 0.01; `loglik_var` adds that error's square. `max_time` bounds the four steps together, and the direct estimate at the estimate gets `max_time` again, as the final E-step does. The fit's `conditioning` records the surfaces built, the clades simulated and the seconds spent, the direct $\log P(S)$ at the estimate with its standard error, the unconditioned log-likelihood, which start was kept, whether step 4 ran, the last surface, and each run's estimate, stop reason, iterations and trace. In the pilot that chose the method for [E46](https://franciscorichter.github.io/emphasis/experiments/E46.html) (100 tips, `cr` and `dd`, where the exact conditioned maximum is known), steps 1 to 3 reached a median deficit of 0.0011 nats (worst 0.13) against 0.0074 for MCEM with the exact factor and 0.26 for the unconditioned fit; without step 4 a second, lower maximum on the extinction edge was kept on 4 of 10 `cr` trees at turnover 0.10. The surfaces cost under 0.3% of a `cr`/`dd` fit, 0.4-1.8% under `ned` and 3-9% under `nk`.
+
+Its settings are entries of `control`, read only under `cond = "surface"`:
+
+| Entry | Default | What it sets |
+| ----- | ------- | ------------ |
+| `surface_radius` | `0.03` | half-width of a surface's box, as a share of the fit's box per coordinate |
+| `surface_se` | `0.02` | standard error of $\log P$ at a surface's centre that the clades per point are set for |
+| `surface_final_se` | `0.01` | standard error of the direct $\log P$ at the estimate |
+| `surface_segment` | `25` | MCEM iterations per segment |
+| `surface_max_lin` | `max(1000, 20 * n_tips)` | lineage cap of a simulated clade |
+| `surface_edge` | `1e-3` | share of the box span within which $\gamma_0$ triggers step 4 |
+| `surface_restart` | `TRUE` | whether step 4 runs |
+| `surface_max_clades` | `40000` | cap on the clades per surface point |
+| `surface_final_max_clades` | `1e5` | cap on the clades of the direct estimate at the estimate |
+| `surface_seed` | `NULL` | seed of the clades; `NULL` draws one from R's generator, so `set.seed()` reproduces them |
+
+`emphasis_pipeline()` conditions on the GAM that its bounds stage trains; leaving that stage out, with `control$lower_bound`, `control$upper_bound` and optionally `control$survival_gam`, conditions on another survival probability or on none.
 
 ### Incomplete taxon sampling
 
@@ -254,6 +283,11 @@ estimate_rates(phy, model = "nd", link = "exponential",
                               lower_bound = lb, upper_bound = ub))
 estimate_rates(phy, model = "dd", control = list(sampling = "dynamic_fresh", ...))
 estimate_rates(phy, model = "dd", control = list(rho = 0.8, ...))
+
+# conditioned on survival through local surfaces of a direct estimate (any model)
+fit_c <- estimate_rates(phy, model = "nd", cond = "surface", init_pars = nested_start,
+                        control = list(lower_bound = lb, upper_bound = ub, sample_size = 200))
+fit_c$conditioning[c("surfaces", "clades", "seconds", "logP", "logP_se", "start")]
 ```
 
 ### Simulation
@@ -308,7 +342,9 @@ compare_models(cr = fit_cr, dd = fit_dd)   # AIC, ESS, gap, swing, within_margin
 | `compare_models()` | AIC table over fits with effective sample, gap, swing and the ranking-at-risk flag; `chosen` is the fewest parameters within 2 AIC of the minimum, ties broken by the lower AIC |
 | `covariate_path()` | The dgLARS path over the covariates, for speciation and extinction; entry order and the set BIC or AIC chooses |
 | `lineage_table()` | One row per lineage and segment: the covariates and the event mark the likelihood reads |
-| `auto_bounds()` | The parameter box from the observed tree, and the optional survival surface |
+| `auto_bounds()` | The parameter box from the observed tree, and the optional survival GAM |
+| `survival_mc()` | $\log P_\theta(S)$ by direct simulation, for any model, link and $\rho$ |
+| `survival_surface()` | A local quadratic surface of $\log P_\theta(S)$; `predict()` gives $\log P$, $P$ or its gradient |
 | `diagnose_mcem()` | The trace of a fit: iterates, log-likelihood, effective sample, weights |
 | `emphasis_pipeline()`, `train_GAM()`, `predict_survival()`, `diagnose_cem()`, `diagnose_gam()` | Further estimators and the survival emulator, exported for compatibility |
 
@@ -328,7 +364,7 @@ The accuracy of the conditioned estimates (E45, E46) and model choice with the c
 
 ## Validation
 
-The test suite has 41 files in `tests/testthat/`. At the last full run 42,441 expectations passed with `NOT_CRAN=true` and about 2,270 in CRAN mode, where the Monte Carlo gates are skipped; a full run takes a few minutes. CI runs `R CMD check` on macOS, Windows and Linux (R release, devel and oldrel).
+The test suite has 42 files in `tests/testthat/`. At the last full run 42,458 expectations passed with `NOT_CRAN=true` and 2,225 in CRAN mode, where the Monte Carlo gates are skipped; a full run takes a few minutes. CI runs `R CMD check` on macOS, Windows and Linux (R release, devel and oldrel).
 
 These files hold the likelihood and the proposals to a computation written independently of the C++ code, or to the simulator:
 
@@ -345,6 +381,7 @@ These files hold the likelihood and the proposals to a computation written indep
 | `test-parent-support.R` | the parent a hidden birth attaches to, and $E_q[f/q]$ against the brute-force marginal likelihood on 3- and 4-tip trees |
 | `test-bdi-cr.R`, `test-bdi-d.R` | the surrogate's survival probability against Nee's formula and its zero-variance weights under constant rates; $E_q[f/q]$ under a $D$ model against quadrature |
 | `test-thinning-envelope.R` | that the thinning envelope dominates the proposal rate, against a closed form for the probability of no missing lineage |
+| `test-survival-surface.R` | the direct survival estimate against the exact `cr` value at $\rho = 1$, $0.7$ and $0.4$; the surface against a direct estimate at its centre and its gradient against its value; end-to-end `cond = "surface"` fits under `cr` and `d` |
 | `test-jensen.R` | the `gap` against the true bias of a log of a Monte Carlo mean, and the warnings of `compare_models()` |
 
 Others hold the package's behaviour: `test-ultrametric.R` (refusal of a non-ultrametric tree), `test-time-budget.R` (the clock inside the E-step and the M-step), `test-compare-chosen.R` (the parsimonious choice and its tie-break), `test-bdi-damping.R` (relaxation of the mean field), `test-mstep-start.R` (the first simplex sized from the box), `test-rho.R` (incomplete sampling), `test-reproducibility.R` (seeding of the C++ samplers) and the rest of `tests/testthat/`.

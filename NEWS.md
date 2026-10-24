@@ -1,3 +1,22 @@
+# emphasis (development version)
+
+* `estimate_rates(cond = "surface")` conditions a fit on survival for any
+  model and link: an unconditioned fit, then MCEM continued on local
+  quadratic surfaces of a direct Monte Carlo estimate of log P(S) around the
+  iterate, rebuilt whenever the iterate leaves the inner half of a surface's
+  box, with a second run from the nested start when the unconditioned
+  extinction intercept is on an edge of the box. The reported log-likelihood
+  subtracts a direct estimate of log P(S) at the estimate, and the fit's
+  `conditioning` records the surfaces, clades, seconds and the start kept.
+  It is the recommended conditioning for the lineage-level models, whose
+  survival GAM is not accurate enough (E43). The settings are `control`
+  entries named `surface_*`.
+* `survival_mc()` estimates log P(S) by direct simulation for any model, link
+  and sampling fraction, with common random numbers across parameter values;
+  `survival_surface()` fits the local surface, with `predict()` and `print()`
+  methods. `predict_survival()` and `estimate_rates(cond = )` accept a
+  surface.
+
 # emphasis 1.0.0
 
 First release on CRAN. The package was rewritten after version 0.4
