@@ -79,9 +79,10 @@ struct gbranch {
   int   label;
   float end_date;   // -1 if still alive
   int   k;          // ancestral splits: speciation events on the path from the crown
+  int   mark;       // latent mark (dev/latent-marks/design.md); 0 without marks
 
-  gbranch(float bd, float ts, int pl, int lab, float ext, int kk = 0)
-    : start_date(bd), tip_start(ts), parent_label(pl), label(lab), end_date(ext), k(kk) {}
+  gbranch(float bd, float ts, int pl, int lab, float ext, int kk = 0, int mk = 0)
+    : start_date(bd), tip_start(ts), parent_label(pl), label(lab), end_date(ext), k(kk), mark(mk) {}
 };
 
 enum breaks { none, finished, extinction, maxN_exceeded };
@@ -101,6 +102,46 @@ struct general_div {
   std::vector<gbranch> ltable;
   breaks break_type;
   rnd_t  rndgen;
+
+  // Latent marks (model.hpp, marks_t): S marks multiplying a lineage's rates,
+  // drawn at the crown from pi and at every split for both daughters, from
+  // the joint kernel C (S^3, read symmetrised by a fair swap) or, when P
+  // (S x S) is set, independently.  With S = 1 nothing is drawn, so the
+  // random stream and every tree are what they were without marks.
+  int mS = 1;
+  std::vector<double> m_clam{1.0}, m_cmu{1.0}, m_C, m_P, m_pi{1.0};
+
+  void set_marks(int S, const std::vector<double>& log_clam, const std::vector<double>& log_cmu,
+                 const std::vector<double>& C, const std::vector<double>& P,
+                 const std::vector<double>& pi) {
+    mS = S; m_C = C; m_P = P; m_pi = pi;
+    m_clam.resize(static_cast<size_t>(S)); m_cmu.resize(static_cast<size_t>(S));
+    for (size_t m = 0; m < static_cast<size_t>(S); ++m) {
+      m_clam[m] = std::exp(log_clam[m]); m_cmu[m] = std::exp(log_cmu[m]);
+    }
+  }
+  bool has_marks() const { return mS > 1; }
+  // An index drawn from n weights starting at w (not necessarily normalised).
+  int draw_index(const double* w, size_t n) {
+    double tot = 0.0;
+    for (size_t i = 0; i < n; ++i) tot += w[i];
+    const double u = rndgen.uniform() * tot;
+    double cum = 0.0;
+    for (size_t i = 0; i < n; ++i) { cum += w[i]; if (u < cum) return static_cast<int>(i); }
+    return static_cast<int>(n - 1);
+  }
+  // The two daughters' marks from a parent's mark m.
+  void draw_daughters(int m, int& a, int& b) {
+    const size_t S = static_cast<size_t>(mS), mm = static_cast<size_t>(m);
+    if (!m_P.empty()) {
+      a = draw_index(m_P.data() + mm * S, S);
+      b = draw_index(m_P.data() + mm * S, S);
+    } else {
+      const int ab = draw_index(m_C.data() + mm * S * S, S * S);
+      a = ab / mS; b = ab % mS;
+      if (rndgen.uniform() < 0.5) std::swap(a, b);
+    }
+  }
 
   general_div(double total_time,
               const std::array<double, 12>& p,
@@ -179,6 +220,14 @@ struct general_div {
     return apply_link(eta);
   }
 
+  // The rates of row i of the L-table, its mark's multiplier included.
+  double lambda_of(size_t i, double Nval, double Pval, double Eval, double EDval, double Kval) const {
+    return compute_lambda(Nval, Pval, Eval, EDval, Kval) * m_clam[static_cast<size_t>(ltable[i].mark)];
+  }
+  double mu_of(size_t i, double Nval, double Pval, double Eval, double EDval, double Kval) const {
+    return compute_mu(Nval, Pval, Eval, EDval, Kval) * m_cmu[static_cast<size_t>(ltable[i].mark)];
+  }
+
   // Uniform random alive lineage (rejection sampling)
   size_t sample_tip() {
     size_t idx = rndgen.random_number(ltable.size());
@@ -199,6 +248,11 @@ struct general_div {
     ltable.push_back(gbranch(0.f, 0.f, -1,  2, -1.f));
     int tree_id = 3;
     break_type  = none;
+    if (has_marks()) {
+      int a = 0, b = 0;
+      draw_daughters(draw_index(m_pi.data(), static_cast<size_t>(mS)), a, b);
+      ltable[0].mark = a; ltable[1].mark = b;
+    }
 
     // P(t) = N*t - sum_tip_start  (pendant PD of alive lineages)
     double sum_tip_start = 0.0;
@@ -214,8 +268,8 @@ struct general_div {
     const bool use_k       = (model[4] != 0);
     // K is per lineage like D and ED, and K alone takes the same per-lineage
     // loop the linear-link D takes.
-    const bool per_lineage = (model[2] == 1) || use_ed || use_k;
-    const bool ep_exp = (model[2] == 1 && !use_ed && !use_k && link == 1);
+    const bool per_lineage = (model[2] == 1) || use_ed || use_k || has_marks();
+    const bool ep_exp = (model[2] == 1 && !use_ed && !use_k && !has_marks() && link == 1);
     double sum_exp_bE = ep_exp ? 2.0 * std::exp(-pars[3] * 0.0) : 0.0;  // 2 lineages at ts=0
     double sum_exp_gE = ep_exp ? 2.0 * std::exp(-pars[7] * 0.0) : 0.0;
 
@@ -253,7 +307,7 @@ struct general_div {
           const auto& br = ltable[i];
           if (br.end_date != -1.f) continue;
           const double E = static_cast<double>(t) - static_cast<double>(br.tip_start);
-          total_rate += compute_lambda(Nval, Pval, E, edv[i], br.k) + compute_mu(Nval, Pval, E, edv[i], br.k);
+          total_rate += lambda_of(i, Nval, Pval, E, edv[i], br.k) + mu_of(i, Nval, Pval, E, edv[i], br.k);
         }
         // Raw ED grows at unit slope between events, so the hazard is not
         // constant until the next event: under the exponential link every
@@ -278,8 +332,8 @@ struct general_div {
               const auto& br = ltable[i];
               if (br.end_date != -1.f) continue;
               const double E = tt - static_cast<double>(br.tip_start);
-              L += compute_lambda(Nval, Pv, E, edv[i] + dt, br.k);
-              M += compute_mu   (Nval, Pv, E, edv[i] + dt, br.k);
+              L += lambda_of(i, Nval, Pv, E, edv[i] + dt, br.k);
+              M += mu_of    (i, Nval, Pv, E, edv[i] + dt, br.k);
             }
           };
           double off = 0.0; double found = -1.0;
@@ -322,10 +376,11 @@ struct general_div {
       } else {
         // D under the linear link, or K: O(N) per-lineage loop (max(0,·)
         // clipping, or the per-lineage integer, prevents factoring)
-        for (const auto& br : ltable) {
+        for (size_t i = 0; i < ltable.size(); ++i) {
+          const auto& br = ltable[i];
           if (br.end_date != -1.f) continue;
           const double E = static_cast<double>(t) - static_cast<double>(br.tip_start);
-          total_rate += compute_lambda(Nval, Pval, E, 0.0, br.k) + compute_mu(Nval, Pval, E, 0.0, br.k);
+          total_rate += lambda_of(i, Nval, Pval, E, 0.0, br.k) + mu_of(i, Nval, Pval, E, 0.0, br.k);
         }
       }
 
@@ -363,8 +418,8 @@ struct general_div {
         for (size_t i = 0; i < ltable.size(); ++i) {
           if (ltable[i].end_date != -1.f) continue;
           const double E   = static_cast<double>(t) - static_cast<double>(ltable[i].tip_start);
-          const double lam = compute_lambda(Nval, Pval2, E, edv[i], ltable[i].k);
-          const double mu  = compute_mu   (Nval, Pval2, E, edv[i], ltable[i].k);
+          const double lam = lambda_of(i, Nval, Pval2, E, edv[i], ltable[i].k);
+          const double mu  = mu_of    (i, Nval, Pval2, E, edv[i], ltable[i].k);
           alive_idx.push_back(i);
           lam_vec.push_back(lam);
           mu_vec.push_back(mu);
@@ -400,9 +455,12 @@ struct general_div {
         int new_id = tree_id++;
         if (ltable[focal].label < 0) { new_id = -new_id; N2++; } else { N1++; }
 
-        // both daughters carry one more ancestral split
+        // both daughters carry one more ancestral split, and draw their marks
         ltable[focal].k += 1;
-        ltable.push_back(gbranch(t, t, ltable[focal].label, new_id, -1.f, ltable[focal].k));
+        int ma = 0, mb = 0;
+        if (has_marks()) draw_daughters(ltable[focal].mark, ma, mb);
+        if (has_marks()) ltable[focal].mark = ma;
+        ltable.push_back(gbranch(t, t, ltable[focal].label, new_id, -1.f, ltable[focal].k, mb));
       } else {
         // Extinction
         const double dead_ts = static_cast<double>(ltable[focal].tip_start);

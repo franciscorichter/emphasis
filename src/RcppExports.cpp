@@ -11,8 +11,8 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // simulate_div_tree_cpp
-Rcpp::List simulate_div_tree_cpp(Rcpp::NumericVector pars, Rcpp::IntegerVector model, double max_t, int max_N, int max_tries, int link, int seed);
-RcppExport SEXP _emphasis_simulate_div_tree_cpp(SEXP parsSEXP, SEXP modelSEXP, SEXP max_tSEXP, SEXP max_NSEXP, SEXP max_triesSEXP, SEXP linkSEXP, SEXP seedSEXP) {
+Rcpp::List simulate_div_tree_cpp(Rcpp::NumericVector pars, Rcpp::IntegerVector model, double max_t, int max_N, int max_tries, int link, int seed, int marks_S, Rcpp::NumericVector log_clam, Rcpp::NumericVector log_cmu, Rcpp::NumericVector marks_C, Rcpp::NumericVector marks_P, Rcpp::NumericVector marks_pi);
+RcppExport SEXP _emphasis_simulate_div_tree_cpp(SEXP parsSEXP, SEXP modelSEXP, SEXP max_tSEXP, SEXP max_NSEXP, SEXP max_triesSEXP, SEXP linkSEXP, SEXP seedSEXP, SEXP marks_SSEXP, SEXP log_clamSEXP, SEXP log_cmuSEXP, SEXP marks_CSEXP, SEXP marks_PSEXP, SEXP marks_piSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -23,7 +23,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type max_tries(max_triesSEXP);
     Rcpp::traits::input_parameter< int >::type link(linkSEXP);
     Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(simulate_div_tree_cpp(pars, model, max_t, max_N, max_tries, link, seed));
+    Rcpp::traits::input_parameter< int >::type marks_S(marks_SSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type log_clam(log_clamSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type log_cmu(log_cmuSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type marks_C(marks_CSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type marks_P(marks_PSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type marks_pi(marks_piSEXP);
+    rcpp_result_gen = Rcpp::wrap(simulate_div_tree_cpp(pars, model, max_t, max_N, max_tries, link, seed, marks_S, log_clam, log_cmu, marks_C, marks_P, marks_pi));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -215,7 +221,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_emphasis_simulate_div_tree_cpp", (DL_FUNC) &_emphasis_simulate_div_tree_cpp, 7},
+    {"_emphasis_simulate_div_tree_cpp", (DL_FUNC) &_emphasis_simulate_div_tree_cpp, 13},
     {"_emphasis_eval_logf_cpp", (DL_FUNC) &_emphasis_eval_logf_cpp, 5},
     {"_emphasis_eval_logf_marks_cpp", (DL_FUNC) &_emphasis_eval_logf_marks_cpp, 11},
     {"_emphasis_lineage_table_cpp", (DL_FUNC) &_emphasis_lineage_table_cpp, 1},

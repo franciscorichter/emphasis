@@ -104,6 +104,19 @@ for GeoSSE ($S = 3$) and PBD ($S = 2$) that is cheap.
 | 4 | $Q \neq 0$: multitype and GeoSSE, optional tip marks | brute force on small trees; GeoSSE with no endogenous covariate against `diversitree`'s GeoSSE likelihood fitted on the same reconstructed trees |
 | 5 | Protracted speciation: the observation step | its own design note first |
 
+Phase 2 result (`dev/latent-marks/recovery-complete.R`, 200 complete trees per row, crown age 5,
+trend-free kernel, joint ML of $\lambda_0, \mu_0, \sigma$; trees over 20 000 lineages excluded):
+
+| generating $\sigma$ | $\hat\lambda_0$ (0.35) | $\hat\mu_0$ (0.07) | $\hat\sigma$ | trees over the cap |
+|---|---|---|---|---|
+| 0.5 | 0.332 | 0.068 | 0.503 | 24 of 235 |
+| 0 | 0.351 | 0.053 | 0.058 | 0 |
+
+With $\alpha = 1$ the mean rate grows by $e^{\sigma^2/2}$ a split and 40% of trees at $\sigma = 0.5$,
+crown age 8, exceed 2000 lineages; dropping them biased $\hat\lambda_0$ to 0.24, a selection of
+the test, not of the likelihood. One tree of 8088 lineages took most of the 52 minutes of the
+$\sigma = 0.5$ fit (65 grid points): the grid size is the cost to watch in phase 3.
+
 Model choice between `nk` and a latent-rate model fitted on the same trees is what the extension
 is for; its estimability is a study of its own, after phase 3.
 

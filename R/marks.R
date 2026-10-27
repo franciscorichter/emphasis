@@ -10,14 +10,16 @@
 # is 0, the grid's centre, since the intercepts carry the level.  The span must
 # cover the spread the walk reaches after the largest K in a tree,
 # sigma * sqrt(K); the default is three times that for K = kmax.
-.latent_rate_marks <- function(sigma, log_alpha = 0, S = 21L, span = NULL, kmax = 20) {
-  S <- as.integer(S)
-  if (S %% 2L != 1L) stop("S must be odd, so that the grid holds the root offset 0")
+.latent_rate_marks <- function(sigma, log_alpha = 0, S = NULL, span = NULL, kmax = 20, smax = 101L) {
   if (!is.finite(sigma) || sigma < 0) stop("sigma must be finite and non-negative")
   if (sigma == 0 && log_alpha == 0) {
     return(list(S = 1L, u = 0, log_clam = 0, log_cmu = 0, C = 1, P = 1, pi = 1))
   }
   if (is.null(span)) span <- max(3 * max(sigma, 1e-3) * sqrt(kmax), 3 * abs(log_alpha) * kmax)
+  # three grid points per sigma across the span, odd, at most smax
+  if (is.null(S)) S <- min(as.integer(smax), 2L * ceiling(span / (max(sigma, 1e-3) / 3)) + 1L)
+  S <- as.integer(S)
+  if (S %% 2L != 1L) stop("S must be odd, so that the grid holds the root offset 0")
   u <- seq(-span, span, length.out = S)
   P <- outer(u, u, function(from, to) stats::dnorm(to, from + log_alpha, max(sigma, 1e-12)))
   P <- P / rowSums(P)
@@ -31,4 +33,60 @@
                   log_clam = marks$log_clam, log_cmu = marks$log_cmu,
                   C = if (length(marks$C)) marks$C else numeric(0),
                   P = if (marks$S > 1L) as.vector(t(marks$P)) else numeric(0), pi = marks$pi)
+}
+
+# The forest and the complete-tree frame of a simulated L-table (crown age T):
+# every lineage, extinct ones included, as the node list eval_logf reads.
+.ltable_forest <- function(L, T) {
+  b <- T - L[, 1]; b[1:2] <- 0
+  list(birth = b, death = ifelse(L[, 4] == -1, Inf, T - L[, 4]),
+       parent = c(NA, NA, match(L[-(1:2), 2], L[, 3])), n = nrow(L))
+}
+.ltable_complete_frame <- function(L, T) {
+  f <- .ltable_forest(L, T)
+  ev <- rbind(data.frame(t = f$birth[-(1:2)], type = rep(1L, f$n - 2), row = seq_len(f$n - 2L) + 2L),
+              data.frame(t = f$death[is.finite(f$death)], type = rep(2L, sum(is.finite(f$death))),
+                         row = which(is.finite(f$death))))
+  ev <- ev[order(ev$t), ]; prow <- f$parent
+  ids <- c(-2L, -3L, seq_len(f$n - 2L) - 1L)
+  ts <- c(0, 0, rep(NA_real_, f$n - 2L)); alive <- c(TRUE, TRUE, rep(FALSE, f$n - 2L))
+  out <- vector("list", nrow(ev) + 1L)
+  for (k in seq_len(nrow(ev))) {
+    t <- ev$t[k]; r <- ev$row[k]; a <- which(alive); n <- length(a); pd <- sum(t - ts[a])
+    if (ev$type[k] == 1L) {
+      p <- prow[r]
+      out[[k]] <- data.frame(brts = t, n = n, t_ext = if (is.finite(f$death[r])) f$death[r] else 10e10,
+                             pd = pd, tip_start = t, focal_tip_start = ts[p], clade = 0L,
+                             id = ids[r], parent_id = ids[p])
+      ts[p] <- t; ts[r] <- t; alive[r] <- TRUE
+    } else {
+      out[[k]] <- data.frame(brts = t, n = n, t_ext = 0, pd = pd, tip_start = ts[r],
+                             focal_tip_start = ts[r], clade = 0L, id = ids[r], parent_id = -1L)
+      alive[r] <- FALSE
+    }
+  }
+  a <- which(alive)
+  out[[nrow(ev) + 1L]] <- data.frame(brts = T, n = length(a), t_ext = 10e10, pd = sum(T - ts[a]),
+                                     tip_start = T, focal_tip_start = -1, clade = 0L,
+                                     id = -1L, parent_id = -1L)
+  do.call(rbind, out)
+}
+
+# One complete tree simulated with the marks of a preset: the L-table, each
+# row's final mark, the status, and the complete-tree frame.  `pars` is the
+# compact vector of `model`, as simulate_tree() takes it.
+.simulate_marks <- function(pars, model, max_t, marks, max_N = 1e4, max_tries = 100L, seed = 0L) {
+  mb <- .resolve_model(model)
+  pe <- .expand_pars(pars, mb)
+  for (i in seq_len(max_tries)) {
+    r <- simulate_div_tree_cpp(pe, mb, max_t, as.integer(max_N), 0L, 1L,
+                               seed = if (seed > 0L) as.integer(seed + i - 1L) else .draw_seed(),
+                               marks_S = marks$S, log_clam = marks$log_clam, log_cmu = marks$log_cmu,
+                               marks_C = if (length(marks$C)) marks$C else numeric(0),
+                               marks_P = if (marks$S > 1L) as.vector(t(marks$P)) else numeric(0),
+                               marks_pi = marks$pi)
+    if (r$status != "extinct") break
+  }
+  r$frame <- if (r$status == "done") .ltable_complete_frame(r$Ltable, max_t) else NULL
+  r
 }

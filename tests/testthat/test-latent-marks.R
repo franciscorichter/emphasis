@@ -143,3 +143,51 @@ test_that("the latent-rate preset reduces to one mark at sigma = 0 and converges
   expect_true(all(abs(a - b) < 0.01))
   expect_true(all(a != l1))
 })
+
+# ---- the simulator (phase 2) ----
+
+sim1 <- function(pe, mb, T, seed, ...) {
+  emphasis:::simulate_div_tree_cpp(pe, mb, T, 5000L, 0L, 1L, seed = seed, ...)
+}
+
+test_that("without marks the simulator draws the same tree as before, seed for seed", {
+  cr <- emphasis:::.resolve_model("cr")
+  pe <- emphasis:::.expand_pars(c(log(0.4), log(0.1)), cr)
+  for (s in 1:5) {
+    a <- sim1(pe, cr, 6, s)
+    b <- sim1(pe, cr, 6, s, marks_S = 1L, log_clam = 0, log_cmu = 0, marks_C = 1, marks_P = numeric(0), marks_pi = 1)
+    expect_identical(a$Ltable, b$Ltable); expect_true(all(a$marks == 0L))
+  }
+})
+
+tips_of <- function(n, pe, mb, T, seed0, ...) {
+  vapply(seq_len(n), function(i) {
+    r <- sim1(pe, mb, T, seed0 + i, ...)
+    if (r$status == "done") sum(r$Ltable[, 4] == -1) else NA_real_
+  }, 1)
+}
+
+test_that("marks that leave the rates alone leave the trees' distribution alone", {
+  skip_on_cran()
+  cr <- emphasis:::.resolve_model("cr")
+  pe <- emphasis:::.expand_pars(c(log(0.4), log(0.1)), cr)
+  a <- tips_of(400, pe, cr, 6, 1000L)
+  b <- tips_of(400, pe, cr, 6, 5000L, marks_S = 3L, log_clam = rep(0, 3), log_cmu = rep(0, 3),
+               marks_P = rep(1 / 3, 9), marks_pi = rep(1 / 3, 3))
+  expect_gt(suppressWarnings(stats::ks.test(a[!is.na(a)], b[!is.na(b)])$p.value), 0.01)
+})
+
+test_that("a kernel that sends every lineage to a doubled rate simulates the doubled model", {
+  skip_on_cran()
+  cr <- emphasis:::.resolve_model("cr")
+  pe <- emphasis:::.expand_pars(c(log(0.25), log(0.05)), cr)
+  p2 <- emphasis:::.expand_pars(c(log(0.5), log(0.1)), cr)
+  # mark 1 doubles both rates; every daughter, and both crown lineages, get mark 1
+  a <- tips_of(400, p2, cr, 6, 1000L)
+  b <- tips_of(400, pe, cr, 6, 5000L, marks_S = 2L, log_clam = c(0, log(2)), log_cmu = c(0, log(2)),
+               marks_P = c(0, 1, 0, 1), marks_pi = c(1, 0))
+  expect_gt(suppressWarnings(stats::ks.test(a[!is.na(a)], b[!is.na(b)])$p.value), 0.01)
+  r <- sim1(pe, cr, 6, 7L, marks_S = 2L, log_clam = c(0, log(2)), log_cmu = c(0, log(2)),
+            marks_P = c(0, 1, 0, 1), marks_pi = c(1, 0))
+  expect_true(all(r$marks == 1L))
+})
