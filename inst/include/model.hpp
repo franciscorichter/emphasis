@@ -175,6 +175,26 @@ namespace emphasis {
   // 1 = exponential: rate = exp(eta)
   enum class LinkType : int { linear = 0, exponential = 1 };
 
+  // Latent marks (dev/latent-marks/design.md): a state m in 0..S-1 that every
+  // lineage carries, unseen, and that multiplies its rates under the
+  // exponential link, lambda_s = exp(eta) * exp(log_clam[m]), mu_s likewise.
+  // The first version has no change along a branch (Q = 0): a mark changes
+  // only at a split, where the parent's mark m gives the two daughters (the
+  // continuing lineage and the new one) the marks (a, b) with probability
+  // C[(m * S + a) * S + b].  Which daughter continues is a convention of the
+  // lineage representation, so the kernel is read symmetrised in (a, b).  The
+  // two crown lineages arise from a root mark drawn from pi by the same kernel.
+  // When P (S x S, row m the law of one daughter's mark) is given, the two
+  // daughters draw independently and C is not read.
+  struct marks_t
+  {
+    int S = 1;
+    std::vector<double> log_clam{0.0}, log_cmu{0.0};
+    std::vector<double> C{1.0};
+    std::vector<double> P;
+    std::vector<double> pi{1.0};
+  };
+
   // General diversification model
   //
   // Orthogonal covariate basis (per lineage s at event time t):
@@ -1033,10 +1053,13 @@ namespace emphasis {
       // ends at the node (-1 when the parent is not alive there).
       std::vector<char>   w;
       std::vector<int>    par_entry;
+      // Per alive lineage per segment, its index in the forest (loglik_marks
+      // collects each lineage's integrals through it).
+      std::vector<int>    lin;
       std::size_t bytes() const {
         return sizeof(double) * (kED.size() + tsD.size() + kK.size() + focal.size() + focalK.size()
                                  + 9 * sum_kED.size())
-             + sizeof(int) * (seg_begin.size() + par_entry.size()) + w.size();
+             + sizeof(int) * (seg_begin.size() + par_entry.size() + lin.size()) + w.size();
       }
     };
 
@@ -1059,6 +1082,7 @@ namespace emphasis {
       tab.min_tsD.assign(n_nodes, inf);  tab.max_tsD.assign(n_nodes, -inf);
       tab.min_kK.assign(n_nodes, inf);   tab.max_kK.assign(n_nodes, -inf);
       tab.w.clear();
+      tab.lin.clear();
       tab.par_entry.assign(n_nodes, -1);
       std::vector<int> entry_of(forest.parent.size(), -1);   // lineage -> its entry on this segment
       const auto& splits = forest.splits;
@@ -1077,6 +1101,7 @@ namespace emphasis {
           const bool observed = (ni < 0) || is_tip(tree[static_cast<std::size_t>(ni)]);
           entry_of[k] = static_cast<int>(tab.kED.size());
           tab.w.push_back(observed ? 2 : 1);
+          tab.lin.push_back(static_cast<int>(k));
           tab.kED.push_back(kv);
           tab.tsD.push_back(tv);
           tab.kK.push_back(kk);
@@ -1262,6 +1287,163 @@ namespace emphasis {
         log_sampling = n_obs * std::log(rho_) + n_unsamp * std::log(1.0 - rho_);
       }
       return log_mu_sum + log_lambda.result() - inte + log_sampling;
+    }
+
+    // The log-likelihood of a complete tree with the latent marks summed out
+    // (dev/latent-marks/design.md).  The rate integrals and event rates are
+    // loglik_ed's, collected per lineage and per stretch between its splits;
+    // the marks multiply them, and the sum over mark histories is taken by
+    // pruning on the lineages of the forest, every daughter before its parent
+    // (a daughter's index is larger than its parent's).  With S = 1 this is
+    // loglik_ed.
+    double loglik_marks(const param_t& pars, const tree_t& tree, const marks_t& mk) const {
+      if (link_ != LinkType::exponential) {
+        throw std::invalid_argument("latent marks need the exponential link");
+      }
+      const int S = mk.S;
+      const std::size_t SS = static_cast<std::size_t>(S);
+      if (S < 1 || mk.log_clam.size() != SS || mk.log_cmu.size() != SS || mk.pi.size() != SS ||
+          (mk.P.empty() && mk.C.size() != SS * SS * SS) || (!mk.P.empty() && mk.P.size() != SS * SS)) {
+        throw std::invalid_argument("marks: log_clam, log_cmu, pi, C or P do not match S");
+      }
+      const forest_t f = build_forest(tree);
+      if (!f.complete) {
+        throw std::invalid_argument("latent marks need the tree's topology");
+      }
+      const std::shared_ptr<const ed_table_t> tab = ed_table(tree);
+      const double bED = beta_ed(pars), gED = gamma_ed(pars);
+      const double bK = beta_k(pars), gK = gamma_k(pars);
+      const bool centred = ed_centred();
+      const double ninf = -std::numeric_limits<double>::infinity();
+      const std::size_t nL = f.parent.size();
+
+      // Per lineage: the integrals of exp(eta) on each stretch (stretch j runs
+      // from its j-th split, or its birth, to the next or to its end), the log
+      // speciation rate at each of its splits, the log extinction rate at its
+      // death (NaN when it does not die).
+      std::vector<std::vector<double>> Il(nL), Im(nL), ls(nL);
+      std::vector<double> ld(nL, std::numeric_limits<double>::quiet_NaN());
+      std::vector<std::vector<int>> child(nL);
+      for (std::size_t k = 0; k < nL; ++k) {
+        Il[k].assign(f.splits[k].size() + 1, 0.0);
+        Im[k].assign(f.splits[k].size() + 1, 0.0);
+        ls[k].assign(f.splits[k].size(), 0.0);
+        if (f.parent[k] >= 0) child[static_cast<std::size_t>(f.parent[k])].push_back(static_cast<int>(k));
+      }
+
+      double prev_brts = 0.0;
+      const std::size_t last = tree.size() - 1;
+      for (std::size_t i = 0; i < tree.size(); ++i) {
+        const auto& node = tree[i];
+        const int p0 = tab->seg_begin[i], p1 = tab->seg_begin[i + 1];
+        const double n_al = static_cast<double>(p1 - p0);
+        const double cED = (centred && n_al > 0.0) ? tab->sum_kED[i] / n_al : 0.0;
+        const double t1 = prev_brts, t2 = node.brts;
+        if (t2 > t1) {
+          const double N_seg = node.n;
+          const double M_seg = (N_seg > 0.0) ? node.pd / N_seg : 0.0;
+          const double base_lam = pars[0] + pars[1] * N_seg + (pars[2] - pars[3]) * M_seg + pars[3] * t2;
+          const double base_mu  = pars[4] + pars[5] * N_seg + (pars[6] - pars[7]) * M_seg + pars[7] * t2;
+          const double b_lam = centred ? 0.0 : bED;
+          const double b_mu  = centred ? 0.0 : gED;
+          for (int p = p0; p < p1; ++p) {
+            const std::size_t q = static_cast<std::size_t>(p);
+            const double kED = tab->kED[q] - cED;
+            const double A_lam = base_lam - pars[3] * tab->tsD[q] + bED * kED + bK * tab->kK[q];
+            const double A_mu  = base_mu  - pars[7] * tab->tsD[q] + gED * kED + gK * tab->kK[q];
+            const std::size_t k = static_cast<std::size_t>(tab->lin[q]);
+            const auto& sp = f.splits[k];
+            const std::size_t j = static_cast<std::size_t>(std::upper_bound(sp.begin(), sp.end(), t1) - sp.begin());
+            Il[k][j] += exp_integral(A_lam, b_lam, t1, t2);
+            Im[k][j] += exp_integral(A_mu, b_mu, t1, t2);
+          }
+        }
+        const double fED = centred ? tab->focal[i] - (cED + node.brts) : tab->focal[i];
+        const double fK  = tab->focalK[i];
+        if (is_extinction(node)) {
+          const int k = f.node_lineage[i];
+          if (k < 0) throw std::invalid_argument("latent marks: an extinction names no lineage");
+          ld[static_cast<std::size_t>(k)] = std::log(std::max(extinction_rate_ep(pars, node, fED, fK), 1e-300));
+        } else if (i != last) {
+          const int k = f.lookup(node.parent_id);
+          if (k < 0) throw std::invalid_argument("latent marks: a split names no lineage");
+          const auto& sp = f.splits[static_cast<std::size_t>(k)];
+          const std::size_t j = static_cast<std::size_t>(std::lower_bound(sp.begin(), sp.end(), node.brts) - sp.begin());
+          ls[static_cast<std::size_t>(k)][j] = std::log(std::max(speciation_rate_ep(pars, node, fED, fK), 1e-300));
+        }
+        prev_brts = node.brts;
+      }
+
+      // log sum_x w[x] exp(v[x]), over the x with w[x] > 0
+      auto logdot = [&](const double* w, const std::vector<double>& v) {
+        double mx = ninf;
+        for (std::size_t x = 0; x < SS; ++x) if (w[x] > 0.0 && v[x] > mx) mx = v[x];
+        if (mx == ninf) return ninf;
+        double s = 0.0;
+        for (std::size_t x = 0; x < SS; ++x) if (w[x] > 0.0) s += w[x] * std::exp(v[x] - mx);
+        return mx + std::log(s);
+      };
+      std::vector<double> Cb;
+      const bool indep = !mk.P.empty();
+      if (!indep) {
+        Cb.resize(SS * SS * SS);
+        for (std::size_t m = 0; m < SS; ++m)
+          for (std::size_t a = 0; a < SS; ++a)
+            for (std::size_t b = 0; b < SS; ++b)
+              Cb[(m * SS + a) * SS + b] = 0.5 * (mk.C[(m * SS + a) * SS + b] + mk.C[(m * SS + b) * SS + a]);
+      }
+      // log sum_{a,b} Cbar(m, a, b) exp(va[a] + vb[b])
+      std::vector<double> tmp(SS);
+      auto split = [&](std::size_t m, const std::vector<double>& va, const std::vector<double>& vb) {
+        if (indep) {
+          const double* row = mk.P.data() + m * SS;
+          return logdot(row, va) + logdot(row, vb);
+        }
+        for (std::size_t a = 0; a < SS; ++a) tmp[a] = logdot(Cb.data() + (m * SS + a) * SS, vb);
+        double mx = ninf;
+        for (std::size_t a = 0; a < SS; ++a) if (va[a] + tmp[a] > mx) mx = va[a] + tmp[a];
+        if (mx == ninf) return ninf;
+        double s = 0.0;
+        for (std::size_t a = 0; a < SS; ++a) s += std::exp(va[a] + tmp[a] - mx);
+        return mx + std::log(s);
+      };
+
+      std::vector<double> clam(SS), cmu(SS);
+      for (std::size_t m = 0; m < SS; ++m) { clam[m] = std::exp(mk.log_clam[m]); cmu[m] = std::exp(mk.log_cmu[m]); }
+      std::vector<std::vector<double>> L(nL);
+      std::vector<double> w(SS);
+      for (std::size_t k = nL; k-- > 0;) {
+        std::vector<double> v(SS, 0.0);
+        if (!std::isnan(ld[k])) for (std::size_t m = 0; m < SS; ++m) v[m] = ld[k] + mk.log_cmu[m];
+        for (std::size_t j = f.splits[k].size() + 1; j-- > 0;) {
+          for (std::size_t m = 0; m < SS; ++m) v[m] -= clam[m] * Il[k][j] + cmu[m] * Im[k][j];
+          if (j > 0) {
+            const std::size_t d = static_cast<std::size_t>(child[k][j - 1]);
+            for (std::size_t m = 0; m < SS; ++m) w[m] = ls[k][j - 1] + mk.log_clam[m] + split(m, v, L[d]);
+            v = w;
+          }
+        }
+        L[k] = std::move(v);
+      }
+      std::vector<double> root(SS, ninf);
+      for (std::size_t m = 0; m < SS; ++m) if (mk.pi[m] > 0.0) root[m] = std::log(mk.pi[m]) + split(m, L[0], L[1]);
+      double mx = ninf;
+      for (double r : root) if (r > mx) mx = r;
+      double s = 0.0;
+      if (mx > ninf) for (double r : root) s += std::exp(r - mx);
+      const double log_root = (mx > ninf) ? mx + std::log(s) : ninf;
+
+      double log_sampling = 0.0;
+      if (rho_ < 1.0) {
+        int n_obs = 1;
+        int n_unsamp = 0;
+        for (const auto& node : tree) {
+          if (is_tip(node)) ++n_obs;
+          else if (is_unsampled(node)) ++n_unsamp;
+        }
+        log_sampling = n_obs * std::log(rho_) + n_unsamp * std::log(1.0 - rho_);
+      }
+      return log_root + log_sampling;
     }
 
     // The ED-aware proposal on the segment ending at node i, from the table:

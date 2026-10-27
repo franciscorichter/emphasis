@@ -49,6 +49,23 @@ eval_logf <- function(pars, trees, model = as.integer( c(0, 0, 0)), link = 0L, r
     .Call('_emphasis_eval_logf_cpp', PACKAGE = 'emphasis', pars, trees, model, link, rho)
 }
 
+#' Log-likelihood of complete trees with latent marks summed out
+#'
+#' Development entry point of the latent-mark likelihood
+#' (dev/latent-marks/design.md): \code{eval_logf} with every lineage carrying
+#' an unseen mark that multiplies its rates.  Exponential link only.
+#' @param S Number of marks.
+#' @param log_clam,log_cmu Log rate multipliers per mark (length S).
+#' @param C Joint kernel of the daughters' marks, \code{C[(m*S + a)*S + b]}
+#'   (length S^3); not read when \code{P} is given.
+#' @param P Kernel of one daughter's mark, row-major S x S, daughters
+#'   independent; empty to use \code{C}.
+#' @param pi Law of the root mark (length S).
+#' @keywords internal
+eval_logf_marks <- function(pars, trees, model, link, rho, S, log_clam, log_cmu, C, P, pi) {
+    .Call('_emphasis_eval_logf_marks_cpp', PACKAGE = 'emphasis', pars, trees, model, link, rho, S, log_clam, log_cmu, C, P, pi)
+}
+
 #' The per-lineage design an augmented tree's likelihood is built on
 #'
 #' One row per lineage alive on each segment between consecutive events:

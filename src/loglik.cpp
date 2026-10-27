@@ -101,6 +101,45 @@ Rcpp::List eval_logf_cpp(const std::vector<double>& pars,
 }
 
 
+//' Log-likelihood of complete trees with latent marks summed out
+//'
+//' Development entry point of the latent-mark likelihood
+//' (dev/latent-marks/design.md): \code{eval_logf} with every lineage carrying
+//' an unseen mark that multiplies its rates.  Exponential link only.
+//' @param S Number of marks.
+//' @param log_clam,log_cmu Log rate multipliers per mark (length S).
+//' @param C Joint kernel of the daughters' marks, \code{C[(m*S + a)*S + b]}
+//'   (length S^3); not read when \code{P} is given.
+//' @param P Kernel of one daughter's mark, row-major S x S, daughters
+//'   independent; empty to use \code{C}.
+//' @param pi Law of the root mark (length S).
+//' @keywords internal
+// [[Rcpp::export(name = "eval_logf_marks")]]
+std::vector<double> eval_logf_marks_cpp(const std::vector<double>& pars,
+                                        const Rcpp::List& trees,
+                                        Rcpp::IntegerVector model,
+                                        int link,
+                                        double rho,
+                                        int S,
+                                        const std::vector<double>& log_clam,
+                                        const std::vector<double>& log_cmu,
+                                        const std::vector<double>& C,
+                                        const std::vector<double>& P,
+                                        const std::vector<double>& pi) {
+  std::vector<int> model_bin(model.begin(), model.end());
+  emphasis::param_t lb8(8, -1e6), ub8(8, 1e6);
+  auto mdl = emphasis::Model(lb8, ub8, model_bin, link, rho);
+  emphasis::marks_t mk;
+  mk.S = S; mk.log_clam = log_clam; mk.log_cmu = log_cmu; mk.C = C; mk.P = P; mk.pi = pi;
+  std::vector<double> logf(trees.size());
+  for (int i = 0; i < trees.size(); ++i) {
+    auto local_tree = loglik::pack(Rcpp::as<Rcpp::DataFrame>(trees[i]));
+    logf[i] = mdl.loglik_marks(pars, local_tree, mk);
+  }
+  return logf;
+}
+
+
 //' The per-lineage design an augmented tree's likelihood is built on
 //'
 //' One row per lineage alive on each segment between consecutive events:
