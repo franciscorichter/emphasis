@@ -117,6 +117,17 @@ crown age 8, exceed 2000 lineages; dropping them biased $\hat\lambda_0$ to 0.24,
 the test, not of the likelihood. One tree of 8088 lineages took most of the 52 minutes of the
 $\sigma = 0.5$ fit (65 grid points): the grid size is the cost to watch in phase 3.
 
+Phase 3, first run (`R/marks.R` `.mcem_marks()`, an R-level MCEM: augment_trees at the base
+rates, weights by the mark-marginal likelihood over the proposal, M-step by optim;
+`dev/latent-marks/mcem-prototype-one-tree.R`): one ClaDS tree, 138 tips, $\lambda_0 = 0.35$,
+$\mu_0 = 0.07$, $\sigma = 0.5$, trend-free. At the generating values the effective sample of 500
+draws is 2.2 with the marks against 22.9 without them: the proposal, blind to the marks, is the
+bottleneck the design anticipated. MCEM converged (log-likelihood $-132.9$) to $\lambda_0 = 0.216$,
+$\mu_0 \to 0$, $\sigma = 0.287$ in 2.8 hours on one core; one tree does not separate bias from
+noise, and $\mu_0 \to 0$ is also the corner where the proposal draws no hidden lineage and the
+weights are flat. Next: a mark-aware proposal (hidden lineages at the mark-averaged rate of the
+lineage they attach to), then the recovery study on many trees, then the M-step in C++.
+
 Model choice between `nk` and a latent-rate model fitted on the same trees is what the extension
 is for; its estimability is a study of its own, after phase 3.
 

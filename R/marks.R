@@ -90,3 +90,48 @@
   r$frame <- if (r$status == "done") .ltable_complete_frame(r$Ltable, max_t) else NULL
   r
 }
+
+# ---- MCEM with marks: an R-level prototype (phase 3) ----
+#
+# The E-step is the package's: augment_trees() draws hidden lineages from the
+# proposal at the current base rates (the marks ignored).  Each augmented tree
+# is weighed by its mark-marginal likelihood over the proposal density,
+# log w = loglik_marks(theta) - log g, which is what makes the marks enter
+# without any change to the sampler.  The M-step maximises the weighted
+# mark-marginal log-likelihood over the base parameters and the mark
+# parameters with optim().  `marks_of(theta_m)` turns the mark parameters
+# (on the optimiser's scale) into a preset.
+.mcem_marks <- function(phy, model, start, start_m, marks_of, n_iter = 20L, N = 200L,
+                        N_growth = 1.15, N_max = 2000L, rho = 1, max_missing = 5000L, seed = 1L,
+                        verbose = FALSE) {
+  mb <- .resolve_model(model)
+  brts <- .extract_brts(phy)
+  np <- length(start)
+  th <- c(start, start_m)
+  trace <- vector("list", n_iter)
+  draw <- function(th, n, s) {
+    a <- augment_trees(brts, .expand_pars(th[seq_len(np)], mb), sample_size = as.integer(n),
+                       maxN = as.integer(50 * n), max_missing = as.integer(max_missing), max_lambda = 1e6,
+                       num_threads = 1L, model = mb, link = 1L, rho = rho,
+                       parent_tip_start = .pts(brts), seed = as.integer(s), parent_id = .pid(brts))
+    a
+  }
+  wlogf <- function(th, trees) .eval_logf_marks(.expand_pars(th[seq_len(np)], mb), trees, mb,
+                                                 marks_of(th[-seq_len(np)]), rho = rho)
+  for (it in seq_len(n_iter)) {
+    a  <- draw(th, N, seed + it)
+    lw <- wlogf(th, a$trees) - a$logg
+    ok <- is.finite(lw)
+    m  <- max(lw[ok]); w <- exp(lw[ok] - m); w <- w / sum(w)
+    ess <- 1 / sum(w^2)
+    trees <- a$trees[ok]
+    obj <- function(x) { v <- wlogf(x, trees); if (any(!is.finite(v))) return(1e10); -sum(w * v) }
+    f <- stats::optim(th, obj, control = list(maxit = 200 + 50 * length(th)))
+    th <- f$par
+    trace[[it]] <- c(iter = it, N = N, ess = ess, loglik = m + log(mean(exp(lw[ok] - m))), th)
+    if (verbose) message(sprintf("iter %d  N %d  ESS %.1f  logL %.3f  %s", it, N, ess,
+                                 trace[[it]][["loglik"]], paste(round(th, 3), collapse = " ")))
+    N <- min(as.integer(ceiling(N * N_growth)), as.integer(N_max))
+  }
+  list(estimate = th, trace = do.call(rbind, trace))
+}
