@@ -1,0 +1,2 @@
+"task","sigma","rep","tips","lineages_ever","draws_to_window","ess_truth_nomarks","ess_truth_marks","lambda0_marks","mu0_marks","sigma_hat","loglik_marks","ess_last_marks","sec_marks","lambda0_cr","mu0_cr","loglik_cr","ess_last_cr","sec_cr","lr","build"
+75,0.5,15,60,73,5,33.5501101968811,11.7603385463211,0.288198229193545,0.0370907787936082,0.124378141219094,-123.414609856255,35.8472856305566,1949.32685685158,0.366311471774515,0.0987563622571448,-123.404013062407,31.0982768705865,83.8022215366364,-0.021193587696672,"1.0.0.9000"

@@ -138,6 +138,26 @@ keeps turnover constant, so a hidden lineage on a fast part of the tree lives to
 proposal; the next version offsets each hidden lineage's extinction rate by its parent's
 multiplier, in the sampler and the density alike.
 
+Recovery study, blind proposal (`dev/latent-marks/recovery-mcem.R`, USI cluster array 6770,
+build `35f4f9f`; per-tree rows in `dev/latent-marks/results/blind-35f4f9f/`): 30 trees per
+$\sigma$, cr with the trend-free latent rate, crown age 14, kept at 50-200 tips; MCEM with and
+without the marks, likelihood ratio from 2000-draw estimates. Medians [10th, 90th percentile]:
+
+| $\sigma$ | $\hat\sigma$ | LR > 3.84 | $\hat\lambda_0$ (0.35) | $\hat\mu_0$ (0.07) |
+|---|---|---|---|---|
+| 0 | 0.00 [0.00, 0.06] | 0 of 30 | 0.326 | 0.046 |
+| 0.25 | 0.15 [0.00, 0.25] | 18 of 30 | 0.303 | 0.014 |
+| 0.5 | 0.30 [0.19, 0.48] | 26 of 30 | 0.230 | 0.003 |
+
+The latent rate is never chosen on constant-rate trees and is chosen on most trees that carry
+it; its size is underestimated by about 40% at $\sigma = 0.5$, and extinction collapses to near
+zero under the marks model: the corner where the blind proposal draws no hidden lineage. The
+effective sample at the last iteration is highest there (median 195 at $\sigma = 0.5$), which
+is that corner, not a good fit. With extinction offsets added to the mark-aware proposal the
+one-tree ESS fell from 6.4 to 1.3 of 2000 (one run, dominated by a few weights); arrays 6868
+(speciation offsets) and 6869 (both) rerun the study on the same trees with the ESS of all
+three proposals recorded per tree.
+
 Model choice between `nk` and a latent-rate model fitted on the same trees is what the extension
 is for; its estimability is a study of its own, after phase 3.
 
