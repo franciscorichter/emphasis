@@ -128,6 +128,16 @@ noise, and $\mu_0 \to 0$ is also the corner where the proposal draws no hidden l
 weights are flat. Next: a mark-aware proposal (hidden lineages at the mark-averaged rate of the
 lineage they attach to), then the recovery study on many trees, then the M-step in C++.
 
+Mark-aware proposal, first version (`ef7a3f4`): each observed lineage's speciation predictor in
+the proposal is offset by the log of its posterior mean multiplier on the observed tree, and a
+hidden lineage takes its parent's. Same tree, generating values, 2000 draws
+(`dev/latent-marks/proposal-ess-one-tree.R`): blind ESS 1.0, log L $-143.52$ (se 0.98);
+mark-aware ESS 6.4, log L $-141.76$ (se 0.40). Six times the effective sample, still 0.3% of the
+draws. The lifetimes are still drawn at the segment's mean extinction rate while the latent rate
+keeps turnover constant, so a hidden lineage on a fast part of the tree lives too long under the
+proposal; the next version offsets each hidden lineage's extinction rate by its parent's
+multiplier, in the sampler and the density alike.
+
 Model choice between `nk` and a latent-rate model fitted on the same trees is what the extension
 is for; its estimability is a study of its own, after phase 3.
 
