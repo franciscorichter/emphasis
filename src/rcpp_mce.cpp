@@ -74,6 +74,8 @@ namespace emphasis {
 //'   dev/latent-marks/design.md): for observed lineage \code{offset_id[i]}, the
 //'   offset over \code{(offset_from[i], offset_to[i]]}. Empty (the default):
 //'   no offsets.
+//' @param offset_mu Extinction offsets, same length as \code{offset_id}
+//'   (empty: 0): a missing lineage's lifetime is drawn at its parent's.
 //' @return A named list:
 //' \describe{
 //'   \item{trees}{List of augmented-tree data frames.}
@@ -109,7 +111,8 @@ List rcpp_mce(const std::vector<double>& brts,
               Rcpp::IntegerVector offset_id = Rcpp::IntegerVector::create(),
               Rcpp::NumericVector offset_from = Rcpp::NumericVector::create(),
               Rcpp::NumericVector offset_to = Rcpp::NumericVector::create(),
-              Rcpp::NumericVector offset = Rcpp::NumericVector::create())
+              Rcpp::NumericVector offset = Rcpp::NumericVector::create(),
+              Rcpp::NumericVector offset_mu = Rcpp::NumericVector::create())
 {
   emphasis::rng::set_seed(emphasis::resolve_seed(seed));
   const std::vector<double> pts(parent_tip_start.begin(), parent_tip_start.end());
@@ -150,7 +153,8 @@ List rcpp_mce(const std::vector<double>& brts,
     mdl.set_lineage_offsets(std::vector<int>(offset_id.begin(), offset_id.end()),
                             std::vector<double>(offset_from.begin(), offset_from.end()),
                             std::vector<double>(offset_to.begin(), offset_to.end()),
-                            std::vector<double>(offset.begin(), offset.end()));
+                            std::vector<double>(offset.begin(), offset.end()),
+                            std::vector<double>(offset_mu.begin(), offset_mu.end()));
   }
 
   // The envelope counter is process-wide and accumulates across calls and

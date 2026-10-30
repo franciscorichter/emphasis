@@ -523,7 +523,15 @@ namespace emphasis {
           // for every pt >= 1. The candidate is accepted either way.
           pt = std::min(pt, 1.0);
           if (u2 < pt) {
-            double ext_time = ed_mode
+            // With proposal offsets (the mark-aware proposal) the parent is
+            // drawn first and the lifetime at its own extinction rate; without
+            // them the order is the one every earlier draw used.
+            const bool by_parent = ed_mode && model.has_offsets();
+            std::size_t parent_k = 0;
+            if (by_parent) parent_k = seg.draw_parent(next_speciation_time, reng);
+            double ext_time = by_parent
+              ? model.extinction_time_at(next_speciation_time, seg.mu_bar * std::exp(seg.off_mu[parent_k]), b)
+              : ed_mode
               ? model.extinction_time_at(next_speciation_time, seg.mu_bar, b)
               : model.extinction_time(next_speciation_time, pars, tree);
             // The parent: uniform over the labelled attachments, which is the
@@ -547,7 +555,9 @@ namespace emphasis {
             // own rate at the birth time, w_s * lambda_s(t), and its density
             // charges log of that share (Model::sampling_prob_ed).
             int chosen_parent_id = no_parent;
-            if (ed_mode) {
+            if (by_parent) {
+              chosen_parent_id = seg.id[parent_k];
+            } else if (ed_mode) {
               chosen_parent_id = seg.id[seg.draw_parent(next_speciation_time, reng)];
             } else {
               const auto& alive = sweep.alive();

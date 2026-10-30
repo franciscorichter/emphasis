@@ -177,6 +177,8 @@ ed_fair_proportion <- function(parent, birth, alive, t) {
 #'   dev/latent-marks/design.md): for observed lineage \code{offset_id[i]}, the
 #'   offset over \code{(offset_from[i], offset_to[i]]}. Empty (the default):
 #'   no offsets.
+#' @param offset_mu Extinction offsets, same length as \code{offset_id}
+#'   (empty: 0): a missing lineage's lifetime is drawn at its parent's.
 #' @return A named list:
 #' \describe{
 #'   \item{trees}{List of augmented-tree data frames.}
@@ -195,8 +197,8 @@ ed_fair_proportion <- function(parent, birth, alive, t) {
 #'   \item{time}{Elapsed time (ms).}
 #' }
 #' @keywords internal
-augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, parent_tip_start = as.numeric( c()), seed = 0L, parent_id = as.integer( c()), offset_id = as.integer( c()), offset_from = as.numeric( c()), offset_to = as.numeric( c()), offset = as.numeric( c())) {
-    .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link, rho, parent_tip_start, seed, parent_id, offset_id, offset_from, offset_to, offset)
+augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, parent_tip_start = as.numeric( c()), seed = 0L, parent_id = as.integer( c()), offset_id = as.integer( c()), offset_from = as.numeric( c()), offset_to = as.numeric( c()), offset = as.numeric( c()), offset_mu = as.numeric( c())) {
+    .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link, rho, parent_tip_start, seed, parent_id, offset_id, offset_from, offset_to, offset, offset_mu)
 }
 
 #' What the proposal could attach an augmented lineage to

@@ -238,16 +238,20 @@ test_that("proposal offsets change the draws but not the likelihood they estimat
   fr   <- emphasis:::.observed_frame(phy)
   ids  <- unique(fr$id[fr$id >= 0 & fr$t_ext > 1e9]); ids <- c(-2L, -3L, ids)
   off  <- stats::runif(length(ids), -1, 1)                       # arbitrary: one offset per observed lineage
-  run <- function(o, seed) {
-    a <- emphasis:::augment_trees(brts, pe, 1500L, 75000L, 2000L, 1e6, 1L, model = nk, link = 1L, rho = 1,
+  run <- function(o, seed, rho = 1) {
+    a <- emphasis:::augment_trees(brts, pe, 1500L, 75000L, 2000L, 1e6, 1L, model = nk, link = 1L, rho = rho,
                                   parent_tip_start = emphasis:::.pts(brts), seed = seed, parent_id = emphasis:::.pid(brts),
-                                  offset_id = o$id, offset_from = o$from, offset_to = o$to, offset = o$off)
+                                  offset_id = o$id, offset_from = o$from, offset_to = o$to, offset = o$off,
+                                  offset_mu = o$off_mu)
     lw <- a$logf - a$logg; lw <- lw[is.finite(lw)]; m <- max(lw); w <- exp(lw - m)
     c(est = m + log(mean(w)), se = stats::sd(w) / (sqrt(length(w)) * mean(w)), viol = a$envelope_violations)
   }
-  none <- list(id = integer(0), from = numeric(0), to = numeric(0), off = numeric(0))
-  some <- list(id = as.integer(ids), from = rep(0, length(ids)), to = rep(1e9, length(ids)), off = off)
-  a <- run(none, 3L); b <- run(some, 4L)
-  expect_lt(abs(a[["est"]] - b[["est"]]), 4 * sqrt(a[["se"]]^2 + b[["se"]]^2))
-  expect_equal(b[["viol"]], 0)
+  none <- list(id = integer(0), from = numeric(0), to = numeric(0), off = numeric(0), off_mu = numeric(0))
+  some <- list(id = as.integer(ids), from = rep(0, length(ids)), to = rep(1e9, length(ids)), off = off,
+               off_mu = stats::runif(length(ids), -1, 1))
+  for (rho in c(1, 0.8)) {
+    a <- run(none, 3L, rho); b <- run(some, 4L, rho)
+    expect_lt(abs(a[["est"]] - b[["est"]]), 4 * sqrt(a[["se"]]^2 + b[["se"]]^2))
+    expect_equal(b[["viol"]], 0)
+  }
 })

@@ -294,14 +294,19 @@ namespace emphasis {
     // branched off.  With offsets set the thinning sampler takes the
     // per-lineage proposal and sampling_prob its density, both adding the
     // offset to every eta_s, so the density stays the sampler's.
-    struct offset_piece_t { double from, to, off; };
+    struct offset_piece_t { double from, to, off, off_mu; };
+    // off_mu (optional, same length) offsets the extinction rate a missing
+    // lineage's lifetime is drawn at, read off its parent.
     void set_lineage_offsets(const std::vector<int>& id, const std::vector<double>& from,
-                             const std::vector<double>& to, const std::vector<double>& off) {
-      if (id.size() != from.size() || id.size() != to.size() || id.size() != off.size()) {
-        throw std::invalid_argument("lineage offsets: id, from, to and offset differ in length");
+                             const std::vector<double>& to, const std::vector<double>& off,
+                             const std::vector<double>& off_mu = {}) {
+      if (id.size() != from.size() || id.size() != to.size() || id.size() != off.size() ||
+          (!off_mu.empty() && off_mu.size() != id.size())) {
+        throw std::invalid_argument("lineage offsets: id, from, to, offset and offset_mu differ in length");
       }
       auto m = std::make_shared<std::unordered_map<int, std::vector<offset_piece_t>>>();
-      for (std::size_t i = 0; i < id.size(); ++i) (*m)[id[i]].push_back({from[i], to[i], off[i]});
+      for (std::size_t i = 0; i < id.size(); ++i)
+        (*m)[id[i]].push_back({from[i], to[i], off[i], off_mu.empty() ? 0.0 : off_mu[i]});
       for (auto& kv : *m) std::sort(kv.second.begin(), kv.second.end(),
                                     [](const offset_piece_t& a, const offset_piece_t& b) { return a.from < b.from; });
       offsets_ = m;
@@ -740,13 +745,14 @@ namespace emphasis {
       std::vector<int>    id;    // lineage id, for the sampler's parent draw
       std::vector<double> eta;   // eta_s(t0)
       std::vector<char>   w;     // labelled attachments: 2 observed, 1 augmented
+      std::vector<double> off_mu; // extinction offsets per lineage (the mark-aware proposal)
       std::vector<double> eta_sorted, eta_prefix;   // linear link
       double sum_exp_eta = 0.0;                     // exponential link
       std::vector<double> scratch;
 
       std::size_t size() const { return eta.size(); }
 
-      void clear() { id.clear(); eta.clear(); w.clear(); }
+      void clear() { id.clear(); eta.clear(); w.clear(); off_mu.clear(); }
 
       // Called once the per-lineage entries are in.
       void finish() {
@@ -878,8 +884,9 @@ namespace emphasis {
       return pars[4] + pars[5] * N + pars[6] * M + gamma_ed(pars) * ed + gamma_k(pars) * kk;
     }
 
-    // The offset of lineage k at time t (0 without offsets, or for an id with none).
-    double lineage_offset(const forest_t& f, const tree_t& tree, std::size_t k, double t) const {
+    // The offset of lineage k at time t (0 without offsets, or for an id with
+    // none); `mu` selects the extinction offset.
+    double lineage_offset(const forest_t& f, const tree_t& tree, std::size_t k, double t, bool mu = false) const {
       if (!has_offsets()) return 0.0;
       std::size_t kk = k; double tt = t;
       for (;;) {
@@ -895,7 +902,8 @@ namespace emphasis {
       if (it == offsets_->end() || it->second.empty()) return 0.0;
       const auto& v = it->second;
       auto pc = std::upper_bound(v.begin(), v.end(), tt, [](double x, const offset_piece_t& q) { return x < q.from; });
-      return (pc == v.begin()) ? v.front().off : (pc - 1)->off;
+      const offset_piece_t& q = (pc == v.begin()) ? v.front() : *(pc - 1);
+      return mu ? q.off_mu : q.off;
     }
 
     // The proposal on the segment (t0, t1] that `node` governs, from the
@@ -936,6 +944,7 @@ namespace emphasis {
         seg.id.push_back(ni < 0 ? (k == 0 ? crown_id_a : crown_id_b)
                                 : tree[static_cast<std::size_t>(ni)].id);
         seg.eta.push_back(proposal_eta_lambda(pars, N, M, ed0, kk) + lineage_offset(forest, tree, k, t0));
+        seg.off_mu.push_back(lineage_offset(forest, tree, k, t0, true));
         seg.w.push_back(observed ? 2 : 1);
       }
       const double n_al = static_cast<double>(seg.eta.size());
@@ -1615,8 +1624,10 @@ namespace emphasis {
         const double ed0 = centred ? tab.kED[static_cast<std::size_t>(p)] - cED
                                    : tab.kED[static_cast<std::size_t>(p)] + t0;
         ed_sum += ed0;
+        const std::size_t kl = static_cast<std::size_t>(tab.lin[static_cast<std::size_t>(p)]);
         seg.eta.push_back(proposal_eta_lambda(pars, N, M, ed0, tab.kK[static_cast<std::size_t>(p)])
-                          + (forest ? lineage_offset(*forest, tree, static_cast<std::size_t>(tab.lin[static_cast<std::size_t>(p)]), t0) : 0.0));
+                          + (forest ? lineage_offset(*forest, tree, kl, t0) : 0.0));
+        seg.off_mu.push_back(forest ? lineage_offset(*forest, tree, kl, t0, true) : 0.0);
         seg.w.push_back(tab.w[static_cast<std::size_t>(p)]);
       }
       const double n_al = static_cast<double>(p1 - p0);
@@ -1650,8 +1661,18 @@ namespace emphasis {
           const double Lam = seg.Lambda(t);
           if (!(Lam > 0.0)) return neg_inf;
           logg += std::log(Lam) + seg.log_mark(k, t);
-          if (is_missing(node)) logg += std::log(seg.mu_bar) - seg.mu_bar * (node.t_ext - t);
-          else                  logg += std::log(1.0 - rho_) - seg.mu_bar * (T - t);
+          if (has_offsets()) {
+            // The lifetime at the parent's rate mu_k: the survival factor of
+            // the birth intensity (at mu_bar) no longer cancels its
+            // normalisation 1 - rho exp(-mu_k (T - t)), so both are charged.
+            const double mk = seg.mu_bar * std::exp(seg.off_mu[k]);
+            logg += std::log(seg.survival(t)) - std::log(1.0 - rho_ * std::exp(-mk * (T - t)));
+            if (is_missing(node)) logg += std::log(mk) - mk * (node.t_ext - t);
+            else                  logg += std::log(1.0 - rho_) - mk * (T - t);
+          } else {
+            if (is_missing(node)) logg += std::log(seg.mu_bar) - seg.mu_bar * (node.t_ext - t);
+            else                  logg += std::log(1.0 - rho_) - seg.mu_bar * (T - t);
+          }
         }
         prev_brts = node.brts;
       }
