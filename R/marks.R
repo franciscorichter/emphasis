@@ -91,6 +91,19 @@
   r
 }
 
+# The mark-aware proposal's offsets: on the observed tree at the current
+# parameters, each observed lineage's posterior mean speciation multiplier per
+# stretch, on the log scale (Model::set_lineage_offsets reads them).
+.mark_offsets <- function(pars_full, phy, model, marks, rho = 1) {
+  mb <- .resolve_model(model)
+  po <- marks_posterior(pars_full, .observed_frame(phy), model = mb, link = 1L, rho = rho, S = marks$S,
+                        log_clam = marks$log_clam, log_cmu = marks$log_cmu,
+                        C = if (length(marks$C)) marks$C else numeric(0),
+                        P = if (marks$S > 1L) as.vector(t(marks$P)) else numeric(0), pi = marks$pi)
+  off <- log(as.vector(po$post %*% exp(marks$log_clam)))
+  list(id = as.integer(po$rows$id), from = po$rows$t_from, to = po$rows$t_to, off = off)
+}
+
 # ---- MCEM with marks: an R-level prototype (phase 3) ----
 #
 # The E-step is the package's: augment_trees() draws hidden lineages from the
@@ -100,21 +113,26 @@
 # without any change to the sampler.  The M-step maximises the weighted
 # mark-marginal log-likelihood over the base parameters and the mark
 # parameters with optim().  `marks_of(theta_m)` turns the mark parameters
-# (on the optimiser's scale) into a preset.
+# (on the optimiser's scale) into a preset.  With `aware = TRUE` the proposal
+# is the mark-aware one: each E-step's draws carry the offsets of
+# .mark_offsets() at that iteration's parameters.
 .mcem_marks <- function(phy, model, start, start_m, marks_of, n_iter = 20L, N = 200L,
                         N_growth = 1.15, N_max = 2000L, rho = 1, max_missing = 5000L, seed = 1L,
-                        verbose = FALSE) {
+                        verbose = FALSE, aware = FALSE) {
   mb <- .resolve_model(model)
   brts <- .extract_brts(phy)
   np <- length(start)
   th <- c(start, start_m)
   trace <- vector("list", n_iter)
   draw <- function(th, n, s) {
-    a <- augment_trees(brts, .expand_pars(th[seq_len(np)], mb), sample_size = as.integer(n),
-                       maxN = as.integer(50 * n), max_missing = as.integer(max_missing), max_lambda = 1e6,
-                       num_threads = 1L, model = mb, link = 1L, rho = rho,
-                       parent_tip_start = .pts(brts), seed = as.integer(s), parent_id = .pid(brts))
-    a
+    pf <- .expand_pars(th[seq_len(np)], mb)
+    o <- if (aware && length(th) > np) .mark_offsets(pf, phy, model, marks_of(th[-seq_len(np)]), rho)
+         else list(id = integer(0), from = numeric(0), to = numeric(0), off = numeric(0))
+    augment_trees(brts, pf, sample_size = as.integer(n),
+                  maxN = as.integer(50 * n), max_missing = as.integer(max_missing), max_lambda = 1e6,
+                  num_threads = 1L, model = mb, link = 1L, rho = rho,
+                  parent_tip_start = .pts(brts), seed = as.integer(s), parent_id = .pid(brts),
+                  offset_id = o$id, offset_from = o$from, offset_to = o$to, offset = o$off)
   }
   wlogf <- function(th, trees) .eval_logf_marks(.expand_pars(th[seq_len(np)], mb), trees, mb,
                                                  marks_of(th[-seq_len(np)]), rho = rho)

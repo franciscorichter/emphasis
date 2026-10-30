@@ -284,7 +284,29 @@ namespace emphasis {
     // split, hidden splits counted.  Per lineage like ED, so a K model takes
     // the per-lineage likelihood and the per-lineage (ED-aware) proposal.
     bool uses_k() const { return model_bin_[4] != 0; }
-    bool lineage_proposal() const { return ed_proposal() || uses_k(); }
+    bool lineage_proposal() const { return ed_proposal() || uses_k() || has_offsets(); }
+
+    // Per-lineage offsets of the proposal's speciation predictor: the
+    // mark-aware proposal (dev/latent-marks/design.md) sets them to the log of
+    // each observed lineage's posterior mean rate multiplier.  An observed
+    // lineage id holds pieces (from, to, offset) over its stretches; a lineage
+    // not observed reads its nearest observed ancestor's offset at the time it
+    // branched off.  With offsets set the thinning sampler takes the
+    // per-lineage proposal and sampling_prob its density, both adding the
+    // offset to every eta_s, so the density stays the sampler's.
+    struct offset_piece_t { double from, to, off; };
+    void set_lineage_offsets(const std::vector<int>& id, const std::vector<double>& from,
+                             const std::vector<double>& to, const std::vector<double>& off) {
+      if (id.size() != from.size() || id.size() != to.size() || id.size() != off.size()) {
+        throw std::invalid_argument("lineage offsets: id, from, to and offset differ in length");
+      }
+      auto m = std::make_shared<std::unordered_map<int, std::vector<offset_piece_t>>>();
+      for (std::size_t i = 0; i < id.size(); ++i) (*m)[id[i]].push_back({from[i], to[i], off[i]});
+      for (auto& kv : *m) std::sort(kv.second.begin(), kv.second.end(),
+                                    [](const offset_piece_t& a, const offset_piece_t& b) { return a.from < b.from; });
+      offsets_ = m;
+    }
+    bool has_offsets() const { return offsets_ && !offsets_->empty(); }
     bool lineage_loglik() const { return uses_ed() || uses_k(); }
     // With the covariate active, model_bin[3] also selects the proposal the
     // thinning sampler draws from: 1 the ED-aware proposal (ed_proposal_seg_t
@@ -856,6 +878,26 @@ namespace emphasis {
       return pars[4] + pars[5] * N + pars[6] * M + gamma_ed(pars) * ed + gamma_k(pars) * kk;
     }
 
+    // The offset of lineage k at time t (0 without offsets, or for an id with none).
+    double lineage_offset(const forest_t& f, const tree_t& tree, std::size_t k, double t) const {
+      if (!has_offsets()) return 0.0;
+      std::size_t kk = k; double tt = t;
+      for (;;) {
+        const int ni = f.lineage_node[kk];
+        if (ni < 0 || is_tip(tree[static_cast<std::size_t>(ni)])) break;
+        const int p = f.parent[kk];
+        if (p < 0) return 0.0;
+        tt = f.birth[kk]; kk = static_cast<std::size_t>(p);
+      }
+      const int ni = f.lineage_node[kk];
+      const int id = ni < 0 ? (kk == 0 ? crown_id_a : crown_id_b) : tree[static_cast<std::size_t>(ni)].id;
+      auto it = offsets_->find(id);
+      if (it == offsets_->end() || it->second.empty()) return 0.0;
+      const auto& v = it->second;
+      auto pc = std::upper_bound(v.begin(), v.end(), tt, [](double x, const offset_piece_t& q) { return x < q.from; });
+      return (pc == v.begin()) ? v.front().off : (pc - 1)->off;
+    }
+
     // The proposal on the segment (t0, t1] that `node` governs, from the
     // lineages alive there in `forest`.  `alive` and `edr` are reusable
     // scratch; the sampler calls this once per segment, with a forest it
@@ -893,7 +935,7 @@ namespace emphasis {
         const bool observed = (ni < 0) || is_tip(tree[static_cast<std::size_t>(ni)]);
         seg.id.push_back(ni < 0 ? (k == 0 ? crown_id_a : crown_id_b)
                                 : tree[static_cast<std::size_t>(ni)].id);
-        seg.eta.push_back(proposal_eta_lambda(pars, N, M, ed0, kk));
+        seg.eta.push_back(proposal_eta_lambda(pars, N, M, ed0, kk) + lineage_offset(forest, tree, k, t0));
         seg.w.push_back(observed ? 2 : 1);
       }
       const double n_al = static_cast<double>(seg.eta.size());
@@ -1558,7 +1600,7 @@ namespace emphasis {
     // finished tree (kED + t0 is ED_s(t0)).
     void ed_proposal_segment_from_table(const param_t& pars, const tree_t& tree, std::size_t i,
                                         const ed_table_t& tab, double t0,
-                                        ed_proposal_seg_t& seg) const {
+                                        ed_proposal_seg_t& seg, const forest_t* forest = nullptr) const {
       const node_t& node = tree[i];
       const double N = node.n;
       const double M = (N > 0.0) ? pendant_pd(node, t0) / N : 0.0;
@@ -1573,7 +1615,8 @@ namespace emphasis {
         const double ed0 = centred ? tab.kED[static_cast<std::size_t>(p)] - cED
                                    : tab.kED[static_cast<std::size_t>(p)] + t0;
         ed_sum += ed0;
-        seg.eta.push_back(proposal_eta_lambda(pars, N, M, ed0, tab.kK[static_cast<std::size_t>(p)]));
+        seg.eta.push_back(proposal_eta_lambda(pars, N, M, ed0, tab.kK[static_cast<std::size_t>(p)])
+                          + (forest ? lineage_offset(*forest, tree, static_cast<std::size_t>(tab.lin[static_cast<std::size_t>(p)]), t0) : 0.0));
         seg.w.push_back(tab.w[static_cast<std::size_t>(p)]);
       }
       const double n_al = static_cast<double>(p1 - p0);
@@ -1593,9 +1636,11 @@ namespace emphasis {
       ed_proposal_seg_t seg;
       double inte = 0.0, logg = 0.0, prev_brts = 0.0;
       const double T = tree.back().brts;
+      forest_t forest;
+      if (has_offsets()) forest = build_forest(tree);
       for (std::size_t i = 0; i < tree.size(); ++i) {
         const auto& node = tree[i];
-        ed_proposal_segment_from_table(pars, tree, i, *tab, prev_brts, seg);
+        ed_proposal_segment_from_table(pars, tree, i, *tab, prev_brts, seg, has_offsets() ? &forest : nullptr);
         inte += seg.compensator();
         if (is_missing(node) || is_unsampled(node)) {
           const int pe = tab->par_entry[i];
@@ -1798,6 +1843,7 @@ namespace emphasis {
     // The ED tables of the trees a Model has scored, shared by every copy of
     // the Model and by the M-step's threads (see ed_table()).
     std::shared_ptr<ed_cache_t> ed_cache_ = std::make_shared<ed_cache_t>();
+    std::shared_ptr<const std::unordered_map<int, std::vector<offset_piece_t>>> offsets_;
     LinkType link_ = LinkType::linear;
     double rho_ = 1.0;
   };

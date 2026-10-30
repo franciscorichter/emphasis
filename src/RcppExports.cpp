@@ -132,8 +132,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // rcpp_mce
-List rcpp_mce(const std::vector<double>& brts, const std::vector<double>& pars, int sample_size, int maxN, int max_missing, double max_lambda, int num_threads, Rcpp::IntegerVector model, int link, double rho, Rcpp::NumericVector parent_tip_start, int seed, Rcpp::IntegerVector parent_id);
-RcppExport SEXP _emphasis_rcpp_mce(SEXP brtsSEXP, SEXP parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP num_threadsSEXP, SEXP modelSEXP, SEXP linkSEXP, SEXP rhoSEXP, SEXP parent_tip_startSEXP, SEXP seedSEXP, SEXP parent_idSEXP) {
+List rcpp_mce(const std::vector<double>& brts, const std::vector<double>& pars, int sample_size, int maxN, int max_missing, double max_lambda, int num_threads, Rcpp::IntegerVector model, int link, double rho, Rcpp::NumericVector parent_tip_start, int seed, Rcpp::IntegerVector parent_id, Rcpp::IntegerVector offset_id, Rcpp::NumericVector offset_from, Rcpp::NumericVector offset_to, Rcpp::NumericVector offset);
+RcppExport SEXP _emphasis_rcpp_mce(SEXP brtsSEXP, SEXP parsSEXP, SEXP sample_sizeSEXP, SEXP maxNSEXP, SEXP max_missingSEXP, SEXP max_lambdaSEXP, SEXP num_threadsSEXP, SEXP modelSEXP, SEXP linkSEXP, SEXP rhoSEXP, SEXP parent_tip_startSEXP, SEXP seedSEXP, SEXP parent_idSEXP, SEXP offset_idSEXP, SEXP offset_fromSEXP, SEXP offset_toSEXP, SEXP offsetSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -150,7 +150,11 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type parent_tip_start(parent_tip_startSEXP);
     Rcpp::traits::input_parameter< int >::type seed(seedSEXP);
     Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type parent_id(parent_idSEXP);
-    rcpp_result_gen = Rcpp::wrap(rcpp_mce(brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link, rho, parent_tip_start, seed, parent_id));
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type offset_id(offset_idSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type offset_from(offset_fromSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type offset_to(offset_toSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type offset(offsetSEXP);
+    rcpp_result_gen = Rcpp::wrap(rcpp_mce(brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link, rho, parent_tip_start, seed, parent_id, offset_id, offset_from, offset_to, offset));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -249,7 +253,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_emphasis_lineage_table_cpp", (DL_FUNC) &_emphasis_lineage_table_cpp, 1},
     {"_emphasis_eval_nh_rate_cpp", (DL_FUNC) &_emphasis_eval_nh_rate_cpp, 6},
     {"_emphasis_rcpp_ed_fair_proportion", (DL_FUNC) &_emphasis_rcpp_ed_fair_proportion, 4},
-    {"_emphasis_rcpp_mce", (DL_FUNC) &_emphasis_rcpp_mce, 13},
+    {"_emphasis_rcpp_mce", (DL_FUNC) &_emphasis_rcpp_mce, 17},
     {"_emphasis_rcpp_attachments", (DL_FUNC) &_emphasis_rcpp_attachments, 1},
     {"_emphasis_rcpp_pendant_sweep", (DL_FUNC) &_emphasis_rcpp_pendant_sweep, 3},
     {"_emphasis_rcpp_thinning_envelope_violations", (DL_FUNC) &_emphasis_rcpp_thinning_envelope_violations, 1},

@@ -172,6 +172,11 @@ ed_fair_proportion <- function(parent, birth, alive, t) {
 #'   default) draws one from R's generator, so \code{set.seed()} reaches the
 #'   sampler whether or not a seed is passed. Two calls carrying the same
 #'   seed, the same arguments and \code{num_threads = 1} draw the same trees.
+#' @param offset_id,offset_from,offset_to,offset Per-lineage offsets of the
+#'   proposal's speciation predictor (the mark-aware proposal,
+#'   dev/latent-marks/design.md): for observed lineage \code{offset_id[i]}, the
+#'   offset over \code{(offset_from[i], offset_to[i]]}. Empty (the default):
+#'   no offsets.
 #' @return A named list:
 #' \describe{
 #'   \item{trees}{List of augmented-tree data frames.}
@@ -190,8 +195,8 @@ ed_fair_proportion <- function(parent, birth, alive, t) {
 #'   \item{time}{Elapsed time (ms).}
 #' }
 #' @keywords internal
-augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, parent_tip_start = as.numeric( c()), seed = 0L, parent_id = as.integer( c())) {
-    .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link, rho, parent_tip_start, seed, parent_id)
+augment_trees <- function(brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model = as.integer( c(0, 0, 0)), link = 0L, rho = 1.0, parent_tip_start = as.numeric( c()), seed = 0L, parent_id = as.integer( c()), offset_id = as.integer( c()), offset_from = as.numeric( c()), offset_to = as.numeric( c()), offset = as.numeric( c())) {
+    .Call('_emphasis_rcpp_mce', PACKAGE = 'emphasis', brts, pars, sample_size, maxN, max_missing, max_lambda, num_threads, model, link, rho, parent_tip_start, seed, parent_id, offset_id, offset_from, offset_to, offset)
 }
 
 #' What the proposal could attach an augmented lineage to

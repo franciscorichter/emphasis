@@ -225,3 +225,29 @@ test_that("the downward pass gives every stretch's posterior, equal to the enume
     expect_true(all(abs(rowSums(po$post) - 1) < 1e-12))
   }
 })
+
+# ---- the mark-aware proposal: per-lineage offsets in the sampler and its density ----
+
+test_that("proposal offsets change the draws but not the likelihood they estimate", {
+  skip_on_cran()
+  set.seed(17)
+  phy  <- ape::rphylo(20L, 0.6, 0.2)
+  p    <- c(log(0.5), -0.01, 0.05, log(0.15), 0, 0)
+  pe   <- emphasis:::.expand_pars(p, nk)
+  brts <- emphasis:::.extract_brts(phy)
+  fr   <- emphasis:::.observed_frame(phy)
+  ids  <- unique(fr$id[fr$id >= 0 & fr$t_ext > 1e9]); ids <- c(-2L, -3L, ids)
+  off  <- stats::runif(length(ids), -1, 1)                       # arbitrary: one offset per observed lineage
+  run <- function(o, seed) {
+    a <- emphasis:::augment_trees(brts, pe, 1500L, 75000L, 2000L, 1e6, 1L, model = nk, link = 1L, rho = 1,
+                                  parent_tip_start = emphasis:::.pts(brts), seed = seed, parent_id = emphasis:::.pid(brts),
+                                  offset_id = o$id, offset_from = o$from, offset_to = o$to, offset = o$off)
+    lw <- a$logf - a$logg; lw <- lw[is.finite(lw)]; m <- max(lw); w <- exp(lw - m)
+    c(est = m + log(mean(w)), se = stats::sd(w) / (sqrt(length(w)) * mean(w)), viol = a$envelope_violations)
+  }
+  none <- list(id = integer(0), from = numeric(0), to = numeric(0), off = numeric(0))
+  some <- list(id = as.integer(ids), from = rep(0, length(ids)), to = rep(1e9, length(ids)), off = off)
+  a <- run(none, 3L); b <- run(some, 4L)
+  expect_lt(abs(a[["est"]] - b[["est"]]), 4 * sqrt(a[["se"]]^2 + b[["se"]]^2))
+  expect_equal(b[["viol"]], 0)
+})

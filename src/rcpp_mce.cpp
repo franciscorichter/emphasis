@@ -69,6 +69,11 @@ namespace emphasis {
 //'   default) draws one from R's generator, so \code{set.seed()} reaches the
 //'   sampler whether or not a seed is passed. Two calls carrying the same
 //'   seed, the same arguments and \code{num_threads = 1} draw the same trees.
+//' @param offset_id,offset_from,offset_to,offset Per-lineage offsets of the
+//'   proposal's speciation predictor (the mark-aware proposal,
+//'   dev/latent-marks/design.md): for observed lineage \code{offset_id[i]}, the
+//'   offset over \code{(offset_from[i], offset_to[i]]}. Empty (the default):
+//'   no offsets.
 //' @return A named list:
 //' \describe{
 //'   \item{trees}{List of augmented-tree data frames.}
@@ -100,7 +105,11 @@ List rcpp_mce(const std::vector<double>& brts,
               double rho = 1.0,
               Rcpp::NumericVector parent_tip_start = Rcpp::NumericVector::create(),
               int seed = 0,
-              Rcpp::IntegerVector parent_id = Rcpp::IntegerVector::create())
+              Rcpp::IntegerVector parent_id = Rcpp::IntegerVector::create(),
+              Rcpp::IntegerVector offset_id = Rcpp::IntegerVector::create(),
+              Rcpp::NumericVector offset_from = Rcpp::NumericVector::create(),
+              Rcpp::NumericVector offset_to = Rcpp::NumericVector::create(),
+              Rcpp::NumericVector offset = Rcpp::NumericVector::create())
 {
   emphasis::rng::set_seed(emphasis::resolve_seed(seed));
   const std::vector<double> pts(parent_tip_start.begin(), parent_tip_start.end());
@@ -132,6 +141,17 @@ List rcpp_mce(const std::vector<double>& brts,
   // Bounds are only needed for M-step (nlopt); E-step does not use them.
   std::vector<double> lb8(emphasis::n_params, -1e6), ub8(emphasis::n_params, 1e6);
   auto mdl = emphasis::Model(lb8, ub8, model_bin, link, rho);
+  // Per-lineage proposal offsets (the mark-aware proposal): they name
+  // observed lineages, so the topology is needed as for ED and K.
+  if (offset_id.size() > 0) {
+    if (pid.empty() || pts.empty()) {
+      throw std::invalid_argument("augment_trees: proposal offsets need the tree's topology");
+    }
+    mdl.set_lineage_offsets(std::vector<int>(offset_id.begin(), offset_id.end()),
+                            std::vector<double>(offset_from.begin(), offset_from.end()),
+                            std::vector<double>(offset_to.begin(), offset_to.end()),
+                            std::vector<double>(offset.begin(), offset.end()));
+  }
 
   // The envelope counter is process-wide and accumulates across calls and
   // threads; the difference over the call is this call's count, and leaves
