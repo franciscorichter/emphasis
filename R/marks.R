@@ -114,9 +114,10 @@
 # without any change to the sampler.  The M-step maximises the weighted
 # mark-marginal log-likelihood over the base parameters and the mark
 # parameters with optim().  `marks_of(theta_m)` turns the mark parameters
-# (on the optimiser's scale) into a preset.  With `aware = TRUE` the proposal
-# is the mark-aware one: each E-step's draws carry the offsets of
-# .mark_offsets() at that iteration's parameters.
+# (on the optimiser's scale) into a preset.  `aware` picks the proposal:
+# "none" (blind to the marks), "lambda" (speciation offsets of .mark_offsets()
+# at each iteration's parameters; TRUE means this) or "both" (speciation and
+# extinction offsets).
 .mcem_marks <- function(phy, model, start, start_m, marks_of, n_iter = 20L, N = 200L,
                         N_growth = 1.15, N_max = 2000L, rho = 1, max_missing = 5000L, seed = 1L,
                         verbose = FALSE, aware = FALSE) {
@@ -127,8 +128,10 @@
   trace <- vector("list", n_iter)
   draw <- function(th, n, s) {
     pf <- .expand_pars(th[seq_len(np)], mb)
-    o <- if (aware && length(th) > np) .mark_offsets(pf, phy, model, marks_of(th[-seq_len(np)]), rho)
+    o <- if (!identical(aware, "none") && !isFALSE(aware) && length(th) > np)
+           .mark_offsets(pf, phy, model, marks_of(th[-seq_len(np)]), rho)
          else list(id = integer(0), from = numeric(0), to = numeric(0), off = numeric(0), off_mu = numeric(0))
+    if (identical(aware, "lambda") || isTRUE(aware)) o$off_mu <- numeric(0)
     augment_trees(brts, pf, sample_size = as.integer(n),
                   maxN = as.integer(50 * n), max_missing = as.integer(max_missing), max_lambda = 1e6,
                   num_threads = 1L, model = mb, link = 1L, rho = rho,
