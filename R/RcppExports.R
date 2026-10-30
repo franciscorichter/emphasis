@@ -70,6 +70,21 @@ eval_logf_marks <- function(pars, trees, model, link, rho, S, log_clam, log_cmu,
     .Call('_emphasis_eval_logf_marks_cpp', PACKAGE = 'emphasis', pars, trees, model, link, rho, S, log_clam, log_cmu, C, P, pi)
 }
 
+#' Posterior of the latent marks on a complete tree
+#'
+#' Development entry point (dev/latent-marks/design.md): for every stretch of
+#' every lineage (from its birth or a split to its next split or its end),
+#' the posterior probabilities of its mark given the tree.
+#' @inheritParams eval_logf_marks_cpp
+#' @param tree One complete-tree data frame with the topology.
+#' @return A list: \code{rows} (data frame of lineage, stretch, id, t_from,
+#'   t_to), \code{post} (matrix, one row per stretch, S columns) and
+#'   \code{loglik}.
+#' @keywords internal
+marks_posterior <- function(pars, tree, model, link, rho, S, log_clam, log_cmu, C, P, pi) {
+    .Call('_emphasis_marks_posterior_cpp', PACKAGE = 'emphasis', pars, tree, model, link, rho, S, log_clam, log_cmu, C, P, pi)
+}
+
 #' The per-lineage design an augmented tree's likelihood is built on
 #'
 #' One row per lineage alive on each segment between consecutive events:

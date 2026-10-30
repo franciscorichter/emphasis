@@ -140,6 +140,49 @@ std::vector<double> eval_logf_marks_cpp(const std::vector<double>& pars,
 }
 
 
+//' Posterior of the latent marks on a complete tree
+//'
+//' Development entry point (dev/latent-marks/design.md): for every stretch of
+//' every lineage (from its birth or a split to its next split or its end),
+//' the posterior probabilities of its mark given the tree.
+//' @inheritParams eval_logf_marks_cpp
+//' @param tree One complete-tree data frame with the topology.
+//' @return A list: \code{rows} (data frame of lineage, stretch, id, t_from,
+//'   t_to), \code{post} (matrix, one row per stretch, S columns) and
+//'   \code{loglik}.
+//' @keywords internal
+// [[Rcpp::export(name = "marks_posterior")]]
+Rcpp::List marks_posterior_cpp(const std::vector<double>& pars,
+                               const Rcpp::DataFrame& tree,
+                               Rcpp::IntegerVector model,
+                               int link,
+                               double rho,
+                               int S,
+                               const std::vector<double>& log_clam,
+                               const std::vector<double>& log_cmu,
+                               const std::vector<double>& C,
+                               const std::vector<double>& P,
+                               const std::vector<double>& pi) {
+  std::vector<int> model_bin(model.begin(), model.end());
+  emphasis::param_t lb8(8, -1e6), ub8(8, 1e6);
+  auto mdl = emphasis::Model(lb8, ub8, model_bin, link, rho);
+  emphasis::marks_t mk;
+  mk.S = S; mk.log_clam = log_clam; mk.log_cmu = log_cmu; mk.C = C; mk.P = P; mk.pi = pi;
+  auto local_tree = loglik::pack(tree);
+  auto r = mdl.marks_posterior(pars, local_tree, mk);
+  const int n = static_cast<int>(r.lineage.size());
+  Rcpp::NumericMatrix post(n, S);
+  for (int i = 0; i < n; ++i)
+    for (int m = 0; m < S; ++m) post(i, m) = r.post[static_cast<std::size_t>(i)][static_cast<std::size_t>(m)];
+  return Rcpp::List::create(
+    Rcpp::Named("rows") = Rcpp::DataFrame::create(
+      Rcpp::Named("lineage") = r.lineage, Rcpp::Named("stretch") = r.stretch, Rcpp::Named("id") = r.id,
+      Rcpp::Named("t_from") = r.t_from, Rcpp::Named("t_to") = r.t_to),
+    Rcpp::Named("post") = post,
+    Rcpp::Named("loglik") = r.loglik);
+}
+
+
 //' The per-lineage design an augmented tree's likelihood is built on
 //'
 //' One row per lineage alive on each segment between consecutive events:

@@ -69,6 +69,27 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// marks_posterior_cpp
+Rcpp::List marks_posterior_cpp(const std::vector<double>& pars, const Rcpp::DataFrame& tree, Rcpp::IntegerVector model, int link, double rho, int S, const std::vector<double>& log_clam, const std::vector<double>& log_cmu, const std::vector<double>& C, const std::vector<double>& P, const std::vector<double>& pi);
+RcppExport SEXP _emphasis_marks_posterior_cpp(SEXP parsSEXP, SEXP treeSEXP, SEXP modelSEXP, SEXP linkSEXP, SEXP rhoSEXP, SEXP SSEXP, SEXP log_clamSEXP, SEXP log_cmuSEXP, SEXP CSEXP, SEXP PSEXP, SEXP piSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type pars(parsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::DataFrame& >::type tree(treeSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type model(modelSEXP);
+    Rcpp::traits::input_parameter< int >::type link(linkSEXP);
+    Rcpp::traits::input_parameter< double >::type rho(rhoSEXP);
+    Rcpp::traits::input_parameter< int >::type S(SSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type log_clam(log_clamSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type log_cmu(log_cmuSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type C(CSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type P(PSEXP);
+    Rcpp::traits::input_parameter< const std::vector<double>& >::type pi(piSEXP);
+    rcpp_result_gen = Rcpp::wrap(marks_posterior_cpp(pars, tree, model, link, rho, S, log_clam, log_cmu, C, P, pi));
+    return rcpp_result_gen;
+END_RCPP
+}
 // lineage_table_cpp
 Rcpp::DataFrame lineage_table_cpp(const Rcpp::DataFrame& tree);
 RcppExport SEXP _emphasis_lineage_table_cpp(SEXP treeSEXP) {
@@ -224,6 +245,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_emphasis_simulate_div_tree_cpp", (DL_FUNC) &_emphasis_simulate_div_tree_cpp, 13},
     {"_emphasis_eval_logf_cpp", (DL_FUNC) &_emphasis_eval_logf_cpp, 5},
     {"_emphasis_eval_logf_marks_cpp", (DL_FUNC) &_emphasis_eval_logf_marks_cpp, 11},
+    {"_emphasis_marks_posterior_cpp", (DL_FUNC) &_emphasis_marks_posterior_cpp, 11},
     {"_emphasis_lineage_table_cpp", (DL_FUNC) &_emphasis_lineage_table_cpp, 1},
     {"_emphasis_eval_nh_rate_cpp", (DL_FUNC) &_emphasis_eval_nh_rate_cpp, 6},
     {"_emphasis_rcpp_ed_fair_proportion", (DL_FUNC) &_emphasis_rcpp_ed_fair_proportion, 4},

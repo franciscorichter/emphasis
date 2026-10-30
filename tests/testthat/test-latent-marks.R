@@ -83,7 +83,12 @@ brute_marks <- function(pe, tree, S, lc, lm, Cbar, pi) {
     }
     v
   })
-  mx <- max(vals); mx + log(sum(exp(vals - mx)))
+  mx <- max(vals); ll <- mx + log(sum(exp(vals - mx)))
+  pw <- exp(vals - ll)                                            # posterior of each history
+  post <- t(vapply(seq_along(st), function(s) vapply(seq_len(S), function(x) sum(pw[grid[, s + 1L] == x]), 1),
+                   numeric(S)))
+  rownames(post) <- st
+  structure(ll, post = post)
 }
 
 test_that("pruning equals the sum over every mark history", {
@@ -105,14 +110,14 @@ test_that("pruning equals the sum over every mark history", {
   for (tr in unique(trees)[seq_len(min(5, length(unique(trees))))]) {
     got <- lgm(pe, list(tr), nk, S = S, log_clam = lc, log_cmu = lm,
                C = as.vector(aperm(Cm, c(3, 2, 1))), pi = pi)
-    expect_equal(got, brute_marks(pe, tr, S, lc, lm, Cbar, pi), tolerance = 1e-9)
+    expect_equal(got, as.numeric(brute_marks(pe, tr, S, lc, lm, Cbar, pi)), tolerance = 1e-9)
   }
   # independent daughters: P[m, a]
   P  <- matrix(c(0.8, 0.3, 0.2, 0.7), 2)
   Ci <- array(0, c(2, 2, 2)); for (m in 1:2) Ci[m, , ] <- outer(P[m, ], P[m, ])
   tr <- trees[[1]]
   expect_equal(lgm(pe, list(tr), nk, S = S, log_clam = lc, log_cmu = lm, P = as.vector(t(P)), pi = pi),
-               brute_marks(pe, tr, S, lc, lm, Ci, pi), tolerance = 1e-9)
+               as.numeric(brute_marks(pe, tr, S, lc, lm, Ci, pi)), tolerance = 1e-9)
 })
 
 test_that("the linear link and a wrong kernel size are refused", {
@@ -190,4 +195,33 @@ test_that("a kernel that sends every lineage to a doubled rate simulates the dou
   r <- sim1(pe, cr, 6, 7L, marks_S = 2L, log_clam = c(0, log(2)), log_cmu = c(0, log(2)),
             marks_P = c(0, 1, 0, 1), marks_pi = c(1, 0))
   expect_true(all(r$marks == 1L))
+})
+
+# ---- the posterior of the marks (the mark-aware proposal reads it) ----
+
+test_that("the downward pass gives every stretch's posterior, equal to the enumeration", {
+  set.seed(9)
+  phy <- ape::rphylo(4L, 0.7, 0)
+  p   <- c(log(0.6), -0.02, 0.1, log(0.4), 0.01, -0.05)
+  pe  <- emphasis:::.expand_pars(p, nk)
+  trees <- unique(c(list(emphasis:::.observed_frame(phy)), aug(phy, p, nk, 20L, seed = 7L)))
+  nst <- vapply(trees, function(tr) {
+    tab <- emphasis:::lineage_table_cpp(tr); length(unique(tab$lineage)) + sum(tab$event == 1L)
+  }, 1)
+  trees <- trees[nst <= 11][1:3]
+  S  <- 2L; lc <- c(0, 0.7); lm <- c(0, -0.4); pi <- c(0.3, 0.7)
+  Cm <- aperm(array(c(0.5, 0.1, 0.2, 0.2,  0.1, 0.3, 0.1, 0.5), c(2, 2, 2)), c(3, 1, 2))
+  Cbar <- (Cm + aperm(Cm, c(1, 3, 2))) / 2
+  for (tr in trees) {
+    po <- emphasis:::marks_posterior(pe, tr, model = nk, link = 1L, rho = 1, S = S, log_clam = lc, log_cmu = lm,
+                                     C = as.vector(aperm(Cm, c(3, 2, 1))), P = numeric(0), pi = pi)
+    br <- brute_marks(pe, tr, S, lc, lm, Cbar, pi)
+    expect_equal(po$loglik, as.numeric(br), tolerance = 1e-9)
+    expect_equal(po$loglik, lgm(pe, list(tr), nk, S = S, log_clam = lc, log_cmu = lm,
+                                C = as.vector(aperm(Cm, c(3, 2, 1))), pi = pi), tolerance = 1e-10)
+    key <- paste(po$rows$lineage, po$rows$stretch)
+    expect_setequal(key, rownames(attr(br, "post")))
+    expect_equal(unname(po$post), unname(attr(br, "post")[key, , drop = FALSE]), tolerance = 1e-9)
+    expect_true(all(abs(rowSums(po$post) - 1) < 1e-12))
+  }
 })
