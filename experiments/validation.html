@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The validation series V1–V12 · emphasis</title>
+<meta name="description" content="Registered 2026-10-31 from the report/experiment-history.pdf: of 56 experiments, 11 stand, 24 stand in part, 20 no longer stand and E46 is running.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../covariates/index.html">Covariates</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Phylogeny analyses</a></li>
+<li><a href="https://franciscorichter.github.io/phylo-species-atlas/" rel="external">Phylogeny catalogue</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="">
+<header class="page-header">
+<h1>The validation series V1–V12</h1>
+</header>
+
+<p>Registered 2026-10-31 from the <code>report/experiment-history.pdf</code>: of 56 experiments, 11 stand, 24 stand in part, 20 no longer stand and E46 is running. Each method the two papers use is validated by one experiment below, on one build (emphasis <code>182055b</code>), under one protocol (<code>00-design.md</code>, <em>The validation series</em>): E43's calibrated generators with no size window, the conditioned likelihood, the exponential link, fits run to the stopping rule.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Validates</th>
+<th>Replaces</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="V1.html">V1</a></td>
+<td>the complete-data likelihood</td>
+<td>E44</td>
+<td>complete: per-tree rule met in 29 of 64 cells; pooled, 138 of 150 coefficients within [0.9, 1.1]</td>
+</tr>
+<tr>
+<td><a href="V2.html">V2</a></td>
+<td>proposal densities and efficiency</td>
+<td>E3, E6b, E7</td>
+<td>running</td>
+</tr>
+<tr>
+<td><a href="V3.html">V3</a></td>
+<td>the stopping rule and the box</td>
+<td>E9, E13, E41</td>
+<td>running</td>
+</tr>
+<tr>
+<td><a href="V4.html">V4</a></td>
+<td>agreement with the exact estimate</td>
+<td>E1, E42, E45 <code>dd</code></td>
+<td>running (real-tree arm); E45 <code>dd</code> re-scoring in <a href="E45.html">E45</a></td>
+</tr>
+<tr>
+<td><a href="E46.html">V5</a></td>
+<td>recovery and tree size</td>
+<td>E2, E12, E16, E18, E19, E21, E24, E29, E30</td>
+<td>running as <a href="E46.html">E46</a></td>
+</tr>
+<tr>
+<td><a href="V6.html">V6</a></td>
+<td>the sampling fraction</td>
+<td>E27's <span class="math inline">\(\rho\)</span> arms, E35(b)</td>
+<td>running</td>
+</tr>
+<tr>
+<td><a href="V7.html">V7</a></td>
+<td>model choice: pairwise and the ladder</td>
+<td>E8, E23, E27, E31</td>
+<td>running (100-tip cells)</td>
+</tr>
+<tr>
+<td><a href="V8.html">V8</a></td>
+<td>the covariate path</td>
+<td>E20, E21b, E22, E33</td>
+<td>registered; submitted once V7's <code>dd</code> fits are written</td>
+</tr>
+<tr>
+<td><a href="V9.html">V9</a></td>
+<td>misspecification</td>
+<td>E11, E17</td>
+<td>calibration running</td>
+</tr>
+<tr>
+<td><a href="V10.html">V10</a></td>
+<td>extinction</td>
+<td>E29, E32, E35(a), E38</td>
+<td>registered (analysis)</td>
+</tr>
+<tr>
+<td><a href="V11.html">V11</a></td>
+<td>real phylogenies</td>
+<td>E26, E28, E40, E48</td>
+<td>registered; held until V1–V10 are read</td>
+</tr>
+<tr>
+<td><a href="V12.html">V12</a></td>
+<td>cost</td>
+<td>E4, E15</td>
+<td>registered (analysis)</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 1.0.0.9000. Francisco Richter, Università della Svizzera italiana.</p>
+</footer>
+</body>
+</html>

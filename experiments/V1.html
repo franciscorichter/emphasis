@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>V1 — on complete trees, is each model&#x27;s likelihood the likelihood of its simulator? · emphasis</title>
+<meta name="description" content="A complete tree — every lineage kept, the extinct ones included — hides nothing, so maximising its complete-data likelihood tests whether that likelihood is the one of the process the simulator runs, with no Monte Carlo involved.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../covariates/index.html">Covariates</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Phylogeny analyses</a></li>
+<li><a href="https://franciscorichter.github.io/phylo-species-atlas/" rel="external">Phylogeny catalogue</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>V1 — on complete trees, is each model's likelihood the likelihood of its simulator?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rule">Pre-set rule</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>complete 2026-10-31 (2560 of 2560 trees); registered rule met in 29 of 64 cells; pooled over each cell's trees, 138 of 150 coefficients within [0.9, 1.1]</td>
+</tr>
+<tr>
+<td>Series</td>
+<td><a href="validation.html">the validation series</a> (replaces <a href="E44.html">E44</a>)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis <code>182055b</code> (1.0.0.9000), R 4.5.3</td>
+</tr>
+<tr>
+<td>Driver</td>
+<td><code>sim/V1.R</code>, runner <code>sim/V-run.R</code>, library <code>sim/V-lib.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/V1/jobs/&lt;cell&gt;-k&lt;kk&gt;.csv</code>, <code>results/V1/build.txt</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>A complete tree — every lineage kept, the extinct ones included — hides nothing, so maximising its complete-data likelihood tests whether that likelihood is the one of the process the simulator runs, with no Monte Carlo involved. <a href="E44.html">E44</a> asked this with a 60–160-tip window on the trees, which biased the <code>ed</code> cells; V1 asks it again on the current build, with no window, at two sizes and two turnovers.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<tbody>
+<tr>
+<td>models</td>
+<td><code>cr</code>, <code>dd</code>, <code>d</code>, <code>nd</code>, <code>ed</code>, <code>edc</code>, <code>ned</code>, <code>nedc</code>, <code>k</code>, <code>nk</code>, exponential link</td>
+</tr>
+<tr>
+<td>cells</td>
+<td>every reachable <a href="E43.html">E43</a> cell at 100 and 200 tips: 64 cells</td>
+</tr>
+<tr>
+<td>trees</td>
+<td>40 a cell, complete, <span class="math inline">\(\rho = 1\)</span>, crown age 15, kept when both crown lineages survive; no size window</td>
+</tr>
+<tr>
+<td>fit</td>
+<td>complete-data log-likelihood maximised by Subplex from the generating values and a perturbed start, restarted until a restart gains less than <span class="math inline">\(10^{-6}\)</span></td>
+</tr>
+<tr>
+<td>jobs</td>
+<td>2560, seconds each</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="pre-set-rule">Pre-set rule</h2>
+<p>Per cell, the median ratio of every speciation coefficient to its generating value lies in [0.9, 1.1], its bootstrap 95% interval contains 1, and a lineage-level coefficient has the right sign on at least 95% of trees. A cell that fails at both sizes is a likelihood that is not its simulator's; one that fails at 100 tips and passes at 200 is a size effect.</p>
+<h2 id="results">Results</h2>
+<p>The registered rule holds in <strong>29 of 64 cells</strong> (<code>sim/V1-analysis.R</code>, <code>results/V1/coefficients.csv</code>).</p>
+<ul>
+<li><code>cr</code> passes at both sizes and turnovers; <code>edc</code> in 7 of 8 cells; <code>k</code> at <span class="math inline">\(-0.35\)</span> in all; <code>nk</code> at turnover 0.10.</li>
+<li>The cells that fail split two ways. Single-covariate models miss by 5–10% on the intercept or the slope (<code>d</code>, <code>ed</code>), or on the sign share of <code>k</code> at <span class="math inline">\(+0.35\)</span> (0.78–0.93). The <span class="math inline">\(N\)</span> models at turnover 0.40 (<code>dd</code>, <code>nd</code>, <code>ned</code>, <code>nedc</code>) read <span class="math inline">\(\beta_N\)</span> at 1.1–1.4 of its value and the intercept 5–10% high.</li>
+<li>The per-tree rule reads a 100- or 200-tip maximum, which carries small-sample error, on trees selected for survival and for staying under the lineage cap. A pooled estimate per cell (one parameter vector for the cell's 40 trees, <code>sim/V1-pooled.R</code>, a diagnostic beside the rule, not a change to it) separates the two: small-sample error averages out of it, selection does not.</li>
+</ul>
+<p><strong>Pooled estimate (diagnostic, <code>results/V1/pooled.csv</code>).</strong> 138 of the 150 coefficients lie within [0.9, 1.1] of their generating values, and almost no clade was dropped at the lineage cap (a share of 0 in the <span class="math inline">\(N\)</span>-model cells at turnover 0.40, 0.02 elsewhere), so the cap does not explain the failures and most per-tree failures are small-sample error. Outside [0.9, 1.1]: <span class="math inline">\(\beta_N\)</span> of <code>dd</code> at turnover 0.40 (1.17, 1.15), of <code>nd</code> (1.21, 0.86), <code>ned</code> (0.85) and <code>nedc</code> (1.14, 1.15); <span class="math inline">\(\beta_D\)</span> of <code>d</code> and <code>nd</code> (1.10–1.16) in three cells; <span class="math inline">\(\beta_{ED}\)</span> of <code>ned</code> (0.85, 1.16). These are what is left once 40 trees are pooled, on trees kept only when both crown lineages survive.</p>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 1.0.0.9000. Francisco Richter, Università della Svizzera italiana.</p>
+</footer>
+</body>
+</html>

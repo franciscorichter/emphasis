@@ -72,9 +72,10 @@ WIKI_PAGES = {
     "Real-phylogenies": "real-phylogenies.html",
     "Open-issues": "open-issues.html",
     "Glossary": "glossary.html",
+    "Validation-series": "experiments/validation.html",
 }
 
-EXPERIMENT_RE = re.compile(r"^(E\d+|S)$")
+EXPERIMENT_RE = re.compile(r"^(E\d+|V\d+|S)$")
 
 INDEX_STYLE = """<style>
 .table-wrap:has(th:nth-child(4)) table { table-layout: fixed; }
@@ -598,7 +599,7 @@ def main():
     # The experiments.
     site.experiments_index()
     exp = sorted((p for p in wiki.glob("*.md") if EXPERIMENT_RE.match(p.stem)),
-                 key=lambda p: (p.stem != "S", int(p.stem[1:]) if p.stem != "S" else 0))
+                 key=lambda p: ("SEV".index(p.stem[0]), int(p.stem[1:] or 0)))
     for p in exp:
         site.markdown_page(p, "experiments/" + p.stem + ".html", p.stem, meta_first=True)
     print("wrote %d pages" % len(site.pages))

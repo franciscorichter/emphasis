@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>V9 — on trees with no lineage-level effect, how often does model choice name one? · emphasis</title>
+<meta name="description" content="The ladder chooses nk on 54 of the 170 real trees, with a speciation factor above 1 on all 54.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../covariates/index.html">Covariates</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Phylogeny analyses</a></li>
+<li><a href="https://franciscorichter.github.io/phylo-species-atlas/" rel="external">Phylogeny catalogue</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>V9 — on trees with no lineage-level effect, how often does model choice name one?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rules">Pre-set rules</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>registered 2026-10-31; calibration running on Bre</td>
+</tr>
+<tr>
+<td>Series</td>
+<td><a href="validation.html">the validation series</a> (replaces E11, E17 (E47's alternative-generator arm))</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis <code>182055b</code> (1.0.0.9000), R 4.5.3</td>
+</tr>
+<tr>
+<td>Driver</td>
+<td><code>sim/V9.R</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>The ladder chooses <code>nk</code> on 54 of the 170 real trees, with a speciation factor above 1 on all 54. Processes with no <span class="math inline">\(K\)</span> effect can still make some clades keep splitting: a heritable latent rate (ClaDS), protracted speciation, a fast region colonised rarely. If they make the ladder choose <code>nk</code> with factors like the real ones, <code>nk</code> on real trees reads as a heritable rate, not <span class="math inline">\(K\)</span> in particular.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<tbody>
+<tr>
+<td>generators</td>
+<td>latent rate (<span class="math inline">\(\sigma\)</span> 0.10, 0.25, 0.40; trend-free), protracted speciation (duration 0.5, 2, 5), two regions (extirpation equal or none from A)</td>
+</tr>
+<tr>
+<td>turnover</td>
+<td>0.10 and 0.40</td>
+</tr>
+<tr>
+<td>cells</td>
+<td>16, each scale calibrated to a median of 100 tips (V9cal)</td>
+</tr>
+<tr>
+<td>trees</td>
+<td>30 a cell</td>
+</tr>
+<tr>
+<td>fits</td>
+<td>the ladder's five models, as in <a href="V7.html">V7</a>; controls are V7's <code>cr</code> and <code>nk</code> cells</td>
+</tr>
+<tr>
+<td>jobs</td>
+<td>2400 (after 16 calibration jobs)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="pre-set-rules">Pre-set rules</h2>
+<ol type="1">
+<li>A cell reproduces the K result when <code>nk</code> is chosen on more than 10% of read trees with a median factor per sd of <span class="math inline">\(K\)</span> of at least 1.48.</li>
+<li>A cell with more than 20% of trees unread is sampler-limited.</li>
+</ol>
+<h2 id="results">Results</h2>
+<p>Not yet.</p>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 1.0.0.9000. Francisco Richter, Università della Svizzera italiana.</p>
+</footer>
+</body>
+</html>

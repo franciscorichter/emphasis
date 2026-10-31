@@ -60,7 +60,7 @@ window.MathJax = {
 </li>
 <li><a href="#reading-a-page">Reading a page</a>
 </li>
-<li><a href="#in-progress">In progress</a>
+<li><a href="#the-validation-series-v1v12">The validation series V1–V12</a>
 </li>
 <li><a href="#1-the-estimator-against-the-exact-answer-and-the-proposals">1. The estimator against the exact answer, and the proposals</a>
 </li>
@@ -105,7 +105,7 @@ window.MathJax = {
   .table-wrap:has(th:nth-child(4)) td:nth-child(4) { order: 4; flex-basis: 100%; }
 }
 </style>
-<p>These are the pre-registered experiments behind the <code>emphasis</code> package: each tests the Monte Carlo EM estimator against an exact answer or a generating value, or asks what a dated tree can estimate. There are 48 experiment pages; E46 is registered and E47 planned. Find a question in the tables below, read its status against the vocabulary, and open the page for the design, the rule and the full results; the conclusions that hold now are collected in <a href="../established.html">What we know</a> and the terms in the <a href="../glossary.html">Glossary</a>.</p>
+<p>These are the pre-registered experiments behind the <code>emphasis</code> package: each tests the Monte Carlo EM estimator against an exact answer or a generating value, or asks what a dated tree can estimate. The <strong>validation series V1–V12</strong> validates every method the two papers use, on one build (1.0.0.9000) under one protocol: calibrated generators with no size window, the likelihood conditioned on survival, the exponential link, and fits run until the Monte Carlo error rule stops them. The experiments E1–E48 before it are the earlier record; each row below says what of it holds now. The conclusions that hold now are collected in <a href="../established.html">What we know</a> and the terms in the <a href="../glossary.html">Glossary</a>.</p>
 <h2 id="identifiable-estimable-informative">Identifiable, estimable, informative</h2>
 <p>These pages keep three properties apart, because each belongs to a different thing.</p>
 <ul>
@@ -161,7 +161,8 @@ window.MathJax = {
 </div>
 <p>Conflicts between the record and the data are listed in <a href="../open-issues.html">Open issues</a>.</p>
 <h2 id="at-a-glance">At a glance</h2>
-<p>Holds 14 · Holds within a scope 4 · Partly holds 10 · Superseded 13 · Historical 6 · Merged 1 · Running 1 · Planned 2.</p>
+<p>Validation series: complete 1 · running 6 · calibrating 1 · registered 3 · held 1.</p>
+<p>E1–E48: Holds 9 · Holds within a scope 5 · Partly holds 15 · Superseded 13 · Historical 6 · Merged 1 · Running 1.</p>
 <h2 id="reading-a-page">Reading a page</h2>
 <p>Every experiment page has the same headings: Question, Design, Pre-set rule (as registered before the data existed), Results, Conclusion, Related. Variants (E8b, E10b, E12b, E19b, E24b, E34r, E36c and others) are sections of the parent page. Three markings recur:</p>
 <ul>
@@ -169,7 +170,8 @@ window.MathJax = {
 <li><strong>clock-limited</strong>: the wall clock ended more than 10% of the cell's fits; its rates are floors.</li>
 <li><strong>unfinished</strong>: the fits ran to their iteration cap without meeting the stopping rule.</li>
 </ul>
-<h2 id="in-progress">In progress</h2>
+<h2 id="the-validation-series-v1v12">The validation series V1–V12</h2>
+<p>Registered 2026-10-31. Each experiment validates one method of the papers; the <a href="validation.html">series page</a> gives the common protocol. Findings are as of 31 October 2026.</p>
 <div class="table-wrap">
 <table>
 <thead>
@@ -177,27 +179,81 @@ window.MathJax = {
 <th>Experiment</th>
 <th>Question</th>
 <th>Status</th>
-<th>What it settles</th>
+<th>Finding so far</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><a href="E45.html">E45</a></td>
-<td>Conditioned <code>cr</code> and <code>dd</code> against the exact estimate, 25-800 tips</td>
+<td><a href="V1.html">V1</a></td>
+<td>On complete trees, is each model's likelihood its simulator's?</td>
+<td>Complete</td>
+<td>All ten models, 2560 complete trees: pooled over each cell's 40 trees, 138 of 150 coefficients lie within 10% of their generating values; the per-tree rule holds in 29 of 64 cells, the rest being small-sample error except <span class="math inline">\(\beta_N\)</span> of the <span class="math inline">\(N\)</span> models (0.85–1.21).</td>
+</tr>
+<tr>
+<td><a href="V2.html">V2</a></td>
+<td>Is each proposal's likelihood estimate unbiased, and how many effective draws does it keep?</td>
 <td>Running</td>
-<td>replaces <a href="E1.html">E1</a>'s headline and <a href="S.html">S</a></td>
+<td>The surrogate's estimate equals the exact likelihood for <code>cr</code> (ratio 1.000 at <span class="math inline">\(\rho\)</span> 1, 0.8, 0.5) and for <code>dd</code> (0.993); thinning keeps 3–5 of 1000 draws for most models, the surrogate 800–1000 for <code>cr</code> and <code>dd</code> and 3–4 for <code>ed</code>, <code>ned</code>, <code>nedc</code>.</td>
 </tr>
 <tr>
-<td><a href="E46.html">E46</a></td>
-<td>Accuracy of the eight lineage-level models by size, turnover and effect, conditioned on survival</td>
-<td>Planned: registered 2026-10-21, starts when E45 ends</td>
-<td>replaces the recovery results of the superseded pages</td>
+<td><a href="V3.html">V3</a></td>
+<td>Does each stopping rule stop where the estimate has settled, inside the box?</td>
+<td>Running</td>
+<td>176 of 960 runs written, the long reference runs first.</td>
 </tr>
 <tr>
-<td><a href="../estimability.html">E47</a></td>
-<td>Model choice with the conditioned ladder, on an effect grid</td>
-<td>Planned</td>
-<td>replaces the selection and path results of the superseded pages</td>
+<td><a href="V4.html">V4</a></td>
+<td>On real and simulated trees, does MCEM reach the exact conditioned maximum?</td>
+<td>Running</td>
+<td><code>cr</code> at the exact maximum in all 24 cells; on the repaired <code>dd</code> reference the rule holds in 12 of 13 cells of 25–200 tips; on the real trees <code>mc_error</code> fits fall short by a median 0.05 (<code>cr</code>) and 0.01 (<code>dd</code>), default-rule fits by 0.16 and 0.07.</td>
+</tr>
+<tr>
+<td><a href="E46.html">V5</a></td>
+<td>From how many tips is each lineage-level parameter reliable?</td>
+<td>Running as <a href="E46.html">E46</a></td>
+<td>19 of 57 cell–proposal pairs are sampler-limited (under 10 effective draws of 2400 at the generating values).</td>
+</tr>
+<tr>
+<td><a href="V6.html">V6</a></td>
+<td>What do incomplete sampling and a misstated sampling fraction cost?</td>
+<td>Running</td>
+<td>31 of 3200 fits written.</td>
+</tr>
+<tr>
+<td><a href="V7.html">V7</a></td>
+<td>Does model choice name the generating model, and how often a richer one?</td>
+<td>Running</td>
+<td>47 of 3580 fits written.</td>
+</tr>
+<tr>
+<td><a href="V8.html">V8</a></td>
+<td>Does the covariate path name the generating covariates at a fitted estimate?</td>
+<td>Registered</td>
+<td>Runs on V7's trees once their <code>dd</code> fits are written.</td>
+</tr>
+<tr>
+<td><a href="V9.html">V9</a></td>
+<td>On trees with no lineage-level effect, how often is one chosen?</td>
+<td>Calibrating</td>
+<td>The three generators (latent rate, protracted speciation, two regions) are being calibrated to the tree sizes of the grid; 2400 fits follow.</td>
+</tr>
+<tr>
+<td><a href="V10.html">V10</a></td>
+<td>Where does a tree identify extinction?</td>
+<td>Registered</td>
+<td>A reading of E45, E46 and E38.</td>
+</tr>
+<tr>
+<td><a href="V11.html">V11</a></td>
+<td>The analysis of record on real phylogenies</td>
+<td>Held</td>
+<td>Runs once V1–V10 are read.</td>
+</tr>
+<tr>
+<td><a href="V12.html">V12</a></td>
+<td>What a fit costs</td>
+<td>Registered</td>
+<td>A reading of the fits' recorded times.</td>
 </tr>
 </tbody>
 </table>
@@ -217,19 +273,19 @@ window.MathJax = {
 <tr>
 <td><a href="E1.html">E1</a></td>
 <td>Does MCEM reach the exact MLE under <code>cr</code> and <code>dd</code>?</td>
-<td>Holds within a scope</td>
+<td>Holds within a scope (unconditioned, linear link, 20–100 tips; replaced by <a href="V4.html">V4</a>)</td>
 <td>MCEM at the exact maximum (median deficit ≥ -0.5 nats) on 27 of 30 cell × proposal rows; surrogate shortfall a median 0.00-0.32 nats.</td>
 </tr>
 <tr>
 <td><a href="S.html">S</a></td>
 <td>The same comparison from 25 to 800 tips</td>
-<td>Superseded by E45</td>
+<td>Superseded by E45 and V4</td>
 <td>Under <code>cr</code> MCEM lies within a tenth of the exact MLE's spread, 1-6% high; cells from 100 tips clock-limited.</td>
 </tr>
 <tr>
 <td><a href="E3.html">E3</a></td>
 <td>ED-aware or mean-field thinning for <code>ned</code>?</td>
-<td>Holds</td>
+<td>Holds within a scope (where thinning is used)</td>
 <td>ED-aware is ahead on 77% of trees, short of the 95% required; it completes on 23 trees where mean-field fails.</td>
 </tr>
 <tr>
@@ -277,7 +333,7 @@ window.MathJax = {
 <tr>
 <td><a href="E13.html">E13</a></td>
 <td>How noisy is one iterate, and when does a fit settle?</td>
-<td>Holds</td>
+<td>Partly holds (the noise floor)</td>
 <td>Noise falls about as 1/√draws (1-7%); the settling iteration depends on the criterion and does not scale.</td>
 </tr>
 <tr>
@@ -289,7 +345,7 @@ window.MathJax = {
 <tr>
 <td><a href="E42.html">E42</a></td>
 <td>MCEM against the exact MLE on real trees</td>
-<td>Holds</td>
+<td>Partly holds (<code>cr</code>; replaced by <a href="V4.html">V4</a>)</td>
 <td>On 75 trees the median deficit is -0.079 nats under <code>cr</code> and -0.005 under <code>dd</code> on complete trees.</td>
 </tr>
 </tbody>
@@ -322,25 +378,25 @@ window.MathJax = {
 <tr>
 <td><a href="E11.html">E11</a></td>
 <td>Does the estimator invent an ED effect on <code>evesim</code> null trees?</td>
-<td>Holds</td>
+<td>Partly holds (selection; fits unfinished)</td>
 <td><code>ned</code> is selected on 0.05 and 0.00 of null trees.</td>
 </tr>
 <tr>
 <td><a href="E12.html">E12</a></td>
 <td>Where does the ED term become selectable?</td>
-<td>Superseded by E46 and E47</td>
+<td>Superseded by V5 and V7</td>
 <td>The 0.80 selection contour lies between -0.35<span class="math inline">\(\lambda\)</span> and -0.60<span class="math inline">\(\lambda\)</span> at 100-400 tips; false positives 3.3%.</td>
 </tr>
 <tr>
 <td><a href="E16.html">E16</a></td>
 <td>The same at turnover 0.25</td>
-<td>Superseded by E46 and E47</td>
+<td>Superseded by V5 and V7</td>
 <td>Selection 0.67 at -0.35<span class="math inline">\(\lambda\)</span> and 1.00 at -0.60<span class="math inline">\(\lambda\)</span>; no false positive.</td>
 </tr>
 <tr>
 <td><a href="E18.html">E18</a></td>
 <td>Does centring ED lift selection?</td>
-<td>Superseded by E46 and E47</td>
+<td>Superseded by V5 and V7</td>
 <td>No: 0.10-0.20 at -0.15<span class="math inline">\(\lambda\)</span> against 0.5 required; <code>nedc</code> behaves as <code>ned</code>.</td>
 </tr>
 <tr>
@@ -367,13 +423,13 @@ window.MathJax = {
 <tr>
 <td><a href="E19.html">E19</a></td>
 <td>Is <span class="math inline">\(\beta_D\)</span> recovered, and <code>nd</code> selected over <code>dd</code>?</td>
-<td>Superseded by E46</td>
+<td>Superseded by V5</td>
 <td>Sign recovered, size not: ratio 0.30-0.47 on thinning and 0.43-0.63 on the surrogate at ±0.35.</td>
 </tr>
 <tr>
 <td><a href="E30.html">E30</a></td>
 <td>E19b's design with 300 iterations and a 4-hour clock</td>
-<td>Superseded by E46</td>
+<td>Superseded by V5</td>
 <td>Ratio 0.67 at -0.35; 0 of 39 fits met the stopping rule.</td>
 </tr>
 <tr>
@@ -385,13 +441,13 @@ window.MathJax = {
 <tr>
 <td><a href="E31.html">E31</a></td>
 <td>Can the ladder tell <code>nd</code> from <code>ned</code> at 200 tips?</td>
-<td>Superseded by E46 and E47</td>
+<td>Superseded by V5 and V7</td>
 <td>No: <code>nd</code> chosen on 5 of 20 of its own trees, the pair on 9; <span class="math inline">\(\beta_D\)</span> at 0.68.</td>
 </tr>
 <tr>
 <td><a href="E21.html">E21</a></td>
 <td>Is <span class="math inline">\(\beta_K\)</span> recovered, by fitting and on the path?</td>
-<td>Superseded by E46 and E47</td>
+<td>Superseded by V5 and V7</td>
 <td><span class="math inline">\(\beta_K\)</span> at 0.95 and 0.92 at ∓0.35; selection 0.15 and 0.60; on the path ED carries K's signal.</td>
 </tr>
 </tbody>
@@ -418,31 +474,31 @@ window.MathJax = {
 <tr>
 <td><a href="E20.html">E20</a></td>
 <td>Does one dgLARS path select the generating set?</td>
-<td>Superseded by E47</td>
+<td>Superseded by V7 and V8</td>
 <td>Met for <code>cr</code> only (0.90) at 100 tips; D and ED are not separable.</td>
 </tr>
 <tr>
 <td><a href="E22.html">E22</a></td>
 <td>The path at 50, 200 and 400 tips</td>
-<td>Superseded by E47</td>
+<td>Superseded by V7 and V8</td>
 <td>Null chosen on 0.85-1.00 of trees; <code>dd</code>'s N alone on 0.40-0.70; <code>ned</code>'s N + ED never on 0.80.</td>
 </tr>
 <tr>
 <td><a href="E23.html">E23</a></td>
 <td>What does the one-call ladder choose?</td>
-<td>Superseded by E47</td>
+<td>Superseded by V7 and V8</td>
 <td>The generator is chosen on 0.80 of <code>cr</code> and 0.90 of <code>dd</code> trees; <code>nk</code> 0.70, <code>ned</code> 0.20, <code>nd</code> 0.00.</td>
 </tr>
 <tr>
 <td><a href="E27.html">E27</a></td>
 <td>The ladder across eight conditions</td>
-<td>Superseded by E46 and E47</td>
+<td>Superseded by V5 and V7</td>
 <td><code>nk</code> chosen on 11-15 of 20 of its trees, <code>ned</code> on at most 2; turnover 0.25-0.40 moves null trees to <code>cr</code>.</td>
 </tr>
 <tr>
 <td><a href="E33.html">E33</a></td>
 <td>The path at a fitted estimate; the extinction path</td>
-<td>Superseded by E47</td>
+<td>Superseded by V7 and V8</td>
 <td>At a fitted estimate <code>dd</code>'s exact set falls to 0.35 and 0.25; an extinction driver is not detected.</td>
 </tr>
 </tbody>
@@ -558,7 +614,7 @@ window.MathJax = {
 <td><a href="E41.html">E41</a></td>
 <td>Do E40's fits change when continued, with edges moved out?</td>
 <td>Partly holds</td>
-<td>Choice unchanged on 16 of 16 trees; the edge binds on 4 of 63 fits; <code>nd</code> and <code>nk</code> converge on 0 of 32.</td>
+<td>Choice unchanged on 16 of 16 trees; the edge binds on 4 of 63 fits. The <code>nd</code> and <code>nk</code> fits kept their starting draws (the stopping rule could not grow them on that build), so their convergence is measured by <a href="V3.html">V3</a>.</td>
 </tr>
 <tr>
 <td><a href="E48.html">E48</a></td>
@@ -585,7 +641,7 @@ window.MathJax = {
 <tr>
 <td><a href="E44.html">E44</a></td>
 <td>On complete trees, is the likelihood the simulator's?</td>
-<td>Holds</td>
+<td>Partly holds (the <span class="math inline">\(D\)</span> fix; replaced by <a href="V1.html">V1</a>)</td>
 <td>Yes, with D constant between events: <code>d</code>'s <span class="math inline">\(\beta_D\)</span> returns at 0.95 and 1.16 of its value, against 0.70 and 1.46 before.</td>
 </tr>
 <tr>
@@ -597,14 +653,14 @@ window.MathJax = {
 <tr>
 <td><a href="E45.html">E45</a></td>
 <td>Conditioned <code>cr</code> and <code>dd</code> against the exact estimate</td>
-<td>Running</td>
-<td>885 of 1720 fits (48 of 760 <code>dd</code>): MCEM at the exact maximum in every finished <code>cr</code> cell; <span class="math inline">\(\lambda\)</span> reliable from 25 tips.</td>
+<td>Partly holds (<code>cr</code>; <code>dd</code> on the repaired reference)</td>
+<td>1720 of 1720 fits: MCEM at the exact maximum in all 24 <code>cr</code> cells, <span class="math inline">\(\lambda\)</span> reliable from 25 tips at turnover 0.10; on the repaired <code>dd</code> reference every rescored tree has a valid maximum and the rule holds in 12 of 13 cells of 25–200 tips.</td>
 </tr>
 <tr>
 <td><a href="E46.html">E46</a></td>
 <td>The eight lineage-level models, conditioned, by size, turnover and effect</td>
-<td>Planned (registered)</td>
-<td>Starts when E45 ends: 57 cells at 50 and 100 tips, larger only where a parameter is not reliable; about 10 500 CPU-hours.</td>
+<td>Running (the series' V5)</td>
+<td>57 cells at 50 and 100 tips, larger only where a parameter is not reliable; 19 of 57 cell–proposal pairs are sampler-limited.</td>
 </tr>
 </tbody>
 </table>
@@ -618,13 +674,14 @@ window.MathJax = {
 <li><strong>The ladder and the families:</strong> <a href="E23.html">E23</a>, <a href="E24.html">E24</a>, <a href="E25.html">E25</a>, <a href="E26.html">E26</a>, <a href="E27.html">E27</a>, <a href="E28.html">E28</a> (October 2026).</li>
 <li><strong>Extinction and the information in a tree:</strong> <a href="E29.html">E29</a>, <a href="E31.html">E31</a>, <a href="E30.html">E30</a>, <a href="E32.html">E32</a>, <a href="E34.html">E34</a>, <a href="E36.html">E36</a>, <a href="E35.html">E35</a>, <a href="E37.html">E37</a>, <a href="E38.html">E38</a>, <a href="E33.html">E33</a>, <a href="E39.html">E39</a>.</li>
 <li><strong>Class-tree clades:</strong> <a href="E40.html">E40</a> (closed 2026-10-18), <a href="E42.html">E42</a>, <a href="E41.html">E41</a> (closed at the pilot 2026-10-19).</li>
-<li><strong>Estimability under the conditioned likelihood (from 2026-10-15):</strong> <a href="E44.html">E44</a>, <a href="E43.html">E43</a>, <a href="E45.html">E45</a>, then <a href="E10.html">E10c</a>, <a href="E6.html">E6b</a>, <a href="E48.html">E48</a>, <a href="E46.html">E46</a> and E47.</li>
+<li><strong>Estimability under the conditioned likelihood (from 2026-10-15):</strong> <a href="E44.html">E44</a>, <a href="E43.html">E43</a>, <a href="E45.html">E45</a>, then <a href="E10.html">E10c</a>, <a href="E6.html">E6b</a>, <a href="E48.html">E48</a>, <a href="E46.html">E46</a>.</li>
+<li><strong>The validation series (from 2026-10-31):</strong> <a href="V1.html">V1</a>–<a href="V12.html">V12</a>.</li>
 </ul>
 
 </article>
 </main>
 <footer class="site-footer">
-<p>emphasis, version 1.0.0. Francisco Richter, Università della Svizzera italiana.</p>
+<p>emphasis, version 1.0.0.9000. Francisco Richter, Università della Svizzera italiana.</p>
 </footer>
 </body>
 </html>

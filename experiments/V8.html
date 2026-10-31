@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>V8 — does the covariate path name the generating covariates at a fitted estimate? · emphasis</title>
+<meta name="description" content="The path selects covariates from one draw set without fitting each model.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../covariates/index.html">Covariates</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Phylogeny analyses</a></li>
+<li><a href="https://franciscorichter.github.io/phylo-species-atlas/" rel="external">Phylogeny catalogue</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>V8 — does the covariate path name the generating covariates at a fitted estimate?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rules">Pre-set rules</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>registered 2026-10-31</td>
+</tr>
+<tr>
+<td>Series</td>
+<td><a href="validation.html">the validation series</a> (replaces E20, E21b, E22, E33)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis <code>182055b</code> (1.0.0.9000), R 4.5.3</td>
+</tr>
+<tr>
+<td>Driver</td>
+<td><code>sim/V8.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/V8/jobs/</code>, <code>results/V8/build.txt</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>The path selects covariates from one draw set without fitting each model. Earlier runs drew at the generating values (unavailable to a user) or read <span class="math inline">\(D\)</span> from the old likelihood; <a href="E33.html">E33</a> at a fitted estimate failed.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<tbody>
+<tr>
+<td>trees</td>
+<td><a href="V7.html">V7</a>'s</td>
+</tr>
+<tr>
+<td>draws</td>
+<td>3000 by thinning at V7's <code>dd</code> estimate, the 150 of largest weight kept</td>
+</tr>
+<tr>
+<td>path</td>
+<td><code>covariate_path()</code> over <span class="math inline">\(N\)</span>, <span class="math inline">\(D\)</span>, ED, <span class="math inline">\(K\)</span>, speciation and extinction, BIC</td>
+</tr>
+<tr>
+<td>jobs</td>
+<td>640, each run once V7's <code>dd</code> fit of its tree is written</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="pre-set-rules">Pre-set rules</h2>
+<ol type="1">
+<li>On <code>cr</code> and <code>dd</code> trees no lineage-level covariate is active at BIC's optimum on at least 90%.</li>
+<li>On each lineage-level generator's trees its covariate is active on at least 80%.</li>
+</ol>
+<h2 id="results">Results</h2>
+<p>Not yet.</p>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 1.0.0.9000. Francisco Richter, Università della Svizzera italiana.</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>V6 — what does incomplete sampling cost, and a misstated sampling fraction? · emphasis</title>
+<meta name="description" content="Real clades are incompletely sampled, and the sampling fraction is itself an estimate.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../covariates/index.html">Covariates</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Phylogeny analyses</a></li>
+<li><a href="https://franciscorichter.github.io/phylo-species-atlas/" rel="external">Phylogeny catalogue</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>V6 — what does incomplete sampling cost, and a misstated sampling fraction?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rules">Pre-set rules</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>registered 2026-10-31</td>
+</tr>
+<tr>
+<td>Series</td>
+<td><a href="validation.html">the validation series</a> (replaces E27's <span class="math inline">\(\rho\)</span> arms, E35(b))</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis <code>182055b</code> (1.0.0.9000), R 4.5.3</td>
+</tr>
+<tr>
+<td>Driver</td>
+<td><code>sim/V6.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/V6/jobs/</code>, <code>results/V6/build.txt</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>Real clades are incompletely sampled, and the sampling fraction is itself an estimate. Recovery at <span class="math inline">\(\rho &lt; 1\)</span> has not been measured on a current build.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<tbody>
+<tr>
+<td>cells</td>
+<td>the 100-tip <a href="E43.html">E43</a> cells: 32</td>
+</tr>
+<tr>
+<td>conditions</td>
+<td><span class="math inline">\(\rho\)</span> 0.9, 0.75, 0.5 told the truth; <span class="math inline">\(\rho\)</span> 0.75 told 0.65 and 0.85</td>
+</tr>
+<tr>
+<td>trees</td>
+<td>20 per cell and condition (<a href="V2.html">V2</a>'s trees at that <span class="math inline">\(\rho\)</span>)</td>
+</tr>
+<tr>
+<td>fit</td>
+<td>the generating model, <code>estimate_rates()</code> defaults, conditioned</td>
+</tr>
+<tr>
+<td>jobs</td>
+<td>3200</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="pre-set-rules">Pre-set rules</h2>
+<ol type="1">
+<li>Per cell and condition, <a href="E46.html">E46</a>'s rule (2) for every speciation coefficient; the smallest <span class="math inline">\(\rho\)</span> at which it holds is the answer, beside V5's at <span class="math inline">\(\rho = 1\)</span>.</li>
+<li>A misstated <span class="math inline">\(\rho\)</span> is harmless for a coefficient when its median ratio moves by less than 0.1.</li>
+</ol>
+<h2 id="results">Results</h2>
+<p>Not yet.</p>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 1.0.0.9000. Francisco Richter, Università della Svizzera italiana.</p>
+</footer>
+</body>
+</html>

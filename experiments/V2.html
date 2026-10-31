@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>V2 — is each proposal&#x27;s likelihood estimate unbiased, and how efficient is it? · emphasis</title>
+<meta name="description" content="MCEM weighs every augmented tree by \(f(y, z\mid\theta)/q(z)\).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../covariates/index.html">Covariates</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Phylogeny analyses</a></li>
+<li><a href="https://franciscorichter.github.io/phylo-species-atlas/" rel="external">Phylogeny catalogue</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>V2 — is each proposal's likelihood estimate unbiased, and how efficient is it?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rules">Pre-set rules</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>registered 2026-10-31; amended 2026-10-31; running on Bre</td>
+</tr>
+<tr>
+<td>Series</td>
+<td><a href="validation.html">the validation series</a> (replaces <a href="E3.html">E3</a>, <a href="E6.html">E6b</a>, <a href="E7.html">E7</a>)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis <code>182055b</code> (1.0.0.9000), R 4.5.3</td>
+</tr>
+<tr>
+<td>Driver</td>
+<td><code>sim/V2.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/V2/jobs/&lt;cell&gt;-r&lt;rho&gt;-k&lt;kk&gt;.csv</code>, <code>results/V2/build.txt</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>MCEM weighs every augmented tree by <span class="math inline">\(f(y, z\mid\theta)/q(z)\)</span>. The weights average to the likelihood only if <span class="math inline">\(q\)</span> is the density the sampler draws from; a wrong density biases every log-likelihood, every AIC and every M-step. Earlier proposal studies measured the effective sample only, at the generating values, on builds since changed. V2 measures both: whether each proposal's estimate is unbiased where an exact likelihood exists, whether the two proposals agree where it does not, and how many effective draws each keeps, by model, size, turnover and sampling fraction.</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<tbody>
+<tr>
+<td>cells</td>
+<td>every reachable <a href="E43.html">E43</a> cell (50–400 tips, turnover 0.10 and 0.40), at <span class="math inline">\(\rho\)</span> = 1, 0.8, 0.5</td>
+</tr>
+<tr>
+<td>trees</td>
+<td>20 per (cell, <span class="math inline">\(\rho\)</span>)</td>
+</tr>
+<tr>
+<td>proposals</td>
+<td>surrogate (all models but <code>k</code>, <code>nk</code>); thinning (all; ED-aware for ED models)</td>
+</tr>
+<tr>
+<td>draws</td>
+<td>four independent sets of 1000 per tree and proposal, at the generating values</td>
+</tr>
+<tr>
+<td>exact</td>
+<td><code>cr</code> at every <span class="math inline">\(\rho\)</span> (Bernoulli closed form); <code>dd</code> at <span class="math inline">\(\rho = 1\)</span> (<code>ll_dd</code>, repaired in <code>c641dca</code>)</td>
+</tr>
+<tr>
+<td>jobs</td>
+<td>7440</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="pre-set-rules">Pre-set rules</h2>
+<ol type="1">
+<li><strong>Unbiased:</strong> per cell with an exact reference, the mean of <span class="math inline">\(\hat L/L\)</span> has a 95% interval containing 1.</li>
+<li><strong>Agreement:</strong> where no exact reference exists, the median difference between the two proposals' pooled <span class="math inline">\(\log\hat L\)</span> lies within its 95% interval of 0, on trees where both keep at least 10 effective draws.</li>
+<li><strong>Efficiency</strong> (descriptive): median effective sample and share of trees below 10, per proposal, cell, <span class="math inline">\(\rho\)</span>.</li>
+</ol>
+<h2 id="results">Results</h2>
+<p>Running: all 7,440 trees on the driver that reads the surrogate's own estimate (<code>fhat</code>, rejected draws included) and records its acceptance rate.</p>
+<ul>
+<li><strong><code>cr</code>:</strong> the surrogate's estimate equals the exact likelihood (mean <span class="math inline">\(\hat L/L\)</span> = 1.000 on 450 trees).</li>
+<li><strong><code>dd</code>:</strong> on six trees checked against the exact value, the surrogate's estimate lies within 0.024 of it, at acceptance rates of 0.78–0.90.</li>
+</ul>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 1.0.0.9000. Francisco Richter, Università della Svizzera italiana.</p>
+</footer>
+</body>
+</html>

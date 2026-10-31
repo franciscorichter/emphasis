@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>V3 — does each stopping rule stop where the estimate has settled, and does the box hold it? · emphasis</title>
+<meta name="description" content="A fit is only as good as the place it stops.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../covariates/index.html">Covariates</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="../reference.html">Reference</a></li>
+<li><a href="../established.html">What is established</a></li>
+<li><a href="../estimability.html">Estimability</a></li>
+<li><a href="../real-phylogenies.html">Phylogeny analyses</a></li>
+<li><a href="https://franciscorichter.github.io/phylo-species-atlas/" rel="external">Phylogeny catalogue</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>V3 — does each stopping rule stop where the estimate has settled, and does the box hold it?</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#question">Question</a>
+</li>
+<li><a href="#design">Design</a>
+</li>
+<li><a href="#pre-set-rules">Pre-set rules</a>
+</li>
+<li><a href="#results">Results</a>
+</li>
+</ol>
+</nav>
+<div class="table-wrap">
+<table class="meta">
+<tbody>
+<tr>
+<td>Status</td>
+<td>registered 2026-10-31</td>
+</tr>
+<tr>
+<td>Series</td>
+<td><a href="validation.html">the validation series</a> (replaces E9, E13, E41)</td>
+</tr>
+<tr>
+<td>Package build</td>
+<td>emphasis <code>182055b</code> (1.0.0.9000), R 4.5.3</td>
+</tr>
+<tr>
+<td>Driver</td>
+<td><code>sim/V3.R</code></td>
+</tr>
+<tr>
+<td>Data</td>
+<td><code>results/V3/jobs/</code>, <code>results/V3/build.txt</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="question">Question</h2>
+<p>A fit is only as good as the place it stops. The package's default rule (<code>rel_change</code>) and the Monte Carlo error rule (<code>mc_error</code>) are checked against a reference run that never stops by rule, on every model; <a href="E41.html">E41</a>'s claim that <code>nd</code> and <code>nk</code> do not settle within 1000 iterations was made on fits whose draws never grew (fixed in <code>182055b</code>).</p>
+<h2 id="design">Design</h2>
+<div class="table-wrap">
+<table>
+<tbody>
+<tr>
+<td>cells</td>
+<td>the 100-tip <a href="E43.html">E43</a> cells of all ten models: 32</td>
+</tr>
+<tr>
+<td>trees</td>
+<td>10 a cell</td>
+</tr>
+<tr>
+<td>arms</td>
+<td><code>rel</code> (default rule), <code>mc</code> (<code>mc_error</code>, draws to 2400), <code>ref</code> (1200 draws, 400 iterations, never stops by rule; estimate = mean of the last 200 iterates)</td>
+</tr>
+<tr>
+<td>fit</td>
+<td><code>estimate_rates()</code> defaults, conditioned on survival, the box of <code>auto_bounds()</code>, 22-hour clock</td>
+</tr>
+<tr>
+<td>jobs</td>
+<td>960</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="pre-set-rules">Pre-set rules</h2>
+<ol type="1">
+<li>A rule stops by itself on at least 90% of trees.</li>
+<li>Its estimate lies within 2 reference sds of the reference mean on at least 90% of trees, for every coefficient.</li>
+<li>The reference mean lies inside the box, more than <span class="math inline">\(10^{-3}\)</span> of the span from each edge, on at least 90% of trees.</li>
+</ol>
+<h2 id="results">Results</h2>
+<p>Not yet.</p>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 1.0.0.9000. Francisco Richter, Università della Svizzera italiana.</p>
+</footer>
+</body>
+</html>
