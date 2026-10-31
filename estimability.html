@@ -79,9 +79,9 @@ window.MathJax = {
 <p>Which parameters of each model a dated tree identifies, from how many tips, and what sets the limit: the information in the tree, the estimator, or the Monte Carlo sampler behind it. Every statement below is a measurement on simulated trees with known generating values, with the likelihood conditioned on the survival of both crown lineages; <a href="#where-the-numbers-come-from">the last section</a> names the experiment behind each one. Terms are in the <a href="glossary.html">Glossary</a>.</p>
 <h2 id="in-short">In short</h2>
 <ol type="1">
-<li><strong>The estimator is not the limit where an exact answer exists.</strong> The Monte Carlo EM estimate sits at the exact conditioned maximum in every <code>cr</code> cell and in 14 of 17 <code>dd</code> cells up to 200 tips, so what follows about those two models is a property of the trees, not of the algorithm.</li>
+<li><strong>The estimator is not the limit where an exact answer exists.</strong> The Monte Carlo EM estimate sits at the exact conditioned maximum in every <code>cr</code> cell and in 11 of 14 <code>dd</code> cells at complete sampling, including all nine of 25–100 tips, so what follows about those two models is a property of the trees, not of the algorithm.</li>
 <li><strong>Speciation is read early, extinction late.</strong> The speciation rate is within a factor of 2 of the truth from 25 tips under constant rates, and from 50 under diversity dependence. The extinction rate is not, at any size up to 800 tips, unless turnover is high; at turnover 0.40 it is from about 200 tips.</li>
-<li><strong>Under diversity dependence the slowdown is read, but not how it divides.</strong> Speciation at low diversity and its slope on diversity are recovered at low turnover; the estimate tilts extinction, which was generated constant, from 0.1–0.35 of the truth early in a clade's history to 1.2–2.8 times the truth today.</li>
+<li><strong>Under diversity dependence the slowdown is read, but not how it divides.</strong> Speciation at low diversity and its slope on diversity are recovered at low turnover; the estimate tilts extinction, which was generated constant, from 0.1–0.35 of the truth early in a clade's history to 1.2–2.9 times the truth today.</li>
 <li><strong>A complete tree carries enough to estimate most covariate slopes.</strong> With the extinct lineages kept, a slope of ±0.35 per scale unit is estimated within about 0.6 to 1.5 times its value at 100 tips, with the right sign on 95% of trees or more, narrowing at 200; the exceptions are weak slopes (the diversity slope at high turnover, <code>ned</code>'s ED slope).</li>
 <li><strong>On a reconstructed tree the sampler decides first.</strong> <code>ned</code>, <code>nedc</code>, <code>ed</code> with a negative effect, and the thinning proposal at high turnover keep about 10 effective draws of 2400 or fewer at the generating values; <code>d</code>, <code>edc</code> and <code>nd</code> on the surrogate proposal keep hundreds.</li>
 <li><strong>Where the sampler works and the fit converges, the slope mostly lands within a factor of 2 of the truth</strong>: 84% of fits that meet the stopping rule, against 62% of fits stopped at the iteration cap (provisional, on the first 156 fits of the lineage-level study).</li>
@@ -111,8 +111,8 @@ window.MathJax = {
 </tr>
 <tr>
 <td><code>dd</code></td>
-<td>the same, 25–400 tips, on the repaired exact reference (715 trees)</td>
-<td>within 0.5 of the maximum in median and 2 at the 90th percentile in 14 of 17 cells of 25–200 tips. It misses at 200 tips and turnover 0.25 (sampling fraction 1 and 0.8), at 100 tips and turnover 0.40 with sampling fraction 0.8, and in both 400-tip cells; in those cells 30 to 39 of 40 fits ended on the clock before the stopping rule</td>
+<td>the same, 25–400 tips at complete sampling, on the repaired exact reference (747 of 756 rescored trees with a valid maximum)</td>
+<td>within 0.5 of the maximum in median and 2 at the 90th percentile in 11 of 14 cells: all nine of 25–100 tips (median shortfall -0.001 to -0.18) and two of the five of 200–400 tips. It misses at 400 tips and turnover 0.10 (median -0.55) and at 200 and 400 tips and turnover 0.25 (-0.72, -0.62); in those cells 30 to 39 of 40 fits ended on the 8-hour clock before the stopping rule</td>
 </tr>
 <tr>
 <td><code>cr</code>, <code>dd</code></td>
@@ -144,7 +144,7 @@ window.MathJax = {
 <tr>
 <td>speciation rate</td>
 <td>25</td>
-<td>25 (400 with the Wald interval, whose coverage is 0.85 at 200 tips)</td>
+<td>50 (400 with the Wald interval, whose coverage is 0.85 at 200 tips)</td>
 <td>25 (100 with the Wald interval)</td>
 </tr>
 <tr>
@@ -156,15 +156,16 @@ window.MathJax = {
 </tbody>
 </table>
 </div>
+<p>For <code>dd</code> the same reading needs the curvature at the repaired maxima, which has not been computed: reliable sizes for <code>dd</code> are pending.</p>
 <h2 id="diversity-dependence-the-slowdown-is-read-its-division-is-not">Diversity dependence: the slowdown is read, its division is not</h2>
 <figure id="figure-2">
 <img src="assets/wiki/est-dd.png" alt="Diversity-dependent model: estimated speciation and extinction rates over the true rates along the clade&#39;s history, by turnover, at 50 and 200 tips" loading="lazy">
 <figcaption><strong>Figure 2.</strong> Diversity-dependent model: estimated speciation and extinction rates over the true rates along the clade&#x27;s history, by turnover, at 50 and 200 tips</figcaption>
 </figure><ul>
 <li><strong>Speciation at low diversity</strong> is within a factor of 2 from 50 tips at every turnover (median 0.68–1.07 of the truth).</li>
-<li><strong>The slope of speciation on diversity</strong> is recovered at turnover 0.10 (median 0.84–0.91, right sign on 95–100% of trees at every size). At 0.25 the median is 0.54–0.70 from 50 tips. At 0.40 the slope is weak (generated at -0.0005 to -0.03 per lineage) and its median estimate is near 0, with the right sign on 42–75% of trees.</li>
-<li><strong>Extinction</strong>, generated constant, comes out rising with diversity: the median slope of extinction on diversity is positive in every cell, and the intercept falls to a tenth to a third of its value up to 200 tips. Along the clade's history the estimated rate runs from 0.1–0.35 of the truth at the crown to 1.2–2.8 times the truth today (medians over trees), crossing it at about two thirds of today's diversity.</li>
-<li><strong>Speciation along the same history</strong> stays within 20% of the truth, except early in the history at 50 tips and turnover 0.40, where it starts at about two thirds.</li>
+<li><strong>The slope of speciation on diversity</strong> is recovered at turnover 0.10 (median 0.84–0.91, right sign on 95–100% of trees at every size). At 0.25 the median is 0.35–0.70 from 50 tips. At 0.40 the slope is weak (generated at -0.0005 to -0.03 per lineage) and its median estimate is near 0, with the right sign on 42–75% of trees.</li>
+<li><strong>Extinction</strong>, generated constant, comes out rising with diversity: the median slope of extinction on diversity is positive in every cell, and the intercept falls to a tenth to a third of its value up to 200 tips. Along the clade's history the estimated rate runs from 0.1–0.35 of the truth at the crown to 1.2–2.9 times the truth today (medians over trees), crossing it at about two thirds of today's diversity.</li>
+<li><strong>Speciation along the same history</strong> stays within 20% of the truth, except early in the history at 50 tips and turnover 0.40, where it starts at 0.7.</li>
 </ul>
 <p>The tree constrains the overall slowdown of diversification. How much of it comes from falling speciation and how much from rising extinction is not separated by the likelihood at these sizes, and the maximum resolves the ridge towards rising extinction.</p>
 <h2 id="what-a-complete-tree-carries">What a complete tree carries</h2>
@@ -193,6 +194,7 @@ window.MathJax = {
 <li>19 of the 57 cell–proposal pairs of the lineage-level study are under 10 effective draws.</li>
 </ul>
 <h2 id="covariate-slopes-on-reconstructed-trees-provisional">Covariate slopes on reconstructed trees (provisional)</h2>
+<p>No cell of the lineage-level study has yet met its read rule (at least 80% of fits finished and a median final effective sample of 10 or more), so these are the fits written so far, not a reading.</p>
 <figure id="figure-5">
 <img src="assets/wiki/est-lineage.png" alt="Fitted slope against the complete-tree range, per tree, for the lineage-level cells with at least 14 fits" loading="lazy">
 <figcaption><strong>Figure 5.</strong> Fitted slope against the complete-tree range, per tree, for the lineage-level cells with at least 14 fits</figcaption>

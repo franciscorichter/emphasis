@@ -71,7 +71,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td><strong>running</strong> since 2026-10-16; 885 of 1720 fits at 2026-10-22 (837 of 960 <code>cr</code>, 48 of 760 <code>dd</code>). A <code>dd</code> fit at 400 tips takes about 15 hours (median of the first 29; 10-19 hours), its MCEM and its conditioning each running to the 8-hour clock, so the <code>dd</code> share is about 11,000 CPU-hours rather than the first estimate of 2,200. The <code>dd</code> fits run largest trees first and are split between two hosts through per-job claims, so that no fit runs twice, with the registered build <code>e1c2e82</code> on both. Expected to finish in the first half of November</td>
+<td><strong>complete</strong> 2026-10-31: 1,720 fits (960 <code>cr</code>, 760 <code>dd</code>). <code>cr</code> read on both rules; <code>dd</code> rule 1 read on the repaired exact reference (756 of 760 trees rescored, the last four at 400 tips running); <code>dd</code> rule 2 pending</td>
 </tr>
 <tr>
 <td>Package build</td>
@@ -129,11 +129,46 @@ window.MathJax = {
 <h2 id="pre-set-rule">Pre-set rule</h2>
 <p>(1) MCEM agreement: median deficit <span class="math inline">\(\ge -0.5\)</span> nats and 90th percentile of <span class="math inline">\(|\Delta\ell| \le 2\)</span> per cell. (2) A parameter is reliable at a size when the exact estimate's median ratio to the truth lies in [0.8, 1.25], its central 80% within [0.5, 2], and its 95% interval covers the truth on at least 90% of trees. At <span class="math inline">\(\rho = 0.8\)</span> rule (1) reads <code>cr</code> against the Bernoulli exact MLE (the two sampling models differ by 0.2-0.36 nats); <code>dd</code>'s <span class="math inline">\(\rho = 0.8\)</span> deficit is reported, not read.</p>
 <h2 id="results">Results</h2>
-<p>Provisional, <code>cr</code> only (twelve cells, 25-100 tips):</p>
-<p>| cell | trees | median deficit | 90th pct <span class="math inline">\(|\Delta\ell|\)</span> | rule 1 | |---|---|---|---|---| | 25 tips, turnover 0.10 / 0.25 / 0.40 | 40 each | -0.009 / -0.006 / -0.005 | 0.035 / 0.022 / 0.018 | met | | 50 tips, turnover 0.10 / 0.25 / 0.40 | 40 each | -0.009 / -0.003 / -0.003 | 0.032 / 0.026 / 0.010 | met | | 100 tips, turnover 0.10 / 0.25 / 0.40 | 40 / 40 / 33 | -0.012 / -0.004 / -0.002 | 0.027 / 0.026 / 0.007 | met | | 100 tips, <span class="math inline">\(\rho = 0.8\)</span>, turnover 0.10 / 0.25 / 0.40 | 40 each | -0.014 / -0.004 / -0.002 | 0.041 / 0.033 / 0.009 | met |</p>
-<p>Rule 2 so far: <span class="math inline">\(\lambda\)</span> reliable from 25 tips at turnover 0.10 and 0.25, and at 0.40 from 100 tips (it holds at 25, not at 50); <span class="math inline">\(\mu\)</span> not reliable at 25, 50 or 100 tips at any turnover, estimated at zero on many trees (Wald coverage 0.30-0.73 because a zero estimate has no Wald interval; profile coverage 0.95-1.00).</p>
+<p><strong>Rule 1, <code>cr</code>: met in all 24 cells</strong> (25–800 tips; turnover 0.10, 0.25, 0.40; <span class="math inline">\(\rho\)</span> 1 and 0.8): median deficit −0.001 to −0.014 nats, 90th percentile of <span class="math inline">\(|\Delta\ell|\)</span> at most 0.08. Fits stopped by the clock (up to 26 of 39 at 800 tips) also sit at the exact maximum.</p>
+<p><strong>Rule 2, <code>cr</code>, reliability by size</strong> (exact conditioned MLE; median ratio in [0.8, 1.25], central 80 % within [0.5, 2], interval covering the truth on ≥ 90 % of trees), read with the profile interval:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>turnover</th>
+<th><span class="math inline">\(\lambda\)</span> reliable from</th>
+<th><span class="math inline">\(\mu\)</span> reliable from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.10</td>
+<td>25 tips</td>
+<td>not up to 800 tips</td>
+</tr>
+<tr>
+<td>0.25</td>
+<td>50 tips</td>
+<td>not up to 800 tips</td>
+</tr>
+<tr>
+<td>0.40</td>
+<td>25 tips</td>
+<td>200 tips</td>
+</tr>
+<tr>
+<td><span class="math inline">\(\rho\)</span> 0.8: 0.10 / 0.25 / 0.40</td>
+<td>100 / 100 / 100</td>
+<td>not / not / 200</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><span class="math inline">\(\mu\)</span> fails on spread, not coverage: the exact estimate of <span class="math inline">\(\mu\)</span> is zero on 10–50 % of trees at turnover 0.10 (0–33 % at 0.25), so the central 80 % of ratios cannot lie within [0.5, 2], while the profile interval covers the truth on 88–100 % of trees. With the Wald interval (none exists at a zero estimate) <span class="math inline">\(\mu\)</span> is reliable only at turnover 0.40, from 400 tips with <span class="math inline">\(\rho\)</span> 1 and from 200 with <span class="math inline">\(\rho\)</span> 0.8.</p>
+<p><strong>Rule 1, <code>dd</code>, on the repaired exact reference.</strong> The exact <code>dd</code> reference used until 30 October returned <span class="math inline">\(-\infty\)</span> through a guard wherever extinction rises with diversity and rescaled its probability vector only at branching times (<code>results/accept-surface/dd-reference-repair.md</code>); on the repaired one 747 of 756 rescored trees have a valid maximum. With <span class="math inline">\(\rho\)</span> 1, where the rule gives a verdict, it holds in <strong>11 of 14 cells</strong>: all nine of 25–100 tips (median deficit −0.001 to −0.182) and two of the five of 200–400 tips. It fails at 400 tips / turnover 0.10 (median −0.55) and 200 and 400 tips / turnover 0.25 (−0.72, −0.62), cells in which 30–39 of the 40 fits ended on the eight-hour clock, the exact survival term taking most of each fit's time. At <span class="math inline">\(\rho\)</span> 0.8 the deficits are reported without a verdict; the thresholds are met in three of five cells.</p>
+<p><strong>Rule 2, <code>dd</code>:</strong> pending; the rescoring re-maximised but did not compute the Hessian at the new maxima.</p>
 <h2 id="conclusion">Conclusion</h2>
-<p>Provisional: conditioned MCEM reaches the exact conditioned maximum in every cell read. Where the extinction rate becomes reliable is the open part.</p>
+<p>Under constant rates, conditioned MCEM reaches the exact conditioned maximum at every size and turnover measured. The speciation rate is reliable from 25–100 tips; the extinction rate only at turnover 0.40, from 200 tips, and at no size up to 800 tips at turnover 0.10 or 0.25. Under diversity dependence MCEM reaches the exact maximum up to 100 tips; at 200–400 tips the failures are cells whose fits ended on the clock.</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="../estimability.html">Estimability</a>, <a href="E43.html">E43</a>, <a href="E42.html">E42</a>, <a href="E38.html">E38</a>, <a href="E1.html">E1</a>, <a href="S.html">S</a>.</li>
