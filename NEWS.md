@@ -1,5 +1,14 @@
 # emphasis (development version)
 
+* The trees an E-step returns under the thinning proposal carry their lineage
+  ids and covariate columns again. The copy `rcpp_mcem.cpp` made of them had
+  only `brts`, `n` and `t_ext`, so under `stop_rule = "mc_error"` every batch
+  M-step of a `D`, `ED` or `K` model failed to build its covariate table, the
+  Monte Carlo error of the step was never computed (`mc_z` was `NA` on every
+  iteration), the draws never grew and no thinning fit of those models met
+  the rule: it ran to `max_iter` whatever the estimate did. The surrogate
+  proposal was not affected.
+
 * `estimate_rates(cond = "surface")` conditions a fit on survival for any
   model and link: an unconditioned fit, then MCEM continued on local
   quadratic surfaces of a direct Monte Carlo estimate of log P(S) around the

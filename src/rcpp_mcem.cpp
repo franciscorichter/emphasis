@@ -11,20 +11,8 @@ using namespace Rcpp;
 namespace emphasis { uint64_t resolve_seed(int seed); }
 
 
-namespace {
-
-  DataFrame unpack(const emphasis::tree_t& tree)
-  {
-    NumericVector brts, n, t_ext;
-    for (const emphasis::node_t& node : tree) {
-      brts.push_back(node.brts);
-      n.push_back(node.n);
-      t_ext.push_back(node.t_ext);
-    }
-    return DataFrame::create(Named("brts") = brts, Named("n") = n, Named("t_ext") = t_ext);
-  }
-
-}
+#include "unpack.h"   // the full node: topology and covariate columns, so that the trees an
+                      // E-step hands back can be scored again by the batch M-steps
 
 //' function to perform one step of the E-M algorithm
 //' @param brts vector of branching times

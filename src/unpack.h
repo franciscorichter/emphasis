@@ -10,7 +10,7 @@
 using namespace Rcpp;
 
 
-DataFrame unpack(const emphasis::tree_t& tree)
+inline DataFrame unpack(const emphasis::tree_t& tree)
 {
 NumericVector brts, n, t_ext, pd, tip_start, focal_tip_start;
 IntegerVector clade, id, parent_id;
