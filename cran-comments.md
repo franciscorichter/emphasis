@@ -20,7 +20,7 @@ reviewed. It is submitted as version 1.1.0 because it adds functionality:
 
 ## R CMD check results
 
-0 errors | 0 warnings | 4 notes locally (one from the package, three from
+0 errors | 0 warnings | 2 notes locally (one from the package, one from
 the test machine). Tests: 2274 passed, 0 failed, 92 skipped on CRAN.
 
 * New submission.
@@ -37,14 +37,8 @@ the test machine). Tests: 2274 passed, 0 failed, 92 skipped on CRAN.
 
 ## Notes from the local environment only
 
-* "Package suggested but not available for checking: 'dglars'": not
-  installed on the test machine; the tests that use it are skipped when it
-  is absent.
 * "unable to verify current time": the machine had no access to a time
   server during the check.
-* "Examples with CPU (user + system) or elapsed time > 5s: compare_models
-  (user 1.35 s, elapsed 6.75 s)": the CPU time is under 5 s; the elapsed
-  time reflects other load on the test machine.
 
 ## Reverse dependencies
 
