@@ -178,6 +178,37 @@ from its posterior on the observed tree (forward filtering, backward sampling ov
 the hidden lineages with their marks under that path, weighted by the complete-data likelihood
 with marks over the joint proposal density.
 
+Two measurements on the 90 recovery trees decide what that proposal has to be
+(`dev/latent-marks/proposal-ess-surrogate.R`, `results/proposal-ess-1.1.0/`). The surrogate, which
+samples the hidden lineages of cr exactly, keeps all 500 draws without the marks and falls with them
+to the thinning proposal's level: median effective sample 15.7 and 5.0 of 500 at $\sigma$ 0.25 and
+0.5, against 4.5 and 3.1 for thinning. More draws do not help: on one tree at $\sigma = 0.25$ the
+effective sample is 8.7, 3.2, 6.5, 12.3 and 9.7 at 500 to 8000 draws, the weights being heavy-tailed.
+The limit is where the hidden lineages fall relative to the marks, not the base proposal.
+
+The proposal (`R/marks-proposal.R`, `.mcem_marks(aware = "sample")`) is the exact posterior of a
+nearby model in which a hidden lineage keeps the mark of the observed branch it hangs from. The
+branch marks are drawn jointly by forward filtering and backward sampling over the grid, from the
+reconstructed-tree likelihood with per-branch constant rates, each branch contributing
+$\exp\{-\int(\mu_s + \lambda_s(1 - 2q_s))\}$; given the marks, hidden subtrees attach along each
+branch at intensity $2\lambda_s q_s(t)$ (the 2 counts the two orientations of a split) and evolve
+conditioned to die before $T$ (birth rate $\lambda_s q_s$, death rate $\mu_s/q_s$). The proposal
+density is the ratio of two pruning passes, with and without the hidden lineages, so the weight
+is $\log L_{\text{marks}}(h) - \log g(h)$ without a mixture. With one mark it is the posterior of cr:
+every weight equals the reconstructed-tree likelihood in its $p_1$ form, to $10^{-13}$ at three
+parameter values (`tests/testthat/test-marks-proposal.R`). At the generating values, 200 draws
+(`dev/latent-marks/proposal-ess-marks.R`, `results/proposal-ess-sample/`):
+
+| $\sigma$ | median effective sample of 200 (10th percentile) | sd of log weight | seconds per tree |
+|---|---|---|---|
+| 0 | 200 (200) | 0 | 78 |
+| 0.25 | 166 (140) | 0.4 | 92 |
+| 0.5 | 83 (65) | 1.0 | 22 |
+
+Its log-likelihood estimates exceed the surrogate's by a median 0.56 and 1.89 at $\sigma$ 0.25 and
+0.5, the direction in which an estimate from a handful of effective draws falls short. The recovery
+study reruns with this proposal (USI cluster array 9083, build `2874bfa`, `results-sample`).
+
 Model choice between `nk` and a latent-rate model fitted on the same trees is what the extension
 is for; its estimability is a study of its own, after phase 3.
 
