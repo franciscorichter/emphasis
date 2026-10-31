@@ -158,6 +158,26 @@ one-tree ESS fell from 6.4 to 1.3 of 2000 (one run, dominated by a few weights);
 (speciation offsets) and 6869 (both) rerun the study on the same trees with the ESS of all
 three proposals recorded per tree.
 
+Mark-aware proposals on the recovery trees (arrays 6868, 6869, build `24b4fe0`; per-tree rows in
+`dev/latent-marks/results/{lambda,both}-24b4fe0/`). Median effective sample of 500 draws at the
+generating values, with the marks:
+
+| $\sigma$ | blind | speciation offsets | speciation and extinction offsets |
+|---|---|---|---|
+| 0.25 | 5.7 | 5.7 | 4.7 |
+| 0.5 | 4.1 | 6.6 | 7.3 |
+
+The estimates match the blind study to rounding ($\hat\sigma$ 0.15-0.16 and 0.30; the latent rate
+chosen on 18 and 26 of 30 trees; never at $\sigma = 0$): the offsets on the observed lineages do
+not lift the effective sample. Fitted without marks, the same trees give $\hat\mu_0$ = 0.049,
+0.070, 0.100 (truth 0.07); with marks, 0.042, 0.018, 0.008. The collapse of extinction belongs to
+the marks E-step: at the generating values a handful of draws carry the weight, so the Monte Carlo
+log-likelihood there is biased low, while near $\mu_0 = 0$ no lineage is hidden and the weights
+are flat. The next proposal draws the marks themselves: a mark path for each observed lineage
+from its posterior on the observed tree (forward filtering, backward sampling over the grid), and
+the hidden lineages with their marks under that path, weighted by the complete-data likelihood
+with marks over the joint proposal density.
+
 Model choice between `nk` and a latent-rate model fitted on the same trees is what the extension
 is for; its estimability is a study of its own, after phase 3.
 
