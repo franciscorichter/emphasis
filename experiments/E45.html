@@ -130,7 +130,7 @@ window.MathJax = {
 <p>(1) MCEM agreement: median deficit <span class="math inline">\(\ge -0.5\)</span> nats and 90th percentile of <span class="math inline">\(|\Delta\ell| \le 2\)</span> per cell. (2) A parameter is reliable at a size when the exact estimate's median ratio to the truth lies in [0.8, 1.25], its central 80% within [0.5, 2], and its 95% interval covers the truth on at least 90% of trees. At <span class="math inline">\(\rho = 0.8\)</span> rule (1) reads <code>cr</code> against the Bernoulli exact MLE (the two sampling models differ by 0.2-0.36 nats); <code>dd</code>'s <span class="math inline">\(\rho = 0.8\)</span> deficit is reported, not read.</p>
 <h2 id="results">Results</h2>
 <p><strong>Rule 1, <code>cr</code>: met in all 24 cells</strong> (25–800 tips; turnover 0.10, 0.25, 0.40; <span class="math inline">\(\rho\)</span> 1 and 0.8): median deficit −0.001 to −0.014 nats, 90th percentile of <span class="math inline">\(|\Delta\ell|\)</span> at most 0.08. Fits stopped by the clock (up to 26 of 39 at 800 tips) also sit at the exact maximum.</p>
-<p><strong>Rule 2, <code>cr</code>, reliability by size</strong> (exact conditioned MLE; median ratio in [0.8, 1.25], central 80 % within [0.5, 2], interval covering the truth on ≥ 90 % of trees), read with the profile interval:</p>
+<p><strong>Rule 2, <code>cr</code>, reliability by size</strong> (exact conditioned MLE; median ratio in [0.8, 1.25], central 80 % within [0.5, 2], interval covering the truth on ≥ 90 % of trees), read with the profile interval (percentiles interpolated, as in <code>sim/E45-analysis.R</code>):</p>
 <div class="table-wrap">
 <table>
 <thead>
@@ -148,7 +148,7 @@ window.MathJax = {
 </tr>
 <tr>
 <td>0.25</td>
-<td>50 tips</td>
+<td>25 tips</td>
 <td>not up to 800 tips</td>
 </tr>
 <tr>
@@ -168,7 +168,7 @@ window.MathJax = {
 <p><strong>Rule 1, <code>dd</code>, on the repaired exact reference.</strong> The exact <code>dd</code> reference used until 30 October returned <span class="math inline">\(-\infty\)</span> through a guard wherever extinction rises with diversity and rescaled its probability vector only at branching times (<code>results/accept-surface/dd-reference-repair.md</code>); on the repaired one 747 of 756 rescored trees have a valid maximum. With <span class="math inline">\(\rho\)</span> 1, where the rule gives a verdict, it holds in <strong>11 of 14 cells</strong>: all nine of 25–100 tips (median deficit −0.001 to −0.182) and two of the five of 200–400 tips. It fails at 400 tips / turnover 0.10 (median −0.55) and 200 and 400 tips / turnover 0.25 (−0.72, −0.62), cells in which 30–39 of the 40 fits ended on the eight-hour clock, the exact survival term taking most of each fit's time. At <span class="math inline">\(\rho\)</span> 0.8 the deficits are reported without a verdict; the thresholds are met in three of five cells.</p>
 <p><strong>Rule 2, <code>dd</code>:</strong> pending; the rescoring re-maximised but did not compute the Hessian at the new maxima.</p>
 <h2 id="conclusion">Conclusion</h2>
-<p>Under constant rates, conditioned MCEM reaches the exact conditioned maximum at every size and turnover measured. The speciation rate is reliable from 25–100 tips; the extinction rate only at turnover 0.40, from 200 tips, and at no size up to 800 tips at turnover 0.10 or 0.25. Under diversity dependence MCEM reaches the exact maximum up to 100 tips; at 200–400 tips the failures are cells whose fits ended on the clock.</p>
+<p>Under constant rates, conditioned MCEM reaches the exact conditioned maximum at every size and turnover measured. The speciation rate is reliable from 25 tips with complete sampling (from 100, the smallest size run, at sampling 0.8); the extinction rate only at turnover 0.40, from 200 tips, and at no size up to 800 tips at turnover 0.10 or 0.25. Under diversity dependence MCEM reaches the exact maximum up to 100 tips; at 200–400 tips the failures are cells whose fits ended on the clock.</p>
 <h2 id="related">Related</h2>
 <ul>
 <li><a href="../estimability.html">Estimability</a>, <a href="E43.html">E43</a>, <a href="E42.html">E42</a>, <a href="E38.html">E38</a>, <a href="E1.html">E1</a>, <a href="S.html">S</a>.</li>
