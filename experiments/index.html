@@ -161,7 +161,7 @@ window.MathJax = {
 </div>
 <p>Conflicts between the record and the data are listed in <a href="../open-issues.html">Open issues</a>.</p>
 <h2 id="at-a-glance">At a glance</h2>
-<p>Validation series: complete 1 · running 6 · calibrating 1 · registered 3 · held 1.</p>
+<p>Validation series: complete 2 · running 5 · calibrating 1 · registered 3 · held 1.</p>
 <p>E1–E48: Holds 9 · Holds within a scope 5 · Partly holds 15 · Superseded 13 · Historical 6 · Merged 1 · Running 1.</p>
 <h2 id="reading-a-page">Reading a page</h2>
 <p>Every experiment page has the same headings: Question, Design, Pre-set rule (as registered before the data existed), Results, Conclusion, Related. Variants (E8b, E10b, E12b, E19b, E24b, E34r, E36c and others) are sections of the parent page. Three markings recur:</p>
@@ -192,8 +192,8 @@ window.MathJax = {
 <tr>
 <td><a href="V2.html">V2</a></td>
 <td>Is each proposal's likelihood estimate unbiased, and how many effective draws does it keep?</td>
-<td>Running</td>
-<td>The surrogate's estimate equals the exact likelihood for <code>cr</code> (ratio 1.000 at <span class="math inline">\(\rho\)</span> 1, 0.8, 0.5) and for <code>dd</code> (0.993); thinning keeps 3–5 of 1000 draws for most models, the surrogate 800–1000 for <code>cr</code> and <code>dd</code> and 3–4 for <code>ed</code>, <code>ned</code>, <code>nedc</code>.</td>
+<td>Complete</td>
+<td>Both densities are their samplers': the surrogate reproduces the exact likelihood (<code>cr</code> exactly; <code>dd</code> within 1% in six of seven cells), and the two proposals converge where both are well sampled (median difference 0.03 nats above 400 effective draws). The surrogate keeps hundreds of draws for <code>cr</code>, <code>dd</code>, <code>nd</code>, <code>d</code>; <code>ed</code>, <code>ned</code>, <code>nedc</code> keep a handful on either proposal, and there <span class="math inline">\(\log\hat L\)</span> falls below the truth.</td>
 </tr>
 <tr>
 <td><a href="V3.html">V3</a></td>

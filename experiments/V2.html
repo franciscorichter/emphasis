@@ -60,6 +60,8 @@ window.MathJax = {
 </li>
 <li><a href="#results">Results</a>
 </li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
 </ol>
 </nav>
 <div class="table-wrap">
@@ -67,7 +69,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>registered 2026-10-31; amended 2026-10-31; running on Bre</td>
+<td>registered 2026-10-31; amended 2026-10-31; read 2026-10-31 on 7,436 of 7,440 trees</td>
 </tr>
 <tr>
 <td>Series</td>
@@ -128,11 +130,128 @@ window.MathJax = {
 <li><strong>Efficiency</strong> (descriptive): median effective sample and share of trees below 10, per proposal, cell, <span class="math inline">\(\rho\)</span>.</li>
 </ol>
 <h2 id="results">Results</h2>
-<p>Running: all 7,440 trees on the driver that reads the surrogate's own estimate (<code>fhat</code>, rejected draws included) and records its acceptance rate.</p>
+<p>Read on 7,436 of 7,440 trees (<code>sim/V2-analysis.py</code>; <code>results/V2/rule1.csv</code>, <code>rule2.csv</code>, <code>rule3.csv</code>, <code>ess-diagnostic.csv</code>).</p>
+<p><strong>Rule 1, unbiasedness against the exact likelihood</strong> (31 cells with a reference: <code>cr</code> at every <span class="math inline">\(\rho\)</span>, <code>dd</code> at <span class="math inline">\(\rho = 1\)</span>).</p>
 <ul>
-<li><strong><code>cr</code>:</strong> the surrogate's estimate equals the exact likelihood (mean <span class="math inline">\(\hat L/L\)</span> = 1.000 on 450 trees).</li>
-<li><strong><code>dd</code>:</strong> on six trees checked against the exact value, the surrogate's estimate lies within 0.024 of it, at acceptance rates of 0.78–0.90.</li>
+<li><strong>Surrogate: holds in 30 of 31 cells.</strong> For <code>cr</code> its estimate equals the exact likelihood on every set of draws (mean <span class="math inline">\(\hat L/L\)</span> = 1.000, interval of zero width): it samples the posterior exactly. For <code>dd</code> the mean lies within [0.95, 1.003] with the interval containing 1 in six of seven cells; the seventh, 50 tips at turnover 0.40, is 0.990 [0.984, 0.995].</li>
+<li><strong>Thinning: holds in 15 of 31 cells,</strong> always failing below 1. The shortfall follows the effective sample: the median <span class="math inline">\(\log(\hat L/L)\)</span> is -5 to -51 where the median effective sample of a 1000-draw set is 1–2, -0.3 to -2.2 at 3–9, -0.02 to -0.18 at 12–54 and -0.005 to -0.025 at 114–269. An average of importance weights is unbiased for <span class="math inline">\(L\)</span>, but with a few effective draws it lands below <span class="math inline">\(L\)</span> on most runs; the surrogate, scored against the same references on the same trees, shows that the references are the likelihood the proposals estimate.</li>
 </ul>
+<p><strong>Rule 2, agreement between the proposals where no reference exists</strong> (<code>dd</code> at <span class="math inline">\(\rho &lt; 1\)</span> and the lineage-level models with both proposals; trees where both pooled effective samples reach 10).</p>
+<ul>
+<li>The proposals agree in 66 cells and differ in 150; 62 cells have fewer than five such trees.</li>
+<li>The proposal with the smaller effective sample gives the lower estimate: the surrogate is higher for <code>d</code>, <code>dd</code>, <code>nd</code> and <code>edc</code> (median of the differing cells 0.4–1.4 per model), thinning is higher for <code>ed</code>, <code>ned</code> and <code>nedc</code> (2–7), the models on which the surrogate keeps 2–7 effective draws.</li>
+<li>The difference vanishes as both are sampled well. By the smaller pooled effective sample of the two (4000 draws each):</li>
+</ul>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>smaller effective sample</th>
+<th>trees</th>
+<th>median difference of <span class="math inline">\(\log\hat L\)</span></th>
+<th>share where the less-sampled proposal is lower</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>under 10</td>
+<td>1,972</td>
+<td>10.6</td>
+<td>0.77</td>
+</tr>
+<tr>
+<td>10–40</td>
+<td>2,187</td>
+<td>2.06</td>
+<td>0.73</td>
+</tr>
+<tr>
+<td>40–100</td>
+<td>643</td>
+<td>0.37</td>
+<td>0.68</td>
+</tr>
+<tr>
+<td>100–400</td>
+<td>415</td>
+<td>0.11</td>
+<td>0.61</td>
+</tr>
+<tr>
+<td>over 400</td>
+<td>174</td>
+<td>0.03</td>
+<td>0.55</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Rule 3, efficiency</strong> (median effective sample of a 1000-draw set at the generating values; share of sets under 10 in brackets):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>surrogate, <span class="math inline">\(\rho\)</span> 1 / 0.8 / 0.5</th>
+<th>thinning, <span class="math inline">\(\rho\)</span> 1 / 0.8 / 0.5</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code></td>
+<td>1000 / 1000 / 1000 (0)</td>
+<td>7.7 / 3.8 / 3.1 (0.53–0.72)</td>
+</tr>
+<tr>
+<td><code>dd</code></td>
+<td>788 / 862 / 744 (0)</td>
+<td>5.2 / 3.4 / 3.8 (0.68–0.77)</td>
+</tr>
+<tr>
+<td><code>nd</code></td>
+<td>242 / 217 / 182 (0.02–0.05)</td>
+<td>4.6 / 3.1 / 2.9 (0.72–0.84)</td>
+</tr>
+<tr>
+<td><code>d</code></td>
+<td>118 / 56 / 42 (0.14–0.26)</td>
+<td>6.3 / 2.7 / 2.2 (0.59–0.87)</td>
+</tr>
+<tr>
+<td><code>edc</code></td>
+<td>64 / 18 / 8.4 (0.26–0.54)</td>
+<td>11.3 / 3.7 / 3.0 (0.48–0.73)</td>
+</tr>
+<tr>
+<td><code>ed</code></td>
+<td>6.4 / 3.1 / 2.0 (0.58–0.92)</td>
+<td>14.3 / 4.4 / 3.5 (0.45–0.73)</td>
+</tr>
+<tr>
+<td><code>ned</code></td>
+<td>7.3 / 4.1 / 2.4 (0.57–0.90)</td>
+<td>5.3 / 3.1 / 3.0 (0.61–0.76)</td>
+</tr>
+<tr>
+<td><code>nedc</code></td>
+<td>4.2 / 3.0 / 2.2 (0.77–0.95)</td>
+<td>5.1 / 3.4 / 3.6 (0.67–0.78)</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>—</td>
+<td>50.4 / 11.2 / 12.7 (0.35–0.48)</td>
+</tr>
+<tr>
+<td><code>nk</code></td>
+<td>—</td>
+<td>3.8 / 3.2 / 3.4 (0.71–0.79)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 id="conclusion">Conclusion</h2>
+<p>Both proposal densities are the ones their samplers draw from: the surrogate reproduces the exact likelihood, and the two proposals converge on the same value where both are well sampled. What separates them is efficiency. The surrogate keeps hundreds of effective draws for <code>cr</code>, <code>dd</code>, <code>nd</code> and <code>d</code> and is the proposal to use there; for <code>ed</code>, <code>ned</code> and <code>nedc</code> neither proposal keeps more than a handful at the generating values, and an estimate of <span class="math inline">\(\log L\)</span> from so few draws lies below the truth by an amount that grows as the effective sample falls. Sampling fractions below 1 lower the effective sample of every proposal.</p>
 
 </article>
 </main>
