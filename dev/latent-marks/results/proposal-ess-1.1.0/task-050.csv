@@ -1,0 +1,2 @@
+"task","sigma","rep","tips","draws","ess_thin_nomarks","ess_thin_marks","ess_surr_nomarks","ess_surr_marks","surr_acc","surr_valid","ll_thin_marks","ll_surr_marks","sec_thin","sec_surr","build"
+50,0.25,20,128,500,24.0973061500232,18.8574464161263,500.000000000002,11.8317672305743,1,500,-259.484936735304,-256.629474484204,20.3301711082458,34.7404878139496,"1.1.0"
