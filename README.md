@@ -3,7 +3,7 @@
 [![R-CMD-check](https://github.com/franciscorichter/emphasis/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/franciscorichter/emphasis/actions/workflows/R-CMD-check.yaml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-Monte Carlo conditional-likelihood inference for endogenous-covariate diversification models on phylogenetic trees. R package, development version 1.0.0.9000; version 1.0.0 is under CRAN review.
+Monte Carlo conditional-likelihood inference for endogenous-covariate diversification models on phylogenetic trees. R package, version 1.1.0, submitted to CRAN.
 
 ```r
 devtools::install_github("franciscorichter/emphasis")

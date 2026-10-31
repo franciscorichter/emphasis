@@ -1,4 +1,4 @@
-# emphasis (development version)
+# emphasis 1.1.0
 
 * The trees an E-step returns under the thinning proposal carry their lineage
   ids and covariate columns again. The copy `rcpp_mcem.cpp` made of them had

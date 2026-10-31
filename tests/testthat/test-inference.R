@@ -119,9 +119,12 @@ test_that("estimate_rates CR with mcem runs end-to-end", {
 })
 
 test_that("estimate_rates CR with cem runs end-to-end", {
-  fit <- estimate_rates(brts_cr, method = "cem", model = "cr",
-    control = list(lower_bound = c(0, 0), upper_bound = c(2, 1),
-                   max_iter = 3L, num_particles = 20L, num_threads = 1L), link = "linear")
+  # 20 particles: a starved fit is expected and warned about
+  fit <- muffle_expected(
+    estimate_rates(brts_cr, method = "cem", model = "cr",
+      control = list(lower_bound = c(0, 0), upper_bound = c(2, 1),
+                     max_iter = 3L, num_particles = 20L, num_threads = 1L), link = "linear"),
+    "effective sample is")
   expect_s3_class(fit, "emphasis_fit")
   expect_equal(length(fit$pars), 2L)
   expect_equal(fit$method, "cem")
