@@ -114,13 +114,16 @@ test_that("estimate_rates runs an ED model under either proposal", {
   set.seed(24)
   phy <- ape::rcoal(12)
   for (proposal in c("ed", "meanfield")) {
-    fit <- estimate_rates(phy, method = "mcem", model = "ned",
-                          init_pars = c(0.8, -0.01, 0.0, 0.2, 0.0, 0.0),
-                          control = list(sampling = "dynamic_fresh", proposal = proposal,
-                                         sample_size = 20L, max_iter = 2L, num_threads = 1L,
-                                         lower_bound = c(0.01, -0.2, -1, 0.0, -0.2, -1),
-                                         upper_bound = c(3, 0.2, 1, 2, 0.2, 1),
-                                         verbose = FALSE), link = "linear")
+    # 20 draws on 12 tips: a starved fit is expected and warned about
+    fit <- muffle_expected(
+      estimate_rates(phy, method = "mcem", model = "ned",
+                     init_pars = c(0.8, -0.01, 0.0, 0.2, 0.0, 0.0),
+                     control = list(sampling = "dynamic_fresh", proposal = proposal,
+                                    sample_size = 20L, max_iter = 2L, num_threads = 1L,
+                                    lower_bound = c(0.01, -0.2, -1, 0.0, -0.2, -1),
+                                    upper_bound = c(3, 0.2, 1, 2, 0.2, 1),
+                                    verbose = FALSE), link = "linear"),
+      "effective sample is")
     expect_s3_class(fit, "emphasis_fit")
     expect_length(fit$pars, 6L)
     expect_true(is.finite(fit$loglik))

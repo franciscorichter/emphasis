@@ -26,7 +26,9 @@ test_that("the raw-ED path with zero ED coefficients matches the birth-death mom
   a <- tips[is.finite(tips)]; b <- ref[is.finite(ref)]
   se <- sqrt(stats::var(a) / length(a) + stats::var(b) / length(b))
   expect_lt(abs(mean(a) - mean(b)), 3.5 * se)
-  expect_gt(stats::ks.test(a, b)$p.value, 0.01)
+  # tip counts are integers, so ties are certain and the p-value is the
+  # asymptotic one, which is conservative for discrete data
+  expect_gt(muffle_expected(stats::ks.test(a, b), "ties")$p.value, 0.01)
 })
 
 test_that("a negative ED coefficient on the exponential link slows the clade below the rate-frozen draw", {

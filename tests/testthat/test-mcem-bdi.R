@@ -232,12 +232,15 @@ test_that("non-finite draws and both rejection channels are recorded from the E-
 test_that("the H11 part D configuration does not report convergence through zero-delta iterations", {
   lb <- c(0.01, -1, 0.001, 0); ub <- c(5, 0, 2, 0)
   set.seed(11)
-  fit <- estimate_rates(brts_dd, method = "mcem", model = "dd",
-                        init_pars = c(1.5, -0.12, 0.4, 0),
-                        control = list(lower_bound = lb, upper_bound = ub,
-                                       sample_size = 200L, max_iter = 4L,
-                                       max_missing = 30L, num_threads = 1L,
-                                       sampling = "bdi"), link = "linear")
+  # a stress configuration: the mean field may not converge in its 20 sweeps
+  fit <- muffle_expected(
+    estimate_rates(brts_dd, method = "mcem", model = "dd",
+                   init_pars = c(1.5, -0.12, 0.4, 0),
+                   control = list(lower_bound = lb, upper_bound = ub,
+                                  sample_size = 200L, max_iter = 4L,
+                                  max_missing = 30L, num_threads = 1L,
+                                  sampling = "bdi"), link = "linear"),
+    "mean-field iteration did not converge")
   m  <- fit$details$mcem
   em <- m[m$m_step, ]
   expect_true(all(c("delta_max", "abs_step", "drift", "m_moved",
