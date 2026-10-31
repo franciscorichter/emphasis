@@ -1,0 +1,18 @@
+{
+  "set": "emphasis-readme",
+  "context": "the README of an R package that fits birth-death models of species diversification to phylogenetic trees of living species",
+  "root": "~/Code/emphasis/man/figures",
+  "threshold": 7,
+  "figures": [
+    {"name": "hidden", "file": "readme-hidden.png",
+     "claim": "A phylogeny of living species records only the survivors of a history that also contained many extinct lineages; the package proposes those hidden extinct lineages onto the observed tree, and one such draw resembles the true history.",
+     "must": ["the middle tree is the observed data and contains no extinct lineages",
+              "the left tree is the true history, with extinct lineages (in purple) that the data omit",
+              "the right tree is the observed tree with extinct lineages added by the method, comparable in number to the true ones"]},
+    {"name": "path", "file": "readme-path.png",
+     "claim": "On a tree simulated with an effect of D on speciation, the covariate path lets D enter first, its coefficient reaches the true value of -0.4, and BIC keeps D alone while N, ED and K stay at zero.",
+     "must": ["D is the first covariate to enter the path",
+              "at the BIC choice D's coefficient is near the true -0.4",
+              "N, ED and K are zero at the chosen point and only move at the very end of the path"]}
+  ]
+}

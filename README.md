@@ -2,418 +2,220 @@
 
 [![R-CMD-check](https://github.com/franciscorichter/emphasis/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/franciscorichter/emphasis/actions/workflows/R-CMD-check.yaml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![Docs](https://img.shields.io/badge/docs-site-1d6d5a.svg)](https://franciscorichter.github.io/emphasis/)
 
-Monte Carlo conditional-likelihood inference for endogenous-covariate diversification models on phylogenetic trees. R package, version 1.1.0, submitted to CRAN.
+**emphasis** fits birth-death models of species diversification to phylogenetic trees, where the speciation and extinction rate of each lineage depends on quantities the process generates itself: how many lineages are alive, how long a lineage has waited since it last split, how distinct it is on the tree, and how many splits lie in its ancestry.
+
+A reconstructed phylogeny shows only the species alive today. Everything that went extinct is missing, and the rates depend on it. emphasis integrates over those hidden lineages: it samples them onto the observed tree, weights each sample by how well it explains the data, and estimates the rates by Monte Carlo expectation-maximisation.
+
+![A simulated clade: its full history, the reconstructed tree that is observed, and one draw of the hidden lineages](man/figures/readme-hidden.png)
+
+*A clade simulated under diversity dependence. Left: everything that happened. Middle: the same tree with its extinct lineages removed, which is all a phylogeny of living species records. Right: one set of extinct lineages that emphasis's sampler proposes for that observed tree; a fit averages over hundreds of such draws.*
+
+Version 1.1.0, submitted to CRAN. Documentation: <https://franciscorichter.github.io/emphasis/>.
+
+## Installation
 
 ```r
+# install.packages("devtools")
 devtools::install_github("franciscorichter/emphasis")
 ```
 
-## Where it lives
+The package compiles C++ code (Rcpp, RcppParallel, nloptr, BH), so a compiler is needed: Xcode command-line tools on macOS, Rtools on Windows.
 
-| What | Where |
-| ---- | ----- |
-| Repository | <https://github.com/franciscorichter/emphasis>: source, CI, docs site, `install_github()` |
-| Docs site | <https://franciscorichter.github.io/emphasis/>: overview, the four covariates and their biological meaning ([covariates](https://franciscorichter.github.io/emphasis/covariates/)), usage, function reference, [what is established](https://franciscorichter.github.io/emphasis/established.html), estimability, real phylogenies, [open issues](https://franciscorichter.github.io/emphasis/open-issues.html), glossary, and [one page per experiment](https://franciscorichter.github.io/emphasis/experiments/) |
-| Simulator | <https://franciscorichter.github.io/emphasis/simulator.html>: forward simulation of every model and link in the browser; its agreement with `simulate_tree()` is checked by `dev/simulator/agreement.R` |
-| Issues and bug reports | <https://github.com/franciscorichter/emphasis/issues> |
-| Citation | Richter et al. (2020), *A general class of species diversification models for phylogenetic trees*, *Statistica Neerlandica* |
-
-## Build and test
-
-Toolchain: R ≥ 3.5, a C++ compiler, and the packages in `DESCRIPTION` (`Rcpp`, `RcppParallel` for TBB parallelism, `nloptr`, `BH` headers, `ape`, `DDD`, `progress`; `mgcv` for the optional survival GAM).
+## Quick start
 
 ```r
-devtools::load_all()    # compiles src/ and loads the package
-devtools::document()    # regenerates NAMESPACE and man/ from roxygen
-devtools::test()        # unit tests (tests/testthat)
-devtools::check()       # full R CMD check
+library(emphasis)
+
+# simulate a clade under diversity dependence: lambda = 0.6 exp(-0.01 N), mu = 0.05
+set.seed(1)
+sim <- simulate_tree(pars = c(log(0.6), -0.01, log(0.05), 0), max_t = 10, model = "dd",
+                     max_tries = 20)        # redraw until the clade survives
+phy <- sim$tes                              # the reconstructed tree, an ape::phylo
+
+# a parameter box for each model, from the tree alone
+box_cr <- auto_bounds(phy, model = "cr", train_surv_gam = FALSE)
+box_dd <- auto_bounds(phy, model = "dd", train_surv_gam = FALSE)
+
+# fit constant rates and diversity dependence, then compare them
+fit_cr <- estimate_rates(phy, model = "cr",
+                         control = list(lower_bound = box_cr$lower_bound,
+                                        upper_bound = box_cr$upper_bound, sample_size = 200))
+fit_dd <- estimate_rates(phy, model = "dd",
+                         control = list(lower_bound = box_dd$lower_bound,
+                                        upper_bound = box_dd$upper_bound, sample_size = 200))
+fit_dd                                      # estimates, log-likelihood, effective sample, stop reason
+compare_models(cr = fit_cr, dd = fit_dd)    # AIC with the Monte Carlo diagnostics
 ```
 
-```sh
-R CMD build .           # source tarball
-```
-
-CI runs `R CMD check` on every push to `main` and on pull requests through `.github/workflows/R-CMD-check.yaml` (r-lib/actions): macOS and Windows on R release, Linux on R release, devel and oldrel. The suite and what it checks are under [Validation](#validation).
-
-## Layout
-
-```
-R/
-  simulate.R        simulate_tree(): forward / batch / conditional (augmentation); model + link resolution;
-                    .expand_pars/.contract_pars between compact and full parameter layouts
-  inference.R       estimate_rates() dispatcher (mcem / cem / gam), control defaults, compare_models()
-  emphasis.R        .mcem_dynamic_fresh(): thinning-based MCEM
-  bdi.R             conditional (BDI) augmentation sampler + .mcem_bdi() (see "Augmentation samplers")
-  covariate_path.R  lineage_table(), covariate_path()
-  de.R              cross-entropy method (CEM) and importance-sampling utilities
-  gam.R             auto_bounds(), train_GAM(), predict_survival(), likelihood-surface GAM
-  survival.R        survival_mc(), survival_surface(), and estimate_rates(cond = "surface")
-  pipeline.R        emphasis_pipeline(): the bounds → GAM → CEM → MCEM chain, kept for compatibility
-  diagnostics.R     diagnose_mcem/cem/gam + print methods
-src/
-  augment_tree.cpp  data augmentation: insert extinct / unsampled lineages (thinning proposal)
-  E_step.cpp        parallel augmentation via TBB, IS weights
-  M_step.cpp        NLopt Subplex maximisation of the weighted log-likelihood
-  div_tree.cpp      forward simulation
-  loglik.cpp, mcem.cpp, rcpp_*.cpp, rsbplx.cpp, rinit.cpp
-inst/include/       header-only model code (model.hpp, augment_tree.hpp, ed_covariate.hpp, general_tree.hpp, …)
-man/                generated by roxygen; do not edit by hand
-tests/testthat/     unit tests
-site/               the docs site's sources and builder: build.py, template.html, style.css, src/*.md,
-                    reference.R + reference/ (Rd fragments), public.py (the public filter)
-*.html, covariates/, experiments/, assets/
-                    the docs site as built (committed; GitHub Pages serves them); simulator.html is
-                    hand-written; D.html is a redirect the build writes; self-hosted MathJax;
-                    excluded from the package build
-  assets/simulator/emphasis-sim.js   the simulator page's engine: a port of general_tree.hpp and ed_covariate.hpp
-dev/                excluded from the package build
-  audit/            the as-implemented map of the estimator, its hypotheses, findings and reproduction scripts
-  simulator/        the check that the simulator page draws from the distribution simulate_tree() does
-```
-
-Exported functions: `simulate_tree`, `estimate_rates`, `compare_models`, `covariate_path`, `lineage_table`, `auto_bounds`, `diagnose_mcem`, `survival_mc`, `survival_surface`; and, kept for compatibility, `emphasis_pipeline`, `train_GAM`, `predict_survival`, `diagnose_cem`, `diagnose_gam`.
-
-## Data
-
-The package ships no data. Inputs are an `ape::phylo` object, a `simulate_tree()` result, or a numeric vector of branching times. A tree that is not ultrametric (one with branching times after the present) is refused with a message. The examples below use simulated trees.
+On a desktop CPU (AMD Ryzen 9) this runs in about 7 minutes. In that run the simulated tree had 97 tips (the compiled simulator draws differently across platforms, so the tree may differ), `compare_models()` chooses `dd` by 4.2 AIC, and the estimate of $\beta_N$ is -0.0102 against the true -0.01.
 
 ## The model
 
-Species diversification is modelled as a stochastic birth-death process whose speciation and extinction rates depend on endogenous covariates, quantities generated by the diversification process itself:
+Each lineage $s$ alive at time $t$ speciates at rate $\lambda(s,t)$ and goes extinct at rate $\mu(s,t)$:
 
 $$
-\lambda(s,t) = f\!\bigl(\beta_0,\; \beta_N N(t) + \beta_D D_s(t) + \beta_{ED}\,\mathrm{ED}_s(t) + \beta_K K_s(t)\bigr), \quad
-\mu(s,t) = f\!\bigl(\gamma_0,\; \gamma_N N(t) + \gamma_D D_s(t) + \gamma_{ED}\,\mathrm{ED}_s(t) + \gamma_K K_s(t)\bigr)
+\lambda(s,t) = f\bigl(\beta_0 + \beta_N N(t) + \beta_D D_s(t) + \beta_{ED}\,\mathrm{ED}_s(t) + \beta_K K_s(t)\bigr),
+\qquad
+\mu(s,t) = f\bigl(\gamma_0 + \gamma_N N(t) + \dots\bigr)
 $$
 
-Two link functions $f$ are available:
+with $f = \exp$ (the default) or the linear link $f(x) = \max(0, x)$, chosen with `link = "exponential"` or `"linear"`.
 
-| Link | Formula | Properties |
-| ---- | ------- | ---------- |
-| **Exponential** (default) | $f(\beta_0, \eta) = \exp(\beta_0 + \eta)$ | Positive; unbounded; monotonic; $\beta_0$, $\gamma_0$ are log rates |
-| **Linear** | $f(\beta_0, \eta) = \max(0,\; \beta_0 + \eta)$ | Non-smooth at zero; monotonic; a rate driven below zero is clipped at zero |
+| Covariate | What it measures | Biological question |
+| --------- | ---------------- | ------------------- |
+| $N(t)$ | the number of lineages alive | do ecological limits slow diversification? |
+| $D_s(t)$ | the time since lineage $s$ last split, relative to the clade mean | do lineages that have waited longer speciate more or less? |
+| $\mathrm{ED}_s(t)$ | evolutionary distinctiveness (fair proportion) on the complete tree | do isolated lineages diversify differently? |
+| $K_s(t)$ | the number of speciation events in the ancestry of $s$ | does a speciation-rich ancestry carry on? |
 
-The link is selected with `link = "exponential"` (the default) or `"linear"`. The linear link is supported.
+$D$, $\mathrm{ED}$ and $K$ are read on the complete tree, hidden lineages included, so they need the tree's topology (a `phylo`). The [covariates page](https://franciscorichter.github.io/emphasis/covariates/) gives each one's definition and meaning.
 
-Four lineage-level covariates are read on the complete tree, the first from its branching times and the others from its topology:
+Setting coefficients to zero gives the named models:
 
-| Symbol     | Name              | Definition                                                                |
-| ---------- | ----------------- | ------------------------------------------------------------------------- |
-| $N(t)$   | Diversity (tempo) | Number of lineages alive at time $t$, a readout of the branching times alone |
-| $D_s(t)$ | Age-imbalance     | $D_s = I_s - M$: a lineage's isolation time $I_s$ (time since it last speciated) relative to the clade mean $M$; centred, so $\sum_s D_s = 0$ |
-| $\mathrm{ED}_s(t)$ | Evolutionary distinctiveness | Fair proportion on the complete tree: $\sum_{b \in \mathrm{anc}(s,t)} \ell_b / n_b$ over the branches from the crown to $s$, each divided by the alive lineages below it. Its last term is the pendant age $I_s$; its sum over lineages is Faith's phylogenetic diversity |
-| $K_s(t)$ | Ancestral splits | The number of speciation events on the path from the crown to $s$ at time $t$, hidden splits counted |
+| Model | Covariates | Model | Covariates |
+| ----- | ---------- | ----- | ---------- |
+| `"cr"` | none (constant rates) | `"ed"` | $\mathrm{ED}$ |
+| `"dd"` | $N$ (diversity dependence) | `"ned"` | $N + \mathrm{ED}$ |
+| `"d"` | $D$ | `"edc"`, `"nedc"` | $\mathrm{ED}$ centred on the clade mean, alone or with $N$ |
+| `"nd"` | $N + D$ | `"k"`, `"nk"` | $K$, alone or with $N$ |
 
-**$D$.** Because $\sum_s D_s = 0$, the age-imbalance is a within-clade signal, uncorrelated with diversity: $N$ measures **when** the clade diversifies, $D$ **the age structure of which lineages do**. The mean pendant age $M = P/N$ is used only internally to centre $D$ and is not a user covariate. A lineage's pendant age restarts when it splits. Between events every pendant age and their mean grow at unit rate, so $D_s$ is constant from one event to the next; the simulator, the likelihood's compensator and its event terms all read that value, over the same alive multiset of pendant starts. See [the biological meaning of D](https://franciscorichter.github.io/emphasis/covariates/D.html) for what $\beta_D$ tests (age-dependent speciation).
+A formula works too: `model = ~ N + D`, `~ N + ED`, `~ N + EDc`, `~ N + K`.
 
-**$\mathrm{ED}$.** The per-lineage form of phylodiversity dependence. It is defined on the complete tree, so hidden lineages count among a branch's descendants and contribute branches, and the augmentation supplies them; it needs the tree's topology (a `phylo`, not a branching-time vector). The same routine computes it in the simulator and in the likelihood (`inst/include/ed_covariate.hpp`). Its cost is quadratic in the *augmented* tree: the per-segment tables over every alive lineage are built once per tree and cached across the parameter values an M-step tries. Because the augmentation builds the complete clade the current parameters imply, an $\mathrm{ED}$ fit is started from the estimate of the nested model (`ed` from `cr`, `ned` from `dd`) with the $\mathrm{ED}$ coefficients at zero; from a point far above the net rate the augmented trees grow by orders of magnitude and the E-step's clock runs out.
+## What the package does
 
-**$\mathrm{ED}^{c}$.** $\mathrm{ED}^{c}_s(t) = \mathrm{ED}_s(t) - \overline{\mathrm{ED}}(t)$, the fair proportion minus its mean over the lineages alive at $t$. Fair-proportion $\mathrm{ED}$ is not centred: its clade mean is Faith's PD over $N$, a clade-level quantity the $N$ term already tracks, so in an `ned` fit $\beta_{ED}$ carries a clade-level component and a within-clade contrast at once. The centred covariate carries only the contrast; it sums to zero over the alive lineages and is constant between events. At $\beta_{ED} = \gamma_{ED} = 0$ `nedc` is `dd`.
+### Simulate trees
 
-**$K$.** Constant between events, one more on both daughters at a split, hidden splits counted, so like $D$ and $\mathrm{ED}$ it is defined on the complete tree and needs the topology and the augmentation. Its compensator is the segment length. It is the observable trace of what inherited-rate models (BAMM, ClaDS) carry as a latent variable; over 6,433 lineages on 30 complete `dd` clades its rank correlation with each of $N$, $D$ and $\mathrm{ED}$ is at most 0.29 in magnitude. The thinning proposal reads it per lineage; the conditional proposal refuses it with a reason, since its mean field does not carry $K$.
-
-Setting coefficients to zero recovers the model classes:
-
-| Shortcut | Covariates | Parameters                                 | Hypothesis                         |
-| -------- | ---------- | ------------------------------------------ | ---------------------------------- |
-| `"cr"` | none       | $(\beta_0, \gamma_0)$                    | Constant rates (null)              |
-| `"dd"` | $N$      | $(\beta_0, \beta_N, \gamma_0, \gamma_N)$ | Diversity dependence (ecological limits) |
-| `"d"`  | $D_s$    | $(\beta_0, \beta_D, \gamma_0, \gamma_D)$ | Age-dependent speciation           |
-| `"nd"` | $N + D_s$ | $(\beta_0, \beta_N, \beta_D, \gamma_0, \gamma_N, \gamma_D)$ | Both  |
-| `"ed"` | $\mathrm{ED}_s$ | $(\beta_0, \beta_{ED}, \gamma_0, \gamma_{ED})$ | Distinctiveness-dependent diversification |
-| `"ned"` | $N + \mathrm{ED}_s$ | $(\beta_0, \beta_N, \beta_{ED}, \gamma_0, \gamma_N, \gamma_{ED})$ | Distinctiveness over and above diversity |
-| `"edc"` | $\mathrm{ED}^{c}_s$ | $(\beta_0, \beta_{ED}, \gamma_0, \gamma_{ED})$ | The same, on the centred covariate |
-| `"nedc"` | $N + \mathrm{ED}^{c}_s$ | $(\beta_0, \beta_N, \beta_{ED}, \gamma_0, \gamma_N, \gamma_{ED})$ | Within-clade distinctiveness over and above diversity |
-| `"k"`  | $K_s$    | $(\beta_0, \beta_K, \gamma_0, \gamma_K)$ | Inherited diversification: a speciation-rich ancestry speciates more (or less) |
-| `"nk"` | $N + K_s$ | $(\beta_0, \beta_N, \beta_K, \gamma_0, \gamma_N, \gamma_K)$ | The same over and above diversity |
-
-Models can also be given as a formula: `model = ~ N + D`, `model = ~ N + ED`, `model = ~ N + EDc`, `model = ~ N + K`. (`"ep"` is an alias for `"d"`.) Internally a model is a five-slot vector `c(use_N, use_M, use_D, use_ED, use_K)`, where slot 4 is 1 for the raw covariate and 3 for the centred one, and the full parameter vector has twelve slots, with the two $\mathrm{ED}$ coefficients and then the two $K$ coefficients last, so that eight-slot parameter vectors and three-slot model vectors keep their meaning.
-
-## Inference
-
-Reconstructed phylogenies record only extant lineages; extinct side branches are unobserved. The marginal likelihood integrates over all possible extinction histories $z$:
-
-$$
-L_\theta(y_{\text{obs}}) = \int f_\theta(y_{\text{obs}}, z)\,dz
-$$
-
-It is estimated by **importance sampling**: the observed tree is augmented with latent extinct lineages, and each augmented tree is weighted by $f_\theta / q$.
-
-### The reported log-likelihood is biased downward, and by how much is recorded
-
-Two Monte Carlo averages appear in an MCEM fit, and only one of them is unbiased.
-
-The **EM objective** is an expectation of a log, $Q(\theta)=E[\log f(y,z\mid\theta)]$, and the M-step averages $\log f$ directly (`src/M_step.cpp`). Averaging logs to estimate a mean of logs is unbiased.
-
-The **log-likelihood** is not. $\hat\ell=\log\big(\tfrac1N\sum_i w_i\big)$ is a log of a mean, so by Jensen's inequality $E[\hat\ell]\le\log p(y\mid\theta)$: biased down, never up, by an amount that grows as the effective sample falls. `AIC` inherits it doubled, and it does **not** cancel between models: the model that is harder to sample is penalised for being harder to sample.
-
-Every fit therefore records `details$final_IS$ESS` and `$gap`, and `compare_models()` reports both and **warns when a ranking is not safe against them**: when the handicap of a lower-ESS model reaches the AIC gap it is losing by, or when its draw is heavy enough that the handicap cannot be quantified. It also warns when the model it chooses rests on fewer than 10 effective draws. `print()` on a fit shows the effective sample and, when it matters, how far below the truth the estimate sits.
-
-`gap` is an indicator of size and not a bound. Against log-normal weights at $N=200$ it overstates the true bias where that bias is negligible (ratio 4.9 at $n_{\text{eff}}=188$, absolute size $3\times10^{-5}$) and understates it where it is not (ratio 0.46 at $n_{\text{eff}}=17$, 0.16 at $n_{\text{eff}}=6$, where the true bias is half a nat). The `gap_heavy` flag marks $n_{\text{eff}}<N/10$, where the ratio first falls below one half, and a heavy draw is treated as unquantified.
-
-### Choosing a model
-
-**The chosen model is not the lowest AIC.** Among nested models the richer one has the lower AIC whenever its two extra parameters raise the log-likelihood by more than 2, which under the null happens on about 13% of trees (the likelihood-ratio statistic is $\chi^2_2$), and more often with several richer models offered beside the null. `compare_models()` therefore reports `chosen`: the model with the fewest parameters among those within `margin = 2` AIC of the minimum and, among those, the one with the lower AIC, whatever order the fits are passed in; `within_margin` marks the rows that qualify, and the full ranking is kept.
-
-**Three routes to a model.** `estimate_rates()` fits one named model. `estimate_rates(model = "all")` fits the nested ladder `cr`, `dd`, `nd`, `ned`, `nk` (the last two need a `phylo`), each started from the estimate of the model it nests and boxed by `auto_bounds()` unless `control$bounds` names a box per model, and returns the fits with their `compare_models()` table and its `chosen` model; `control$models` restricts the ladder. `covariate_path()` selects and estimates at once, along one dgLARS path (Augugliaro, Mineo & Wit 2013) over the covariates, on the segment-level Poisson form of the log-linear point process (`lineage_table()` is that form, one row per lineage and segment), choosing a point by BIC or AIC for speciation and extinction separately. Called on a `phylo`, it treats the tree as fully observed; the augmented route, with the hidden lineages entering at their importance weights, runs on the draws of an E-step.
-
-**What a fit records about itself.** A fit carries `notes`, each stating the number it rests on: a lineage-level covariate on fewer than 50 tips; an effective sample below 10 at the last E-step; turnover above 0.5 at the intercepts; under `model = "all"` with both `nd` and `ned` in the ladder, that the two read the same pendant edge; `clock` when `max_time` cut a step short; and `mean_field` when the surrogate proposal's mean-field iteration was relaxed below the full step (which the default does at every sweep when $\rho < 1$), ran under a `damping` the user set, or did not converge within its sweep budget; the note names the setting and whether it was the default. `print()` shows them.
-
-### Augmentation samplers
-
-Two proposals $q$ are available, selected with `simulate_tree(method = )` for conditional simulation and `control = list(sampling = )` for MCEM:
-
-| Sampler | Where | Scope | Property |
-| ------- | ----- | ----- | -------- |
-| `"bdi"`, the surrogate (default) | `R/bdi.R` | `cr`, `dd` and $\mathrm{ED}$ models on the linear and exponential links; $D$ models on request; any $\rho \in (0,1]$ | Draws from the exact conditional distribution under constant rates (ESS = sample size); under diversity dependence, $D$ or $\mathrm{ED}$ it is a mean-field proposal built on a self-consistent backward-forward iteration, and the weights carry the approximation |
-| `"thinning"` (`sampling = "dynamic_fresh"`) | `src/augment_tree.cpp` | Every model and link | Poisson-thinning proposal, C++ with TBB parallelism |
-
-`.bdi_supported(model_bin, link, rho)` gates both entry points, and `.bdi_unsupported_reason()` supplies the phrase the fallback message carries. What runs on thinning:
-
-- **$K$ models**, since the mean field does not carry $K$.
-- **$D$ models, unless `control$sampling` names `"bdi"`.** Under the surrogate the average lineage has $D = 0$, so the mean field is the `dd` one and $\beta_D$ enters only the attachment of hidden births, which is exact: each candidate parent is weighted by the model's own speciation rate at that instant. The pre-registered condition for making it the $D$ default is not met.
-- **A model with an $M$ term.** The iteration carries $\hat N$ and $\hat P$ but not the mean pendant age an $M$ model would close on. ($\mathrm{ED}$ is admitted because its clade mean is $\hat P / \hat N$, and $D$ because its clade mean is zero.)
-
-The surrogate's mean field is a Picard iteration, and where its map expands it diverges; `control$damping` under-relaxes the sweep. By default the step is `"auto"` at complete sampling ($\rho = 1$), which halves the relaxation whenever the residual grows, and a fixed ⅛ when $\rho < 1$. At the shipped sweep budget (20 sweeps at $\rho = 1$, 200 below) a fixed ⅛ converges more diverging cases below $\rho = 1$ (142 against 131 of 192 units at $\rho = 0.2$) but none of 192 at $\rho = 1$, against 131 for `"auto"`, at 1.4 to 3.3 times the E-step time and with no gain in effective sample ([E10](https://franciscorichter.github.io/emphasis/experiments/E10.html)). A mean field that converges only under relaxation leaves an effective sample of about 1 either way. Every E-step's mean field is in the trace (`mf_converged`, `mf_delta`, `mf_sweeps`, `mf_omega`, `mf_budget`), and `fit$notes$mean_field` records the relaxation used.
-
-**The thinning proposal reads ED.** For a model with $\mathrm{ED}$ the sampler draws the missing births at the model's total speciation rate over the lineages alive on the segment, $\Lambda(t) = \sum_s \lambda_s(t)$ with each lineage at its own $\mathrm{ED}_s(t)$, and attaches a birth to lineage $p$ with probability proportional to $\lambda_p(t)$; the segment's extinction rate reads the mean $\mathrm{ED}$. The density mirrors it through the ED table (`Model::ed_proposal_seg_t`, `Model::sampling_prob_ed`), and at $\beta_{ED} = \gamma_{ED} = 0$ it is the mean-field density term for term. The mean-field thinning proposal, $N\lambda(N, M)$ with the ED term at zero and uniform attachment, is reachable through `control = list(proposal = "meanfield")`; the ED-aware one is the default because it completes where the mean-field one returns zero weight ([E3](https://franciscorichter.github.io/emphasis/experiments/E3.html)).
-
-### Estimation
-
-The estimator is Monte Carlo EM. At each iteration the E-step draws hidden lineages from the proposal and weights them, and the M-step maximises the weighted complete-data log-likelihood over a box with Rowan's Subplex (NLopt), the first simplex sized at a tenth of the box in every coordinate; the per-lineage tables are built once per E-step and cached across the values the M-step tries.
-
-The box comes from the observed tree alone, by `auto_bounds()`: a centre at the net rate the tip count and crown age imply, a bisection along each axis toward the point where forward simulation stops producing clades within a tenth and ten times the observed size, each slope axis scaled by its covariate's size on the tree, and a second pass that tightens the box where the augmentation fails at its corners. Its $\lambda$ ceiling has turnover headroom (the implied net rate divided by $1 - 0.95$) and the search probes the constant-net-rate ray, so a high-turnover optimum is inside the box.
-
-Two stopping rules: `rel_change` (default) stops once the relative step, in units independent of the tree's time scale, falls below 1e-2 on three consecutive iterations; `mc_error` measures the step against its own Monte Carlo standard error from five batches, grows the draws by half whenever a step is inside the noise, and stops once the draws reach their cap and the step has stayed inside the noise for three iterations, returning the mean of the last three iterates. `rel_change` compares the step with a fixed tolerance rather than with the noise of the iterate, so on `dd` fits at 200 draws it can run to its cap; `mc_error` lands about 2% from a 400-iteration reference ([E9](https://franciscorichter.github.io/emphasis/experiments/E9.html)). Both are subject to `max_iter` and `max_time`, and a fit reports which of the four ended it.
-
-`control$max_time` bounds the E-step and the M-step: both samplers read the clock between draws and inside a draw, the M-step's optimiser reads the same deadline before every evaluation of its objective and keeps its best point only if it improves on the current iterate, and the fit ends with `stop_reason = "time_budget"` and a `clock` note. After the loop one more E-step runs at the returned point, with `max_time` again, so that the reported log-likelihood, effective sample and gap describe the estimate and a fit returns within about twice `max_time`.
-
-`estimate_rates(method = "cem" | "gam")` and `emphasis_pipeline()` are further estimators (a cross-entropy search, a likelihood surface fitted on a grid); nothing above depends on them. `survival_mc()`, `survival_surface()`, `train_GAM()` and `predict_survival()` are the survival probabilities of the next section.
-
-### Conditioning on survival
-
-Reconstructed trees are conditioned on survival to the present. The conditioned log-likelihood is:
-
-$$
-\ell_{\text{cond}}(\theta) = \ell(\theta) - \log P_\theta(\text{survival})
-$$
-
-Survival is crown survival: both crown lineages leave a sampled descendant at the present. The likelihood is not conditioned by default (`cond = NULL`), and neither is the ladder. `cond` takes one of:
-
-- **`"surface"`**: $\log P_\theta$ estimated by direct simulation on local quadratic surfaces around the iterate, for any model and link, under MCEM. The recommendation for the lineage-level models.
-- **a function** of the parameter data frame returning $P_\theta$ (the probability, not its log). The recommendation for `cr` and `dd`, with the exact value: under `cr` on the exponential link one crown lineage leaves a sampled descendant with probability $p = \rho d / (\rho\lambda + (\lambda(1-\rho) - \mu)e^{-dT})$, $d = \lambda - \mu$, and $P_\theta = p^2$; the example in `?estimate_rates` codes it. Under `dd` it is the solution of the master equation on the clade size. Neither function is in the package.
-- **a surface** from `survival_surface()`, held fixed through the fit.
-- **a binomial GAM** from `train_GAM()`, which simulates clades at Latin-hypercube points of the box and counts a clade that reaches the lineage cap as surviving (`auto_bounds(train_surv_gam = TRUE)` returns one), or an **`nnet`** object. In [E43](https://franciscorichter.github.io/emphasis/experiments/E43.html), GAMs trained on 2000, 5000 and 20 000 clades for each of the eight lineage-level models had a 90th-percentile error of $\log P(S)$ of 0.44 to 2.56, against the 0.05 its rule required, and the error did not fall with the training size; the emulator is not accurate enough to condition on. Its accuracy under `cr` and `dd` over the whole box is measured in [E36](https://franciscorichter.github.io/emphasis/experiments/E36.html).
-
-$P_\theta$ does not depend on the observed tree, so one function per model, crown age and $\rho$ serves every fit of a cell.
-
-**The direct estimate.** `survival_mc()` draws clades forward to the crown age, clade $i$ from seed `seed + i`, so that two calls with the same seed draw the same clades at different parameters (common random numbers). A clade that passes the lineage cap counts as surviving, as in `train_GAM()`. Under $\rho < 1$ a clade that reaches the present with $n_1$ and $n_2$ extant descendants of its two crown lineages contributes $(1-(1-\rho)^{n_1})(1-(1-\rho)^{n_2})$, the probability that sampling each extant tip with probability $\rho$ keeps one on both sides. The estimate is $\log((k + 1/2)/(n + 1))$ over $n$ clades of total contribution $k$, with the delta-method standard error. Against the exact `cr` value it agrees within its error at $\rho = 1$ and $\rho = 0.7$ (`tests/testthat/test-survival-surface.R`). At a standard error of 0.01 one estimate took E43 a median of 2 to 29 s of one core under the lineage-level models, and the M-step evaluates `cond` at every value it tries, which is why `"surface"` does not call it there.
-
-**`cond = "surface"`** runs four steps (`R/survival.R`, `.fit_surface_cond()`):
-
-1. The unconditioned fit, from `init_pars`, to the stopping rule.
-2. A surface of $\log P(S)$ around its estimate (`survival_surface()`): direct estimates at $2p + 1$ points, $p$ the coefficients of a full quadratic in the $d$ parameters (31 points for $d = 4$, 57 for $d = 6$), the centre and a Latin hypercube of a box of half-width 0.03 of the fit's box per coordinate; the same clades at every point, as many as give a standard error of 0.02 at the centre; a quadratic fitted by weighted least squares, the tangent plane outside the box, capped at $\log P = 0$.
-3. MCEM continued from the unconditioned estimate (clamped $10^{-3}$ of the box span inside the box) with the surface as `cond`, in segments of 25 iterations that carry the draw count forward. The surface is rebuilt at the iterate whenever the iterate leaves the inner half of its box; the run ends when the stopping rule is met inside the inner half, or on `max_iter` iterations or `max_time`.
-4. When the unconditioned $\gamma_0$ is within $10^{-3}$ of the box span of an edge, step 3 is also run from `init_pars`, the nested start (the nested model's estimate, lineage-level coefficients at zero), and the run with the higher conditioned log-likelihood is kept.
-
-The reported `loglik` is the kept run's unconditioned log-likelihood minus a direct $\log P(S)$ at its estimate, at a standard error of 0.01; `loglik_var` adds that error's square. `max_time` bounds the four steps together, and the direct estimate at the estimate gets `max_time` again, as the final E-step does. The fit's `conditioning` records the surfaces built, the clades simulated and the seconds spent, the direct $\log P(S)$ at the estimate with its standard error, the unconditioned log-likelihood, which start was kept, whether step 4 ran, the last surface, and each run's estimate, stop reason, iterations and trace. In the pilot that chose the method for [E46](https://franciscorichter.github.io/emphasis/experiments/E46.html) (100 tips, `cr` and `dd`, where the exact conditioned maximum is known), steps 1 to 3 reached a median deficit of 0.0011 nats (worst 0.13) against 0.0074 for MCEM with the exact factor and 0.26 for the unconditioned fit; without step 4 a second, lower maximum on the extinction edge was kept on 4 of 10 `cr` trees at turnover 0.10. The surfaces cost under 0.3% of a `cr`/`dd` fit, 0.4-1.8% under `ned` and 3-9% under `nk`.
-
-Its settings are entries of `control`, read only under `cond = "surface"`:
-
-| Entry | Default | What it sets |
-| ----- | ------- | ------------ |
-| `surface_radius` | `0.03` | half-width of a surface's box, as a share of the fit's box per coordinate |
-| `surface_se` | `0.02` | standard error of $\log P$ at a surface's centre that the clades per point are set for |
-| `surface_final_se` | `0.01` | standard error of the direct $\log P$ at the estimate |
-| `surface_segment` | `25` | MCEM iterations per segment |
-| `surface_max_lin` | `max(1000, 20 * n_tips)` | lineage cap of a simulated clade |
-| `surface_edge` | `1e-3` | share of the box span within which $\gamma_0$ triggers step 4 |
-| `surface_restart` | `TRUE` | whether step 4 runs |
-| `surface_max_clades` | `40000` | cap on the clades per surface point |
-| `surface_final_max_clades` | `1e5` | cap on the clades of the direct estimate at the estimate |
-| `surface_seed` | `NULL` | seed of the clades; `NULL` draws one from R's generator, so `set.seed()` reproduces them |
-
-`emphasis_pipeline()` conditions on the GAM that its bounds stage trains; leaving that stage out, with `control$lower_bound`, `control$upper_bound` and optionally `control$survival_gam`, conditions on another survival probability or on none.
-
-### Incomplete taxon sampling
-
-When the phylogeny samples only a fraction $\rho$ of the living species, set `rho` in the control list (or `simulate_tree(rho = ...)`). The augmentation then inserts both extinct lineages and unsampled extant lineages, and the likelihood gains the binomial sampling factor $n_{\text{obs}}\log\rho + n_{\text{unsamp}}\log(1-\rho)$. With `rho = 1` (default) the tree is completely sampled.
-
-Both proposals implement this. In the surrogate $p(t)$ becomes the probability of leaving a *sampled* descendant, which solves the same ODE with the terminal condition $p(t_p) = \rho$ and has the closed form $\rho d / (dE + \rho\lambda(1-E))$ under constant rates; a missing lineage still alive at the present is an unsampled extant tip, emitted with the `5e10` sentinel so that $N(t)$ counts it. The value of `rho` used is recorded in the fit. A `rho` outside (0, 1] is an error, in R and in the compiled code alike.
-
-## Usage
-
-### The three routes
+`simulate_tree()` runs the process forward under any model and link, and returns the reconstructed tree (`tes`), the complete tree with its extinct lineages (`tas`) and the L-table. A matrix of parameter rows gives one simulation per row, in parallel. Given an observed tree, it instead draws the hidden lineages from either of the package's two samplers.
 
 ```r
-library(emphasis); library(ape)
+sim <- simulate_tree(pars = c(log(0.5), -0.02, log(0.1), 0), max_t = 10, model = "dd")
+sim$status                           # "done", "extinct" or "too_large"
+plot(sim$tes)
 
-# a clade under diversity dependence: lambda = exp(b0 + bN N), mu = exp(g0)
-sim <- simulate_tree(pars = c(log(0.6), -0.01, log(0.05), 0), max_t = 12,
-                     model = "dd", link = "exponential")
-phy <- sim$tes
+# hidden lineages for an observed tree: 50 draws with their log proposal density
+aug <- simulate_tree(sim$tes, pars = c(log(0.5), -0.02, log(0.1), 0), model = "dd",
+                     n_trees = 50, method = "bdi")        # or method = "thinning"
+```
 
-# 1. one model
-box <- auto_bounds(phy, model = "dd", link = "exponential", train_surv_gam = FALSE)
-fit <- estimate_rates(phy, model = "dd", link = "exponential",
+The [simulator page](https://franciscorichter.github.io/emphasis/simulator.html) runs the same forward process in the browser.
+
+### Estimate rates
+
+`estimate_rates()` fits one model by Monte Carlo EM. Each iteration draws hidden lineages for the observed tree (the E-step) and maximises the weighted complete-data likelihood (the M-step).
+
+```r
+box <- auto_bounds(phy, model = "dd", train_surv_gam = FALSE)   # parameter box from the tree alone
+fit <- estimate_rates(phy, model = "dd",
                       control = list(lower_bound = box$lower_bound,
                                      upper_bound = box$upper_bound,
                                      sample_size = 200))
-fit                        # estimates, log-likelihood, effective sample, gap, stop reason, notes
+fit$pars; fit$loglik; fit$AIC
+diagnose_mcem(fit)                                       # the trace of every iteration
+```
 
-# 2. the ladder: cr, dd, nd, ned, nk from nested starts, ranked by AIC
-fits <- estimate_rates(phy, model = "all", link = "exponential",
-                       control = list(sample_size = 200))
-fits$comparison            # AIC, ESS, gap, swing, within_margin; attrs "chosen", "ranking_at_risk"
-fits$chosen                # the fewest parameters within 2 AIC of the minimum
-fits$fits$nd$pars
+- **Two samplers** for the hidden lineages: `"bdi"` (the default), which is exact under constant rates and a mean-field proposal otherwise, and `"thinning"`, which covers every model. Choose with `control$sampling`.
+- **Two stopping rules**: `rel_change` (the default) stops when the relative step stays below a tolerance; `mc_error` grows the number of draws until the step is inside its own Monte Carlo noise. `max_iter` and `max_time` bound every fit. `rel_change` can stop while the iterate is still moving: on a 100-tip constant-rate tree it stopped after 28 iterations at extinction 0.115, where the exact maximum-likelihood estimate is 0.239 and `mc_error` reached 0.202 within 15 minutes. Check `diagnose_mcem(fit)` and, where the trace is still drifting, use `control = list(stop_rule = "mc_error")` or start from a nearby estimate (`init_pars`).
+- **Conditioning on survival**: `cond = "surface"` conditions any model on the clade surviving to the present, through local surfaces of a simulated survival probability; `cond` also takes a function for an exact value.
+- **Incomplete sampling**: `control$rho` is the fraction of living species in the tree; the sampler then also inserts unsampled living lineages.
 
-# 3. the path: which covariates the data ask for first (exponential link only)
+### Choose a model
+
+There are three ways to decide which covariates the data support:
+
+```r
+# 1. compare fits you made yourself
+compare_models(cr = fit_cr, dd = fit_dd, nd = fit_nd)
+
+# 2. fit the nested ladder cr, dd, nd, ned, nk in one call (five fits: on a 135-tip tree
+#    it had not finished after 50 minutes)
+fits <- estimate_rates(phy, model = "all")
+fits$comparison; fits$chosen
+
+# 3. follow a dgLARS path over all four covariates at once
 cp <- covariate_path(phy, covariates = c("N", "D", "ED", "K"), criterion = "BIC")
 cp$speciation$entry_order; cp$speciation$active
-
-# the numbers the likelihood is built on
-head(lineage_table(phy))
-
-# the surrogate on a D model (the default there is thinning), thinning anywhere,
-# and incomplete sampling
-estimate_rates(phy, model = "nd", link = "exponential",
-               control = list(sampling = "bdi", sample_size = 200,
-                              lower_bound = lb, upper_bound = ub))
-estimate_rates(phy, model = "dd", control = list(sampling = "dynamic_fresh", ...))
-estimate_rates(phy, model = "dd", control = list(rho = 0.8, ...))
-
-# conditioned on survival through local surfaces of a direct estimate (any model)
-fit_c <- estimate_rates(phy, model = "nd", cond = "surface", init_pars = nested_start,
-                        control = list(lower_bound = lb, upper_bound = ub, sample_size = 200))
-fit_c$conditioning[c("surfaces", "clades", "seconds", "logP", "logP_se", "start")]
 ```
 
-### Simulation
+`compare_models()` reports AIC together with each fit's effective sample and its Monte Carlo gap, and warns when the ranking could be an artefact of sampling. Its `chosen` model is the one with the fewest parameters among those within 2 AIC of the best. `covariate_path()` works on the Poisson form of the likelihood that `lineage_table()` exposes: one row per lineage and time segment, with its covariates and whether it split.
 
-```r
-# Forward simulation: lambda(N) = 0.5 exp(-0.02 N), mu = 0.1
-sim <- simulate_tree(
-  pars  = c(log(0.5), -0.02, log(0.1), 0),
-  max_t = 10,
-  model = "dd",
-  link  = "exponential"   # the default; or "linear"
-)
-sim$status    # "done", "extinct", or "too_large"
-plot(sim$tes) # reconstructed (extant-only) tree
+![Coefficient paths of the four covariates on a tree simulated with an age effect](man/figures/readme-path.png)
 
-# Batch simulation (parallel)
-pars_mat <- cbind(
-  beta_0  = log(runif(100, 0.3, 1.0)),
-  beta_N  = runif(100, -0.05, -0.005),
-  gamma_0 = log(runif(100, 0.01, 0.3)),
-  gamma_N = rep(0, 100)
-)
-batch <- simulate_tree(
-  pars = pars_mat, max_t = 10,
-  model = "dd", link = "exponential",
-  max_tries = 1, num_threads = 4
-)
+*`covariate_path()` on a 218-tip tree simulated with an effect of $D$ on speciation and none of $N$, $\mathrm{ED}$ or $K$. Reading the path from left to right, covariates enter as the penalty falls; BIC stops where only $D$ has entered, at a coefficient of -0.41.*
 
-# Conditional simulation: augment an observed tree with latent lineages
-aug <- simulate_tree(sim$tes, pars = c(log(0.5), -0.02, log(0.1), 0), model = "dd",
-                     n_trees = 50, method = "bdi")   # or method = "thinning"
-length(aug$trees); aug$log_q
-```
+### Read what a fit says about itself
 
-`max_tries` is the number of forward draws in all, the first included: the default `1` is a single draw, unconditioned on survival, and an extinct clade is redrawn until one survives or `max_tries` draws have been made.
-
-### Model comparison
-
-```r
-# fits named one by one, compared with the Monte Carlo guard
-fit_cr <- estimate_rates(phy, model = "cr", link = "exponential", control = ctrl_cr)
-fit_dd <- estimate_rates(phy, model = "dd", link = "exponential", control = ctrl_dd)
-compare_models(cr = fit_cr, dd = fit_dd)   # AIC, ESS, gap, swing, within_margin; attr "chosen"
-```
+A fit prints its effective sample, an indication of how far its log-likelihood sits below the truth, why it stopped, and notes when the data are thin: fewer than 50 tips for a lineage-level covariate, an effective sample below 10, turnover above 0.5. The reported log-likelihood is a log of a Monte Carlo mean, so it is biased downwards; `compare_models()` takes this into account when it ranks fits.
 
 ## Function reference
 
 | Function | Purpose |
 | -------- | ------- |
-| `simulate_tree()` | Forward simulation under every model and link; given a tree, hidden lineages from either proposal (`method = "bdi"` / `"thinning"`) |
-| `estimate_rates()` | Monte Carlo EM for one model, or the nested ladder with `model = "all"`; the trace of every iteration in `details$mcem` |
-| `compare_models()` | AIC table over fits with effective sample, gap, swing and the ranking-at-risk flag; `chosen` is the fewest parameters within 2 AIC of the minimum, ties broken by the lower AIC |
-| `covariate_path()` | The dgLARS path over the covariates, for speciation and extinction; entry order and the set BIC or AIC chooses |
-| `lineage_table()` | One row per lineage and segment: the covariates and the event mark the likelihood reads |
-| `auto_bounds()` | The parameter box from the observed tree, and the optional survival GAM |
-| `survival_mc()` | $\log P_\theta(S)$ by direct simulation, for any model, link and $\rho$ |
-| `survival_surface()` | A local quadratic surface of $\log P_\theta(S)$; `predict()` gives $\log P$, $P$ or its gradient |
-| `diagnose_mcem()` | The trace of a fit: iterates, log-likelihood, effective sample, weights |
-| `emphasis_pipeline()`, `train_GAM()`, `predict_survival()`, `diagnose_cem()`, `diagnose_gam()` | Further estimators and the survival emulator, exported for compatibility |
+| `simulate_tree()` | forward simulation under every model and link; given a tree, draws of its hidden lineages |
+| `estimate_rates()` | Monte Carlo EM for one model, or the nested ladder with `model = "all"` |
+| `compare_models()` | AIC table with effective sample, Monte Carlo gap and the parsimonious choice |
+| `covariate_path()` | the dgLARS path over the covariates, for speciation and extinction |
+| `lineage_table()` | the per-lineage, per-segment table the likelihood is built on |
+| `auto_bounds()` | a parameter box computed from the observed tree |
+| `survival_mc()`, `survival_surface()` | the survival probability by direct simulation, and a local surface of it |
+| `diagnose_mcem()` | the trace of a fit |
+| `emphasis_pipeline()`, `train_GAM()`, `predict_survival()`, `diagnose_cem()`, `diagnose_gam()` | further estimators (cross-entropy, GAM surface) and a survival emulator, kept for compatibility |
 
-The full reference, with every argument, is on the [docs site](https://franciscorichter.github.io/emphasis/reference.html).
+Every argument is documented on the [reference page](https://franciscorichter.github.io/emphasis/reference.html) and in R (`?estimate_rates`).
 
-## What is established
+## What has been measured
 
-Each experiment is pre-registered with its rule before it runs, and has one page on the docs site ([experiments](https://franciscorichter.github.io/emphasis/experiments/)). The conclusions that hold are collected on [What is established](https://franciscorichter.github.io/emphasis/established.html) and [Estimability](https://franciscorichter.github.io/emphasis/estimability.html).
+The estimator is tested in a series of simulation experiments, each with its rule fixed before it runs. Their results are on the docs site: [what is established](https://franciscorichter.github.io/emphasis/established.html), [estimability](https://franciscorichter.github.io/emphasis/estimability.html) by tree size, and [one page per experiment](https://franciscorichter.github.io/emphasis/experiments/). In short:
 
-- **Conditioned MCEM reaches the exact conditioned maximum where one exists.** Under `cr` it meets the pre-set rule in all 24 cells (25-800 tips; turnover 0.10, 0.25, 0.40; sampling fraction 1 and 0.8). Under `dd` with complete sampling it meets it in 11 of 14 cells: all nine at 25-100 tips, and two of five at 200-400 tips, where the three failing cells are those whose fits ended on the eight-hour clock ([E45](https://franciscorichter.github.io/emphasis/experiments/E45.html)).
-- **Under constant rates the speciation rate is reliable from 25 tips** (from 100, the smallest size run, at sampling fraction 0.8). **The extinction rate is reliable only at turnover 0.40, from 200 tips**, and at no size up to 800 tips at turnover 0.10 or 0.25, where its exact estimate is zero on up to half the trees (E45). At 200 tips and turnover 0.10 the exact `bd_ML` also puts extinction at zero on 37 of 40 trees ([E32](https://franciscorichter.github.io/emphasis/experiments/E32.html)).
-- With nothing hidden, every model's likelihood returns its generating coefficients: pooled over 40 complete trees a cell, 138 of 150 coefficients lie within 10% of their value (V1).
-- The surrogate proposal's likelihood estimate equals the exact value under `cr` (mean ratio 1.000 over 450 trees) and `dd` (within 0.02) (V2).
-- Before `182055b` the `mc_error` stopping rule could not fire for `d`, `nd`, `k` and `nk` fitted with the thinning proposal, so every such fit ran to its iteration cap; fits under the default `rel_change` rule were not affected.
+- Under constant rates, conditioned MCEM with the `mc_error` stopping rule (up to 1000 iterations, [E45](https://franciscorichter.github.io/emphasis/experiments/E45.html)) reaches the exact maximum-likelihood estimate in all 24 settings tested (25 to 800 tips, three turnovers, complete and 80% sampling); under diversity dependence with complete sampling it does so in 11 of 14, and the three that miss stopped on their eight-hour time limit.
+- Speciation under constant rates is estimated reliably from 25 tips. Extinction is estimated reliably only at turnover 0.4 and from 200 tips; at lower turnover the exact estimate itself is often zero.
+- With nothing hidden, every model's likelihood returns the coefficients that generated the tree.
+- A validation series (V1 to V12) is measuring, model by model, the tree size from which each lineage-level coefficient is recovered. Until it reports, no lineage-level coefficient has a measured reliable tree size.
 
-The rest of the earlier results are being remeasured by a validation series, V1-V12, each replacing named earlier experiments: proposal densities (V2), stopping rule and box (V3), exact agreement including 170 real trees (V4), recovery of the eight lineage-level models by tree size under the conditioned likelihood (V5, from E46), sampling fraction (V6), model choice (V7), covariate path (V8), misspecification (V9), extinction (V10), real phylogenies (V11) and cost (V12). Until V5 reports, no lineage-level coefficient has a measured reliable tree size.
+## Citation
 
-### Related repositories
-
-| Repository | Holds |
-| ---------- | ----- |
-| `emphasis-paper` (private) | the pre-registrations (`00-design.md`), drivers (`sim/`), results (`results/`) and reports: the validation series and its status (`report/validation-series.pdf`), the audit of E1-E48 (`report/experiment-history.pdf`), the map from each E experiment to the V experiment replacing it (`report/e-to-v-map.md`), the results the papers must state (`report/paper-results-2026-10-31.md`) |
-| `emphasis-methods`, `emphasis-biology` (private) | the two manuscripts, the method and the bird and mammal application, each with a supplement |
-| experiments wiki (private) | one page per experiment, rendered into the docs site by `site/build.py` |
-
-The two manuscripts are being revised so that they state only results that hold and point each pending one to its V experiment; both still lack an abstract, and their titles are open.
-
-## Validation
-
-The test suite has 42 files in `tests/testthat/`. At the last full run 42,458 expectations passed with `NOT_CRAN=true` and 2,225 in CRAN mode, where the Monte Carlo gates are skipped; a full run takes a few minutes. CI runs `R CMD check` on macOS, Windows and Linux (R release, devel and oldrel).
-
-These files hold the likelihood and the proposals to a computation written independently of the C++ code, or to the simulator:
-
-| File | What it checks |
-| ---- | -------------- |
-| `test-d-bookkeeping.R` | the $D$ compensator on a fully observed tree against pendant ages read off the edge list, under both links, and the `d`/`nd` complete-data log-likelihood of simulated trees against one computed in R |
-| `test-ed-complete.R` | the raw-$\mathrm{ED}$ complete-data log-likelihood of simulated `ed` trees against one computed in R from the definition of fair proportion |
-| `test-d-compensator.R` | the linear-link $D$ compensator against quadrature over the instantaneous $D$, and the pendant PD the thinning sampler reads against a replay of the tree |
-| `test-ed.R` | $\mathrm{ED}$ against a fair-proportion computation on `ape` trees, its sum against Faith's PD, and `ned` at $\beta_{ED} = 0$ against `dd` |
-| `test-k.R` | the simulator's $K$ against `ape`'s node depth, and the $K$ likelihood against the Poisson form of the lineage table |
-| `test-lineage-table.R` | the full model's log-likelihood rebuilt from `lineage_table()` against `eval_logf`, and the point-process path against `dglars` |
-| `test-de.R` | the importance-sampling estimate on a fixed tree against a direct calculation, and the effective-sample identities |
-| `test-proposal-density.R` | $E_q[f/q]$ against the brute-force marginal likelihood on a 2-tip tree, and the drawn lifetimes against the density $\log q$ charges (KS test) |
-| `test-parent-support.R` | the parent a hidden birth attaches to, and $E_q[f/q]$ against the brute-force marginal likelihood on 3- and 4-tip trees |
-| `test-bdi-cr.R`, `test-bdi-d.R` | the surrogate's survival probability against Nee's formula and its zero-variance weights under constant rates; $E_q[f/q]$ under a $D$ model against quadrature |
-| `test-thinning-envelope.R` | that the thinning envelope dominates the proposal rate, against a closed form for the probability of no missing lineage |
-| `test-survival-surface.R` | the direct survival estimate against the exact `cr` value at $\rho = 1$, $0.7$ and $0.4$; the surface against a direct estimate at its centre and its gradient against its value; end-to-end `cond = "surface"` fits under `cr` and `d` |
-| `test-jensen.R` | the `gap` against the true bias of a log of a Monte Carlo mean, and the warnings of `compare_models()` |
-
-Others hold the package's behaviour: `test-ultrametric.R` (refusal of a non-ultrametric tree), `test-time-budget.R` (the clock inside the E-step and the M-step), `test-compare-chosen.R` (the parsimonious choice and its tie-break), `test-bdi-damping.R` (relaxation of the mean field), `test-mstep-start.R` (the first simplex sized from the box), `test-rho.R` (incomplete sampling), `test-reproducibility.R` (seeding of the C++ samplers) and the rest of `tests/testthat/`.
-
-`dev/audit/` holds an audit of the estimator: `01-map.md` documents what the code computes (the weights, `fhat`, the M-step objective, the MCEM/CEM/GAM stages, the index, time and log conventions) and raises hypotheses, each tested against a closed form, a property or a controlled comparison, with the reproduction scripts in `dev/audit/checks/`; `02-findings.md` carries the confirmed findings ranked by severity and the refuted hypotheses with the reason each is not a defect. The measurements of the estimator on simulated and real trees are on the docs site's [experiments pages](https://franciscorichter.github.io/emphasis/experiments/).
-
-## The docs site
-
-<https://franciscorichter.github.io/emphasis/> is generated from its sources. One command rebuilds every page from three inputs: the overview, usage and covariate texts in `site/src/*.md` and `site/src/covariates/*.md`, the function reference fragments in `site/reference/` (made from `man/*.Rd` by `site/reference.R`, run on a machine with R), and a checkout of the experiments wiki, passed on the command line:
-
-```sh
-python3 site/build.py --wiki <path to the experiments wiki checkout>   # pandoc 3 required
+```r
+citation("emphasis")
 ```
 
-It writes the root pages (`index.html`, `usage.html`, `reference.html`, `established.html`, `estimability.html`, `real-phylogenies.html`, `open-issues.html`, `glossary.html`), `covariates/index.html` with one page per covariate (`N`, `D`, `ED`, `K`), the redirect `D.html`, `experiments/index.html` and one `experiments/E<n>.html` per wiki page, copies the wiki's figures to `assets/wiki/`, numbers figures and equations, builds each long page's table of contents, and exits non-zero on a broken internal link or a missing image. The built pages are committed, and GitHub Pages serves the root of `main` (`.nojekyll`), so a push to `main` is a deploy. The style is one stylesheet, `site/style.css`.
+Richter F, Haegeman B, Etienne RS, Wit EC (2020). Introducing a general class of species diversification models for phylogenetic trees. *Statistica Neerlandica* 74(3), 261–274. [doi:10.1111/stan.12205](https://doi.org/10.1111/stan.12205)
 
-## Author
+## Development
 
-**Francisco Richter** (author and maintainer), franciscorichter@gmail.com
+```r
+devtools::load_all()    # compile src/ and load
+devtools::document()    # NAMESPACE and man/ from roxygen
+devtools::test()        # tests/testthat; NOT_CRAN=true runs the Monte Carlo tests too
+devtools::check()       # R CMD check
+```
 
-Thijs Janzen and Hanno Hildenbrandt contributed to an earlier C++ implementation, parts of which remain in `src/` and `inst/include/`.
+CI runs `R CMD check` on macOS, Windows and Linux (R release, devel, oldrel) for every push to `main` and every pull request.
+
+```
+R/            the package's R code: simulate.R, inference.R (estimate_rates, compare_models),
+              emphasis.R and bdi.R (MCEM and the two samplers), survival.R, covariate_path.R, ...
+src/          C++: augmentation, E-step and M-step (TBB, NLopt), forward simulation
+inst/include/ header-only model code shared by the simulator and the likelihood
+tests/        testthat suite (42 files)
+man/          generated by roxygen; man/figures/ holds the README figures
+site/         sources of the docs site: build.py, Markdown pages, figure scripts
+docs/         the docs site as built, served by GitHub Pages
+dev/          the estimator's audit, the simulator check and research prototypes (not in the package)
+```
+
+**Tests.** 42 files. About 42,000 expectations pass with `NOT_CRAN=true` and about 2,300 in CRAN mode, where the Monte Carlo tests are skipped. Several check the C++ likelihood and samplers against computations written independently in R: closed forms, quadrature, brute-force marginal likelihoods on 2- to 4-tip trees, and `ape`'s tree quantities.
+
+**Docs site.** `python3 site/build.py --wiki <experiments wiki checkout>` rebuilds every page into `docs/` from `site/src/*.md`, the function reference in `site/reference/` (made by `site/reference.R`) and the experiments wiki (`forge:pancho/emphasis-paper.wiki`, private). It fails on a broken internal link. A push to `main` publishes it.
+
+**README figures.** `Rscript site/figures/readme.R` redraws `man/figures/readme-*.png` from the package; it runs in about a minute.
+
+**Related repositories (private, on the forge).** `emphasis-paper`: the experiments' pre-registrations, drivers, results and reports. `emphasis-methods` and `emphasis-biology`: the two manuscripts, the method and the bird and mammal application, which are being revised to state only results that hold; both lack an abstract and a final title.
+
+## Authors
+
+Francisco Richter (author, maintainer), franciscorichter@gmail.com. Thijs Janzen and Hanno Hildenbrandt contributed to an earlier C++ implementation, parts of which remain in `src/` and `inst/include/`.
 
 ## License
 
-MIT. See [LICENSE](LICENSE) for details.
+MIT. See [LICENSE](LICENSE).

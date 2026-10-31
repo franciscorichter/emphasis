@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Build the emphasis site: Markdown sources and the experiments wiki -> the root pages.
+"""Build the emphasis site: Markdown sources and the experiments wiki -> the pages in docs/.
 
-    python3 site/build.py --wiki <path to the wiki checkout> [--out <repository root>]
+    python3 site/build.py --wiki <path to the wiki checkout> [--out <output directory, default docs/>]
 
 Inputs
     site/template.html          the one page template
@@ -44,7 +44,8 @@ from pathlib import Path
 SITE = Path(__file__).resolve().parent
 sys.path.insert(0, str(SITE))
 import public   # the public filter and audit (site/public.py)
-ROOT_DEFAULT = SITE.parent
+REPO = SITE.parent
+ROOT_DEFAULT = REPO / "docs"   # GitHub Pages serves docs/ on main
 
 GITHUB = "https://github.com/franciscorichter/emphasis"
 CATALOGUE = "https://franciscorichter.github.io/phylo-species-atlas/"
@@ -395,7 +396,7 @@ class Site:
         if (ref_dir / "index.json").exists():
             index = json.loads(read(ref_dir / "index.json"))
         if index is None:
-            exports = set(re.findall(r"^export\(([^)]+)\)", read(self.root / "NAMESPACE"), flags=re.M))
+            exports = set(re.findall(r"^export\(([^)]+)\)", read(REPO / "NAMESPACE"), flags=re.M))
             index = []
             for p in frags:
                 topic = p.stem
@@ -553,7 +554,7 @@ def check_links(root, pages):
 def main():
     ap = argparse.ArgumentParser(description="build the emphasis site")
     ap.add_argument("--wiki", required=True, help="path to the experiments wiki checkout")
-    ap.add_argument("--out", default=str(ROOT_DEFAULT), help="repository root to write into")
+    ap.add_argument("--out", default=str(ROOT_DEFAULT), help="directory to write the site into (default: docs/)")
     args = ap.parse_args()
 
     root = Path(args.out).resolve()
@@ -568,7 +569,7 @@ def main():
         die("site/template.html is missing")
     template = read(template_path)
     version = "0.0"
-    m = re.search(r"^Version:\s*(\S+)", read(root / "DESCRIPTION"), flags=re.M)
+    m = re.search(r"^Version:\s*(\S+)", read(REPO / "DESCRIPTION"), flags=re.M)
     if m:
         version = m.group(1)
 

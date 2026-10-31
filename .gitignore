@@ -54,3 +54,6 @@ doc/emphasis_technical.*
 CLAUDE.md
 .claude/
 dev/.crdd_corpus.rds
+
+# Python bytecode of the site builder
+__pycache__/

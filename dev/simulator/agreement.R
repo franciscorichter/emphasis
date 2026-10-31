@@ -1,5 +1,5 @@
-# Does the browser simulator (assets/simulator/emphasis-sim.js, the engine of
-# simulator.html) draw from the same distribution as simulate_tree()?
+# Does the browser simulator (docs/assets/simulator/emphasis-sim.js, the engine of
+# docs/simulator.html) draw from the same distribution as simulate_tree()?
 #
 #   Rscript dev/simulator/agreement.R [K] [scenarios]   # from the package root; K = 2000
 #

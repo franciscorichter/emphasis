@@ -8,7 +8,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const sim = require(path.join(__dirname, '..', '..', 'assets', 'simulator', 'emphasis-sim.js'));
+const sim = require(path.join(__dirname, '..', '..', 'docs', 'assets', 'simulator', 'emphasis-sim.js'));
 
 const [scenFile, Karg, seedArg, outFile] = process.argv.slice(2);
 const scen = JSON.parse(fs.readFileSync(scenFile, 'utf8'));

@@ -4,8 +4,8 @@ Working material, excluded from the package build by `.Rbuildignore`.
 
 - `audit/` — the as-implemented map, the 105 hypotheses, the findings, and one reproduction
   script per finding.
-- `simulator/` — `agreement.R` checks the browser simulator (`simulator.html`, engine
-  `assets/simulator/emphasis-sim.js`) against `simulate_tree()`: its ED routine against
+- `simulator/` — `agreement.R` checks the browser simulator (`docs/simulator.html`, engine
+  `docs/assets/simulator/emphasis-sim.js`) against `simulate_tree()`: its ED routine against
   `ed_fair_proportion()` tip by tip, and 2,000 surviving trees per scenario from each simulator
   over ten model × link scenarios, compared on nine summaries (z of the difference in means, KS
   on the extant-tip count). `agreement.csv` is the last full run. Run it after any change to
