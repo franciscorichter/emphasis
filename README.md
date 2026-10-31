@@ -352,15 +352,25 @@ The full reference, with every argument, is on the [docs site](https://francisco
 
 ## What is established
 
-The [experiments](https://franciscorichter.github.io/emphasis/experiments/) are pre-registered, one page each, and the conclusions that hold are collected on [What is established](https://franciscorichter.github.io/emphasis/established.html).
+Each experiment is pre-registered with its rule before it runs, and has one page on the docs site ([experiments](https://franciscorichter.github.io/emphasis/experiments/)). The conclusions that hold are collected on [What is established](https://franciscorichter.github.io/emphasis/established.html) and [Estimability](https://franciscorichter.github.io/emphasis/estimability.html).
 
-- Where an exact likelihood exists, MCEM reaches its maximum: under `cr` and `dd` it meets the pre-set rule on 27 of 30 cell × proposal rows ([E1](https://franciscorichter.github.io/emphasis/experiments/E1.html)), and on the complete trees among 75 real trees the median deficit is -0.079 nats (`cr`) and -0.005 (`dd`) ([E42](https://franciscorichter.github.io/emphasis/experiments/E42.html)).
-- Under `cr` the surrogate proposal keeps 200 of 200 effective draws at every size, while thinning falls below 10 by 100-200 tips ([E4](https://franciscorichter.github.io/emphasis/experiments/E4.html)).
-- Correcting the Monte Carlo bias of the log-likelihood reverses 1 of 101 wrong AIC choices, a tie at 0.003 AIC ([E8](https://franciscorichter.github.io/emphasis/experiments/E8.html)), and on another group's null trees `ned` is selected on 0.05 and 0.00 of trees ([E11](https://franciscorichter.github.io/emphasis/experiments/E11.html)).
-- With nothing hidden, every model's likelihood returns its generating coefficients ([E44](https://franciscorichter.github.io/emphasis/experiments/E44.html)).
-- A reconstructed tree of 200 tips at turnover 0.10 does not identify extinction, by any estimator: the exact `bd_ML` puts it at zero on 37 of 40 trees ([E32](https://franciscorichter.github.io/emphasis/experiments/E32.html)), and conditioning on survival does not change this ([E34](https://franciscorichter.github.io/emphasis/experiments/E34.html)).
+- **Conditioned MCEM reaches the exact conditioned maximum where one exists.** Under `cr` it meets the pre-set rule in all 24 cells (25-800 tips; turnover 0.10, 0.25, 0.40; sampling fraction 1 and 0.8). Under `dd` with complete sampling it meets it in 11 of 14 cells: all nine at 25-100 tips, and two of five at 200-400 tips, where the three failing cells are those whose fits ended on the eight-hour clock ([E45](https://franciscorichter.github.io/emphasis/experiments/E45.html)).
+- **Under constant rates the speciation rate is reliable from 25 tips** (from 100, the smallest size run, at sampling fraction 0.8). **The extinction rate is reliable only at turnover 0.40, from 200 tips**, and at no size up to 800 tips at turnover 0.10 or 0.25, where its exact estimate is zero on up to half the trees (E45). At 200 tips and turnover 0.10 the exact `bd_ML` also puts extinction at zero on 37 of 40 trees ([E32](https://franciscorichter.github.io/emphasis/experiments/E32.html)).
+- With nothing hidden, every model's likelihood returns its generating coefficients: pooled over 40 complete trees a cell, 138 of 150 coefficients lie within 10% of their value (V1).
+- The surrogate proposal's likelihood estimate equals the exact value under `cr` (mean ratio 1.000 over 450 trees) and `dd` (within 0.02) (V2).
+- Before `182055b` the `mc_error` stopping rule could not fire for `d`, `nd`, `k` and `nk` fitted with the thinning proposal, so every such fit ran to its iteration cap; fits under the default `rel_change` rule were not affected.
 
-The accuracy of the conditioned estimates (E45, E46) and model choice with the conditioned ladder (E47) are being remeasured; the results they replace are marked superseded on the experiments index, and the conflicts between record and data are listed on [Open issues](https://franciscorichter.github.io/emphasis/open-issues.html).
+The rest of the earlier results are being remeasured by a validation series, V1-V12, each replacing named earlier experiments: proposal densities (V2), stopping rule and box (V3), exact agreement including 170 real trees (V4), recovery of the eight lineage-level models by tree size under the conditioned likelihood (V5, from E46), sampling fraction (V6), model choice (V7), covariate path (V8), misspecification (V9), extinction (V10), real phylogenies (V11) and cost (V12). Until V5 reports, no lineage-level coefficient has a measured reliable tree size.
+
+### Related repositories
+
+| Repository | Holds |
+| ---------- | ----- |
+| `emphasis-paper` (private) | the pre-registrations (`00-design.md`), drivers (`sim/`), results (`results/`) and reports: the validation series and its status (`report/validation-series.pdf`), the audit of E1-E48 (`report/experiment-history.pdf`), the map from each E experiment to the V experiment replacing it (`report/e-to-v-map.md`), the results the papers must state (`report/paper-results-2026-10-31.md`) |
+| `emphasis-methods`, `emphasis-biology` (private) | the two manuscripts, the method and the bird and mammal application, each with a supplement |
+| experiments wiki (private) | one page per experiment, rendered into the docs site by `site/build.py` |
+
+The two manuscripts are being revised so that they state only results that hold and point each pending one to its V experiment; both still lack an abstract, and their titles are open.
 
 ## Validation
 
