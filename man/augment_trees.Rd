@@ -17,7 +17,12 @@ augment_trees(
   rho = 1,
   parent_tip_start = as.numeric(c()),
   seed = 0L,
-  parent_id = as.integer(c())
+  parent_id = as.integer(c()),
+  offset_id = as.integer(c()),
+  offset_from = as.numeric(c()),
+  offset_to = as.numeric(c()),
+  offset = as.numeric(c()),
+  offset_mu = as.numeric(c())
 )
 }
 \arguments{
@@ -55,6 +60,15 @@ is what a bare branching-time vector has always produced.}
 default) draws one from R's generator, so \code{set.seed()} reaches the
 sampler whether or not a seed is passed. Two calls carrying the same
 seed, the same arguments and \code{num_threads = 1} draw the same trees.}
+
+\item{offset_id, offset_from, offset_to, offset}{Per-lineage offsets of the
+proposal's speciation predictor (the mark-aware proposal,
+dev/latent-marks/design.md): for observed lineage \code{offset_id[i]}, the
+offset over \code{(offset_from[i], offset_to[i]]}. Empty (the default):
+no offsets.}
+
+\item{offset_mu}{Extinction offsets, same length as \code{offset_id}
+(empty: 0): a missing lineage's lifetime is drawn at its parent's.}
 }
 \value{
 A named list:

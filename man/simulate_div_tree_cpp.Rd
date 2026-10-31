@@ -11,7 +11,13 @@ simulate_div_tree_cpp(
   max_N,
   max_tries,
   link = 0L,
-  seed = 0L
+  seed = 0L,
+  marks_S = 1L,
+  log_clam = as.numeric(c(0)),
+  log_cmu = as.numeric(c(0)),
+  marks_C = as.numeric(c(1)),
+  marks_P = as.numeric(c()),
+  marks_pi = as.numeric(c(1))
 )
 }
 \arguments{
@@ -33,10 +39,15 @@ Inactive parameters (those not selected by \code{model}) should be set to 0.}
 draws one from R's generator, so \code{set.seed()} reaches the simulator
 whether or not a seed is passed. Note that \code{max_tries} retries
 continue the same stream: a retry is a fresh tree, not the same one again.}
+
+\item{marks_S, log_clam, log_cmu, marks_C, marks_P, marks_pi}{Latent marks
+(dev/latent-marks/design.md; the arguments of \code{eval_logf_marks}).
+The default, one mark, simulates without marks.}
 }
 \value{
-A named list with \code{Ltable} (4-column numeric matrix in DDD format)
-  and \code{status} (one of \code{"done"}, \code{"extinct"}, \code{"too_large"}).
+A named list with \code{Ltable} (4-column numeric matrix in DDD format),
+  \code{status} (one of \code{"done"}, \code{"extinct"}, \code{"too_large"})
+  and \code{marks}, each L-table row's mark at the end (0-based).
 }
 \description{
 Simulate a single phylogenetic tree under the general diversification model
