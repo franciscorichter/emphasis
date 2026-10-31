@@ -1,4 +1,4 @@
-# A proposal that samples the marks (dev/latent-marks/design.md, phase 3).
+# The mark-sampling proposal for latent marks (dev/latent-marks/design.md, phase 3); internal.
 #
 # The proposal is the exact posterior of a nearby model in which a hidden lineage keeps the mark of
 # the observed branch it hangs from, and so do its descendants: marks change only at observed

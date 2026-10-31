@@ -1,10 +1,12 @@
 # Phase 3 recovery study (dev/latent-marks/design.md), one tree per call:
-#   Rscript dev/latent-marks/recovery-mcem.R <task> <out_dir> [lib] [proposal: none | lambda | both]
+#   Rscript dev/latent-marks/recovery-mcem.R <task> <out_dir> [lib] [proposal: none | lambda | both | sample]
 # Task t (1-based) is generating sigma SIGMAS[(t - 1) %/% REPS + 1], replicate (t - 1) %% REPS + 1.
 # A tree: cr with the trend-free latent rate (log_alpha = -sigma^2 / 2), lambda0 0.35, mu0 0.07,
 # crown age 14, redrawn until it has 50 to 200 tips (a conditioning on size, reported with the
 # results). Two MCEM fits with the prototype (.mcem_marks): cr with the latent rate (sigma free)
-# and cr alone; each ends with a log-likelihood estimate from 2000 draws at its estimate. Also
+# and cr alone; each ends with a log-likelihood estimate from 2000 draws at its estimate (with
+# proposal "sample": both fits use the mark-sampling proposal, the latent-rate fit ends with an
+# estimate from 500 of its draws and the cr fit with its exact log-likelihood). Also
 # recorded: the effective sample of 500 draws at the generating values, with and without marks.
 # Writes <out_dir>/task-<t>.csv.
 args <- commandArgs(trailingOnly = TRUE)
@@ -56,14 +58,22 @@ ess_marks_both   <- ess_aware(TRUE)
 t0 <- Sys.time()
 fm <- e$.mcem_marks(phy, "cr", c(log(0.3), log(0.1)), log(0.3), mko, n_iter = 15L, N = 200L, aware = PROP)
 tm <- as.numeric(Sys.time() - t0, units = "secs")
-b  <- draws(fm$estimate[1:2], 2000, 11)
+SAMPLE <- identical(PROP, "sample")
+b <- if (SAMPLE) { set.seed(11); e$.pm_draws(phy, exp(fm$estimate[1]), exp(fm$estimate[2]), mko(fm$estimate[3]), 500L) } else
+  draws(fm$estimate[1:2], 2000, 11)
 ll_m <- lme(e$.eval_logf_marks(e$.expand_pars(fm$estimate[1:2], mb), b$trees, mb, mko(fm$estimate[3])) - b$logg)
 
 t0 <- Sys.time()
-fc <- e$.mcem_marks(phy, "cr", c(log(0.3), log(0.1)), numeric(0), one, n_iter = 15L, N = 200L)
+fc <- e$.mcem_marks(phy, "cr", c(log(0.3), log(0.1)), numeric(0), one, n_iter = 15L, N = 200L,
+                    aware = if (SAMPLE) "sample" else "none")
 tc <- as.numeric(Sys.time() - t0, units = "secs")
-b  <- draws(fc$estimate[1:2], 2000, 13)
-ll_c <- lme(b$logf - b$logg)
+if (SAMPLE) {   # the exact cr log-likelihood at the estimate
+  Bp <- e$.pm_branches(phy); l0 <- exp(fc$estimate[1]); m0 <- exp(fc$estimate[2])
+  ll_c <- e$.pm_prune(Bp, e$.pm_fac_obs(Bp, l0, m0), l0, matrix(0, 1, 1), 0)$root
+} else {
+  b  <- draws(fc$estimate[1:2], 2000, 13)
+  ll_c <- lme(b$logf - b$logg)
+}
 
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
 utils::write.csv(data.frame(

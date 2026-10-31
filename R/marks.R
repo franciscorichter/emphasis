@@ -116,8 +116,9 @@
 # parameters with optim().  `marks_of(theta_m)` turns the mark parameters
 # (on the optimiser's scale) into a preset.  `aware` picks the proposal:
 # "none" (blind to the marks), "lambda" (speciation offsets of .mark_offsets()
-# at each iteration's parameters; TRUE means this) or "both" (speciation and
-# extinction offsets).
+# at each iteration's parameters; TRUE means this), "both" (speciation and
+# extinction offsets) or "sample" (marks-proposal.R: the branch marks and the
+# hidden lineages drawn from the exact posterior of a nearby model; cr only).
 .mcem_marks <- function(phy, model, start, start_m, marks_of, n_iter = 20L, N = 200L,
                         N_growth = 1.15, N_max = 2000L, rho = 1, max_missing = 5000L, seed = 1L,
                         verbose = FALSE, aware = FALSE) {
@@ -126,7 +127,15 @@
   np <- length(start)
   th <- c(start, start_m)
   trace <- vector("list", n_iter)
+  sample_marks <- identical(aware, "sample")
+  if (sample_marks && !identical(as.integer(mb[1:3]), c(0L, 0L, 0L)))
+    stop(".mcem_marks: aware = \"sample\" draws hidden lineages at constant rates per branch; it needs model cr")
   draw <- function(th, n, s) {
+    if (sample_marks) {
+      set.seed(s)
+      d <- .pm_draws(phy, exp(th[1]), exp(th[2]), marks_of(th[-seq_len(np)]), n)
+      return(list(trees = d$trees, logg = d$logg))
+    }
     pf <- .expand_pars(th[seq_len(np)], mb)
     o <- if (!identical(aware, "none") && !isFALSE(aware) && length(th) > np)
            .mark_offsets(pf, phy, model, marks_of(th[-seq_len(np)]), rho)
