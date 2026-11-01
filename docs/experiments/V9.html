@@ -58,6 +58,8 @@ window.MathJax = {
 </li>
 <li><a href="#pre-set-rules">Pre-set rules</a>
 </li>
+<li><a href="#amendment-2026-11-01">Amendment 2026-11-01</a>
+</li>
 <li><a href="#results">Results</a>
 </li>
 </ol>
@@ -67,7 +69,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>registered 2026-10-31; calibration running on Bre</td>
+<td>registered 2026-10-31; amended 2026-11-01 (calibration); ten cells recalibrating on Bre</td>
 </tr>
 <tr>
 <td>Series</td>
@@ -122,13 +124,15 @@ window.MathJax = {
 <li>A cell reproduces the K result when <code>nk</code> is chosen on more than 10% of read trees with a median factor per sd of <span class="math inline">\(K\)</span> of at least 1.48.</li>
 <li>A cell with more than 20% of trees unread is sampler-limited.</li>
 </ol>
+<h2 id="amendment-2026-11-01">Amendment 2026-11-01</h2>
+<p>The first calibration left 10 of 16 cells off the 100-tip target. The protracted-speciation generator had passed its parameters to <code>PBD::pbd_sim</code> in the wrong order (speciation completed at the extinction rate, incipient species split at the inverse of the mean duration); it now runs <code>pbd_sim</code>'s own event loop with the order fixed and an explicit lineage cap, and returns the same trees as <code>pbd_sim</code> at the same seed (150 of 150). The search widens to scales 0.005-30 with 400 clades a step; a cell is calibrated when its median lies within 70-140 tips, and one that cannot be is reported with its size distribution and enters no rule. The latent rate at <span class="math inline">\(\sigma = 0.40\)</span>, whose surviving clades either die or pass the cap, stays and is read under that rule. The six calibrated cells (latent rate <span class="math inline">\(\sigma\)</span> 0.10, the four two-region cells) keep their scales.</p>
 <h2 id="results">Results</h2>
 <p>Not yet.</p>
 
 </article>
 </main>
 <footer class="site-footer">
-<p>emphasis, version 1.1.0. Francisco Richter, Università della Svizzera italiana.</p>
+<p>emphasis, version 1.1.0.9000. Francisco Richter, Università della Svizzera italiana.</p>
 </footer>
 </body>
 </html>
