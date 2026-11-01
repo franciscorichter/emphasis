@@ -154,6 +154,23 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'   \item{\code{patience}}{Number of consecutive iterations with parameter
 #'     change below \code{tol} required to declare convergence. Default
 #'     \code{3}.}
+#'   \item{\code{stop_rule}}{\code{"projected"} (default),
+#'     \code{"rel_change"} or \code{"mc_error"}. \code{"rel_change"} stops on
+#'     the step alone, as described under \code{tol}. EM is slow in the
+#'     extinction rate, whose information comes almost entirely from the
+#'     lineages the E-step imputes, and a slow EM takes small steps far from
+#'     its fixed point, so that rule can stop early. \code{"projected"} also
+#'     regresses the steps of the last \code{proj_window} iterates on the
+#'     iterates they started from, projects the fixed point from that line,
+#'     and requires the relative distance to it (trace column
+#'     \code{projected}) to be below \code{tol} as well. Under Monte Carlo
+#'     noise around the fixed point the projection is the mean of the window,
+#'     so the rule then behaves as \code{"rel_change"}. \code{"mc_error"}
+#'     compares the step with its own Monte Carlo standard error and grows
+#'     the draws until the step is inside it (controls \code{mc_batches},
+#'     \code{mc_z}, \code{mc_grow}, \code{max_draws}).}
+#'   \item{\code{proj_window}}{Iterates the \code{"projected"} rule projects
+#'     from, the start included. Default \code{8}.}
 #' }
 #'
 #' Read only under \code{estimate_rates(cond = "surface")}, and not in the
@@ -225,7 +242,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
     c(common, list(
       sampling    = "bdi",      # BDI exact sampler (default); "dynamic_fresh" for thinning
       proposal    = "ed",       # thinning proposal for an ED model: "ed" or "meanfield"
-      stop_rule   = "rel_change", # "rel_change" or "mc_error" (Monte Carlo error aware)
+      stop_rule   = "projected", # "projected", "rel_change" or "mc_error" (Monte Carlo error aware)
+      proj_window = 8L,         # projected: iterates the fixed point is projected from
       mc_batches  = 5L,         # mc_error: batches the Monte Carlo error is estimated from
       mc_z        = 1.0,        # mc_error: a step below this many standard errors is noise
       mc_grow     = 1.5,        # mc_error: factor the draws grow by when a step is noise
@@ -540,6 +558,50 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
   max(abs(new - old) / pmax(abs(old), floor_val))
 }
 
+#' Projected distance from the current iterate to the EM fixed point
+#'
+#' Near its fixed point \eqn{\theta^*} EM moves each coordinate by a step
+#' proportional to the distance left, \eqn{\theta_t - \theta_{t-1} \approx
+#' (1 - r)(\theta^* - \theta_{t-1})}, where \eqn{r} is the rate of
+#' convergence.  Regressing the steps of the last \code{w} iterations on the
+#' iterates they started from gives, per coordinate, a slope \eqn{b = -(1 -
+#' r)} and an intercept \eqn{a}, and the projected fixed point \eqn{-a/b}.
+#' The statistic is the largest relative distance between the current
+#' iterate and that point.  A small step does not make it small when EM is
+#' slow (r near 1, slope near 0), which is the case the plain relative-change
+#' rule mistakes for convergence.  Under Monte Carlo noise around the fixed
+#' point the steps are differences of independent errors, the slope is near
+#' -1, and the projected point is the mean of the window.  A slope of zero or
+#' above (no contraction seen) returns \code{Inf}.  A coordinate that did not
+#' move in the window, or is NA throughout, contributes zero; a coordinate with
+#' a non-finite iterate in the window returns \code{Inf}.
+#'
+#' @param hist Matrix of iterates, one row per iteration, oldest first;
+#'   at least 3 rows.
+#' @param floor_val Floor of the relative denominator (\code{.rel_floor}).
+#' @return A non-negative scalar, possibly \code{Inf}.
+#' @keywords internal
+.em_remaining <- function(hist, floor_val) {
+  hist <- as.matrix(hist)
+  k <- nrow(hist)
+  if (k < 3L) return(Inf)
+  cur <- hist[k, ]
+  out <- vapply(seq_len(ncol(hist)), function(j) {
+    h <- hist[, j]
+    if (all(is.na(h))) return(0)              # an unused slot of the layout
+    if (any(!is.finite(h))) return(Inf)
+    x <- h[-k]; y <- diff(h)
+    if (max(abs(y)) <= 1e-12 * max(1, abs(cur[j]))) return(0)
+    vx <- sum((x - mean(x))^2)
+    if (vx <= 0) return(Inf)
+    b <- sum((x - mean(x)) * (y - mean(y))) / vx
+    if (!is.finite(b) || b >= 0) return(Inf)
+    a <- mean(y) - b * mean(x)
+    abs(-a / b - cur[j]) / max(abs(cur[j]), floor_val)
+  }, numeric(1))
+  max(out)
+}
+
 #' Floor of the relative-change denominator
 #'
 #' Under the linear link the parameters are rates, of dimension
@@ -785,7 +847,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       link        = link,
       max_time    = ctrl$max_time,
       rho         = ctrl$rho,
-      stop_rule   = ctrl$stop_rule %||% "rel_change",
+      stop_rule   = ctrl$stop_rule %||% "projected",
+      proj_window = ctrl$proj_window %||% 8L,
       mc_batches  = ctrl$mc_batches %||% 5L,
       mc_z        = ctrl$mc_z %||% 1.0,
       mc_grow     = ctrl$mc_grow %||% 1.5,
@@ -808,7 +871,8 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       num_threads = ctrl$num_threads,
       verbose     = ctrl$verbose,
       conditional = cond_fun,
-      stop_rule   = ctrl$stop_rule %||% "rel_change",
+      stop_rule   = ctrl$stop_rule %||% "projected",
+      proj_window = ctrl$proj_window %||% 8L,
       mc_batches  = ctrl$mc_batches %||% 5L,
       mc_z        = ctrl$mc_z %||% 1.0,
       mc_grow     = ctrl$mc_grow %||% 1.5,
@@ -1078,10 +1142,14 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'   number of speciation events on the path from the crown to the lineage,
 #'   hidden splits counted; it needs a \code{phylo} and runs on the thinning
 #'   sampler.
-#' @param init_pars Starting parameter vector. Required for \code{"mcem"};
-#'   ignored for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the
-#'   midpoint of the bounds is used, with covariate slopes started at 0
-#'   (linear link) so that lambda stays positive during the early E-steps.
+#' @param init_pars Starting parameter vector for \code{"mcem"}; ignored
+#'   for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the fit starts at
+#'   the constant-rate maximum-likelihood estimate of the tree (closed form;
+#'   conditioned on survival when \code{cond} is a function), with every
+#'   covariate coefficient at 0 and each coordinate moved inside the bounds.
+#'   For \code{model = "cr"} that start is the estimate itself. When the
+#'   constant-rate fit fails, the midpoint of the bounds is used, with
+#'   covariate slopes started at 0 (linear link).
 #' @param control Named list of tuning parameters. Must include
 #'   \code{lower_bound} and \code{upper_bound}. Use
 #'   \code{\link{estimate_rates_control}} to inspect other defaults.
@@ -1330,6 +1398,16 @@ estimate_rates <- function(tree,
       stop("'cond' must be \"surface\", a survival emulator (a GAM from train_GAM(), a nnet object, a survival_surface(), or a function of the parameter data frame) or NULL.")
     cond_fun <- .build_cond_fun(cond, model_bin)
   }
+
+  # The default start is the constant-rate maximum-likelihood fit of the tree
+  # (.default_init): every covariate coefficient zero, the intercepts at the
+  # closed-form cr estimate, conditioned on survival when the fit is.  EM is
+  # slow in the extinction rate, whose information comes almost entirely
+  # from the lineages it imputes, so the start matters.  When the cr fit
+  # fails the start falls back to the middle of the box, below.
+  if (is.null(init_pars) && method == "mcem")
+    init_pars <- .default_init(brts, model_bin, link_int, lower_bound, upper_bound,
+                               cond = !is.null(cond_fun), rho = ctrl$rho)
 
   if (is.null(init_pars) && method == "mcem") {
     # The midpoint of a symmetric box has lambda == mu, and both samplers

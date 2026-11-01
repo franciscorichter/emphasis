@@ -19,6 +19,11 @@
 #' stability and resets the streak (trace column \code{m_moved}).  The trace
 #' also records the absolute step \code{abs_step} and \code{drift}, the same
 #' relative displacement measured over the last \code{patience} iterations.
+#' That is \code{stop_rule = "rel_change"}.  Under the default,
+#' \code{"projected"}, an iteration counts toward \code{patience} only when,
+#' in addition, the relative distance from the iterate to the fixed point
+#' projected from the last \code{proj_window} iterates (\code{.em_remaining},
+#' trace column \code{projected}) is below \code{tol}.
 #'
 #' Trace.  Row k of \code{mcem} pairs theta_k with the E-step value
 #' fhat(theta_\{k-1\}) it was computed from, and with the rejection counters
@@ -85,12 +90,14 @@
                       max_time = NULL,
                       rho = 1.0,
                       rel_floor = 1e-2,
-                      stop_rule = c("rel_change", "mc_error"),
+                      stop_rule = c("projected", "rel_change", "mc_error"),
                       mc_batches = 5L,
                       mc_z = 1.0,
                       mc_grow = 1.5,
-                      max_draws = NULL) {
+                      max_draws = NULL,
+                      proj_window = 8L) {
   stop_rule <- match.arg(stop_rule)
+  proj_window <- max(3L, as.integer(proj_window))
   if (inherits(brts, "phylo")) {
     # .extract_brts also carries the tip starts M and D are measured from.
     brts <- .extract_brts(brts)
@@ -230,6 +237,8 @@
       # "mc_error" only: the step in units of its own Monte Carlo standard
       # error, and the number of draws the E-step used at that iteration.
       mc_z                  = NA_real_,
+      # "projected" only: relative distance to the projected fixed point
+      projected             = NA_real_,
       sample_size           = sample_size,
       time                  = results$time
     ))
@@ -356,10 +365,25 @@
       # An M-step that returned its starting point unchanged says nothing
       # about stability (the objective may have been undefined there), so it
       # does not count toward patience under either rule.
-      if (stop_rule == "rel_change") {
+      #
+      # "projected" (the default) adds a second condition to "rel_change":
+      # the distance to the fixed point projected from the last
+      # `proj_window` iterates (.em_remaining, the start included) must also
+      # be below `tol`, so a small step from a slow EM does not count.
+      if (stop_rule != "mc_error") {
+        rem <- NA_real_
+        if (stop_rule == "projected") {
+          ph <- c(list(pars), par_hist)
+          if (length(ph) >= proj_window)
+            rem <- .em_remaining(do.call(rbind, ph[(length(ph) - proj_window + 1L):length(ph)]),
+                                 floor_val)
+          mcem$projected[nrow(mcem)] <- rem
+        }
+        small <- delta_max < tol &&
+          (stop_rule == "rel_change" || (!is.na(rem) && rem < tol))
         if (!m_moved) {
           streak <- 0L
-        } else if (delta_max < tol) {
+        } else if (small) {
           streak <- streak + 1L
           if (streak >= patience) {
             stop_reason <- "converged"

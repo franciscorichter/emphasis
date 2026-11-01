@@ -78,10 +78,14 @@ number of speciation events on the path from the crown to the lineage,
 hidden splits counted; it needs a \code{phylo} and runs on the thinning
 sampler.}
 
-\item{init_pars}{Starting parameter vector. Required for \code{"mcem"};
-ignored for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the
-midpoint of the bounds is used, with covariate slopes started at 0
-(linear link) so that lambda stays positive during the early E-steps.}
+\item{init_pars}{Starting parameter vector for \code{"mcem"}; ignored
+for \code{"cem"}. If \code{NULL} with \code{"mcem"}, the fit starts at
+the constant-rate maximum-likelihood estimate of the tree (closed form;
+conditioned on survival when \code{cond} is a function), with every
+covariate coefficient at 0 and each coordinate moved inside the bounds.
+For \code{model = "cr"} that start is the estimate itself. When the
+constant-rate fit fails, the midpoint of the bounds is used, with
+covariate slopes started at 0 (linear link).}
 
 \item{control}{Named list of tuning parameters. Must include
 \code{lower_bound} and \code{upper_bound}. Use

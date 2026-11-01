@@ -24,11 +24,12 @@
   max_time = NULL,
   rho = 1,
   rel_floor = 0.01,
-  stop_rule = c("rel_change", "mc_error"),
+  stop_rule = c("projected", "rel_change", "mc_error"),
   mc_batches = 5L,
   mc_z = 1,
   mc_grow = 1.5,
-  max_draws = NULL
+  max_draws = NULL,
+  proj_window = 8L
 )
 }
 \value{
@@ -78,6 +79,11 @@ returned its starting point unchanged carries no information about
 stability and resets the streak (trace column \code{m_moved}).  The trace
 also records the absolute step \code{abs_step} and \code{drift}, the same
 relative displacement measured over the last \code{patience} iterations.
+That is \code{stop_rule = "rel_change"}.  Under the default,
+\code{"projected"}, an iteration counts toward \code{patience} only when,
+in addition, the relative distance from the iterate to the fixed point
+projected from the last \code{proj_window} iterates (\code{.em_remaining},
+trace column \code{projected}) is below \code{tol}.
 
 Trace.  Row k of \code{mcem} pairs theta_k with the E-step value
 fhat(theta_\{k-1\}) it was computed from, and with the rejection counters

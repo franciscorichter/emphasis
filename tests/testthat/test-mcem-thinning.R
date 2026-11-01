@@ -253,7 +253,8 @@ test_that("failures after successes leave no lagged loglik (H20)", {
       brts1, ip8, sample_size = 20L, maxN = 2000L, max_missing = 1e4,
       lower_bound = lb8, upper_bound = ub8, max_iter = 20L, xtol = 1e-3,
       tol = 1e-6, patience = 3L, num_threads = 1L, verbose = TRUE,
-      conditional = cond, model = cr_bin, link = 0L, max_time = 120),
+      conditional = cond, model = cr_bin, link = 0L, max_time = 120,
+      stop_rule = "rel_change"),
     message = function(m) {
       if (grepl("^Iteration 3: fhat", conditionMessage(m))) flag$fail <- TRUE
       invokeRestart("muffleMessage")
@@ -286,7 +287,7 @@ test_that("an interleaved E-step failure resets the streak and restarts from the
       lower_bound = lb8, upper_bound = ub8, max_iter = 20L, xtol = 1e-3,
       tol = 1e6,            # every successful iteration counts as stable
       patience = 3L, num_threads = 1L, verbose = TRUE, conditional = cond,
-      model = cr_bin, link = 0L, max_time = 120),
+      model = cr_bin, link = 0L, max_time = 120, stop_rule = "rel_change"),
     message = function(m) {
       txt <- conditionMessage(m); msgs <<- c(msgs, txt)
       if (grepl("^Iteration 2:", txt)) flag$fail <- TRUE
@@ -334,7 +335,8 @@ test_that("second consecutive failure perturbs toward the centre; pars stays the
       brts1, ip8, sample_size = 20L, maxN = 2000L, max_missing = 1e4,
       lower_bound = lb8, upper_bound = ub8, max_iter = 20L, xtol = 1e-3,
       tol = 1e6, patience = 2L, num_threads = 1L, verbose = TRUE,
-      conditional = cond, model = cr_bin, link = 0L, max_time = 120),
+      conditional = cond, model = cr_bin, link = 0L, max_time = 120,
+      stop_rule = "rel_change"),
     message = function(m) {
       txt <- conditionMessage(m); msgs <<- c(msgs, txt)
       if (grepl("^Iteration 1:", txt)) flag$left <- 2L

@@ -32,7 +32,7 @@ run_bdi <- function(pars, max_iter, tol = 1e-2, patience = 3L,
                max_missing = 1e4, lower_bound = lower_bound,
                upper_bound = upper_bound, max_iter = max_iter, xtol = 1e-3,
                tol = tol, patience = patience, num_threads = 1L,
-               model = c(0L, 0L, 0L), link = 0L, rho = 1)
+               model = c(0L, 0L, 0L), link = 0L, rho = 1, stop_rule = "rel_change")
 }
 
 # --------------------------------------------------------------------------- #

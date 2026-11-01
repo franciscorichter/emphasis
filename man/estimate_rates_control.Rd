@@ -141,6 +141,23 @@ MCEM-specific parameters:
   \item{\code{patience}}{Number of consecutive iterations with parameter
     change below \code{tol} required to declare convergence. Default
     \code{3}.}
+  \item{\code{stop_rule}}{\code{"projected"} (default),
+    \code{"rel_change"} or \code{"mc_error"}. \code{"rel_change"} stops on
+    the step alone, as described under \code{tol}. EM is slow in the
+    extinction rate, whose information comes almost entirely from the
+    lineages the E-step imputes, and a slow EM takes small steps far from
+    its fixed point, so that rule can stop early. \code{"projected"} also
+    regresses the steps of the last \code{proj_window} iterates on the
+    iterates they started from, projects the fixed point from that line,
+    and requires the relative distance to it (trace column
+    \code{projected}) to be below \code{tol} as well. Under Monte Carlo
+    noise around the fixed point the projection is the mean of the window,
+    so the rule then behaves as \code{"rel_change"}. \code{"mc_error"}
+    compares the step with its own Monte Carlo standard error and grows
+    the draws until the step is inside it (controls \code{mc_batches},
+    \code{mc_z}, \code{mc_grow}, \code{max_draws}).}
+  \item{\code{proj_window}}{Iterates the \code{"projected"} rule projects
+    from, the start included. Default \code{8}.}
 }
 
 Read only under \code{estimate_rates(cond = "surface")}, and not in the

@@ -22,13 +22,14 @@
   link = 0L,
   max_time = NULL,
   rho = 1,
-  stop_rule = c("rel_change", "mc_error"),
+  stop_rule = c("projected", "rel_change", "mc_error"),
   mc_batches = 5L,
   mc_z = 1,
   mc_grow = 1.5,
   max_draws = NULL,
   mesh = NULL,
-  damping = "auto"
+  damping = "auto",
+  proj_window = 8L
 )
 }
 \value{
@@ -80,6 +81,11 @@ step \code{abs_step} and \code{drift}, the same relative displacement
 measured over the last \code{patience} iterations: under pure Monte Carlo
 noise \code{drift} is of the order of \code{sqrt(patience)} steps, under a
 deterministic EM drift it is \code{patience} steps.
+That is \code{stop_rule = "rel_change"}.  Under the default,
+\code{"projected"}, an iteration counts toward \code{patience} only when,
+in addition, the relative distance from the iterate to the fixed point
+projected from the last \code{proj_window} iterates (\code{.em_remaining},
+trace column \code{projected}) is below \code{tol}.
 
 The reported likelihood is a separate E-step at the final iterate, so
 \code{fhat}, ESS, \code{final_IS} and \code{loglik_var} all describe

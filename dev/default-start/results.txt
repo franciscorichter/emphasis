@@ -1,0 +1,36 @@
+== cr, 40 trees: |error| vs exact conditioned MLE ==
+old  lam median 0.056  max 0.104  | mu median 0.089  max 0.178  | iters median 12  secs median 27.438 
+new  lam median 0.001  max 0.005  | mu median 0.002  max 0.010  | iters median 9  secs median 48.953 
+medians: exact mu 0.209  old 0.072  new 0.209 
+
+converged 
+       40 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   9.00    9.00    9.00   10.55   11.25   18.00 
+tree 4:
+        lam_ex mu_ex lam_old mu_old lam_new mu_new
+beta_03   0.67 0.407     0.6    0.3   0.673   0.41
+
+== cr, rule only (midpoint start, projected rule), 10 trees ==
+ 1 exact 0.398 0.111 | old 0.369 0.055 (  4 it) | rule_only 0.371 0.057 ( 11 it, converged,   20s)
+ 2 exact 0.591 0.354 | old 0.549 0.289 ( 56 it) | rule_only 0.550 0.292 ( 60 it, converged,  277s)
+ 3 exact 0.572 0.316 | old 0.479 0.161 ( 32 it) | rule_only 0.548 0.279 ( 84 it, converged,  308s)
+ 4 exact 0.670 0.407 | old 0.600 0.300 ( 57 it) | rule_only 0.639 0.363 ( 88 it, converged,  449s)
+ 5 exact 0.550 0.241 | old 0.457 0.074 ( 13 it) | rule_only 0.511 0.175 ( 68 it, converged,  177s)
+ 6 exact 0.394 0.020 | old 0.410 0.052 (  4 it) | rule_only 0.409 0.051 (  9 it, converged,   19s)
+ 7 exact 0.498 0.205 | old 0.418 0.061 (  7 it) | rule_only 0.467 0.153 ( 66 it, converged,  242s)
+ 8 exact 0.458 0.129 | old 0.416 0.052 (  5 it) | rule_only 0.426 0.070 ( 22 it, converged,   53s)
+ 9 exact 0.486 0.212 | old 0.427 0.105 ( 27 it) | rule_only 0.454 0.154 ( 58 it, converged,  155s)
+10 exact 0.594 0.366 | old 0.539 0.285 ( 56 it) | rule_only 0.542 0.288 ( 58 it, converged,  222s)
+
+== dd, 10 trees (pars: beta0 betaN gamma0 gammaN; loglik) ==
+ 1 n=116 | old -0.233 -0.010 -4.511 0.026 ll -256.64 200 it  919s max_ | new -0.236 -0.010 -4.521 0.026 ll -256.54 200 it  785s max_ | ref -0.227 -0.010 -4.501 0.026 ll -256.56 950 it 3667s time
+ 2 n= 69 | old -0.511 -0.012 -4.765 0.043 ll -141.72 200 it  468s max_ | new -0.600 -0.013 -5.736 0.043 ll -142.07  89 it  109s conv | ref -0.520 -0.012 -4.809 0.043 ll -141.97 1000 it 1828s max_
+ 3 n= 99 | old -0.624 -0.005 -4.862 0.030 ll -192.84  42 it  185s conv | new -0.709 -0.006 -5.960 -0.024 ll -193.02 200 it  301s max_ | ref -0.651 -0.005 -5.134 0.030 ll -192.90 1000 it 1329s max_
+ 4 n=114 | old -0.052 -0.013 -2.181 0.004 ll -257.25 200 it 1057s max_ | new -0.181 -0.012 -2.641 0.008 ll -257.09 200 it  688s max_ | ref -0.099 -0.013 -2.307 0.005 ll -257.25 901 it 3717s time
+ 5 n=129 | old -0.153 -0.011 -4.664 0.023 ll -286.24  51 it  431s conv | new -0.143 -0.011 -4.643 0.023 ll -286.15 200 it  950s max_ | ref -0.147 -0.011 -4.646 0.023 ll -286.06 895 it 3784s time
+ 6 n=134 | old -0.400 -0.009 -4.812 0.022 ll -294.30  59 it  319s conv | new -0.411 -0.009 -4.832 0.022 ll -294.19 167 it  473s conv | ref -0.416 -0.009 -4.850 0.022 ll -294.35 1000 it 3430s max_
+ 7 n= 87 | old -0.454 -0.010 -4.507 0.034 ll -186.96 118 it  418s conv | new -0.460 -0.010 -4.481 0.034 ll -186.99 200 it  571s max_ | ref -0.458 -0.010 -4.524 0.034 ll -186.99 1000 it 2951s max_
+ 8 n= 81 | old -0.546 -0.014 -6.076 0.037 ll -173.25  82 it  166s conv | new -0.573 -0.015 -6.038 -0.000 ll -173.21 200 it  225s max_ | ref -0.575 -0.015 -6.296 0.005 ll -173.21 1000 it  897s max_
+ 9 n=105 | old -0.520 -0.008 -4.911 0.029 ll -212.44  80 it  302s conv | new -0.595 -0.008 -6.129 0.029 ll -212.47 151 it  304s conv | ref -0.543 -0.008 -5.084 0.029 ll -212.40 1000 it 1786s max_
+10 n= 86 | old -0.642 -0.001 -3.714 0.035 ll -167.44 200 it 1052s max_ | new -0.564 -0.001 -3.668 0.035 ll -166.85 200 it 1037s max_ | ref -0.555 -0.000 -3.683 0.035 ll -167.09 727 it 3651s time

@@ -1560,6 +1560,11 @@
 #' measured over the last \code{patience} iterations: under pure Monte Carlo
 #' noise \code{drift} is of the order of \code{sqrt(patience)} steps, under a
 #' deterministic EM drift it is \code{patience} steps.
+#' That is \code{stop_rule = "rel_change"}.  Under the default,
+#' \code{"projected"}, an iteration counts toward \code{patience} only when,
+#' in addition, the relative distance from the iterate to the fixed point
+#' projected from the last \code{proj_window} iterates (\code{.em_remaining},
+#' trace column \code{projected}) is below \code{tol}.
 #'
 #' The reported likelihood is a separate E-step at the final iterate, so
 #' \code{fhat}, ESS, \code{final_IS} and \code{loglik_var} all describe
@@ -1623,14 +1628,16 @@
                       link       = 0L,
                       max_time   = NULL,
                       rho        = 1.0,
-                      stop_rule  = c("rel_change", "mc_error"),
+                      stop_rule  = c("projected", "rel_change", "mc_error"),
                       mc_batches = 5L,
                       mc_z       = 1.0,
                       mc_grow    = 1.5,
                       max_draws  = NULL,
                       mesh       = NULL,
-                      damping    = "auto") {
+                      damping    = "auto",
+                      proj_window = 8L) {
   stop_rule <- match.arg(stop_rule)
+  proj_window <- max(3L, as.integer(proj_window))
   if (is.null(max_draws) || !is.finite(max_draws)) max_draws <- as.integer(8L * sample_size)
   max_draws <- as.integer(max(max_draws, sample_size))
   prev_iterate <- pars
@@ -1711,6 +1718,8 @@
       # "mc_error" only: the step in units of its own Monte Carlo standard
       # error, and the draws the E-step used at that iteration.
       mc_z        = NA_real_,
+      # "projected" only: relative distance to the projected fixed point
+      projected   = NA_real_,
       sample_size = sample_size,
       # the mean field the proposal was built on: converged, final residual,
       # sweeps taken and the relaxation of the last sweep (NA under cr)
@@ -1896,10 +1905,24 @@
     # and the run stops only once they have reached max_draws.  The estimate
     # returned is then the mean of the last `patience` iterates.  See
     # .mcem_dynamic_fresh for the references.
-    if (stop_rule == "rel_change") {
+    #
+    # "projected" (the default) adds a second condition to "rel_change": the
+    # distance to the fixed point projected from the last `proj_window`
+    # iterates (.em_remaining) must also be below `tol`.  A small step from a
+    # slow EM no longer counts as convergence.
+    if (stop_rule != "mc_error") {
+      rem <- NA_real_
+      if (stop_rule == "projected") {
+        if (n_iter + 1L >= proj_window)
+          rem <- .em_remaining(do.call(rbind, history[(n_iter + 2L - proj_window):(n_iter + 1L)]),
+                               floor_val)
+        mcem$projected[nrow(mcem)] <- rem
+      }
+      small <- delta_max < tol &&
+        (stop_rule == "rel_change" || (!is.na(rem) && rem < tol))
       if (!m_moved) {
         streak <- 0L
-      } else if (delta_max < tol) {
+      } else if (small) {
         streak <- streak + 1L
         if (streak >= patience) { stop_reason <- "converged"; break }
       } else {

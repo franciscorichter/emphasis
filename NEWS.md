@@ -1,3 +1,20 @@
+# emphasis 1.1.0.9000
+
+* `estimate_rates(method = "mcem")` without `init_pars` starts at the
+  constant-rate maximum-likelihood estimate of the tree (closed form,
+  conditioned on survival when `cond` is a function; `.cr_mle()`), with every
+  covariate coefficient at zero, instead of the middle of the parameter box.
+  On 40 constant-rate trees (80-150 tips, lambda = 0.5, mu = 0.2, conditioned
+  fits) the median absolute error in mu against the exact estimate falls from
+  0.089 to 0.002 and the median estimate of mu moves from 0.072 to 0.209
+  (exact 0.209); the fits take a median of 9 iterations.
+
+* New default stopping rule `stop_rule = "projected"`: an iteration counts
+  toward `patience` when the relative step and the relative distance to the
+  fixed point projected from the last `proj_window` (8) iterates are both
+  below `tol`. The trace records the projected distance in the column
+  `projected`. `"rel_change"`, the previous default, remains available.
+
 # emphasis 1.1.0
 
 * The trees an E-step returns under the thinning proposal carry their lineage
