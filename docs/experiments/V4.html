@@ -69,7 +69,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>registered 2026-10-31; read 2026-11-01 on 699 of 700 fits (one <code>dd</code> fit still running)</td>
+<td>registered 2026-10-31; read 2026-11-01 on all 700 fits</td>
 </tr>
 <tr>
 <td>Series</td>
@@ -120,7 +120,7 @@ window.MathJax = {
 <li>On trees with a valid exact maximum: median <span class="math inline">\(\Delta\ell \ge -0.5\)</span> and 90th percentile of <span class="math inline">\(|\Delta\ell| \le 2\)</span>, per model, rule and set (E45's C1).</li>
 </ol>
 <h2 id="results">Results</h2>
-<p><code>sim/V4-analysis.py</code> (<code>results/V4/rule.csv</code>, <code>paired.csv</code>): 699 of 700 fits, 609 with a valid exact conditioned maximum (<code>cr</code> on every tree; <code>dd</code> only at complete sampling, so 14 of the 59 family trees).</p>
+<p><code>sim/V4-analysis.py</code> (<code>results/V4/rule.csv</code>, <code>paired.csv</code>): 700 fits, 610 with a valid exact conditioned maximum (<code>cr</code> on every tree; <code>dd</code> only at complete sampling, so 14 of the 59 family trees).</p>
 <p><strong>The rule holds in all eight groups.</strong> <span class="math inline">\(\Delta\ell = \ell(\hat\theta_{\text{MCEM}}) - \ell(\hat\theta)\)</span>:</p>
 <div class="table-wrap">
 <table>
@@ -141,10 +141,10 @@ window.MathJax = {
 <td><code>cr</code></td>
 <td><code>mc_error</code></td>
 <td>family trees</td>
-<td>58</td>
+<td>59</td>
 <td>-0.04</td>
 <td>0.13</td>
-<td>-0.19</td>
+<td>-0.44</td>
 <td>14%</td>
 </tr>
 <tr>
@@ -221,7 +221,7 @@ window.MathJax = {
 </table>
 </div>
 <ul>
-<li>On the 304 trees fitted under both rules, <code>mc_error</code> lands closer to the exact maximum on 75% (median <span class="math inline">\(\Delta\ell\)</span> -0.05 against -0.09 for the default rule).</li>
+<li>On the 305 trees fitted under both rules, <code>mc_error</code> lands closer to the exact maximum on 75% (median <span class="math inline">\(\Delta\ell\)</span> -0.05 against -0.09 for the default rule).</li>
 <li>One tree stands apart: Picidae (223 tips) under <code>dd</code>, where both rules stop at the same point, 14.8 below the exact maximum (15 iterations at 200 draws and 93 at 2400). The next worst are Pteropodidae (-4.1), Pitheciidae (-2.9) and Tenrecidae (-2.9), all under the default rule.</li>
 <li>A <code>cr</code> fit that ends on the iteration cap under <code>mc_error</code> (36% of the class-tree clades) is still at the exact maximum to within the table's spread.</li>
 </ul>
