@@ -1,0 +1,2 @@
+"task","arm","sigma","rep","tips","lineages","tries","capped_before","lambda0","mu0","sigma_hat","lr","conv","sec","build"
+75,"window",0.5,15,60,73,5,1,0.276758484408548,0.0506933739440879,0.151213049423093,4.01647025111674,0,3.89974594116211,"1.1.0"

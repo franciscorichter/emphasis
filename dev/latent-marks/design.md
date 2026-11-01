@@ -224,8 +224,28 @@ core. $\hat\sigma$ is still about half of $\sigma$ (median ratio 0.50 and 0.57; 
 at $\sigma = 0.25$), as under the blind proposal, so with the E-step sampled the shortfall is the
 estimator's on these trees. The trees are kept only at 50-200 tips; at large $\sigma$ the trees
 whose rates drifted up exceed the window, so the window keeps less heterogeneity than $\sigma$
-generates, and the likelihood does not condition on it. The complete-tree fit through the same
-window separates that selection from the loss of the extinct lineages.
+generates, and the likelihood does not condition on it.
+
+Per-tree ML of $(\lambda_0, \mu_0, \sigma)$ on the complete trees (extinct lineages kept;
+`dev/latent-marks/recovery-complete-window.R`, rows in `results/complete-window-1.1.0/`), on the
+recovery study's trees ("window") and, from the same seeds, on the first tree whose two crown
+lineages survive, of any size up to 5000 lineages ("no window"):
+
+| $\sigma$ | arm | median tips | $\hat\sigma$ [10th, 90th] | $\hat\sigma = 0$ | LR > 3.84 |
+|---|---|---|---|---|---|
+| 0.25 | window | 97 | 0.15 [0.07, 0.23] | 3 of 30 | 22 |
+| 0.5 | window | 76 | 0.37 [0.22, 0.69] | 1 of 30 | 28 |
+| 0.25 | no window | 89 | 0.19 [0.00, 0.28] | 7 of 30 | 18 |
+| 0.5 | no window | 20 | 0.28 [0.00, 1.14] | 10 of 30 | 10 |
+
+On the recovery trees the complete tree gives nearly what the reconstructed one gives: per tree, the
+reconstructed $\hat\sigma$ minus the complete one has median -0.003 at $\sigma = 0.25$ and -0.04 at
+0.5 (correlation 0.79 and 0.83). The shortfall is the size of a single tree's information about a
+variance, not the hidden lineages: without the window, at $\sigma = 0.25$, trees under 50 tips give a
+median $\hat\sigma$ of 0.00, 50-200 tips 0.18 and over 200 tips 0.24. The window also selects: at
+$\sigma = 0.5$ it took 330 clades over the 20 000-lineage cap and a median of 17 draws per kept tree.
+Reading $\sigma$ from one tree of about 100 tips therefore shrinks it towards 0 whatever the E-step;
+what the latent rate can be read from is a question of tree size, for the estimability study.
 
 Model choice between `nk` and a latent-rate model fitted on the same trees is what the extension
 is for; its estimability is a study of its own, after phase 3.
