@@ -206,8 +206,26 @@ parameter values (`tests/testthat/test-marks-proposal.R`). At the generating val
 | 0.5 | 83 (65) | 1.0 | 22 |
 
 Its log-likelihood estimates exceed the surrogate's by a median 0.56 and 1.89 at $\sigma$ 0.25 and
-0.5, the direction in which an estimate from a handful of effective draws falls short. The recovery
-study reruns with this proposal (USI cluster array 9083, build `2874bfa`, `results-sample`).
+0.5, the direction in which an estimate from a handful of effective draws falls short.
+
+Recovery study with this proposal (USI cluster array 9083, build `2874bfa`; per-tree rows in
+`dev/latent-marks/results/sample-2874bfa/`; the same 90 trees; the cr fit by the same proposal with
+one mark, its log-likelihood exact). Medians [10th, 90th percentile]:
+
+| $\sigma$ | $\hat\sigma$ | LR > 3.84 | $\hat\lambda_0$ (0.35) | $\hat\mu_0$ (0.07) | effective sample, last iteration |
+|---|---|---|---|---|---|
+| 0 | 0.00 [0.00, 0.06] | 0 of 30 | 0.347 | 0.080 [0.051, 0.116] | 1429 |
+| 0.25 | 0.13 [0.00, 0.24] | 17 of 30 | 0.335 | 0.093 [0.041, 0.124] | 1300 |
+| 0.5 | 0.29 [0.18, 0.60] | 26 of 30 | 0.268 | 0.059 [0.030, 0.109] | 993 |
+
+Extinction no longer collapses ($\hat\mu_0$ 0.003-0.046 under the blind proposal), and the E-step
+keeps 1000-1400 effective draws where the blind one kept 63-195; a fit takes about 1.2 hours on one
+core. $\hat\sigma$ is still about half of $\sigma$ (median ratio 0.50 and 0.57; zero on 7 of 30 trees
+at $\sigma = 0.25$), as under the blind proposal, so with the E-step sampled the shortfall is the
+estimator's on these trees. The trees are kept only at 50-200 tips; at large $\sigma$ the trees
+whose rates drifted up exceed the window, so the window keeps less heterogeneity than $\sigma$
+generates, and the likelihood does not condition on it. The complete-tree fit through the same
+window separates that selection from the loss of the extinct lineages.
 
 Model choice between `nk` and a latent-rate model fitted on the same trees is what the extension
 is for; its estimability is a study of its own, after phase 3.
