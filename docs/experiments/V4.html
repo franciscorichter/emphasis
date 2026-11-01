@@ -222,11 +222,11 @@ window.MathJax = {
 </div>
 <ul>
 <li>On the 305 trees fitted under both rules, <code>mc_error</code> lands closer to the exact maximum on 75% (median <span class="math inline">\(\Delta\ell\)</span> -0.05 against -0.09 for the default rule).</li>
-<li>One tree stands apart: Picidae (223 tips) under <code>dd</code>, where both rules stop at the same point, 14.8 below the exact maximum (15 iterations at 200 draws and 93 at 2400). The next worst are Pteropodidae (-4.1), Pitheciidae (-2.9) and Tenrecidae (-2.9), all under the default rule.</li>
+<li>One tree stands apart: Picidae (223 tips) under <code>dd</code>, where both rules stop at the same point, 14.8 below the exact maximum (15 iterations at 200 draws and 93 at 2400). The extinction slope on <span class="math inline">\(N\)</span> is on the lower edge of the <code>auto_bounds()</code> box in all three fits (<span class="math inline">\(\gamma_N = -0.013453\)</span>), and along that edge the likelihood has two modes: MCEM, started from the box's default, stops at <span class="math inline">\(\lambda_0 = 0.20\)</span>, <span class="math inline">\(\mu_0 = 0.16\)</span>; the exact maximiser, with restarts, reaches <span class="math inline">\(\lambda_0 = 0.72\)</span>, <span class="math inline">\(\mu_0 = 0.79\)</span>. The next worst are Pteropodidae (-4.1), Pitheciidae (-2.9) and Tenrecidae (-2.9), all under the default rule.</li>
 <li>A <code>cr</code> fit that ends on the iteration cap under <code>mc_error</code> (36% of the class-tree clades) is still at the exact maximum to within the table's spread.</li>
 </ul>
 <h2 id="conclusion">Conclusion</h2>
-<p>On real phylogenies MCEM reaches the exact conditioned maximum for <code>cr</code> and <code>dd</code>; the <code>mc_error</code> rule gets closer than the default. Picidae under <code>dd</code> is the exception, a stopping point 14.8 below the exact maximum that both rules reach.</p>
+<p>On real phylogenies MCEM reaches the exact conditioned maximum for <code>cr</code> and <code>dd</code>; the <code>mc_error</code> rule gets closer than the default. Picidae under <code>dd</code> is the exception: with the extinction slope on the box's edge, MCEM from the default start reaches a low-turnover mode 14.8 below the exact maximum's high-turnover one.</p>
 
 </article>
 </main>
