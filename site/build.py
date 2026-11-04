@@ -54,7 +54,6 @@ NAV = [
     ("Overview", "index.html"),
     ("Covariates", "covariates/index.html"),
     ("Usage", "usage.html"),
-    ("Reference", "reference.html"),
     ("Estimability", "estimability.html"),
     ("Phylogeny catalogue", CATALOGUE),
     ("Experiments", "experiments/index.html"),
