@@ -5,6 +5,7 @@
 #include "emphasis.hpp"
 #include "model.hpp"
 #include "rinit.h"
+#include "sbplx.hpp"
 using namespace Rcpp;
 
 
@@ -163,4 +164,20 @@ List rcpp_mcm(List e_step,
   ret["timed_out"] = M.timed_out;
   ret["improved"] = M.improved;
   return ret;
+}
+
+
+//' Set the M-step optimiser for the session
+//'
+//' @param algorithm \code{"bobyqa"} or \code{"subplex"}
+//' @return the previous setting, invisibly usable to restore it
+//' @keywords internal
+// [[Rcpp::export(name = "set_m_algorithm_cpp")]]
+std::string rcpp_set_m_algorithm(std::string algorithm)
+{
+  const std::string prev = (emphasis::m_algorithm() == 1) ? "bobyqa" : "subplex";
+  if (algorithm == "bobyqa") emphasis::set_m_algorithm(1);
+  else if (algorithm == "subplex") emphasis::set_m_algorithm(0);
+  else Rcpp::stop("m_optimizer must be \"bobyqa\" or \"subplex\"");
+  return prev;
 }

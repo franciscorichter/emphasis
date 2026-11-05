@@ -126,6 +126,9 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     \code{200}. Alias: \code{sample_size}.}
 #'   \item{\code{xtol}}{Relative tolerance for the M-step optimiser.
 #'     Default \code{1e-3}.}
+#'   \item{\code{m_optimizer}}{Derivative-free optimiser of the M-step:
+#'     \code{"bobyqa"} (default; used where every coordinate has a finite
+#'     bound, subplex otherwise) or \code{"subplex"}.}
 #'   \item{\code{max_iter}}{Maximum EM iterations. Default \code{200}.}
 #'   \item{\code{maxN}}{Total augmentation attempts per E-step (accepted
 #'     plus rejected). Read by the thinning sampler only; the BDI sampler
@@ -257,6 +260,7 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
       max_iter    = 200L,
       maxN        = NULL,       # total augmentation attempts (thinning only); NULL -> max(2000, 10 * sample_size)
       xtol        = 1e-3,
+      m_optimizer = "bobyqa",   # M-step optimiser: "bobyqa" or "subplex"
       tol         = 1e-2,
       patience    = 3L
     ))
@@ -1369,6 +1373,10 @@ estimate_rates <- function(tree,
   # Resolve parameter aliases (old names still work)
   ctrl <- .resolve_control_aliases(ctrl, method, user_ctrl = control)
   ctrl$rho <- .check_rho(ctrl$rho)
+  if (method == "mcem") {
+    m_prev <- set_m_algorithm_cpp(match.arg(ctrl$m_optimizer, c("bobyqa", "subplex")))
+    on.exit(set_m_algorithm_cpp(m_prev), add = TRUE)
+  }
 
   lower_bound <- ctrl$lower_bound
   upper_bound <- ctrl$upper_bound

@@ -80,11 +80,16 @@ namespace emphasis {
   }
 
 
-  sbplx::sbplx(size_t nparams)
+  namespace { int m_algorithm_ = 1; }
+  int m_algorithm() { return m_algorithm_; }
+  void set_m_algorithm(int a) { m_algorithm_ = (a == 0) ? 0 : 1; }
+
+
+  sbplx::sbplx(size_t nparams, nlopt_algorithm alg)
     : lower_(nparams, -std::numeric_limits<double>::max()),
     upper_(nparams, +std::numeric_limits<double>::max())
   {
-    nlopt_ = remp_create(NLOPT_LN_SBPLX, static_cast<unsigned>(nparams));
+    nlopt_ = remp_create(alg, static_cast<unsigned>(nparams));
     if (nullptr == nlopt_) {
       throw emphasis_error("nlopt_create failed");
     }

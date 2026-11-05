@@ -245,6 +245,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// rcpp_set_m_algorithm
+std::string rcpp_set_m_algorithm(std::string algorithm);
+RcppExport SEXP _emphasis_rcpp_set_m_algorithm(SEXP algorithmSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type algorithm(algorithmSEXP);
+    rcpp_result_gen = Rcpp::wrap(rcpp_set_m_algorithm(algorithm));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_emphasis_simulate_div_tree_cpp", (DL_FUNC) &_emphasis_simulate_div_tree_cpp, 13},
@@ -260,6 +271,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_emphasis_rcpp_thinning_envelope_violations", (DL_FUNC) &_emphasis_rcpp_thinning_envelope_violations, 1},
     {"_emphasis_rcpp_mcem", (DL_FUNC) &_emphasis_rcpp_mcem, 19},
     {"_emphasis_rcpp_mcm", (DL_FUNC) &_emphasis_rcpp_mcm, 12},
+    {"_emphasis_rcpp_set_m_algorithm", (DL_FUNC) &_emphasis_rcpp_set_m_algorithm, 1},
     {NULL, NULL, 0}
 };
 

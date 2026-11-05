@@ -362,3 +362,12 @@ m_cpp <- function(e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel,
     .Call('_emphasis_rcpp_mcm', PACKAGE = 'emphasis', e_step, init_pars, plugin, lower_bound, upper_bound, xtol_rel, num_threads, model, link, rho, rconditional, time_left)
 }
 
+#' Set the M-step optimiser for the session
+#'
+#' @param algorithm \code{"bobyqa"} or \code{"subplex"}
+#' @return the previous setting, invisibly usable to restore it
+#' @keywords internal
+set_m_algorithm_cpp <- function(algorithm) {
+    .Call('_emphasis_rcpp_set_m_algorithm', PACKAGE = 'emphasis', algorithm)
+}
+

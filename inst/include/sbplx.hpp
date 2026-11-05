@@ -32,13 +32,20 @@ namespace emphasis {
   };
 
 
+  // The M-step's derivative-free optimiser for the session: 0 = subplex,
+  // 1 = BOBYQA (the default).  Set from R by set_m_algorithm_cpp(), which
+  // estimate_rates() calls with control$m_optimizer.
+  int m_algorithm();
+  void set_m_algorithm(int);
+
   class sbplx
   {
   public:
     sbplx(const sbplx&) = delete;
     sbplx& operator=(const sbplx&) = delete;
 
-    sbplx(size_t nparams);
+    // alg: NLOPT_LN_SBPLX or NLOPT_LN_BOBYQA (M_step chooses; see m_algorithm())
+    sbplx(size_t nparams, nlopt_algorithm alg = NLOPT_LN_SBPLX);
     ~sbplx();
     void set_xtol_rel(double);
     void set_lower_bounds(const std::vector<double>&);
