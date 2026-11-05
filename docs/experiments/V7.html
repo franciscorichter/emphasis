@@ -64,7 +64,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>registered 2026-10-31; running on Bre (674 of 3580 fits, 2 November)</td>
+<td>registered 2026-10-31; running on Bre (992 of 3580 fits, 5 November); 16 of 32 cells budget-limited, no rule read</td>
 </tr>
 <tr>
 <td>Series</td>
@@ -79,8 +79,8 @@ window.MathJax = {
 <td><code>sim/V7.R</code></td>
 </tr>
 <tr>
-<td>Data</td>
-<td><code>results/V7/jobs/</code>, <code>results/V7/build.txt</code></td>
+<td>Data / analysis</td>
+<td><code>results/V7/jobs/</code> on Bre; merged rows and tables in <code>results/V7/</code>; <code>sim/V7-analysis.R</code></td>
 </tr>
 </tbody>
 </table>
@@ -121,7 +121,11 @@ window.MathJax = {
 <li>A cell with more than a tenth of fits on the cap or the clock is budget-limited, not read.</li>
 </ol>
 <h2 id="results">Results</h2>
-<p>Not yet.</p>
+<p>Interim, on the 992 fits of 5 November. "The cap" is the 1000-iteration limit (<code>max_iter</code>), "the clock" the 22-hour limit (<code>time_budget</code>); the tenth in rule 3 is of the planned fits (100 or 120 a cell).</p>
+<p><strong>Outcomes:</strong> 584 converged, 160 on the cap, 246 on the clock (123 of them with zero EM iterations), 2 E-step failures. Of the written fits, <code>nd</code>, <code>ned</code> and <code>nk</code> end on the cap or the clock on 91%, 80% and 90%.</p>
+<p><strong>Rule 3.</strong> 16 of 32 cells are budget-limited whatever the remaining fits do: both <code>cr</code> and both <code>dd</code> cells, all four <code>d</code> cells, <code>nd</code> t10 +0.35 and t40 +0.35, <code>ed</code> t40 −0.35, <code>edc</code> t40 +0.35, <code>ned</code> t10 −0.35, <code>nedc</code> t10 −0.35, <code>k</code> t10 +0.35 and t40 +0.35. Rule 1 (false choice) therefore cannot be read in any cell. The other 16 cells are 1–6 cap or clock fits away from the same state.</p>
+<p><strong>Ladders.</strong> 73 trees have all five ladder fits written; none has all five converged (converged share on those trees: <code>cr</code> 0.95, <code>dd</code> 0.84, <code>nd</code> 0.07, <code>ned</code> 0.15, <code>nk</code> 0.07).</p>
+<p><strong>Descriptive, not a rule reading.</strong> Pairwise choice on the 38 trees with both fits converged: the generator is chosen on 19 (<code>d</code> 4/8, <code>ed</code> 8/14, <code>edc</code> 4/5, <code>k</code> 2/7, <code>nedc</code> 1/2, <code>ned</code> 0/1, <code>nk</code> 0/1). On two trees a converged richer fit lies more than 1 log-likelihood unit below the model it nests (<code>k</code> t10 +0.35: k08 <code>ned</code> against <code>dd</code>, −1.45; k07 <code>nd</code> against <code>cr</code>, −1.02); fits start from the box default, not the nested estimate.</p>
 
 </article>
 </main>

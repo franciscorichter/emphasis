@@ -66,7 +66,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>registered 2026-10-31; amended 2026-11-01 (calibration); running on Bre (290 of 2400 fits, 2 November)</td>
+<td>registered 2026-10-31; amended 2026-11-01 (calibration); running on Bre (622 of 2400 fits, 5 November); 9 of 15 calibrated cells sampler-limited, no tree read</td>
 </tr>
 <tr>
 <td>Series</td>
@@ -125,7 +125,9 @@ window.MathJax = {
 <p>The first calibration left 10 of 16 cells off the 100-tip target. The protracted-speciation generator had passed its parameters to <code>PBD::pbd_sim</code> in the wrong order (speciation completed at the extinction rate, incipient species split at the inverse of the mean duration); it now runs <code>pbd_sim</code>'s own event loop with the order fixed and an explicit lineage cap, and returns the same trees as <code>pbd_sim</code> at the same seed (150 of 150). The search widens to scales 0.005-30 with 400 clades a step; a cell is calibrated when its median lies within 70-140 tips, and one that cannot be is reported with its size distribution and enters no rule. The latent rate at <span class="math inline">\(\sigma = 0.40\)</span>, whose surviving clades either die or pass the cap, stays and is read under that rule. The six calibrated cells (latent rate <span class="math inline">\(\sigma\)</span> 0.10, the four two-region cells) keep their scales.</p>
 <p>Recalibrated: 15 of 16 cells lie within 70-140 tips (all six protracted-speciation cells at 94-104; the latent rate at <span class="math inline">\(\sigma\)</span> 0.25 at 84 and 84; at <span class="math inline">\(\sigma\)</span> 0.40 and turnover 0.10 at 105). The latent rate at <span class="math inline">\(\sigma = 0.40\)</span> and turnover 0.40 reaches a median of 35 tips with a third of its surviving clades over the cap: it is not calibrated and enters no rule.</p>
 <h2 id="results">Results</h2>
-<p>Not yet.</p>
+<p>Interim, on the 622 fits of 5 November (<code>sim/V9-analysis.R</code>, tables in <code>results/V9/</code>). A tree is read when its five ladder fits converged with an effective sample of at least 10.</p>
+<p><strong>Rule 2.</strong> 9 of the 15 calibrated cells already have more than 20% of their 30 trees unread and enter no rule: the latent rate at <span class="math inline">\(\sigma\)</span> 0.10 and 0.25 (both turnovers) and 0.40 (turnover 0.10), protracted speciation at durations 0.5 and 5 (turnover 0.10), and two regions with no extirpation from A (both turnovers). The other six (protracted speciation at duration 2 (0.10) and 0.5, 2, 5 (0.40); two regions with equal extirpation, both turnovers) are 1–4 unread trees from the same state.</p>
+<p><strong>Rule 1.</strong> No tree is read in any cell, so no cell reproduces the K result and none is ruled out. The controls are in the same state: V7's <code>cr</code> and <code>nk</code> +0.35 cells have no read tree, and both <code>cr</code> cells are budget-limited under V7's rule 3. The factor per sd of <span class="math inline">\(K\)</span> needs the trees regenerated (<code>--trees</code>), which needs the calibration file and <code>PBD</code>/<code>diversitree</code>.</p>
 
 </article>
 </main>

@@ -48,7 +48,12 @@ window.MathJax = {
 </header>
 
 <p>What is still open in the package and in the record, each with the page that gives the evidence and what closes it. Work that is registered or running (E45, <a href="experiments/E48.html">E48</a>, E46, E47) is listed on the <a href="experiments/index.html">experiments index</a>; each experiment page states what its record does not hold.</p>
-<p>Nothing is open in the package or in the record.</p>
+<h2 id="fits-that-do-not-finish-one-e-step">Fits that do not finish one E-step</h2>
+<p>In <a href="experiments/V6.html">V6</a> 225 of 927 fits and in <a href="experiments/V7.html">V7</a> 123 of 992 ended on the 22-hour clock with zero EM iterations, after growing their draws to 2400 in the first E-step; they hold 95% (V6) and 94% (V7) of the fit-hours spent. None is a <code>cr</code> or <code>dd</code> fit. Their share rises with tree size (above 60% beyond 150 tips) and, at equal size, as <span class="math inline">\(\rho\)</span> falls. Together with fits on the iteration cap, they leave the lineage-level models without a reading in <a href="experiments/V3.html">V3</a>, <a href="experiments/E46.html">E46</a>, V6, V7 and <a href="experiments/V9.html">V9</a>. Closed by a change to the E-step that lets these fits finish (or fail fast with a recorded reason), measured on the stalled trees, and an amendment that relaunches the series under it.</p>
+<h2 id="the-conditioned-fits-trace-is-its-last-segment">The conditioned fit's trace is its last segment</h2>
+<p>Under <code>cond = "surface"</code>, <code>estimate_rates()</code> returns the last 25-iteration segment as <code>details$mcem</code>; the full trace is under <code>conditioning</code>. <a href="experiments/V3.html">V3</a>'s reference statistics were taken from the former, so its rule 2 is not read. Closed by the package returning the full trace (or documenting where it is) and V3's references rerun.</p>
+<h2 id="e46s-clock-exceeds-the-clusters-allocation">E46's clock exceeds the cluster's allocation</h2>
+<p><a href="experiments/E46.html">E46</a>'s clock (four times the longest of a cell's first three trees) is above Bre's 24-hour limit on 547 of the 551 fits that ended on it, so "clock-limited" there records the allocation, not the design. Closed by an amendment that sets a clock the host can give, or a host that gives the registered one.</p>
 
 </article>
 </main>

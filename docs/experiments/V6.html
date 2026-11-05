@@ -64,7 +64,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>registered 2026-10-31; running on Bre (463 of 3200 fits, 2 November)</td>
+<td>registered 2026-10-31; running on Bre (927 of 3200 fits, 5 November); no cell–condition read</td>
 </tr>
 <tr>
 <td>Series</td>
@@ -79,8 +79,8 @@ window.MathJax = {
 <td><code>sim/V6.R</code></td>
 </tr>
 <tr>
-<td>Data</td>
-<td><code>results/V6/jobs/</code>, <code>results/V6/build.txt</code></td>
+<td>Data / analysis</td>
+<td><code>results/V6/jobs/</code> on Bre; merged rows and tables in <code>results/V6/</code>; <code>sim/V6-analysis.R</code></td>
 </tr>
 </tbody>
 </table>
@@ -120,7 +120,10 @@ window.MathJax = {
 <li>A misstated <span class="math inline">\(\rho\)</span> is harmless for a coefficient when its median ratio moves by less than 0.1.</li>
 </ol>
 <h2 id="results">Results</h2>
-<p>Not yet.</p>
+<p>Interim, on the 927 fits of 5 November. The design sets no readability condition; the analysis uses <a href="E46.html">E46</a>'s rule (1): a cell–condition is read when at least 16 of its 20 fits converged and the median final effective sample is at least 10.</p>
+<p><strong>Outcomes:</strong> 243 converged, 243 on the 1000-iteration cap, 212 on the 22-hour clock after some iterations, 225 on the clock with <strong>zero EM iterations</strong>, 4 E-step failures. <strong>Read:</strong> none of 160 cell–conditions; 76 can no longer be read whatever the remaining fits do (more than 4 of 20 unfinished), 84 are pending. No <code>ned</code>, <code>nedc</code> or <code>nk</code> fit has converged (0 of 167).</p>
+<p><strong>Descriptive, not a rule reading.</strong> Converged fits are on smaller trees than unconverged ones (median 23–41 against 34–68 tips for <code>d</code>, <code>ed</code>, <code>edc</code>, <code>k</code>), so only <code>cr</code>, where every fit converged, is free of that selection. <code>cr</code> median speciation ratio: 1.03 at <span class="math inline">\(\rho\)</span> 0.9, 1.07 at 0.75, 1.02 at 0.5 (20–22 trees each). Misstated <span class="math inline">\(\rho\)</span> at 0.75, on the 17 <code>cr</code> trees with all three fits converged: told 0.65 moves the median ratio by +0.16, told 0.85 by −0.13, both beyond the 0.1 of rule 2.</p>
+<p><strong>The zero-iteration fits</strong> never occur under <code>cr</code> or <code>dd</code>; they make up 79% of <code>ned</code> fits, 60% of <code>nk</code>, 38% of <code>edc</code>, 33% of <code>nd</code>, 31% of <code>nedc</code>, 21% of <code>ed</code>, 14% of <code>d</code>, 6% of <code>k</code>. Their share rises with tree size (1% at 50 tips or fewer, 42% at 76–100, 62–69% above 150; logistic coefficient of log tips +5.8, z = 10) and, at equal size, as the stated <span class="math inline">\(\rho\)</span> falls. 216 of 225 grew their draws to 2400 within the first E-step. They hold 2,939 of the 3,077 fit-hours spent.</p>
 
 </article>
 </main>

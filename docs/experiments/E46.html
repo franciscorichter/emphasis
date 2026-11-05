@@ -70,7 +70,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td><strong>running</strong> on Bre (USI cluster) since 2026-10-31 under the amendment of that date (build <code>182055b</code>: the thinning path's <code>mc_error</code> rule could not fire in <code>2143bde</code>, so every thinning fit was rerun); 208 fits written, all 1,710 effective-sample checks done, no cell read yet. Ran on CSCS Daint 27–28 October before that (stopped: the allocation belongs to a course)</td>
+<td>ran on Bre (USI cluster) 2026-10-31 to 2026-11-04 under the amendment of 2026-10-31 (build <code>182055b</code>: the thinning path's <code>mc_error</code> rule could not fire in <code>2143bde</code>, so every thinning fit was rerun); nothing queued since 4 November; 1,072 fits written, 1 of 38 open pairs read (see Results). Ran on CSCS Daint 27–28 October before that (stopped: the allocation belongs to a course)</td>
 </tr>
 <tr>
 <td>Package build</td>
@@ -173,7 +173,45 @@ window.MathJax = {
 <h2 id="budget">Budget</h2>
 <p>From the pilot, per tree on one core at 100 tips with both stages and the nested start: <code>nk</code> about 7 hours, <code>ned</code> at least 10; taken for the others: <code>nd</code> 7, <code>nedc</code> 10, <code>ed</code> and <code>edc</code> 6, <code>d</code> and <code>k</code> 4. At 50 tips 0.6 of that, at 200 tips 3.1 times (from <a href="E27.html">E27</a>'s size ladders). The 50- and 100-tip cells with the second <code>d</code>/<code>nd</code> proposal: about 10 500 CPU-hours, about 14 days on 24 workers. Each 200-tip cell costs 3.1 times its 100-tip cell (at most a further 17 500 CPU-hours if no parameter is reliable at 100), a 400-tip cell about 10 times. These are lower bounds where the pilot's fits ended on their clock.</p>
 <h2 id="results">Results</h2>
-<p>Not started.</p>
+<p>Interim, on the rows of 4 November (<code>sim/E46-analysis.R</code>, tables in <code>results/E46/</code>). Read under the amendment: 958 fits on <code>182055b</code> (Bre) and 114 surrogate fits on <code>2143bde</code> (Daint and a local host); 1,710 effective-sample checks; 103 conditioning repeats.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th></th>
+<th>pairs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>cell–proposal pairs</td>
+<td>65 (57 cells)</td>
+</tr>
+<tr>
+<td>sampler-limited before the fit</td>
+<td>19</td>
+</tr>
+<tr>
+<td>not queued (<code>d</code>/<code>nd</code> at 50 tips: E19b's choice waits on two 100-tip <code>nd</code> fits)</td>
+<td>8</td>
+</tr>
+<tr>
+<td>clock-limited</td>
+<td>34</td>
+</tr>
+<tr>
+<td>unfinished (2 of 30 written: <code>k</code> t40 +0.35 100 tips, <code>nk</code> t40 +0.35 50 tips; <code>edc</code> t10 +0.35 50 tips)</td>
+<td>3</td>
+</tr>
+<tr>
+<td>read</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Written: 1,072 of the 1,140 fits and 103 of the 114 repeats of the 38 open pairs. <strong>The read pair</strong>, <code>ed</code> turnover 0.10, +0.35, 50 tips (surrogate; 25 of 30 finished; rule 4 met): <span class="math inline">\(\beta_0\)</span> reliable (median ratio 1.17, central 80% 0.88–1.52); <span class="math inline">\(\beta_{ED}\)</span> not reliable (1.36, 0.65–1.89; sign right on 25 of 25); <span class="math inline">\(\gamma_0\)</span> not bounded by the tree on 20 of 25. Its 100-tip pair is clock-limited, so the answer for that triple is the limit at 100 tips. <strong>No model has a smallest reliable size.</strong></p>
+<p>In partly finished pairs the finished trees are the smaller ones (median 51 against 111 tips in <code>d</code> t40 −0.35, 91 against 147 in <code>ed</code> t10 +0.35 at 100 tips). The design's clock (four times the longest of a cell's first three trees) exceeds Bre's 24-hour allocation on 547 of the 551 fits that ended on it; 303 fits ended together when the allocations ended at 19:15–19:36 on 4 November. Conditioned stages also end on the 1000-iteration cap on the surrogate proposal (83 of 180 <code>edc</code> fits, 45 of 60 <code>nedc</code>).</p>
 <h2 id="conclusion">Conclusion</h2>
 <p>Not evaluable until the run reports.</p>
 <h2 id="related">Related</h2>

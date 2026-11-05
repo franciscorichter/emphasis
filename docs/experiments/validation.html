@@ -75,7 +75,7 @@ window.MathJax = {
 <td><a href="V3.html">V3</a></td>
 <td>the stopping rule and the box</td>
 <td>E9, E13, E41</td>
-<td>running</td>
+<td>852 of 960 runs, none queued: rule 1 holds for both rules only on <code>cr</code> and <code>dd</code> 0.10; rule 2 not read (the driver kept the last 25-iteration segment of the reference); rule 3 passes 7, fails 11, not read 2 of 20</td>
 </tr>
 <tr>
 <td><a href="V4.html">V4</a></td>
@@ -87,19 +87,19 @@ window.MathJax = {
 <td><a href="E46.html">V5</a></td>
 <td>recovery and tree size</td>
 <td>E2, E12, E16, E18, E19, E21, E24, E29, E30</td>
-<td>running as <a href="E46.html">E46</a></td>
+<td><a href="E46.html">E46</a>, none queued since 4 November: 1,072 of 1,140 fits; of 65 pairs 19 sampler-limited, 34 clock-limited, 1 read (<span class="math inline">\(\beta_{ED}\)</span> not reliable); no smallest reliable size</td>
 </tr>
 <tr>
 <td><a href="V6.html">V6</a></td>
 <td>the sampling fraction</td>
 <td>E27's <span class="math inline">\(\rho\)</span> arms, E35(b)</td>
-<td>running</td>
+<td>running: 927 of 3,200 fits; no cell–condition read, 76 of 160 no longer readable; 225 fits ended with zero EM iterations</td>
 </tr>
 <tr>
 <td><a href="V7.html">V7</a></td>
 <td>model choice: pairwise and the ladder</td>
 <td>E8, E23, E27, E31</td>
-<td>running (100-tip cells)</td>
+<td>running: 992 of 3,580 fits; 16 of 32 cells budget-limited (all <code>cr</code> and <code>dd</code> cells); no tree has five converged ladder fits</td>
 </tr>
 <tr>
 <td><a href="V8.html">V8</a></td>
@@ -111,7 +111,7 @@ window.MathJax = {
 <td><a href="V9.html">V9</a></td>
 <td>misspecification</td>
 <td>E11, E17</td>
-<td>running: 15 of 16 cells calibrated after the amendment of 1 November</td>
+<td>running: 622 of 2,400 fits; 15 of 16 cells calibrated, 9 sampler-limited, no tree read</td>
 </tr>
 <tr>
 <td><a href="V10.html">V10</a></td>
@@ -134,6 +134,7 @@ window.MathJax = {
 </tbody>
 </table>
 </div>
+<p><strong>State on 5 November.</strong> The lineage-level models have no reading in V3, V5, V6, V7 or V9: their fits end on the iteration cap or the 22-hour clock, many of them without finishing one E-step (see <a href="../open-issues.html">Open issues</a>). <code>cr</code> and <code>dd</code> fits converge in minutes and are read wherever the rules allow.</p>
 
 </article>
 </main>
