@@ -142,35 +142,44 @@ test_that("m_cpp stops on its clock and keeps the best point only when it beats 
                          max_missing = 1e4, max_lambda = 1e6, lower_bound = s$lo, upper_bound = s$up,
                          xtol_rel = 1e-3, num_threads = 1L, copy_trees = TRUE, model = s$mb,
                          link = 1L, seed = 3L)
-  counter <- new.env()
-  counter$n <- 0L
-  counting <- function(p) { counter$n <- counter$n + 1L; 0 }
-  full <- emphasis:::m_cpp(e, s$start, "rpd1", s$lo, s$up, 1e-3, 1L, model = s$mb, link = 1L,
-                           rconditional = counting)
-  expect_false(full$timed_out)
-  # at 0.05 s an evaluation the unbounded M-step takes over five times the budget
-  expect_gt(counter$n * 0.05, 5 * 0.3)
-  sleepy <- function(p) { Sys.sleep(0.05); 0 }
-  t <- elapsed_of(cut <- emphasis:::m_cpp(e, s$start, "rpd1", s$lo, s$up, 1e-3, 1L, model = s$mb,
-                                          link = 1L, rconditional = sleepy, time_left = 0.3))
-  expect_true(cut$timed_out)
-  expect_lt(t, 2)
-  # whatever the machine's speed, a cut M-step returns the start or a point that beats it,
-  # and its flag says which
-  expect_identical(isTRUE(cut$improved), !isTRUE(all.equal(cut$estimates, s$start)))
-  # with room for at least 20 evaluations (still well short of the unbounded M-step's
-  # 97, about 5 s here) a start this far from the optimum is improved on
-  long <- emphasis:::m_cpp(e, s$start, "rpd1", s$lo, s$up, 1e-3, 1L, model = s$mb, link = 1L,
-                           rconditional = sleepy, time_left = 2)
-  expect_true(long$timed_out)
-  expect_true(long$improved)
-  expect_false(isTRUE(all.equal(long$estimates, s$start)))
-  # no time left: the optimiser does not start, and the start is returned
-  none <- emphasis:::m_cpp(e, s$start, "rpd1", s$lo, s$up, 1e-3, 1L, model = s$mb, link = 1L,
-                           rconditional = sleepy, time_left = 0)
-  expect_true(none$timed_out)
-  expect_false(none$improved)
-  expect_equal(none$estimates, s$start)
+  # both optimisers of the M-step read the clock before every evaluation; the
+  # budgets below are set from each one's own evaluation count (BOBYQA takes
+  # about 20 evaluations on this two-parameter problem, subplex about 100)
+  for (alg in c("bobyqa", "subplex")) {
+    prev <- emphasis:::set_m_algorithm_cpp(alg)
+    on.exit(emphasis:::set_m_algorithm_cpp(prev), add = TRUE)
+    counter <- new.env()
+    counter$n <- 0L
+    counting <- function(p) { counter$n <- counter$n + 1L; 0 }
+    full <- emphasis:::m_cpp(e, s$start, "rpd1", s$lo, s$up, 1e-3, 1L, model = s$mb, link = 1L,
+                             rconditional = counting)
+    expect_false(full$timed_out)
+    expect_gt(counter$n, 8)
+    per <- 0.05
+    total <- counter$n * per               # the unbounded M-step's time at `per` an evaluation
+    sleepy <- function(p) { Sys.sleep(per); 0 }
+    # a budget of a fifth of it: cut
+    t <- elapsed_of(cut <- emphasis:::m_cpp(e, s$start, "rpd1", s$lo, s$up, 1e-3, 1L, model = s$mb,
+                                            link = 1L, rconditional = sleepy, time_left = total / 5))
+    expect_true(cut$timed_out)
+    expect_lt(t, total / 5 + 1)
+    # whatever the machine's speed, a cut M-step returns the start or a point that beats it,
+    # and its flag says which
+    expect_identical(isTRUE(cut$improved), !isTRUE(all.equal(cut$estimates, s$start)))
+    # with room for three fifths of the evaluations (still short of the unbounded
+    # M-step) a start this far from the optimum is improved on
+    long <- emphasis:::m_cpp(e, s$start, "rpd1", s$lo, s$up, 1e-3, 1L, model = s$mb, link = 1L,
+                             rconditional = sleepy, time_left = 0.6 * total)
+    expect_true(long$timed_out)
+    expect_true(long$improved)
+    expect_false(isTRUE(all.equal(long$estimates, s$start)))
+    # no time left: the optimiser does not start, and the start is returned
+    none <- emphasis:::m_cpp(e, s$start, "rpd1", s$lo, s$up, 1e-3, 1L, model = s$mb, link = 1L,
+                             rconditional = sleepy, time_left = 0)
+    expect_true(none$timed_out)
+    expect_false(none$improved)
+    expect_equal(none$estimates, s$start)
+  }
 })
 
 test_that("a fit whose M-step alone exceeds max_time stops within a small multiple of it", {

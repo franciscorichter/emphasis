@@ -1,5 +1,14 @@
 # emphasis 1.1.0.9000
 
+* The M-step uses BOBYQA only under the exponential link (and a finite box);
+  under the linear link it uses subplex, as before. BOBYQA's quadratic model
+  stalls on the kinks of `max(0, eta)`: on a 12-tip tree (`dd`, 30 draws) it
+  returned after 18 evaluations within 0.003 of its start, a point subplex
+  leaves at once for one 0.65 log-likelihood units higher after five EM
+  iterations on the same draws, whereas under the exponential link on the same
+  tree BOBYQA's point is the one subplex stays at. Found by the tests pinned
+  to linear-link fits after `ef8a84e` made BOBYQA the default.
+
 * `estimate_rates(cond = "surface")` on a clock gives its unconditioned start
   at most `control$surface_start_share` (0.25) of `max_time`, so that the
   conditioned continuation keeps the rest. In the validation series V6, 225 of

@@ -127,8 +127,10 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'   \item{\code{xtol}}{Relative tolerance for the M-step optimiser.
 #'     Default \code{1e-3}.}
 #'   \item{\code{m_optimizer}}{Derivative-free optimiser of the M-step:
-#'     \code{"bobyqa"} (default; used where every coordinate has a finite
-#'     bound, subplex otherwise) or \code{"subplex"}.}
+#'     \code{"bobyqa"} (default; used under the exponential link where every
+#'     coordinate has a finite bound, subplex otherwise: under the linear
+#'     link the objective has the kinks of \eqn{\max(0, \eta)} and BOBYQA's
+#'     quadratic model stalls at its start) or \code{"subplex"}.}
 #'   \item{\code{max_iter}}{Maximum EM iterations. Default \code{200}.}
 #'   \item{\code{maxN}}{Total augmentation attempts per E-step (accepted
 #'     plus rejected). Read by the thinning sampler only; the BDI sampler

@@ -332,6 +332,7 @@ namespace emphasis {
       }
       return std::max(0.0, eta);
     }
+    bool exponential_link() const { return link_ == LinkType::exponential; }
 
     // ---------------------------------------------------------------------
     // Orthogonal covariate basis {N, M, D}:

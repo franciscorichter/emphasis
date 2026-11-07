@@ -173,21 +173,30 @@ namespace emphasis {
     auto M = M_step_t{};
     auto lower = lower_bound.empty() ? model.lower_bound() : lower_bound;
     auto upper = upper_bound.empty() ? model.upper_bound() : upper_bound;
-    // BOBYQA (Powell's quadratic-model method) where the box is finite in
-    // every coordinate, subplex otherwise or when m_optimizer = "subplex".
+    // BOBYQA (Powell's quadratic-model method) under the exponential link
+    // where the box is finite in every coordinate; subplex otherwise or when
+    // m_optimizer = "subplex".
     // Measured on Bre (2026-11-05, 15 tree x model fits at 400 draws, five
-    // trees whose lineage-level fits hit the clock): BOBYQA used a median of
-    // 866 objective evaluations per MCEM iteration against 5,275 for subplex,
-    // and its first M-step estimate lay within 0.11 Monte Carlo standard
-    // errors of a reference optimum (subplex, xtol_rel 1e-6) in all 15,
-    // against up to 1.9 for subplex at xtol_rel 1e-3.
+    // trees whose lineage-level fits hit the clock, exponential link): BOBYQA
+    // used a median of 866 objective evaluations per MCEM iteration against
+    // 5,275 for subplex, and its first M-step estimate lay within 0.11 Monte
+    // Carlo standard errors of a reference optimum (subplex, xtol_rel 1e-6)
+    // in all 15, against up to 1.9 for subplex at xtol_rel 1e-3.
+    // Under the linear link the objective has the kinks of max(0, eta) and
+    // BOBYQA's quadratic model stalls at the start: on a 12-tip tree (dd,
+    // 30 draws, 2026-11-07) it returned XTOL_REACHED after 18 evaluations
+    // within 0.003 of the start, a point subplex leaves at once for one 0.65
+    // log-likelihood units higher after five EM iterations on the same
+    // draws; under the exponential link on the same tree BOBYQA's point is
+    // the one subplex stays at.
     bool finite_box = !lower.empty() && !upper.empty() &&
       lower.size() == pars.size() && upper.size() == pars.size();
     for (size_t i = 0; finite_box && i < pars.size(); ++i) {
       finite_box = std::isfinite(lower[i]) && std::isfinite(upper[i]) &&
         std::abs(lower[i]) < 1e300 && std::abs(upper[i]) < 1e300;
     }
-    const nlopt_algorithm alg = (m_algorithm() == 1 && finite_box) ? NLOPT_LN_BOBYQA : NLOPT_LN_SBPLX;
+    const nlopt_algorithm alg = (m_algorithm() == 1 && finite_box && model.exponential_link())
+      ? NLOPT_LN_BOBYQA : NLOPT_LN_SBPLX;
     sbplx nlopt(pars.size(), alg);
     M.estimates = pars;
     nlopt.set_xtol_rel(xtol_rel);
