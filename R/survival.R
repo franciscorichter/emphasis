@@ -418,10 +418,13 @@ print.emphasis_surface <- function(x, ...) {
             restart    = ctrl$surface_restart %||% TRUE,
             max_clades = as.integer(ctrl$surface_max_clades %||% 40000L),
             final_max_clades = as.integer(ctrl$surface_final_max_clades %||% 100000L),
+            start_share = ctrl$surface_start_share %||% 0.25,
             seed       = ctrl$surface_seed)
   for (nm in c("radius", "se", "final_se", "edge"))
     if (!is.numeric(s[[nm]]) || length(s[[nm]]) != 1L || !(s[[nm]] > 0))
       stop(sprintf("control$surface_%s must be a positive number.", nm), call. = FALSE)
+  if (!is.numeric(s$start_share) || length(s$start_share) != 1L || !(s$start_share > 0) || s$start_share > 1)
+    stop("control$surface_start_share must be a number in (0, 1].", call. = FALSE)
   if (!(s$segment >= 1L)) stop("control$surface_segment must be at least 1.", call. = FALSE)
   if (!is.logical(s$restart) || length(s$restart) != 1L || is.na(s$restart))
     stop("control$surface_restart must be TRUE or FALSE.", call. = FALSE)
@@ -460,11 +463,12 @@ print.emphasis_surface <- function(x, ...) {
   base$lower_bound <- lb; base$upper_bound <- ub
   base$sampling <- ctrl$sampling
   base$max_draws <- ctrl$max_draws %||% as.integer(8L * draws0)
-  fit_one <- function(init, cond, iters, draws) {
+  # `budget`: seconds this inner fit may take, within what is left of the clock
+  fit_one <- function(init, cond, iters, draws, budget = Inf) {
     cc <- base
     cc$max_iter <- as.integer(iters)
     cc$num_trees <- as.integer(draws); cc$sample_size <- as.integer(draws)
-    cc["max_time"] <- list(if (is.finite(deadline)) max(1, left()) else NULL)
+    cc["max_time"] <- list(if (is.finite(deadline)) max(1, min(left(), budget)) else NULL)
     err <- NULL
     f <- tryCatch(quiet(estimate_rates(tree, method = "mcem", model = model, init_pars = init,
                                        control = cc, link = link, cond = cond)),
@@ -496,6 +500,7 @@ print.emphasis_surface <- function(x, ...) {
   # (iii): the conditioned continuation from `start`, in segments, the surface
   # rebuilt whenever the iterate leaves the inner half of its box
   seg_run <- function(start, sbase) {
+    t_run <- .now(); clades0 <- mc$clades
     th <- clamp(start); S <- NULL; nsurf <- 0L; iters <- 0L; draws <- draws0
     nseg <- 0L; last <- NULL; last_S <- NULL; stop <- NA_character_; err <- NULL; trace <- list()
     repeat {
@@ -540,17 +545,26 @@ print.emphasis_surface <- function(x, ...) {
       out$logP <- d[["logP"]]; out$logP_se <- d[["se"]]; out$logP_clades <- d[["clades"]]
       out$loglik <- out$loglik_uncond - out$logP
     } else out$loglik <- NA_real_
+    out$seconds <- .now() - t_run
+    out$clades <- mc$clades - clades0
     out
   }
 
-  # (i) the unconditioned fit
-  u <- fit_one(init_pars, NULL, max_iter, draws0)
+  # (i) the unconditioned fit, a start for the conditioned continuation: on a
+  # clock it gets at most `start_share` of max_time, so that the continuation
+  # keeps the rest
+  t_u <- .now()
+  budget_u <- if (is.finite(deadline)) sc$start_share * ctrl$max_time else Inf
+  u <- fit_one(init_pars, NULL, max_iter, draws0, budget = budget_u)
   if (is.null(u$f)) stop(u$err, call. = FALSE)
   U <- u$f
-  if (verbose) .vcat(sprintf("[surface] unconditioned fit: %s, %s iterations\n",
-                             U$stop_reason, U$iterations))
+  if (verbose) .vcat(sprintf("[surface] unconditioned fit: %s, %s iterations, %d draws, %.0f s%s\n",
+                             U$stop_reason, U$iterations, draws_of(U), .now() - t_u,
+                             if (is.finite(budget_u)) sprintf(" (budget %.0f s)", budget_u) else ""))
   runs <- list(unconditioned = list(pars = U$pars, loglik = U$loglik, stop_reason = U$stop_reason,
-                                    iterations = U$iterations))
+                                    iterations = U$iterations, draws = draws_of(U),
+                                    seconds = .now() - t_u, budget = budget_u,
+                                    trace = U$details$mcem))
   # (ii)-(iii) from the unconditioned estimate
   C <- seg_run(as.numeric(U$pars), sbase)
   runs$from_unconditioned <- C[setdiff(names(C), c("fit", "surface"))]
@@ -579,6 +593,9 @@ print.emphasis_surface <- function(x, ...) {
     win$stop_reason <- if (identical(win$stop_reason, "error")) win$stop_reason else "time_budget"
     start <- "none"
   }
+  # the trace of the whole run kept, every segment (column `segment`), not the
+  # last segment's alone
+  if (!is.null(win$trace) && nrow(win$trace)) f$details$mcem <- win$trace
   f$loglik <- win$loglik
   if (isTRUE(is.finite(f$loglik_var)) && isTRUE(is.finite(win$logP_se))) f$loglik_var <- f$loglik_var + win$logP_se^2
   f$AIC <- if (is.finite(f$loglik)) -2 * f$loglik + 2 * f$n_pars else NA_real_

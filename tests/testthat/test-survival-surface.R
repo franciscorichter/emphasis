@@ -127,7 +127,43 @@ test_that("cond = \"surface\" fits cr and records what the conditioning did", {
   expect_lt(abs(cd$logP - logp_cr(f$pars, T)), 4 * cd$logP_se + 0.01)
   expect_equal(f$AIC, -2 * f$loglik + 2 * f$n_pars)
   expect_s3_class(cd$surface, "emphasis_surface")
-  expect_false(is.null(cd$runs$unconditioned))
+  # every stage is accounted for: the start's seconds, draws and trace, the
+  # conditioned run's seconds, segments and clades
+  u <- cd$runs$unconditioned
+  expect_true(is.numeric(u$seconds) && u$seconds >= 0)
+  expect_true(is.finite(u$draws))
+  expect_s3_class(u$trace, "data.frame")
+  expect_equal(u$budget, 0.25 * 120)
+  r <- cd$runs$from_unconditioned
+  expect_true(is.numeric(r$seconds) && r$seconds >= 0)
+  expect_gte(r$segments, 1L)
+  expect_gt(r$clades, 0)
+  # the trace returned is the whole conditioned run, every segment, and its
+  # iteration rows add up to the iterations reported
+  if (cd$start != "none") {
+    expect_true("segment" %in% names(f$details$mcem))
+    expect_equal(max(f$details$mcem$segment), cd$runs[[paste0("from_", cd$start)]]$segments)
+    expect_equal(sum(emphasis:::.mcem_iter_rows(f$details$mcem)), f$iterations)
+  }
+})
+
+test_that("cond = \"surface\" cuts the unconditioned start at its share of the clock", {
+  skip_on_cran()
+  phy <- surface_tree()
+  set.seed(4)
+  # a start that cannot meet its rule (tol = 0) stops on its share of the
+  # clock, and the conditioned continuation still runs
+  f <- estimate_rates(phy, model = "cr", cond = "surface",
+                      control = list(lower_bound = c(-3, -5), upper_bound = c(1, 0),
+                                     num_trees = 50, max_iter = 5000, max_time = 40,
+                                     stop_rule = "rel_change", tol = 0,
+                                     surface_start_share = 0.05))
+  u <- f$conditioning$runs$unconditioned
+  expect_equal(u$budget, 2)
+  expect_identical(u$stop_reason, "time_budget")
+  expect_lt(u$seconds, 10)
+  expect_gte(f$conditioning$surfaces, 1L)
+  expect_gte(f$iterations, 1L)
 })
 
 test_that("cond = \"surface\" fits a lineage-level model (d) and respects max_time", {

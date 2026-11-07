@@ -184,6 +184,12 @@ list this function returns (the default is used when an entry is absent):
     Default \code{40000}.}
   \item{\code{surface_final_max_clades}}{Cap on the clades of the direct
     estimate at the estimate. Default \code{1e5}.}
+  \item{\code{surface_start_share}}{Share of \code{max_time} the
+    unconditioned fit of step 1 may take, so that the conditioned
+    continuation keeps the rest; a start the share cuts short stops on
+    \code{"time_budget"} and the continuation begins from where it ended.
+    Default \code{0.25}. Without \code{max_time} the start runs to its
+    stopping rule.}
   \item{\code{surface_seed}}{Seed of the simulated clades, or \code{NULL}
     (default) to draw one from R's generator, so that \code{set.seed()}
     reproduces them.}

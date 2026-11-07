@@ -1,5 +1,17 @@
 # emphasis 1.1.0.9000
 
+* `estimate_rates(cond = "surface")` on a clock gives its unconditioned start
+  at most `control$surface_start_share` (0.25) of `max_time`, so that the
+  conditioned continuation keeps the rest. In the validation series V6, 225 of
+  927 fits and in V7 123 of 992 ended on a 22-hour clock with no conditioned
+  iteration: the start, run to the stopping rule at up to 2400 draws, had
+  taken the clock (a median of 10-19 hours of it), and `iterations`, which
+  counts conditioned iterations only, read 0. The fit now records every stage
+  in `conditioning$runs` (seconds, iterations, draws, stop reason and trace
+  of the start; segments, surfaces and clades of each conditioned run), and
+  `details$mcem` is the trace of the whole run kept, every segment with its
+  `segment` number, not the last segment's alone.
+
 * `estimate_rates(method = "mcem")` without `init_pars` starts at the
   constant-rate maximum-likelihood estimate of the tree (closed form,
   conditioned on survival when `cond` is a function; `.cr_mle()`), with every

@@ -200,6 +200,12 @@ prune_to_extant <- function(phy, tol = 1e-8) {
 #'     Default \code{40000}.}
 #'   \item{\code{surface_final_max_clades}}{Cap on the clades of the direct
 #'     estimate at the estimate. Default \code{1e5}.}
+#'   \item{\code{surface_start_share}}{Share of \code{max_time} the
+#'     unconditioned fit of step 1 may take, so that the conditioned
+#'     continuation keeps the rest; a start the share cuts short stops on
+#'     \code{"time_budget"} and the continuation begins from where it ended.
+#'     Default \code{0.25}. Without \code{max_time} the start runs to its
+#'     stopping rule.}
 #'   \item{\code{surface_seed}}{Seed of the simulated clades, or \code{NULL}
 #'     (default) to draw one from R's generator, so that \code{set.seed()}
 #'     reproduces them.}
@@ -1223,7 +1229,9 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'       inside an E-step or an M-step). \code{print()} shows the last two.}
 #'     \item{\code{details}}{Full output from the back-end function
 #'       (\code{.mcem_dynamic_fresh} or \code{emphasis_cem}); under
-#'       \code{cond = "surface"}, that of the last segment of the run kept.}
+#'       \code{cond = "surface"}, that of the last segment of the run kept,
+#'       with \code{mcem} replaced by the trace of the whole run, every
+#'       segment (column \code{segment}).}
 #'     \item{\code{conditioning}}{Under \code{cond = "surface"} only: what the
 #'       conditioning did. \code{surfaces} built, \code{clades} simulated and
 #'       \code{seconds} spent simulating, over every run; \code{logP} and
@@ -1235,10 +1243,12 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #'       conditioned segment finished within \code{max_time} and the fit is
 #'       the unconditioned one, conditioned at its estimate); \code{restart},
 #'       whether the run from the nested start was made; \code{surface}, the
-#'       last surface of the run kept; \code{runs}, the estimate, stop reason,
-#'       iterations, segments, surfaces, trace and conditioned log-likelihood
-#'       of each run; \code{settings}, \code{seed} and
-#'       \code{seconds_total}.}
+#'       last surface of the run kept; \code{runs}, one entry per stage
+#'       (\code{unconditioned}, \code{from_unconditioned}, and
+#'       \code{from_nested} when made) with its estimate, stop reason,
+#'       iterations, draws, seconds, trace, and for a conditioned run its
+#'       segments, surfaces, clades and conditioned log-likelihood;
+#'       \code{settings}, \code{seed} and \code{seconds_total}.}
 #'   }
 #' @section Conditioning on survival:
 #' The survival emulator of \code{\link{train_GAM}} is not adequate for any
@@ -1276,7 +1286,9 @@ estimate_rates_control <- function(method = c("mcem", "cem", "gam"), n_pars = 4)
 #' parameter value it tries, so the surface method estimates it on a local
 #' quadratic instead, in four steps:
 #' \enumerate{
-#'   \item The unconditioned fit, from \code{init_pars}, to the stopping rule.
+#'   \item The unconditioned fit, from \code{init_pars}, to the stopping rule
+#'     or to \code{surface_start_share} (0.25) of \code{max_time}, whichever
+#'     comes first.
 #'   \item A surface of \eqn{\log P(S)} around its estimate
 #'     (\code{\link{survival_surface}}): direct simulation at \eqn{2p + 1}
 #'     points (\eqn{p} the coefficients of a full quadratic in the
