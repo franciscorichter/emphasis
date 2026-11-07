@@ -64,7 +64,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>registered 2026-10-31; 852 of 960 runs written (5 November), no V3 job queued; rule 2 cannot be read on these rows (see Results)</td>
+<td>rerun under emphasis <code>b21083f</code> submitted 7 November (array <code>v3</code>, job 18638, 1,280 jobs, 1 CPU a fit; amendment of 2026-11-07 in the design); the first pass on <code>182055b</code> (852 of 960 runs, rule 2 unreadable) is archived under <code>results/V3-182055b</code> and reported below as the first pass</td>
 </tr>
 <tr>
 <td>Series</td>
@@ -72,7 +72,7 @@ window.MathJax = {
 </tr>
 <tr>
 <td>Package build</td>
-<td>emphasis <code>182055b</code> (1.0.0.9000), R 4.5.3</td>
+<td>rerun: emphasis <code>b21083f</code> (1.1.0.9000), R 4.5.3; first pass: <code>182055b</code> (1.0.0.9000)</td>
 </tr>
 <tr>
 <td>Driver</td>
@@ -101,15 +101,15 @@ window.MathJax = {
 </tr>
 <tr>
 <td>arms</td>
-<td><code>rel</code> (default rule), <code>mc</code> (<code>mc_error</code>, draws to 2400), <code>ref</code> (1200 draws, 400 iterations, never stops by rule; estimate = mean of the last 200 iterates)</td>
+<td><code>proj</code> (the package's default rule since 2026-11-01, <code>projected</code>; added in the rerun), <code>rel</code> (<code>rel_change</code>, the previous default), <code>mc</code> (<code>mc_error</code>, draws to 2400, the rule the series registered), <code>ref</code> (1200 draws, 400 iterations, never stops by rule; estimate = mean of the last 200 iterates of the conditioned continuation)</td>
 </tr>
 <tr>
 <td>fit</td>
-<td><code>estimate_rates()</code> defaults, conditioned on survival, the box of <code>auto_bounds()</code>, 22-hour clock</td>
+<td><code>estimate_rates()</code> defaults, conditioned on survival, the box of <code>auto_bounds()</code>, 22-hour clock; since <code>b21083f</code> the unconditioned start gets at most a quarter of the clock and every stage is recorded</td>
 </tr>
 <tr>
 <td>jobs</td>
-<td>960</td>
+<td>1,280 (first pass: 960, three arms)</td>
 </tr>
 </tbody>
 </table>
@@ -121,7 +121,8 @@ window.MathJax = {
 <li>The reference mean lies inside the box, more than <span class="math inline">\(10^{-3}\)</span> of the span from each edge, on at least 90% of trees.</li>
 </ol>
 <h2 id="results">Results</h2>
-<p>Interim, on the 852 rows of 5 November. A job without a row counts against rule 1.</p>
+<p><strong>Rerun (b21083f):</strong> submitted 7 November; nothing read yet. What it decides: the stopping rule of the relaunch of V6, V7 and V9 is the rule that passes rules 1 and 2 on the most model–turnover cells.</p>
+<p><strong>First pass (182055b, <code>results/V3-182055b</code>)</strong>, on the 852 rows of 5 November; not read against the rerun. A job without a row counts against rule 1.</p>
 <p><strong>Missing rows (108).</strong> Killed at Bre's 24-hour limit (a 22-hour fit clock plus the tree's simulation): 96 <code>mc</code> fits (<code>nedc</code> all 39, <code>ned</code> 29, <code>nk</code> 19, <code>nd</code> 8, <code>k</code> 1), 11 <code>rel</code> fits on <code>ned</code> and <code>nedc</code>, one reference.</p>
 <p><strong>Rule 1</strong> holds for both arms on <code>cr</code> at both turnovers and <code>dd</code> at 0.10 (3 of 20 model–turnover pairs) and fails on the other 17. <code>rel</code> ends on its 1000-iteration cap on 209 of its 309 written fits; <code>mc</code> ends on the 22-hour clock or has no row for most <code>nd</code>, <code>ned</code>, <code>nedc</code> and <code>nk</code> trees.</p>
 <div class="table-wrap">
@@ -189,7 +190,7 @@ window.MathJax = {
 </div>
 <p><strong>Rule 2 is not read.</strong> With <code>cond = "surface"</code>, <code>estimate_rates()</code> runs the conditioned fit in segments of 25 iterations and returns the last segment's trace as <code>details$mcem</code>; the full trace is in <code>conditioning</code>. <code>sim/V3.R</code> took the last 200 rows of <code>details$mcem</code>, so the reference mean and sd recorded are over at most 26 iterates (26 on 294 of 319 references). Reading the rule needs the references rerun with the full trace kept.</p>
 <p><strong>Rule 3</strong>, on the recorded reference mean: passes on 7 pairs (<code>d</code>, <code>edc</code>, <code>nd</code> at 0.10; <code>cr</code>, <code>d</code>, <code>edc</code>, <code>nk</code> at 0.40), fails on 11 (<code>cr</code>, <code>dd</code>, <code>ed</code>, <code>k</code>, <code>ned</code>, <code>nedc</code>, <code>nk</code> at 0.10; <code>dd</code>, <code>ed</code>, <code>nd</code>, <code>nedc</code> at 0.40), not read on 2 (<code>k</code> 0.40: a reference missing; <code>ned</code> 0.40: four references cut under 100 iterations). The coefficients at the edge are mostly extinction ones (<span class="math inline">\(\gamma_0\)</span>, <span class="math inline">\(\gamma_N\)</span>, <span class="math inline">\(\gamma_{ED}\)</span>).</p>
-<p>The package default is now <code>projected</code>, which V3 does not test; these results are for <code>rel_change</code> and <code>mc_error</code> on <code>182055b</code>.</p>
+<p>These first-pass results are for <code>rel_change</code> and <code>mc_error</code> on <code>182055b</code>; the rerun adds <code>projected</code>, the package default since 2026-11-01, and reads the reference on the whole trace.</p>
 
 </article>
 </main>
