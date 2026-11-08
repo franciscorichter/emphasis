@@ -64,7 +64,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>rerun under emphasis <code>b21083f</code> submitted 7 November (array <code>v3</code>, job 18638, 1,280 jobs, 1 CPU a fit; amendment of 2026-11-07 in the design); the first pass on <code>182055b</code> (852 of 960 runs, rule 2 unreadable) is archived under <code>results/V3-182055b</code> and reported below as the first pass</td>
+<td>rerun under emphasis <code>b21083f</code> submitted 7 November (array <code>v3</code>, job 18638; amendment of 2026-11-07 in the design), its <code>rel</code> and <code>mc</code> arms cancelled on 8 November to give V7 the cluster (to be rerun); a fifth arm <code>mcfix</code> added and submitted 8 November ahead of V7 (job 19938, 320 fits; amendment of 2026-11-08); the first pass on <code>182055b</code> (852 of 960 runs, rule 2 unreadable) is archived under <code>results/V3-182055b</code> and reported below as the first pass</td>
 </tr>
 <tr>
 <td>Series</td>
@@ -101,7 +101,7 @@ window.MathJax = {
 </tr>
 <tr>
 <td>arms</td>
-<td><code>proj</code> (the package's default rule since 2026-11-01, <code>projected</code>; added in the rerun), <code>rel</code> (<code>rel_change</code>, the previous default), <code>mc</code> (<code>mc_error</code>, draws to 2400, the rule the series registered), <code>ref</code> (1200 draws, 400 iterations, never stops by rule; estimate = mean of the last 200 iterates of the conditioned continuation)</td>
+<td><code>proj</code> (the package's default rule since 2026-11-01, <code>projected</code>; added in the rerun), <code>mcfix</code> (<code>mc_error</code> at 200 draws fixed: the step within its own Monte Carlo error stops the fit, draws not grown; added 8 November after the interim reading of <code>proj</code>), <code>rel</code> (<code>rel_change</code>, the previous default), <code>mc</code> (<code>mc_error</code>, draws to 2400, the rule the series registered), <code>ref</code> (1200 draws, 400 iterations, never stops by rule; estimate = mean of the last 200 iterates of the conditioned continuation)</td>
 </tr>
 <tr>
 <td>fit</td>
@@ -109,7 +109,7 @@ window.MathJax = {
 </tr>
 <tr>
 <td>jobs</td>
-<td>1,280 (first pass: 960, three arms)</td>
+<td>1,600 (first pass: 960, three arms)</td>
 </tr>
 </tbody>
 </table>
@@ -117,7 +117,7 @@ window.MathJax = {
 <h2 id="pre-set-rules">Pre-set rules</h2>
 <ol type="1">
 <li>A rule stops by itself on at least 90% of trees.</li>
-<li>Its estimate lies within 2 reference sds of the reference mean on at least 90% of trees, for every coefficient.</li>
+<li>Its estimate lies within 2 reference sds of the reference mean on at least 90% of trees, for every coefficient; read since 8 November also in span units: every speciation coefficient within 2% of the box span of the reference mean (<code>rule2_span_2pct</code>), the registered band being narrower than a 200-draw fit's Monte Carlo error (see the interim reading).</li>
 <li>The reference mean lies inside the box, more than <span class="math inline">\(10^{-3}\)</span> of the span from each edge, on at least 90% of trees.</li>
 </ol>
 <h2 id="results">Results</h2>
