@@ -75,7 +75,7 @@ window.MathJax = {
 <td><a href="V3.html">V3</a></td>
 <td>the stopping rule and the box</td>
 <td>E9, E13, E41</td>
-<td>rerun under <code>b21083f</code> submitted 7 November (1,280 jobs; <code>projected</code> added; reference on the full trace); first pass archived: rule 1 held for <code>rel</code> and <code>mc</code> only on <code>cr</code> and <code>dd</code> 0.10, rule 2 unreadable, rule 3 passed 7, failed 11, not read 2 of 20</td>
+<td>rerun under <code>b21083f</code> submitted 7 November (1,280 jobs; <code>projected</code> added; reference on the full trace; the <code>rel</code> and <code>mc</code> arms cancelled on 8 November to give V7 the cluster, to be rerun later); first pass archived: rule 1 held for <code>rel</code> and <code>mc</code> only on <code>cr</code> and <code>dd</code> 0.10, rule 2 unreadable, rule 3 passed 7, failed 11, not read 2 of 20</td>
 </tr>
 <tr>
 <td><a href="V4.html">V4</a></td>
@@ -93,13 +93,13 @@ window.MathJax = {
 <td><a href="V6.html">V6</a></td>
 <td>the sampling fraction</td>
 <td>E27's <span class="math inline">\(\rho\)</span> arms, E35(b)</td>
-<td>running: 927 of 3,200 fits; no cell–condition read, 76 of 160 no longer readable; 225 fits ended with zero EM iterations</td>
+<td>first pass stopped 7 November (993 of 3,200 fits; no cell–condition read; 225 fits with no conditioned iteration); relaunches under <code>b21083f</code> and the rule V3 supports</td>
 </tr>
 <tr>
 <td><a href="V7.html">V7</a></td>
 <td>model choice: pairwise and the ladder</td>
 <td>E8, E23, E27, E31</td>
-<td>running: 992 of 3,580 fits; 16 of 32 cells budget-limited (all <code>cr</code> and <code>dd</code> cells); no tree has five converged ladder fits</td>
+<td>rerun under <code>b21083f</code> and <code>projected</code> submitted 8 November (3,580 jobs), provisional until V3 reads the rule; first pass archived: 16 of 32 cells budget-limited, no tree with five converged ladder fits</td>
 </tr>
 <tr>
 <td><a href="V8.html">V8</a></td>
@@ -111,7 +111,7 @@ window.MathJax = {
 <td><a href="V9.html">V9</a></td>
 <td>misspecification</td>
 <td>E11, E17</td>
-<td>running: 622 of 2,400 fits; 15 of 16 cells calibrated, 9 sampler-limited, no tree read</td>
+<td>first pass stopped 7 November (622 of 2,400 fits; 15 of 16 cells calibrated, 9 sampler-limited, no tree read); relaunches under <code>b21083f</code> and the rule V3 supports</td>
 </tr>
 <tr>
 <td><a href="V10.html">V10</a></td>
@@ -134,7 +134,7 @@ window.MathJax = {
 </tbody>
 </table>
 </div>
-<p><strong>State on 7 November.</strong> The lineage-level models have no reading in V3, V5, V6, V7 or V9: their fits end on the iteration cap or the 22-hour clock, many of them with the clock spent in the unconditioned start that precedes the conditioned segments (see <a href="../open-issues.html">Open issues</a>). Under the amendment of 7 November their fits rerun on emphasis <code>b21083f</code>, V3 first (submitted), then V6, V7 and V9 under the stopping rule V3 supports; the V6b/V7b arrays on the previous build were cancelled. <code>cr</code> and <code>dd</code> fits converge in minutes and are read wherever the rules allow.</p>
+<p><strong>State on 7 November.</strong> The lineage-level models have no reading in V3, V5, V6, V7 or V9: their fits end on the iteration cap or the 22-hour clock, many of them with the clock spent in the unconditioned start that precedes the conditioned segments (see <a href="../open-issues.html">Open issues</a>). Under the amendments of 7 and 8 November their fits rerun on emphasis <code>b21083f</code>: V3 (its <code>ref</code> and <code>proj</code> arms; <code>rel</code> and <code>mc</code> later) and V7 run now, V7 under the package's default rule <code>projected</code> ahead of V3's reading of it, so V7's rows are provisional until V3 is read; V6 and V9 follow under the rule V3 supports; the V6b/V7b arrays on the previous build were cancelled. <code>cr</code> and <code>dd</code> fits converge in minutes and are read wherever the rules allow.</p>
 
 </article>
 </main>

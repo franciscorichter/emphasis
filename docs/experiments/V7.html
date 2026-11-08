@@ -64,7 +64,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>registered 2026-10-31; first pass on <code>182055b</code> stopped 7 November (1,080 of 3580 fits; the <code>v7b</code> array on <code>ef8a84e</code> cancelled); 16 of 32 cells budget-limited, no rule read; the lineage-level fits relaunch under emphasis <code>b21083f</code> and the stopping rule <a href="V3.html">V3</a>'s rerun supports (amendment of 2026-11-07); the <code>cr</code> and <code>dd</code> fits stand</td>
+<td>rerun in full under emphasis <code>b21083f</code> and the package's default rule (<code>projected</code>) submitted 8 November (arrays <code>v7</code>, 3,580 jobs, one a task; amendment of 2026-11-08), ahead of <a href="V3.html">V3</a>'s reading of that rule: its rows are provisional until V3 is read, and the fits of any model V3 fails <code>projected</code> on rerun under the rule V3 supports. First pass on <code>182055b</code> (1,080 of 3,580 fits, no rule read) archived under <code>results/V7-182055b</code></td>
 </tr>
 <tr>
 <td>Series</td>
@@ -72,7 +72,7 @@ window.MathJax = {
 </tr>
 <tr>
 <td>Package build</td>
-<td>first pass: emphasis <code>182055b</code> (1.0.0.9000), R 4.5.3; relaunch: <code>b21083f</code> (1.1.0.9000)</td>
+<td>rerun: emphasis <code>b21083f</code> (1.1.0.9000), R 4.5.3, rule <code>projected</code>; first pass: <code>182055b</code> (1.0.0.9000), rule <code>mc_error</code></td>
 </tr>
 <tr>
 <td>Driver</td>
@@ -121,7 +121,8 @@ window.MathJax = {
 <li>A cell with more than a tenth of fits on the cap or the clock is budget-limited, not read.</li>
 </ol>
 <h2 id="results">Results</h2>
-<p>Interim, on the 992 fits of 5 November. "The cap" is the 1000-iteration limit (<code>max_iter</code>), "the clock" the 22-hour limit (<code>time_budget</code>); the tenth in rule 3 is of the planned fits (100 or 120 a cell).</p>
+<p><strong>Rerun (b21083f, <code>projected</code>):</strong> submitted 8 November; nothing read yet.</p>
+<p><strong>First pass (182055b, <code>mc_error</code>, <code>results/V7-182055b</code>)</strong>, on the 992 fits of 5 November; not read against the rerun. "The cap" is the 1000-iteration limit (<code>max_iter</code>), "the clock" the 22-hour limit (<code>time_budget</code>); the tenth in rule 3 is of the planned fits (100 or 120 a cell).</p>
 <p><strong>Outcomes:</strong> 584 converged, 160 on the cap, 246 on the clock (123 of them with no conditioned iteration: the clock went to the unconditioned start, see <a href="../open-issues.html">Open issues</a>), 2 E-step failures. Of the written fits, <code>nd</code>, <code>ned</code> and <code>nk</code> end on the cap or the clock on 91%, 80% and 90%.</p>
 <p><strong>Rule 3.</strong> 16 of 32 cells are budget-limited whatever the remaining fits do: both <code>cr</code> and both <code>dd</code> cells, all four <code>d</code> cells, <code>nd</code> t10 +0.35 and t40 +0.35, <code>ed</code> t40 −0.35, <code>edc</code> t40 +0.35, <code>ned</code> t10 −0.35, <code>nedc</code> t10 −0.35, <code>k</code> t10 +0.35 and t40 +0.35. Rule 1 (false choice) therefore cannot be read in any cell. The other 16 cells are 1–6 cap or clock fits away from the same state.</p>
 <p><strong>Ladders.</strong> 73 trees have all five ladder fits written; none has all five converged (converged share on those trees: <code>cr</code> 0.95, <code>dd</code> 0.84, <code>nd</code> 0.07, <code>ned</code> 0.15, <code>nk</code> 0.07).</p>
