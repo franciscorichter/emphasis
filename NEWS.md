@@ -1,5 +1,12 @@
 # emphasis 1.1.0.9000
 
+* Under the thinning proposal, a final E-step that fails is retried with the
+  attempt cap doubled, up to the cap's ceiling and within the final E-step's
+  clock, as a failed E-step inside the loop already was. A fit whose final
+  E-step failed once kept its estimate and returned `loglik = NA`: 21 of 3,404
+  fits of the validation series' model-choice study (all `d`, `nd` or `nk`,
+  on the iteration cap) ended so and could not enter a model comparison.
+
 * The M-step uses BOBYQA only under the exponential link (and a finite box);
   under the linear link it uses subplex, as before. BOBYQA's quadratic model
   stalls on the kinks of `max(0, eta)`: on a 12-tip tree (`dd`, 30 draws) it

@@ -272,6 +272,38 @@ test_that("failures after successes leave no lagged loglik (H20)", {
   expect_false(isTRUE(all.equal(res$loglik, res$mcem$fhat[3])))
 })
 
+test_that("a final E-step that fails once is retried with a larger attempt cap", {
+  # Three iterations succeed; the final E-step at the returned pars fails on
+  # its first attempt and succeeds on the retry, so the fit keeps both its
+  # estimate and a log-likelihood at it.
+  lb8 <- ex(c(0, 0)); ub8 <- ex(c(2, 1)); ip8 <- ex(c(0.5, 0.1))
+  flag <- new.env(); flag$fail_once <- FALSE
+  cond <- function(p) {
+    if (flag$fail_once) { flag$fail_once <- FALSE; stop("injected final E-step failure") }
+    0
+  }
+  set.seed(12)
+  res <- suppressWarnings(withCallingHandlers(
+    emphasis:::.mcem_dynamic_fresh(
+      brts1, ip8, sample_size = 20L, maxN = 2000L, max_missing = 1e4,
+      lower_bound = lb8, upper_bound = ub8, max_iter = 3L, xtol = 1e-3,
+      tol = 1e-6, patience = 3L, num_threads = 1L, verbose = TRUE,
+      conditional = cond, model = cr_bin, link = 0L, max_time = 120,
+      stop_rule = "rel_change"),
+    message = function(m) {
+      if (grepl("^Iteration 3: fhat", conditionMessage(m))) flag$fail_once <- TRUE
+      invokeRestart("muffleMessage")
+    }))
+  expect_equal(res$stop_reason, "max_iter")
+  expect_equal(res$iterations, 3L)
+  expect_true(res$final_estep)
+  expect_true(is.finite(res$loglik))
+  expect_equal(nrow(res$mcem), 4L)
+  expect_equal(res$mcem$m_step, c(TRUE, TRUE, TRUE, FALSE))
+  expect_equal(res$maxN, 4000L)          # the cap doubled once, for the retry
+  expect_false(is.null(res$final_IS))
+})
+
 test_that("an interleaved E-step failure resets the streak and restarts from the last estimate (H30)", {
   lb8 <- ex(c(0, 0)); ub8 <- ex(c(2, 1)); ip8 <- ex(c(0.5, 0.1))
   flag <- new.env(); flag$fail <- FALSE

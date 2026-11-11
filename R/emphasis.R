@@ -452,8 +452,20 @@
     # The final E-step gets a clock of its own, max_time again, so a fit that
     # stopped on its clock still evaluates the point it returns, and does so
     # in bounded time.  Cut short, it keeps the draws it made when it has any.
-    fin <- run_em(prev_pars, maxN,
-                  left = if (is.null(max_time)) -1 else as.numeric(max_time))
+    t_fin <- proc.time()[[3L]]
+    left_fin <- function() if (is.null(max_time)) -1 else
+      max(0, as.numeric(max_time) - (proc.time()[[3L]] - t_fin))
+    fin <- run_em(prev_pars, maxN, left = left_fin())
+    # A final E-step that fails is retried under the loop's escalation of the
+    # attempt cap, within the same clock: without it a fit keeps its estimate
+    # and loses its log-likelihood to one failed E-step (21 of 3,404 fits of
+    # the validation series' model-choice study ended so, all on this driver).
+    while (is.null(fin) && maxN < maxN_cap && (is.null(max_time) || left_fin() > 0)) {
+      maxN <- as.integer(min(2 * maxN, maxN_cap))
+      if (verbose) message(sprintf(
+        "Final E-step at the returned parameters failed - retrying with maxN=%d", maxN))
+      fin <- run_em(prev_pars, maxN, left = left_fin())
+    }
     if (!is.null(fin) && isTRUE(fin$timed_out)) {
       if (.n0(fin$num_trees) >= 1L && is.finite(fin$fhat)) {
         final_truncated <- TRUE
