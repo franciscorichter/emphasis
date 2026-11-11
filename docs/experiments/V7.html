@@ -122,7 +122,88 @@ window.MathJax = {
 </ol>
 <h2 id="results">Results</h2>
 <p><strong>Rerun (b21083f, <code>projected</code>):</strong> submitted 8 November.</p>
-<p><em>Interim, 11 November, on 3,357 of 3,580 fits.</em> By the reading of 8 November a fit on the cap is finished; 17 of 32 cells are decided not budget-limited and none budget-limited. <strong>One cell is read by its rule:</strong> <code>nk</code>, +0.35, turnover 0.10 — the parsimony rule names <code>nk</code> or a model with K on 12 of its 20 trees (0.60, Wilson interval 0.39–0.78) against the 0.80 of the power rule, which <strong>fails</strong>. Descriptive, on the 361 of 640 trees whose five ladder fits have finished: <code>cr</code> on 16 of 18 <code>cr</code> trees and <code>dd</code> on 19 of 30 <code>dd</code> trees (<code>cr</code> on the other 11), <strong>no lineage-level model on any of the 48 null trees</strong>; <code>nk</code> on 15 of 31 <code>nk</code> trees; <code>nd</code> on 12 of 54 <code>nd</code> trees (<code>dd</code> on 22, <code>cr</code> on 20); <code>ned</code> on 2 of 52 <code>ned</code> trees (<code>dd</code> on 36); <code>nedc</code> named with ED on 5 of 59 (<code>dd</code> on 28). The remaining cells decide as their slow trees finish.</p>
+<p><em>Interim, 11 November (evening), on 3,404 of 3,580 fits.</em> A cell with all its fits written and at most a tenth of them on the clock is read on the trees whose five ladder fits each finished with a log-likelihood; the verdict is given under both extreme readings of the unread trees (amendment of 2026-11-11). <strong>Eight cells are read</strong>, all at turnover 0.10:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>cell</th>
+<th>rule</th>
+<th>trees read (unread)</th>
+<th>hits</th>
+<th>verdict</th>
+<th>the ladder's choices</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dd</code>, no effect</td>
+<td>false choice ≤ 0.10</td>
+<td>19 (1)</td>
+<td>0</td>
+<td>holds</td>
+<td><code>dd</code> 16, <code>cr</code> 3</td>
+</tr>
+<tr>
+<td><code>nk</code> +0.35</td>
+<td>power ≥ 0.80</td>
+<td>20 (0)</td>
+<td>12</td>
+<td>fails</td>
+<td><code>nk</code> 12, <code>dd</code> 7, <code>nd</code> 1</td>
+</tr>
+<tr>
+<td><code>nd</code> −0.35</td>
+<td>power ≥ 0.80</td>
+<td>19 (1)</td>
+<td>10</td>
+<td>fails</td>
+<td><code>nd</code> 10, <code>dd</code> 9</td>
+</tr>
+<tr>
+<td><code>k</code> −0.35</td>
+<td>power ≥ 0.80</td>
+<td>16 (4)</td>
+<td>4</td>
+<td>fails</td>
+<td><code>nk</code> 4, <code>dd</code> 7, <code>cr</code> 5</td>
+</tr>
+<tr>
+<td><code>nedc</code> +0.35</td>
+<td>power ≥ 0.80</td>
+<td>19 (1)</td>
+<td>3</td>
+<td>fails</td>
+<td><code>ned</code> 3, <code>dd</code> 14, <code>cr</code> 2</td>
+</tr>
+<tr>
+<td><code>nedc</code> −0.35</td>
+<td>power ≥ 0.80</td>
+<td>19 (1)</td>
+<td>2</td>
+<td>fails</td>
+<td><code>ned</code> 2, <code>dd</code> 9, <code>nd</code> 6, <code>cr</code> 1, <code>nk</code> 1</td>
+</tr>
+<tr>
+<td><code>ned</code> +0.35</td>
+<td>power ≥ 0.80</td>
+<td>19 (1)</td>
+<td>1</td>
+<td>fails</td>
+<td><code>ned</code> 1, <code>dd</code> 18</td>
+</tr>
+<tr>
+<td><code>ned</code> −0.35</td>
+<td>power ≥ 0.80</td>
+<td>19 (1)</td>
+<td>1</td>
+<td>fails</td>
+<td><code>ned</code> 1, <code>dd</code> 14, <code>cr</code> 4</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Two cells are budget-limited and not read (<code>ed</code> −0.35 and <code>k</code> +0.35 at turnover 0.40 and 0.10: 13 and 14 fits on the clock); 22 are still filling. Descriptive, on the 383 of 640 trees with a complete ladder: no lineage-level model on any of the 52 null trees (<code>cr</code> on 20 of 22 <code>cr</code> trees, <code>dd</code> on 19 of 30 <code>dd</code> trees). Twenty-one fits ended on the cap without a log-likelihood (the final E-step at the estimate failed under the thinning proposal and is not retried); their trees are unread.</p>
 <p><strong>First pass (182055b, <code>mc_error</code>, <code>results/V7-182055b</code>)</strong>, on the 992 fits of 5 November; not read against the rerun. "The cap" is the 1000-iteration limit (<code>max_iter</code>), "the clock" the 22-hour limit (<code>time_budget</code>); the tenth in rule 3 is of the planned fits (100 or 120 a cell).</p>
 <p><strong>Outcomes:</strong> 584 converged, 160 on the cap, 246 on the clock (123 of them with no conditioned iteration: the clock went to the unconditioned start, see <a href="../open-issues.html">Open issues</a>), 2 E-step failures. Of the written fits, <code>nd</code>, <code>ned</code> and <code>nk</code> end on the cap or the clock on 91%, 80% and 90%.</p>
 <p><strong>Rule 3.</strong> 16 of 32 cells are budget-limited whatever the remaining fits do: both <code>cr</code> and both <code>dd</code> cells, all four <code>d</code> cells, <code>nd</code> t10 +0.35 and t40 +0.35, <code>ed</code> t40 −0.35, <code>edc</code> t40 +0.35, <code>ned</code> t10 −0.35, <code>nedc</code> t10 −0.35, <code>k</code> t10 +0.35 and t40 +0.35. Rule 1 (false choice) therefore cannot be read in any cell. The other 16 cells are 1–6 cap or clock fits away from the same state.</p>
