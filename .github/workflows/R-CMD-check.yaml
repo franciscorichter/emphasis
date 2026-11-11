@@ -2,10 +2,17 @@
 on:
   push:
     branches: [main]
+    # the docs site (docs/, built from site/) changes without the package changing
+    paths-ignore: ['docs/**', 'site/**']
   pull_request:
     branches: [main]
 
 name: R-CMD-check
+
+# a newer push to the same branch supersedes a check still running
+concurrency:
+  group: r-cmd-check-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions: read-all
 
