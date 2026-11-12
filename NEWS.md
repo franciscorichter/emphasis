@@ -1,11 +1,19 @@
 # emphasis 1.1.0.9000
 
-* Under the thinning proposal, a final E-step that fails is retried with the
-  attempt cap doubled, up to the cap's ceiling and within the final E-step's
-  clock, as a failed E-step inside the loop already was. A fit whose final
-  E-step failed once kept its estimate and returned `loglik = NA`: 21 of 3,404
-  fits of the validation series' model-choice study (all `d`, `nd` or `nk`,
-  on the iteration cap) ended so and could not enter a model comparison.
+* The M-step puts its start inside the parameter box and clamps the optimum
+  it returns. NLopt refuses a start outside its bounds, and BOBYQA, which
+  works in coordinates scaled by the initial step, can return a point one
+  rounding error past a bound; given back as the next start, every M-step
+  from there failed and was reported as a failed E-step. A fit whose estimate
+  sat on such a bound lost iterations to the recovery and returned
+  `loglik = NA`, because the final E-step at the estimate failed the same way:
+  21 of 3,404 fits of the validation series' model-choice study (`d`, `nd`,
+  `nk`) ended so. On one of them (`nd`, 23 tips) every one of 591 failed calls
+  in two minutes started 5.6e-17 past a bound; with the start in the box the
+  same two minutes hold no failure and 58 conditioned iterations instead
+  of 27. Under the thinning proposal a final E-step that fails is also retried
+  with the attempt cap doubled, as a failed E-step inside the loop already
+  was, and the verbose messages of both give the error.
 
 * The M-step uses BOBYQA only under the exponential link (and a finite box);
   under the linear link it uses subplex, as before. BOBYQA's quadratic model

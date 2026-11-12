@@ -272,6 +272,25 @@ test_that("failures after successes leave no lagged loglik (H20)", {
   expect_false(isTRUE(all.equal(res$loglik, res$mcem$fhat[3])))
 })
 
+test_that("an M-step whose start is one rounding error outside the box runs", {
+  # NLopt refuses a start outside its bounds, and BOBYQA can return a point one
+  # rounding error past a bound.  Given back as the next start it failed every
+  # E-step call from there: in the validation series a fit of nd on 23 tips
+  # lost 591 of its E-step calls in two minutes, each start 5.6e-17 past a
+  # bound, and returned loglik = NA.  The M-step puts its start in the box.
+  ip8 <- ex(c(0.5, 0.1)); lb8 <- ex(c(0, 0)); ub8 <- ex(c(2, 1))
+  i <- which(ip8 == 0.5)[1]
+  ub8[i] <- 0.5 - 2^-54                     # the start is 5.6e-17 above it
+  expect_gt(ip8[i], ub8[i])
+  set.seed(31)
+  r <- emphasis:::em_cpp(brts = brts1, init_pars = ip8, sample_size = 20L, maxN = 2000L,
+                         max_missing = 1e4, max_lambda = 1e6, lower_bound = lb8,
+                         upper_bound = ub8, xtol_rel = 1e-3, num_threads = 1L,
+                         copy_trees = FALSE, model = cr_bin, link = 0L)
+  expect_true(is.finite(r$fhat))
+  expect_true(all(r$estimates >= lb8 & r$estimates <= ub8))
+})
+
 test_that("a final E-step that fails once is retried with a larger attempt cap", {
   # Three iterations succeed; the final E-step at the returned pars fails on
   # its first attempt and succeeds on the retry, so the fit keeps both its

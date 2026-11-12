@@ -199,6 +199,18 @@ namespace emphasis {
       ? NLOPT_LN_BOBYQA : NLOPT_LN_SBPLX;
     sbplx nlopt(pars.size(), alg);
     M.estimates = pars;
+    // The start is put inside the box.  NLopt refuses a start outside its
+    // bounds (NLOPT_INVALID_ARGS), and BOBYQA, which works in coordinates
+    // scaled by the initial step, can return a point one rounding error past a
+    // bound; given back as the next start it failed every M-step from there,
+    // the final one included, so the fit lost iterations and its
+    // log-likelihood.  The optimum returned is clamped for the same reason.
+    const bool have_box = lower.size() == pars.size() && upper.size() == pars.size();
+    auto into_box = [&](std::vector<double>& x) {
+      if (!have_box) return;
+      for (size_t i = 0; i < x.size(); ++i) x[i] = std::min(std::max(x[i], lower[i]), upper[i]);
+    };
+    into_box(M.estimates);
     nlopt.set_xtol_rel(xtol_rel);
     if (!lower.empty()) nlopt.set_lower_bounds(lower);
     if (!upper.empty()) nlopt.set_upper_bounds(upper);
@@ -245,6 +257,7 @@ namespace emphasis {
       M.minf = nlopt.optimize(M.estimates);
       M.opt = static_cast<int>(nlopt.result());
     });
+    into_box(M.estimates);
     if (sd.cut || NLOPT_FORCED_STOP == nlopt.result()) {
       M.timed_out = true;
       M.improved = sd.have_f_start && !sd.best_x.empty() && sd.best_f < sd.f_start;

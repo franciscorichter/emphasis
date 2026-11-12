@@ -165,7 +165,7 @@ namespace emphasis {
     double fmin = 0.0;
     result_ = remp_optimize(nlopt_, x.data(), &fmin);
     if (NLOPT_SUCCESS > result_ && NLOPT_FORCED_STOP != result_) {
-      throw emphasis_error("optimize failed");
+      throw emphasis_error("optimize failed (nlopt code " + std::to_string(static_cast<int>(result_)) + ")");
     }
     return fmin;
   }

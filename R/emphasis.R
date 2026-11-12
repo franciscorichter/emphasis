@@ -174,6 +174,7 @@
     if (is.null(max_time)) return(-1)
     max(0, max_time - (proc.time()[[3L]] - t0_mcem))
   }
+  em_error <- NULL          # the message of the last E-step that failed
   run_em <- function(at, maxN_now, left = time_left()) {
     tryCatch(
       em_cpp(brts = brts,
@@ -194,7 +195,7 @@
              parent_tip_start = parent_tip_start,
              parent_id = parent_id,
              time_left = as.numeric(left)),
-      error = function(e) NULL
+      error = function(e) { em_error <<- conditionMessage(e); NULL }
     )
   }
   time_note <- NULL
@@ -304,8 +305,8 @@
       }
 
       if (verbose) message(sprintf(
-        "Iteration %d: E-step failed (%d consecutive) - recovery: maxN=%d, %s",
-        i, fail_streak, maxN, how
+        "Iteration %d: E-step failed (%d consecutive) - recovery: maxN=%d, %s [%s]",
+        i, fail_streak, maxN, how, em_error %||% "no message"
       ))
 
       if (fail_streak >= 8L) {
@@ -463,7 +464,8 @@
     while (is.null(fin) && maxN < maxN_cap && (is.null(max_time) || left_fin() > 0)) {
       maxN <- as.integer(min(2 * maxN, maxN_cap))
       if (verbose) message(sprintf(
-        "Final E-step at the returned parameters failed - retrying with maxN=%d", maxN))
+        "Final E-step at the returned parameters failed - retrying with maxN=%d [%s]",
+        maxN, em_error %||% "no message"))
       fin <- run_em(prev_pars, maxN, left = left_fin())
     }
     if (!is.null(fin) && isTRUE(fin$timed_out)) {
@@ -487,7 +489,8 @@
       if (verbose) message(sprintf("Final E-step at the returned parameters: fhat=%.4f",
                                    fin$fhat))
     } else if (verbose) {
-      message("Final E-step at the returned parameters failed; loglik is NA.")
+      message(sprintf("Final E-step at the returned parameters failed; loglik is NA. [%s]",
+                      em_error %||% "no message"))
     }
   }
 
