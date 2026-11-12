@@ -32,7 +32,6 @@ window.MathJax = {
 <li><a href="../index.html">Overview</a></li>
 <li><a href="../covariates/index.html">Covariates</a></li>
 <li><a href="../usage.html">Usage</a></li>
-<li><a href="../estimability.html">Estimability</a></li>
 <li><a href="https://franciscorichter.github.io/phylo-species-atlas/" rel="external">Phylogeny catalogue</a></li>
 <li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
 <li><a href="../glossary.html">Glossary</a></li>
@@ -64,7 +63,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>running from 10 November 2026 on two local hosts (24 and 8 workers); 1,710 fits; nothing read</td>
+<td>running since 10 November 2026 on two local hosts (24 and 8 workers); 423 of 1,710 fits written on 12 November; no cell read yet</td>
 </tr>
 <tr>
 <td>Series</td>
@@ -113,7 +112,88 @@ window.MathJax = {
 <h2 id="pre-set-rules">Pre-set rules</h2>
 <p>E46's. A cell is read when at least 80% of its fits finished (converged or on the cap) and the median final effective sample is at least 10. A coefficient is <em>reliable</em> in a cell when the median ratio to its generating value lies in [0.8, 1.25] and the central 80% of ratios within [0.5, 2]; <em>identified</em> when reliable with the right sign on at least 95% of trees. The answer is the smallest size from which each coefficient is reliable.</p>
 <h2 id="results">Results</h2>
-<p>Nothing read yet. The record of 8–9 November said E46 reran since 8 November; it was not submitted then, and V5 is its registration and run (the design, amendment of 2026-11-10).</p>
+<p><em>Interim, 12 November: 423 of 1,710 fits written, about a quarter of every cell.</em> 414 finished (67 met the stopping rule, 347 on the iteration cap, read as the estimate) and 9 ended on the 22-hour clock. No cell has its 30 trees, so none is read by the rule; over the finished fits:</p>
+<ul>
+<li><strong>Covariate slope.</strong> Within a factor of 2 of its generating value on 74% of fits, right sign on 92% (fits that met the rule: 79% of 67; capped fits: 73% of 347).</li>
+<li><strong>By model, effect and turnover</strong> (50 and 100 tips together; share within a factor of 2, median ratio):</li>
+</ul>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th></th>
+<th>turnover 0.10, −</th>
+<th>turnover 0.10, +</th>
+<th>turnover 0.40, −</th>
+<th>turnover 0.40, +</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>d</code></td>
+<td>94%, 1.12</td>
+<td>71%, 0.92</td>
+<td>88%, 0.97</td>
+<td>59%, 0.79</td>
+</tr>
+<tr>
+<td><code>nd</code></td>
+<td>88%, 1.38</td>
+<td>50%, 0.64</td>
+<td>54%, 0.61</td>
+<td>40%, 0.42</td>
+</tr>
+<tr>
+<td><code>ed</code></td>
+<td>93%, 1.01</td>
+<td>88%, 1.18</td>
+<td>69%, 0.74</td>
+<td>87%, 1.20</td>
+</tr>
+<tr>
+<td><code>edc</code></td>
+<td>93%, 1.11</td>
+<td>56%, 0.67</td>
+<td>92%, 1.02</td>
+<td>82%, 1.04</td>
+</tr>
+<tr>
+<td><code>ned</code></td>
+<td>46%, 0.99</td>
+<td>47%, 1.86</td>
+<td>no trees</td>
+<td>73%, 1.11</td>
+</tr>
+<tr>
+<td><code>nedc</code></td>
+<td>67%, 1.02</td>
+<td>79%, 0.73</td>
+<td>83%, 0.95</td>
+<td>83%, 0.98</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>100%, 1.13</td>
+<td>60%, 0.77</td>
+<td>no trees</td>
+<td>38%, 0.43</td>
+</tr>
+<tr>
+<td><code>nk</code></td>
+<td>71%, 1.20</td>
+<td>87%, 0.85</td>
+<td>no trees</td>
+<td>93%, 1.21</td>
+</tr>
+</tbody>
+</table>
+</div>
+<ul>
+<li><strong>Intercepts.</strong> Speciation within a factor of 2 on 81% of fits; extinction on 11%.</li>
+<li><strong>Box edges.</strong> The extinction intercept is on an edge of the box on 67% of <code>ed</code> fits, 64% of <code>nedc</code>, 56% of <code>ned</code>, 36% of <code>nk</code>, 27% of <code>nd</code> and of <code>k</code>, 11% of <code>d</code>, 2% of <code>edc</code>.</li>
+<li><strong>Effective sample at the estimate.</strong> Median 29 to 53 of 200 draws for <code>d</code>, <code>edc</code>, <code>k</code>, <code>nd</code>, <code>nk</code> and 184 to 190 for <code>ed</code>, <code>ned</code>, <code>nedc</code>; fits with the extinction intercept on an edge keep a median 188, the others 35. 46 of 414 fits end below 10.</li>
+</ul>
+<p>Tables: <code>results/V5/cells.csv</code>, <code>coef.csv</code>, <code>fits.csv</code>, <code>slope.csv</code> (<code>sim/V5-analysis.R</code>).</p>
 
 </article>
 </main>

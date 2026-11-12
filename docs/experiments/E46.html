@@ -32,7 +32,6 @@ window.MathJax = {
 <li><a href="../index.html">Overview</a></li>
 <li><a href="../covariates/index.html">Covariates</a></li>
 <li><a href="../usage.html">Usage</a></li>
-<li><a href="../estimability.html">Estimability</a></li>
 <li><a href="https://franciscorichter.github.io/phylo-species-atlas/" rel="external">Phylogeny catalogue</a></li>
 <li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
 <li><a href="../glossary.html">Glossary</a></li>
@@ -88,7 +87,7 @@ window.MathJax = {
 </table>
 </div>
 <h2 id="question">Question</h2>
-<p>Phase 2 of the <a href="../estimability.html">estimability plan</a>. For <code>d</code>, <code>nd</code>, <code>ed</code>, <code>edc</code>, <code>ned</code>, <code>nedc</code>, <code>k</code> and <code>nk</code> there is no exact likelihood, so the reference is the generating value. Per model, coefficient, turnover and effect: from how many tips is each parameter of the conditioned MCEM estimate reliable, and from how many is the lineage-level coefficient identified. E46 replaces the recovery results of <a href="E12.html">E12</a>, <a href="E16.html">E16</a>, <a href="E18.html">E18</a>, <a href="E19.html">E19</a> (with E19b), <a href="E21.html">E21</a> (E21a), <a href="E24.html">E24</a>'s <code>d</code> arm, <a href="E27.html">E27</a>'s <code>ned</code> and <code>nk</code> ratios, <a href="E29.html">E29</a>'s <span class="math inline">\(\beta_{ED}\)</span> recovery, <a href="E30.html">E30</a>, <a href="E31.html">E31</a> at 200 tips, and <a href="E7.html">E7</a>'s <code>ed</code> and <code>ned</code> cells.</p>
+<p>Phase 2 of the <a href="estimability.html">estimability plan</a>. For <code>d</code>, <code>nd</code>, <code>ed</code>, <code>edc</code>, <code>ned</code>, <code>nedc</code>, <code>k</code> and <code>nk</code> there is no exact likelihood, so the reference is the generating value. Per model, coefficient, turnover and effect: from how many tips is each parameter of the conditioned MCEM estimate reliable, and from how many is the lineage-level coefficient identified. E46 replaces the recovery results of <a href="E12.html">E12</a>, <a href="E16.html">E16</a>, <a href="E18.html">E18</a>, <a href="E19.html">E19</a> (with E19b), <a href="E21.html">E21</a> (E21a), <a href="E24.html">E24</a>'s <code>d</code> arm, <a href="E27.html">E27</a>'s <code>ned</code> and <code>nk</code> ratios, <a href="E29.html">E29</a>'s <span class="math inline">\(\beta_{ED}\)</span> recovery, <a href="E30.html">E30</a>, <a href="E31.html">E31</a> at 200 tips, and <a href="E7.html">E7</a>'s <code>ed</code> and <code>ned</code> cells.</p>
 <p><a href="E43.html">E43</a> found no survival emulator accurate enough for any of these models, so each conditioned fit needs a direct Monte Carlo estimate of <span class="math inline">\(P(S)\)</span>, the probability that both crown lineages survive. Supplying one at every parameter value the M-step evaluates (about 1300-2900 evaluations an iteration under <code>ned</code>) would cost 0.7-1.6 hours of simulation an iteration. A pilot on 2026-10-20/21, not a registered experiment, compared ways of supplying it and chose the one described below.</p>
 <h2 id="design">Design</h2>
 <div class="table-wrap">
@@ -216,7 +215,7 @@ window.MathJax = {
 <p>Not evaluable until the run reports.</p>
 <h2 id="related">Related</h2>
 <ul>
-<li><a href="../estimability.html">Estimability</a>: the plan, Phase 2.</li>
+<li><a href="estimability.html">Estimability</a>: the plan, Phase 2.</li>
 <li><a href="E43.html">E43</a>: the generators, and why the conditioning is a direct Monte Carlo estimate.</li>
 <li><a href="E45.html">E45</a>: Phase 1, <code>cr</code> and <code>dd</code> against the exact conditioned estimate.</li>
 <li><a href="E41.html">E41</a>: the fit protocol and the box edges; <code>nd</code> and <code>nk</code> unfinished at 1000 iterations.</li>

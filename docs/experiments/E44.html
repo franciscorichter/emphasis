@@ -32,7 +32,6 @@ window.MathJax = {
 <li><a href="../index.html">Overview</a></li>
 <li><a href="../covariates/index.html">Covariates</a></li>
 <li><a href="../usage.html">Usage</a></li>
-<li><a href="../estimability.html">Estimability</a></li>
 <li><a href="https://franciscorichter.github.io/phylo-species-atlas/" rel="external">Phylogeny catalogue</a></li>
 <li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
 <li><a href="../glossary.html">Glossary</a></li>
@@ -86,7 +85,7 @@ window.MathJax = {
 </table>
 </div>
 <h2 id="question">Question</h2>
-<p>Every estimation experiment so far mixed two things: whether the complete-data likelihood is that of the process the simulator runs, and how well Monte Carlo EM integrates over the hidden part. On a complete tree, every lineage kept, extinct ones included, nothing is hidden, so maximising the complete-data likelihood directly tests the first alone. Step 0.2 of the <a href="../estimability.html">estimability plan</a>. The D model was known to be defined two ways: the simulator held <span class="math inline">\(D\)</span> constant between events, the likelihood held the clade mean <span class="math inline">\(M\)</span> at its end-of-segment value so <span class="math inline">\(D\)</span> grew within a segment (<a href="../open-issues.html">Open issues</a>).</p>
+<p>Every estimation experiment so far mixed two things: whether the complete-data likelihood is that of the process the simulator runs, and how well Monte Carlo EM integrates over the hidden part. On a complete tree, every lineage kept, extinct ones included, nothing is hidden, so maximising the complete-data likelihood directly tests the first alone. Step 0.2 of the <a href="estimability.html">estimability plan</a>. The D model was known to be defined two ways: the simulator held <span class="math inline">\(D\)</span> constant between events, the likelihood held the clade mean <span class="math inline">\(M\)</span> at its end-of-segment value so <span class="math inline">\(D\)</span> grew within a segment (<a href="../open-issues.html">Open issues</a>).</p>
 <h2 id="design">Design</h2>
 <div class="table-wrap">
 <table>
@@ -217,7 +216,7 @@ window.MathJax = {
 </ul>
 <h2 id="related">Related</h2>
 <ul>
-<li><a href="../estimability.html">Estimability</a> — the plan this is step 0.2 of.</li>
+<li><a href="estimability.html">Estimability</a> — the plan this is step 0.2 of.</li>
 <li><a href="E19.html">E19</a>, <a href="E30.html">E30</a>, <a href="E31.html">E31</a>, <a href="E37.html">E37</a> — the <span class="math inline">\(\beta_D\)</span> shortfall the D change addresses.</li>
 <li><a href="E24.html">E24</a> — the raw-ED simulator change (<code>f30a791</code>) and the single-covariate design.</li>
 </ul>

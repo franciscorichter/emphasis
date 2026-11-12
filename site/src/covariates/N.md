@@ -48,7 +48,7 @@ Because $N$ is read on the complete tree, its value at a given time is not the n
 
 **Extinction.** Diversity dependence is the one case in which a reconstructed tree carries information on extinction at moderate size: with the exact likelihood, zero extinction is excluded on every simulated `dd` tree from 100 tips at every turnover tested, against never up to 1,600 tips at turnover 0.10 under constant rates ([E38](../experiments/E38.html)).
 
-**Under conditioning.** Every number above maximises the likelihood unconditioned on the survival of the clade. The conditioned study is running: under `cr` at 25 to 100 tips, conditioned Monte Carlo EM sits at the exact conditioned maximum in every cell (median deficit $-0.002$ to $-0.014$ nats), and the speciation rate is reliable from 25 tips at turnover 0.10 and 0.25; the `dd` cells are not finished ([E45](../experiments/E45.html), [Estimability](../estimability.html)).
+**Under conditioning.** Every number above maximises the likelihood unconditioned on the survival of the clade. Conditioned on survival, under `cr` at 25 to 800 tips Monte Carlo EM sits at the exact conditioned maximum in every cell, and the speciation rate is reliable from 25 tips; under `dd` it does in 11 of 14 cells at complete sampling, speciation at low diversity is within a factor of 2 from 50 tips, and the slope on diversity is recovered at turnover 0.10 (median 0.84 to 0.91 of its value) ([E45](../experiments/E45.html), [Estimability](../experiments/estimability.html)).
 
 ![The AIC lead of dd over cr, and of the best lineage-level model over dd, in each of 46 family trees](images/E26-verdict.png)
 

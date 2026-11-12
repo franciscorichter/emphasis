@@ -32,7 +32,6 @@ window.MathJax = {
 <li><a href="../index.html">Overview</a></li>
 <li><a href="../covariates/index.html">Covariates</a></li>
 <li><a href="../usage.html">Usage</a></li>
-<li><a href="../estimability.html">Estimability</a></li>
 <li><a href="https://franciscorichter.github.io/phylo-species-atlas/" rel="external">Phylogeny catalogue</a></li>
 <li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
 <li><a href="../glossary.html">Glossary</a></li>
@@ -102,7 +101,7 @@ window.MathJax = {
   .table-wrap:has(th:nth-child(4)) td:nth-child(4) { order: 4; flex-basis: 100%; }
 }
 </style>
-<p>These are the pre-registered experiments behind the <code>emphasis</code> package: each tests the Monte Carlo EM estimator against an exact answer or a generating value, or asks what a dated tree can estimate. The <strong>validation series V1–V12</strong> validates every method the two papers use, on one build (1.0.0.9000) under one protocol: calibrated generators with no size window, the likelihood conditioned on survival, the exponential link, and fits run until the Monte Carlo error rule stops them. The experiments E1–E48 before it are the earlier record; each row below says what of it holds now. The conclusions that hold now are collected in <a href="../established.html">What we know</a> and the terms in the <a href="../glossary.html">Glossary</a>.</p>
+<p>These are the pre-registered experiments behind the <code>emphasis</code> package: each tests the Monte Carlo EM estimator against an exact answer or a generating value, or asks what a dated tree can estimate. The <strong>validation series V1–V12</strong> validates every method the two papers use, under one protocol: calibrated generators with no size window, the likelihood conditioned on survival, the exponential link, the package's default stopping rule, and a fit on the 1000-iteration cap read as the estimate (build 1.1.0.9000, <code>b21083f</code>, for the runs since 7 November). The experiments E1–E48 before it are the earlier record; each row below says what of it holds now. The conclusions that hold now are collected in <a href="../established.html">What we know</a>, what a tree of a given size estimates in <a href="estimability.html">Estimability</a>, and the terms in the <a href="../glossary.html">Glossary</a>.</p>
 <h2 id="identifiable-estimable-informative">Identifiable, estimable, informative</h2>
 <p>These pages keep three properties apart, because each belongs to a different thing.</p>
 <ul>
@@ -168,7 +167,7 @@ window.MathJax = {
 <li><strong>unfinished</strong>: the fits ran to their iteration cap without meeting the stopping rule.</li>
 </ul>
 <h2 id="the-validation-series-v1v12">The validation series V1–V12</h2>
-<p>Registered 2026-10-31. Each experiment validates one method of the papers; the <a href="validation.html">series page</a> gives the common protocol. Findings are as of 31 October 2026.</p>
+<p>Registered 2026-10-31. Each experiment validates one method of the papers; the <a href="validation.html">series page</a> gives the common protocol. Findings are as of 12 November 2026.</p>
 <div class="table-wrap">
 <table>
 <thead>
@@ -195,8 +194,8 @@ window.MathJax = {
 <tr>
 <td><a href="V3.html">V3</a></td>
 <td>Does each stopping rule stop where the estimate has settled, inside the box?</td>
-<td>Running</td>
-<td>Rerun under <code>b21083f</code> submitted 7 November (1,280 jobs, four rules incl. <code>projected</code>); the first pass (852 of 960 runs, rule 2 unreadable) is archived.</td>
+<td>Complete for two rules</td>
+<td>The default rule stops every <code>cr</code> fit, 11 of 20 <code>dd</code> and 28 of 280 lineage-level fits; the capped fits' speciation coefficients are within 2% of the box span of the reference for 7 of 10 models at turnover 0.10 and 1 of 8 read at 0.40; extinction coefficients drift. A fit on the cap is read as the estimate.</td>
 </tr>
 <tr>
 <td><a href="V4.html">V4</a></td>
@@ -207,8 +206,8 @@ window.MathJax = {
 <tr>
 <td><a href="V5.html">V5</a></td>
 <td>From how many tips is each lineage-level parameter reliable?</td>
-<td>Running as <a href="E46.html">E46</a></td>
-<td>Rerun from 10 November on two local hosts (1,710 fits, <code>b21083f</code>, <code>projected</code>); first pass 1,072 of 1,140 fits, 1 of 65 pairs read.</td>
+<td>Running</td>
+<td>423 of 1,710 fits (12 November), no cell read: over 414 finished fits the covariate slope is within a factor of 2 on 74%, the right sign on 92%; the extinction intercept within a factor of 2 on 11%. First pass: <a href="E46.html">E46</a>.</td>
 </tr>
 <tr>
 <td><a href="V6.html">V6</a></td>
@@ -623,7 +622,7 @@ window.MathJax = {
 </table>
 </div>
 <h2 id="7-estimability-under-the-conditioned-likelihood">7. Estimability under the conditioned likelihood</h2>
-<p>How well each model's parameters are estimated, and from how many tips, with the likelihood conditioned on the survival of the clade: the plan and its status board are on <a href="../estimability.html">Estimability</a>.</p>
+<p>How well each model's parameters are estimated, and from how many tips, with the likelihood conditioned on the survival of the clade: what these experiments and the validation series have measured so far is read together on <a href="estimability.html">Estimability</a>.</p>
 <div class="table-wrap">
 <table>
 <thead>

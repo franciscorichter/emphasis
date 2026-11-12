@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estimability in the emphasis models · emphasis</title>
+<meta name="description" content="Which parameters of each model a dated tree identifies, from how many tips, and what sets the limit: the information in the tree, the estimator, or the Monte Carlo sampler behind it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Sans+3:wght@400;600&family=Source+Code+Pro:wght@400;600&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']],
+    tags: 'ams',
+    processEscapes: true
+  },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'], processHtmlClass: 'reqn' },
+  output: { linebreaks: { inline: true, width: '100%' } },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="../assets/mathjax/tex-svg.js"></script>
+</head>
+<body>
+<header class="site-header">
+<nav class="site-nav" aria-label="Site">
+<a class="brand" href="../index.html">emphasis</a>
+<ul>
+<li><a href="../index.html">Overview</a></li>
+<li><a href="../covariates/index.html">Covariates</a></li>
+<li><a href="../usage.html">Usage</a></li>
+<li><a href="https://franciscorichter.github.io/phylo-species-atlas/" rel="external">Phylogeny catalogue</a></li>
+<li><a href="../experiments/index.html" aria-current="page">Experiments</a></li>
+<li><a href="../glossary.html">Glossary</a></li>
+<li><a href="../simulator.html">Simulator</a></li>
+<li><a href="https://github.com/franciscorichter/emphasis" rel="external">GitHub</a></li>
+</ul>
+</nav>
+</header>
+<main>
+<article class="numbered">
+<header class="page-header">
+<h1>Estimability in the emphasis models</h1>
+</header>
+<nav class="toc" aria-label="Contents">
+<p class="toc-title">Contents</p>
+<ol>
+<li><a href="#in-short">In short</a>
+</li>
+<li><a href="#what-a-tree-of-a-given-size-estimates">What a tree of a given size estimates</a>
+</li>
+<li><a href="#the-estimator-reaches-the-exact-answer">The estimator reaches the exact answer</a>
+</li>
+<li><a href="#constant-rates-speciation-early-extinction-late">Constant rates: speciation early, extinction late</a>
+</li>
+<li><a href="#diversity-dependence-the-slowdown-is-read-its-division-is-not">Diversity dependence: the slowdown is read, its division is not</a>
+</li>
+<li><a href="#what-a-complete-tree-carries">What a complete tree carries</a>
+</li>
+<li><a href="#on-a-reconstructed-tree-the-sampler-decides-first">On a reconstructed tree the sampler decides first</a>
+</li>
+<li><a href="#covariate-slopes-on-reconstructed-trees-interim">Covariate slopes on reconstructed trees (interim)</a>
+</li>
+<li><a href="#where-a-fit-stops">Where a fit stops</a>
+</li>
+<li><a href="#from-estimation-to-model-choice">From estimation to model choice</a>
+</li>
+<li><a href="#on-real-trees">On real trees</a>
+</li>
+<li><a href="#not-yet-known">Not yet known</a>
+</li>
+<li><a href="#where-the-numbers-come-from">Where the numbers come from</a>
+</li>
+</ol>
+</nav>
+<p>Which parameters of each model a dated tree identifies, from how many tips, and what sets the limit: the information in the tree, the estimator, or the Monte Carlo sampler behind it. Every statement below is a measurement on simulated trees with known generating values, with the likelihood conditioned on the survival of both crown lineages; <a href="#where-the-numbers-come-from">the last section</a> names the experiment behind each one. Terms are in the <a href="../glossary.html">Glossary</a>.</p>
+<h2 id="in-short">In short</h2>
+<ol type="1">
+<li><strong>The estimator is not the limit where an exact answer exists.</strong> The Monte Carlo EM estimate sits at the exact conditioned maximum in every <code>cr</code> cell and in 11 of 14 <code>dd</code> cells at complete sampling, including all nine of 25–100 tips, so what follows about those two models is a property of the trees, not of the algorithm.</li>
+<li><strong>Speciation is read early, extinction late.</strong> The speciation rate is within a factor of 2 of the truth from 25 tips under constant rates, and from 50 under diversity dependence. The extinction rate is not, at any size up to 800 tips, unless turnover is high; at turnover 0.40 it is from about 200 tips.</li>
+<li><strong>Under diversity dependence the slowdown is read, but not how it divides.</strong> Speciation at low diversity and its slope on diversity are recovered at low turnover; the estimate tilts extinction, which was generated constant, from 0.1–0.35 of the truth early in a clade's history to 1.2–2.9 times the truth today.</li>
+<li><strong>A complete tree carries enough to estimate most covariate slopes.</strong> With the extinct lineages kept, a slope of ±0.35 per scale unit is estimated within about 0.6 to 1.5 times its value at 100 tips, with the right sign on 95% of trees or more, narrowing at 200; the exceptions are weak slopes (the diversity slope at high turnover, <code>ned</code>'s ED slope).</li>
+<li><strong>On a reconstructed tree the sampler decides first.</strong> <code>ned</code>, <code>nedc</code>, <code>ed</code> with a negative effect, and the thinning proposal at high turnover keep about 10 effective draws of 2400 or fewer at the generating values; <code>d</code>, <code>edc</code> and <code>nd</code> on the surrogate proposal keep hundreds.</li>
+<li><strong>The covariate slope lands within a factor of 2 of the truth on about three quarters of reconstructed trees.</strong> On the 414 fits finished so far at 50 and 100 tips it does on 74%, with the right sign on 92%; the speciation intercept does on 81% and the extinction intercept on 11% (interim, a quarter of the study).</li>
+<li><strong>A lineage-level fit rarely stops by rule, and its speciation side has settled when it reaches the cap.</strong> The default rule stops every <code>cr</code> fit and 28 of 280 lineage-level fits; the capped fits' speciation coefficients lie within 2% of the parameter box of a reference run for 7 of 10 models at turnover 0.10, while the extinction coefficients keep drifting. A fit on the 1000-iteration cap is therefore read as the estimate.</li>
+<li><strong>Model choice does not invent a lineage-level effect, and at 100 tips it misses most real ones.</strong> On trees without one, the ladder chose a lineage-level model on 0 of 52; on trees with an effect of ±0.35 it named the generating covariate on 12 of 20 (<code>nk</code>), 10 of 19 (<code>nd</code>) and 1 of 19 (<code>ned</code>) at turnover 0.10.</li>
+<li><strong>Conditioning on survival is a small term, but not a free one.</strong> It moves the log-likelihood by -0.01 to -0.2 at the estimates; for the lineage-level models it has to be estimated by simulation at every parameter value the fit visits.</li>
+</ol>
+<h2 id="what-a-tree-of-a-given-size-estimates">What a tree of a given size estimates</h2>
+<figure id="figure-1">
+<img src="../assets/wiki/est-map.png" alt="Tile map: for cr and dd parameters, by turnover and tree size, the factor of the truth that holds the central 80% of estimates, with biased medians framed" loading="lazy">
+<figcaption><strong>Figure 1.</strong> Tile map: for cr and dd parameters, by turnover and tree size, the factor of the truth that holds the central 80% of estimates, with biased medians framed</figcaption>
+</figure><p>Each tile is 40 simulated trees, read by the exact conditioned maximum-likelihood estimate. Its colour is the narrowest factor of the truth that holds the central 80% of estimates; a framed tile has a median outside 0.8 to 1.25 of the truth, and its number is that median. The rows are the parameters a user of <code>cr</code> and <code>dd</code> reads; the sections below take them in turn.</p>
+<h2 id="the-estimator-reaches-the-exact-answer">The estimator reaches the exact answer</h2>
+<p>Where the likelihood can be computed exactly, the Monte Carlo estimate can be scored against it.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>what is compared</th>
+<th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code></td>
+<td>MCEM against the exact conditioned maximum, 25–800 tips, turnover 0.10 / 0.25 / 0.40, sampling fraction 1 and 0.8 (960 trees)</td>
+<td>at the maximum in all 24 cells: median shortfall in log-likelihood -0.0006 to -0.014, 90th percentile of its size at most 0.08</td>
+</tr>
+<tr>
+<td><code>dd</code></td>
+<td>the same, 25–400 tips at complete sampling, on the repaired exact reference (747 of 756 rescored trees with a valid maximum)</td>
+<td>within 0.5 of the maximum in median and 2 at the 90th percentile in 11 of 14 cells: all nine of 25–100 tips (median shortfall -0.001 to -0.18) and two of the five of 200–400 tips. It misses at 400 tips and turnover 0.10 (median -0.55) and at 200 and 400 tips and turnover 0.25 (-0.72, -0.62); in those cells 30 to 39 of 40 fits ended on the 8-hour clock before the stopping rule</td>
+</tr>
+<tr>
+<td><code>cr</code>, <code>dd</code></td>
+<td>the surrogate proposal's likelihood estimate against the exact likelihood</td>
+<td>ratio 1.000 for <code>cr</code> and 0.993 [0.978, 1.002] for <code>dd</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>A fit stopped by the Monte Carlo error rule sits closer to the maximum than one stopped by the relative-change rule: on real trees, a median shortfall of -0.05 against -0.25 for <code>cr</code>, and -0.01 against -0.09 for <code>dd</code>.</p>
+<h2 id="constant-rates-speciation-early-extinction-late">Constant rates: speciation early, extinction late</h2>
+<ul>
+<li><strong>Speciation.</strong> The central 80% of estimates lies within a factor of 2 of the truth from 25 tips at every turnover, and narrows to within 10–20% at 800 tips.</li>
+<li><strong>Extinction.</strong> At turnover 0.10 and 0.25 the central 80% stays wider than a factor of 2 at every size up to 800 tips. The estimate is exactly 0 on 50% of 25-tip trees at turnover 0.10, and still on 10–30% at 100 to 800 tips. At turnover 0.40 zeros fall to 0–5% from 100 tips and the central 80% falls within a factor of 2 from about 200 tips.</li>
+<li>The extinction rate is identified by how many lineages are missing near the present, and a tree with low turnover has few: size helps less than turnover.</li>
+</ul>
+<p>Read by the rule "median within [0.8, 1.25], central 80% within [0.5, 2], 95% interval covering the truth on at least 90% of trees, at this size and every larger one", the smallest reliable size is:</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>parameter</th>
+<th>turnover 0.10</th>
+<th>turnover 0.25</th>
+<th>turnover 0.40</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>speciation rate</td>
+<td>25</td>
+<td>25 (400 with the Wald interval, whose coverage is 0.85 at 200 tips)</td>
+<td>25 (100 with the Wald interval)</td>
+</tr>
+<tr>
+<td>extinction rate</td>
+<td>not reliable up to 800</td>
+<td>not reliable up to 800</td>
+<td>200 (400 with the Wald interval)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>For <code>dd</code> the same reading needs the curvature at the repaired maxima, which has not been computed: reliable sizes for <code>dd</code> are pending.</p>
+<h2 id="diversity-dependence-the-slowdown-is-read-its-division-is-not">Diversity dependence: the slowdown is read, its division is not</h2>
+<figure id="figure-2">
+<img src="../assets/wiki/est-dd.png" alt="Diversity-dependent model: estimated speciation and extinction rates over the true rates along the clade&#39;s history, by turnover, at 50 and 200 tips" loading="lazy">
+<figcaption><strong>Figure 2.</strong> Diversity-dependent model: estimated speciation and extinction rates over the true rates along the clade&#x27;s history, by turnover, at 50 and 200 tips</figcaption>
+</figure><ul>
+<li><strong>Speciation at low diversity</strong> is within a factor of 2 from 50 tips at every turnover (median 0.68–1.07 of the truth).</li>
+<li><strong>The slope of speciation on diversity</strong> is recovered at turnover 0.10 (median 0.84–0.91, right sign on 95–100% of trees at every size). At 0.25 the median is 0.35–0.70 from 50 tips. At 0.40 the slope is weak (generated at -0.0005 to -0.03 per lineage) and its median estimate is near 0, with the right sign on 42–75% of trees.</li>
+<li><strong>Extinction</strong>, generated constant, comes out rising with diversity: the median slope of extinction on diversity is positive in every cell, and the intercept falls to a tenth to a third of its value up to 200 tips. Along the clade's history the estimated rate runs from 0.1–0.35 of the truth at the crown to 1.2–2.9 times the truth today (medians over trees), crossing it at about two thirds of today's diversity.</li>
+<li><strong>Speciation along the same history</strong> stays within 20% of the truth, except early in the history at 50 tips and turnover 0.40, where it starts at 0.7.</li>
+</ul>
+<p>The tree constrains the overall slowdown of diversification. How much of it comes from falling speciation and how much from rising extinction is not separated by the likelihood at these sizes, and the maximum resolves the ridge towards rising extinction.</p>
+<h2 id="what-a-complete-tree-carries">What a complete tree carries</h2>
+<figure id="figure-3">
+<img src="../assets/wiki/est-ceiling.png" alt="Complete trees: ratio of each covariate slope&#39;s estimate to its generating value, every lineage-level model, 100 and 200 tips, turnover 0.10 and 0.40" loading="lazy">
+<figcaption><strong>Figure 3.</strong> Complete trees: ratio of each covariate slope&#x27;s estimate to its generating value, every lineage-level model, 100 and 200 tips, turnover 0.10 and 0.40</figcaption>
+</figure><p>With every lineage observed, extinct ones included, the complete-data likelihood is maximised directly. Its spread bounds what a reconstructed tree of the same size can give.</p>
+<ul>
+<li>Most slopes of ±0.35 per scale unit (on D, ED, K) are estimated within a factor of 2, typically 0.6 to 1.5 times their value at 100 tips, with the right sign on 95% of trees or more, and the range narrows at 200 tips.</li>
+<li>Pooled over the 40 trees of a cell, 138 of 150 coefficients lie within 10% of their generating values; the likelihood and the simulator describe the same model.</li>
+<li>The exception is the diversity slope at turnover 0.40 (<code>dd</code>, <code>nd</code>, <code>nedc</code>), generated small because the clade must reach its size against high extinction: its ratio spreads beyond 0 and 2 even on complete trees.</li>
+<li><code>ned</code>'s ED slope at turnover 0.10 is generated weaker (-0.10 and +0.07 per unit): its central 80% spreads past 0, with the right sign on 82–98%.</li>
+<li><code>k</code> at +0.35 reaches only 20–50 tips at the cell's settings, and its sign is right on 78–92%.</li>
+</ul>
+<p>The incompleteness of a reconstructed tree, not the model, is what separates these slopes from what can be estimated in practice.</p>
+<h2 id="on-a-reconstructed-tree-the-sampler-decides-first">On a reconstructed tree the sampler decides first</h2>
+<figure id="figure-4">
+<img src="../assets/wiki/est-sampler.png" alt="Median effective sample of 2400 proposal draws at the generating values, every lineage-level model, 50 and 100 tips, by proposal and turnover" loading="lazy">
+<figcaption><strong>Figure 4.</strong> Median effective sample of 2400 proposal draws at the generating values, every lineage-level model, 50 and 100 tips, by proposal and turnover</figcaption>
+</figure><p>MCEM averages over the extinct lineages a reconstructed tree hides, by drawing them from a proposal. If almost all draws carry negligible weight, no fit can be read, whatever the tree holds.</p>
+<ul>
+<li><code>d</code>, <code>edc</code> and <code>nd</code> on the surrogate proposal keep hundreds to over a thousand effective draws at 50 and 100 tips.</li>
+<li><code>ed</code> with a negative effect, <code>ned</code> and <code>nedc</code> keep 2 to 54; <code>nedc</code> stays at 11 or below in every cell. A larger tree lowers it further.</li>
+<li>Turnover 0.40 lowers the effective sample 3 to 30 times for <code>d</code>, <code>ed</code>, <code>edc</code> and on every thinning cell, as more of the tree is hidden; <code>nd</code> on the surrogate is barely affected.</li>
+<li>The thinning proposal, the only one for <code>k</code> and <code>nk</code>, falls under 10 in 8 of 27 cells, all at turnover 0.40 or 100 tips; for <code>d</code> and <code>nd</code> the surrogate leads it by 4 to 300 times.</li>
+<li>19 of the 57 cell–proposal pairs of the lineage-level study are under 10 effective draws.</li>
+</ul>
+<p>The effective sample at a fitted estimate is a different quantity. Where a fit puts the extinction intercept on the lower edge of its box there are almost no hidden lineages to draw, and the weights are nearly equal: the 35% of fits that end so keep a median 188 of 200 effective draws, against 35 for the others (<code>ned</code>, <code>nedc</code> and <code>ed</code>: medians 184–190). A large effective sample at the estimate says where the estimate is, not that the sampler covers the model.</p>
+<h2 id="covariate-slopes-on-reconstructed-trees-interim">Covariate slopes on reconstructed trees (interim)</h2>
+<p>Every lineage-level model is fitted to 30 trees a cell at 50 and 100 tips, conditioned on survival, by its generating model (<a href="V5.html">V5</a>: 1,710 fits). 423 are written, about a quarter of every cell; 414 finished (67 met the stopping rule, 347 reached the iteration cap, which the series reads as the estimate) and 9 ended on the 22-hour clock. No cell has its 30 trees yet, so no cell is read by its rule and the numbers below are over the fits finished so far.</p>
+<figure id="figure-5">
+<img src="../assets/wiki/est-lineage.png" alt="Fitted covariate slope over its generating value, one point per tree, by model, sign of the effect and turnover, with the share of each column within a factor of 2" loading="lazy">
+<figcaption><strong>Figure 5.</strong> Fitted covariate slope over its generating value, one point per tree, by model, sign of the effect and turnover, with the share of each column within a factor of 2</figcaption>
+</figure><ul>
+<li><strong>The covariate slope</strong> lies within a factor of 2 of its generating value on 74% of the 414 fits, with the right sign on 92%. Fits that met the stopping rule do on 79% (of 67), capped fits on 73% (of 347).</li>
+<li><strong>Where it does on fewer than two thirds of fits</strong>: at turnover 0.10, the positive effects of <code>nd</code>, <code>edc</code> and <code>k</code> (50%, 56%, 60%) and both effects of <code>ned</code> (46%, 47%; the positive one is overestimated, median 1.86 of its value); at turnover 0.40, <code>d</code> +, <code>nd</code> − and +, and <code>k</code> + (59%, 54%, 40%, 38%). <code>k</code> + at turnover 0.40 is spread as widely on complete trees.</li>
+<li><strong>Where it does on 85% or more</strong>: <code>d</code> −, <code>edc</code> −, <code>k</code> −, <code>nk</code> + and <code>ed</code> + at both turnovers, and <code>ed</code> − and <code>nd</code> − at turnover 0.10.</li>
+<li><strong>The intercepts.</strong> The speciation intercept is within a factor of 2 on 81% of fits; the extinction intercept on 11%.</li>
+<li><strong>The extinction side runs to the box.</strong> The extinction intercept is on an edge of the parameter box on 67% of <code>ed</code> fits, 64% of <code>nedc</code>, 56% of <code>ned</code>, 36% of <code>nk</code>, 27% of <code>nd</code> and <code>k</code>, 11% of <code>d</code> and 2% of <code>edc</code>.</li>
+</ul>
+<h2 id="where-a-fit-stops">Where a fit stops</h2>
+<p>The stopping rule is checked against a reference run that never stops by rule (1200 draws, the mean of its last 200 iterates), on 10 trees a cell at 100 tips, every model (<a href="V3.html">V3</a>).</p>
+<ul>
+<li>The package's default rule stops by itself on every <code>cr</code> tree (20–35 iterations) and on 11 of 20 <code>dd</code> trees. On the eight lineage-level models it stops 28 of 280 fits, 23 of them <code>ed</code>; the rest reach the 1000-iteration cap in a median 0.4 to 6.6 hours.</li>
+<li>Stopping when the step falls within its own Monte Carlo error, at fixed draws, adds <code>dd</code> (18 of 20) and a few <code>d</code>, <code>edc</code> and <code>k</code> fits; on <code>nd</code>, <code>ned</code>, <code>nedc</code> and <code>nk</code> it stops 2 of 130. The step stays above its Monte Carlo error for 1000 iterations because the extinction coefficients drift.</li>
+<li>The speciation coefficients of the fits lie within 2% of the span of the parameter box of the reference on at least 90% of trees for <code>cr</code>, <code>dd</code>, <code>ed</code>, <code>edc</code>, <code>ned</code>, <code>nedc</code> and <code>nk</code> at turnover 0.10 (<code>d</code>, <code>k</code> and <code>nd</code>: 11, 13 and 13 of 20 trees). At turnover 0.40 only <code>nk</code> does; the others read miss narrowly (median distance 1.0–2.1% of the span). The extinction coefficients lie 4–12% of the span away.</li>
+<li>The registered yardstick, two standard deviations of the reference's iterates, fails for every model, <code>cr</code> included: it is narrower than the Monte Carlo error of a 200-draw fit.</li>
+</ul>
+<p>A fit on the iteration cap is therefore read as the estimate, with its extinction side not identified; a fit on the clock is not read.</p>
+<h2 id="from-estimation-to-model-choice">From estimation to model choice</h2>
+<p>Each tree is fitted by the ladder <code>cr</code>, <code>dd</code>, <code>nd</code>, <code>ned</code>, <code>nk</code> and the most parsimonious model within 2 AIC units is chosen (<a href="V7.html">V7</a>: 32 cells of 20 trees at 100 tips, effects of ±0.35). Eight cells are read, all at turnover 0.10 (3,404 of 3,580 fits, 11 November):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>generating model</th>
+<th>rule</th>
+<th>trees read</th>
+<th>result</th>
+<th>the ladder's choices</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dd</code>, no lineage-level effect</td>
+<td>a lineage-level model on at most 10%</td>
+<td>19</td>
+<td>0: holds</td>
+<td><code>dd</code> 16, <code>cr</code> 3</td>
+</tr>
+<tr>
+<td><code>nk</code> +0.35</td>
+<td>the generating covariate on at least 80%</td>
+<td>20</td>
+<td>12: fails</td>
+<td><code>nk</code> 12, <code>dd</code> 7, <code>nd</code> 1</td>
+</tr>
+<tr>
+<td><code>nd</code> −0.35</td>
+<td>the same</td>
+<td>19</td>
+<td>10: fails</td>
+<td><code>nd</code> 10, <code>dd</code> 9</td>
+</tr>
+<tr>
+<td><code>k</code> −0.35</td>
+<td>the same</td>
+<td>16</td>
+<td>4: fails</td>
+<td><code>nk</code> 4, <code>dd</code> 7, <code>cr</code> 5</td>
+</tr>
+<tr>
+<td><code>nedc</code> +0.35</td>
+<td>the same</td>
+<td>19</td>
+<td>3: fails</td>
+<td><code>ned</code> 3, <code>dd</code> 14, <code>cr</code> 2</td>
+</tr>
+<tr>
+<td><code>nedc</code> −0.35</td>
+<td>the same</td>
+<td>19</td>
+<td>2: fails</td>
+<td><code>ned</code> 2, <code>dd</code> 9, <code>nd</code> 6, <code>cr</code> 1, <code>nk</code> 1</td>
+</tr>
+<tr>
+<td><code>ned</code> +0.35</td>
+<td>the same</td>
+<td>19</td>
+<td>1: fails</td>
+<td><code>ned</code> 1, <code>dd</code> 18</td>
+</tr>
+<tr>
+<td><code>ned</code> −0.35</td>
+<td>the same</td>
+<td>19</td>
+<td>1: fails</td>
+<td><code>ned</code> 1, <code>dd</code> 14, <code>cr</code> 4</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Over the 383 trees with a complete ladder so far, no lineage-level model is chosen on any of the 52 trees generated without one. A slope estimated within a factor of 2 is not a model selected: <code>ned</code>'s ED slope is in that range on about half of its trees and <code>ned</code> is chosen on 1 of 19.</p>
+<h2 id="on-real-trees">On real trees</h2>
+<p>On the 175 real trees MCEM reaches the exact conditioned maximum for <code>cr</code> and <code>dd</code> (median shortfall -0.01 to -0.16; <a href="V4.html">V4</a>). For the lineage-level models the two limits above appear on the 217 real trees fitted with <code>nd</code> before the conditioned fits (<a href="E48.html">E48</a>): 69 fits are sampler-limited, and among the 145 that can be read, an extinction-side or D coefficient sits on an edge of the parameter box on 47. The ladder is being refitted on the 175 trees under the conditioned likelihood (<a href="V11.html">V11</a>).</p>
+<h2 id="not-yet-known">Not yet known</h2>
+<ul>
+<li>From how many tips each lineage-level coefficient is reliable: the cells of 50 and 100 tips are a quarter written, and the study moves to 200 and 400 tips where a coefficient is not yet reliable (<a href="V5.html">V5</a>).</li>
+<li>Model choice at turnover 0.40 and for the cells still filling, and whether a larger tree brings the power to the rule (<a href="V7.html">V7</a>).</li>
+<li>Estimability under incomplete sampling and a misstated sampling fraction (<a href="V6.html">V6</a>), on trees from misspecified models (<a href="V9.html">V9</a>), and through the covariate path (<a href="V8.html">V8</a>).</li>
+<li>Which choices on real trees hold under the conditioned likelihood (<a href="V11.html">V11</a>).</li>
+<li>Not under study: effects smaller than ±0.35 per scale unit, turnover 0.25 for the lineage-level models, and covariates that drive extinction.</li>
+</ul>
+<h2 id="where-the-numbers-come-from">Where the numbers come from</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>statement</th>
+<th>experiment</th>
+<th>trees</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MCEM at the exact maximum; constant rates by size</td>
+<td><a href="E45.html">E45</a></td>
+<td>960 <code>cr</code></td>
+</tr>
+<tr>
+<td>diversity dependence by size; <code>dd</code> agreement</td>
+<td><a href="E45.html">E45</a> rescored on the repaired reference (<a href="V4.html">V4</a>)</td>
+<td>715 <code>dd</code></td>
+</tr>
+<tr>
+<td>surrogate likelihood equals the exact one</td>
+<td><a href="V2.html">V2</a></td>
+<td><code>cr</code>, <code>dd</code> cells</td>
+</tr>
+<tr>
+<td>what a complete tree carries</td>
+<td><a href="V1.html">V1</a></td>
+<td>2560 complete trees</td>
+</tr>
+<tr>
+<td>effective sample at the generating values</td>
+<td><a href="E46.html">E46</a></td>
+<td>1710 trees</td>
+</tr>
+<tr>
+<td>reconstructed-tree slopes, intercepts, box edges, effective sample at the estimate</td>
+<td><a href="V5.html">V5</a>, interim</td>
+<td>414 fits</td>
+</tr>
+<tr>
+<td>where a fit stops</td>
+<td><a href="V3.html">V3</a></td>
+<td>320 trees, three rules and the reference</td>
+</tr>
+<tr>
+<td>model choice</td>
+<td><a href="V7.html">V7</a>, eight cells read</td>
+<td>150 trees read; 383 complete ladders</td>
+</tr>
+<tr>
+<td>size of the conditioning term; Monte Carlo survival probability</td>
+<td><a href="E43.html">E43</a>, <a href="E34.html">E34</a></td>
+<td>—</td>
+</tr>
+<tr>
+<td>real trees</td>
+<td><a href="V4.html">V4</a>, <a href="E48.html">E48</a></td>
+<td>175; 217</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Figures and tables: <code>sim/estimability-collect.py</code> and <code>sim/estimability-figures.R</code> in the paper repository, from the per-tree results of those experiments. State of 12 November 2026.</p>
+
+</article>
+</main>
+<footer class="site-footer">
+<p>emphasis, version 1.1.0.9000. Francisco Richter, Università della Svizzera italiana.</p>
+</footer>
+</body>
+</html>

@@ -13,7 +13,7 @@ Inputs
     site/reference/*.html       Rd fragments (site/reference.R, run on whitebox) -> reference.html
                                 ordered by site/reference/index.json when it exists
     <wiki>/What-we-know.md      -> established.html
-    <wiki>/Estimability.md      -> estimability.html
+    <wiki>/Estimability.md      -> experiments/estimability.html (estimability.html redirects to it)
     <wiki>/Real-phylogenies.md  -> real-phylogenies.html
     <wiki>/Open-issues.md       -> open-issues.html
     <wiki>/Glossary.md          -> glossary.html
@@ -54,7 +54,6 @@ NAV = [
     ("Overview", "index.html"),
     ("Covariates", "covariates/index.html"),
     ("Usage", "usage.html"),
-    ("Estimability", "estimability.html"),
     ("Phylogeny catalogue", CATALOGUE),
     ("Experiments", "experiments/index.html"),
     ("Glossary", "glossary.html"),
@@ -66,7 +65,7 @@ NAV = [
 WIKI_PAGES = {
     "Home": "experiments/index.html",
     "What-we-know": "established.html",
-    "Estimability": "estimability.html",
+    "Estimability": "experiments/estimability.html",
     "Real-phylogenies": "real-phylogenies.html",
     "Open-issues": "open-issues.html",
     "Glossary": "glossary.html",
@@ -106,7 +105,7 @@ INDEX_STYLE = """<style>
 KEPT = ["simulator.html"]
 
 # Pages that moved: old path -> new path. Each old path gets a page that redirects.
-REDIRECTS = {"D.html": "covariates/D.html"}
+REDIRECTS = {"D.html": "covariates/D.html", "estimability.html": "experiments/estimability.html"}
 
 # Anchors the kept pages link to, kept stable whatever the heading's own id becomes:
 # page -> {anchor: regex matched against the heading id it should land on}.
