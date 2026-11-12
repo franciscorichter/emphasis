@@ -86,7 +86,7 @@ window.MathJax = {
 <li><strong>On a reconstructed tree the sampler decides first.</strong> <code>ned</code>, <code>nedc</code>, <code>ed</code> with a negative effect, and the thinning proposal at high turnover keep about 10 effective draws of 2400 or fewer at the generating values; <code>d</code>, <code>edc</code> and <code>nd</code> on the surrogate proposal keep hundreds.</li>
 <li><strong>The covariate slope lands within a factor of 2 of the truth on about three quarters of reconstructed trees.</strong> On the 414 fits finished so far at 50 and 100 tips it does on 74%, with the right sign on 92%; the speciation intercept does on 81% and the extinction intercept on 11% (interim, a quarter of the study).</li>
 <li><strong>A lineage-level fit rarely stops by rule, and its speciation side has settled when it reaches the cap.</strong> The default rule stops every <code>cr</code> fit and 28 of 280 lineage-level fits; the capped fits' speciation coefficients lie within 2% of the parameter box of a reference run for 7 of 10 models at turnover 0.10, while the extinction coefficients keep drifting. A fit on the 1000-iteration cap is therefore read as the estimate.</li>
-<li><strong>Model choice does not invent a lineage-level effect, and at 100 tips it misses most real ones.</strong> On trees without one, the ladder chose a lineage-level model on 0 of 52; on trees with an effect of ±0.35 it named the generating covariate on 12 of 20 (<code>nk</code>), 10 of 19 (<code>nd</code>) and 1 of 19 (<code>ned</code>) at turnover 0.10.</li>
+<li><strong>Model choice does not invent a lineage-level effect, and at 100 tips it misses most real ones.</strong> On trees without one, the ladder chose a lineage-level model on 0 of 54; on trees with an effect of ±0.35 it named the generating covariate on 12 of 20 (<code>nk</code>), 10 of 19 (<code>nd</code>) and 1 of 19 (<code>ned</code>) at turnover 0.10, and the 80% rule fails in 18 of 19 cells.</li>
 <li><strong>Conditioning on survival is a small term, but not a free one.</strong> It moves the log-likelihood by -0.01 to -0.2 at the estimates; for the lineage-level models it has to be estimated by simulation at every parameter value the fit visits.</li>
 </ol>
 <h2 id="what-a-tree-of-a-given-size-estimates">What a tree of a given size estimates</h2>
@@ -218,85 +218,20 @@ window.MathJax = {
 </ul>
 <p>A fit on the iteration cap is therefore read as the estimate, with its extinction side not identified; a fit on the clock is not read.</p>
 <h2 id="from-estimation-to-model-choice">From estimation to model choice</h2>
-<p>Each tree is fitted by the ladder <code>cr</code>, <code>dd</code>, <code>nd</code>, <code>ned</code>, <code>nk</code> and the most parsimonious model within 2 AIC units is chosen (<a href="V7.html">V7</a>: 32 cells of 20 trees at 100 tips, effects of ±0.35). Eight cells are read, all at turnover 0.10 (3,404 of 3,580 fits, 11 November):</p>
-<div class="table-wrap">
-<table>
-<thead>
-<tr>
-<th>generating model</th>
-<th>rule</th>
-<th>trees read</th>
-<th>result</th>
-<th>the ladder's choices</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>dd</code>, no lineage-level effect</td>
-<td>a lineage-level model on at most 10%</td>
-<td>19</td>
-<td>0: holds</td>
-<td><code>dd</code> 16, <code>cr</code> 3</td>
-</tr>
-<tr>
-<td><code>nk</code> +0.35</td>
-<td>the generating covariate on at least 80%</td>
-<td>20</td>
-<td>12: fails</td>
-<td><code>nk</code> 12, <code>dd</code> 7, <code>nd</code> 1</td>
-</tr>
-<tr>
-<td><code>nd</code> −0.35</td>
-<td>the same</td>
-<td>19</td>
-<td>10: fails</td>
-<td><code>nd</code> 10, <code>dd</code> 9</td>
-</tr>
-<tr>
-<td><code>k</code> −0.35</td>
-<td>the same</td>
-<td>16</td>
-<td>4: fails</td>
-<td><code>nk</code> 4, <code>dd</code> 7, <code>cr</code> 5</td>
-</tr>
-<tr>
-<td><code>nedc</code> +0.35</td>
-<td>the same</td>
-<td>19</td>
-<td>3: fails</td>
-<td><code>ned</code> 3, <code>dd</code> 14, <code>cr</code> 2</td>
-</tr>
-<tr>
-<td><code>nedc</code> −0.35</td>
-<td>the same</td>
-<td>19</td>
-<td>2: fails</td>
-<td><code>ned</code> 2, <code>dd</code> 9, <code>nd</code> 6, <code>cr</code> 1, <code>nk</code> 1</td>
-</tr>
-<tr>
-<td><code>ned</code> +0.35</td>
-<td>the same</td>
-<td>19</td>
-<td>1: fails</td>
-<td><code>ned</code> 1, <code>dd</code> 18</td>
-</tr>
-<tr>
-<td><code>ned</code> −0.35</td>
-<td>the same</td>
-<td>19</td>
-<td>1: fails</td>
-<td><code>ned</code> 1, <code>dd</code> 14, <code>cr</code> 4</td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>Over the 383 trees with a complete ladder so far, no lineage-level model is chosen on any of the 52 trees generated without one. A slope estimated within a factor of 2 is not a model selected: <code>ned</code>'s ED slope is in that range on about half of its trees and <code>ned</code> is chosen on 1 of 19.</p>
+<p>Each tree is fitted by the ladder <code>cr</code>, <code>dd</code>, <code>nd</code>, <code>ned</code>, <code>nk</code> and the most parsimonious model within 2 AIC units is chosen (<a href="V7.html">V7</a>: 32 cells of 20 trees at about 100 tips, effects of ±0.35; 22 cells read, 10 with too many fits on the clock).</p>
+<ul>
+<li><strong>No lineage-level model without a lineage-level effect.</strong> On the 54 <code>cr</code> and <code>dd</code> trees with a complete ladder none is chosen; the rule (at most 10%) holds in the one cell that can be decided.</li>
+<li><strong>The generating covariate is named on at most 60% of trees.</strong> The rule (at least 80%) fails in 18 of the 19 cells read. At turnover 0.10: <code>nk</code> +0.35 on 12 of 20 trees, <code>nd</code> −0.35 on 10 of 19, <code>k</code> −0.35 on 4 of 16, <code>ed</code> −0.35 on 3 of 12, <code>nedc</code> on 3 and 2 of 19, <code>ned</code> on 1 of 19 at either sign. At turnover 0.40: <code>nk</code> +0.35 on 3 of 13 and no other cell above 1 tree.</li>
+<li><strong>What is chosen instead</strong> is <code>dd</code> for the generators that contain diversity dependence and <code>cr</code> for those with a single covariate; at turnover 0.40 <code>cr</code> is chosen on 103 of 143 trees.</li>
+<li><strong>A single covariate is seen pairwise, not on the ladder.</strong> Against <code>cr</code> alone, <code>ed</code>, <code>edc</code>, <code>k</code> and <code>d</code> with a negative effect are chosen on 14 to 18 of 20 trees at turnover 0.10; the ladder, whose lineage-level rungs all add diversity dependence, reaches them on at most 4.</li>
+</ul>
+<p>A slope estimated within a factor of 2 is not a model selected: <code>ned</code>'s ED slope is in that range on about half of its trees and <code>ned</code> is chosen on 1 of 19.</p>
 <h2 id="on-real-trees">On real trees</h2>
 <p>On the 175 real trees MCEM reaches the exact conditioned maximum for <code>cr</code> and <code>dd</code> (median shortfall -0.01 to -0.16; <a href="V4.html">V4</a>). For the lineage-level models the two limits above appear on the 217 real trees fitted with <code>nd</code> before the conditioned fits (<a href="E48.html">E48</a>): 69 fits are sampler-limited, and among the 145 that can be read, an extinction-side or D coefficient sits on an edge of the parameter box on 47. The ladder is being refitted on the 175 trees under the conditioned likelihood (<a href="V11.html">V11</a>).</p>
 <h2 id="not-yet-known">Not yet known</h2>
 <ul>
 <li>From how many tips each lineage-level coefficient is reliable: the cells of 50 and 100 tips are a quarter written, and the study moves to 200 and 400 tips where a coefficient is not yet reliable (<a href="V5.html">V5</a>).</li>
-<li>Model choice at turnover 0.40 and for the cells still filling, and whether a larger tree brings the power to the rule (<a href="V7.html">V7</a>).</li>
+<li>Whether a larger tree or a stronger effect brings model choice to the 80% rule: it was measured at about 100 tips and ±0.35 only (<a href="V7.html">V7</a>).</li>
 <li>Estimability under incomplete sampling and a misstated sampling fraction (<a href="V6.html">V6</a>), on trees from misspecified models (<a href="V9.html">V9</a>), and through the covariate path (<a href="V8.html">V8</a>).</li>
 <li>Which choices on real trees hold under the conditioned likelihood (<a href="V11.html">V11</a>).</li>
 <li>Not under study: effects smaller than ±0.35 per scale unit, turnover 0.25 for the lineage-level models, and covariates that drive extinction.</li>
@@ -349,8 +284,8 @@ window.MathJax = {
 </tr>
 <tr>
 <td>model choice</td>
-<td><a href="V7.html">V7</a>, eight cells read</td>
-<td>150 trees read; 383 complete ladders</td>
+<td><a href="V7.html">V7</a>, 22 cells read</td>
+<td>333 trees read; 399 complete ladders</td>
 </tr>
 <tr>
 <td>size of the conditioning term; Monte Carlo survival probability</td>

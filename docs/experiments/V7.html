@@ -56,6 +56,10 @@ window.MathJax = {
 </li>
 <li><a href="#results">Results</a>
 </li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
+<li><a href="#related">Related</a>
+</li>
 </ol>
 </nav>
 <div class="table-wrap">
@@ -63,7 +67,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>rerun in full under emphasis <code>b21083f</code> and the package's default rule (<code>projected</code>) submitted 8 November (arrays <code>v7</code>, 3,580 jobs, one a task; amendment of 2026-11-08); since the evening amendment of the same day a fit on the 1000-iteration cap is read as the estimate (<a href="V3.html">V3</a>'s reading: speciation coefficients within 2% of the box span of the reference; extinction not identified) and the rows are no longer provisional. First pass on <code>182055b</code> (1,080 of 3,580 fits, no rule read) archived under <code>results/V7-182055b</code></td>
+<td>complete on 12 November 2026 (3,580 fits under emphasis <code>b21083f</code> and <code>projected</code>; arrays <code>v7</code> on Bre): 22 of 32 cells read, 10 budget-limited; false choice holds where decided, power fails in 18 of 19 cells; first pass (<code>182055b</code>) archived under <code>results/V7-182055b</code></td>
 </tr>
 <tr>
 <td>Series</td>
@@ -120,94 +124,258 @@ window.MathJax = {
 <li>A cell with more than a tenth of fits on the cap or the clock is budget-limited, not read.</li>
 </ol>
 <h2 id="results">Results</h2>
-<p><strong>Rerun (b21083f, <code>projected</code>):</strong> submitted 8 November.</p>
-<p><em>Interim, 11 November (evening), on 3,404 of 3,580 fits.</em> A cell with all its fits written and at most a tenth of them on the clock is read on the trees whose five ladder fits each finished with a log-likelihood; the verdict is given under both extreme readings of the unread trees (amendment of 2026-11-11). <strong>Eight cells are read</strong>, all at turnover 0.10:</p>
+<p><strong>Complete, 12 November 2026 (emphasis <code>b21083f</code>, <code>projected</code>).</strong> Of the 3,580 fits, 1,121 met the stopping rule, 2,151 reached the 1000-iteration cap (read as the estimate), 248 ended on the 22-hour clock, 58 were stopped by the cluster's 24-hour limit before writing a row (counted on the clock, amendment of 2026-11-12) and 2 ended on an E-step failure. A cell with at most a tenth of its fits on the clock is read on the trees whose five ladder fits each finished with a log-likelihood, and the verdict is given under both extreme readings of the unread trees (amendment of 2026-11-11). <strong>22 of the 32 cells are read</strong>; 399 of the 640 trees have a complete ladder.</p>
+<p><strong>Rule 1, false choice</strong> (a lineage-level model on at most 10% of <code>cr</code> and <code>dd</code> trees).</p>
 <div class="table-wrap">
 <table>
 <thead>
 <tr>
 <th>cell</th>
-<th>rule</th>
 <th>trees read (unread)</th>
-<th>hits</th>
+<th>lineage-level model chosen</th>
 <th>verdict</th>
 <th>the ladder's choices</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>dd</code>, no effect</td>
-<td>false choice ≤ 0.10</td>
+<td><code>dd</code>, turnover 0.10</td>
 <td>19 (1)</td>
 <td>0</td>
 <td>holds</td>
 <td><code>dd</code> 16, <code>cr</code> 3</td>
 </tr>
 <tr>
+<td><code>cr</code>, turnover 0.10</td>
+<td>14 (6)</td>
+<td>0</td>
+<td>not decided</td>
+<td><code>cr</code> 14</td>
+</tr>
+<tr>
+<td><code>dd</code>, turnover 0.40</td>
+<td>12 (8)</td>
+<td>0</td>
+<td>not decided</td>
+<td><code>cr</code> 9, <code>dd</code> 3</td>
+</tr>
+<tr>
+<td><code>cr</code>, turnover 0.40</td>
+<td>9 (11)</td>
+<td>0</td>
+<td>budget-limited, not read</td>
+<td><code>cr</code> 7, <code>dd</code> 2</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>No lineage-level model is chosen on any of the 54 <code>cr</code> and <code>dd</code> trees with a complete ladder. The two cells not decided have too many unread trees to exclude a share above 10% (Wilson upper bounds 0.22 and 0.24).</p>
+<p><strong>Rule 2, power</strong> (the generating covariate's ladder model on at least 80% of trees). It fails in 18 of the 19 lineage-level cells read and is not decided in one.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>generator, effect</th>
+<th>turnover</th>
+<th>trees read (unread)</th>
+<th>hits</th>
+<th>share (Wilson 95%)</th>
+<th>verdict</th>
+<th>the ladder's choices</th>
+</tr>
+</thead>
+<tbody>
+<tr>
 <td><code>nk</code> +0.35</td>
-<td>power ≥ 0.80</td>
+<td>0.10</td>
 <td>20 (0)</td>
 <td>12</td>
+<td>0.60 (0.39–0.78)</td>
 <td>fails</td>
 <td><code>nk</code> 12, <code>dd</code> 7, <code>nd</code> 1</td>
 </tr>
 <tr>
 <td><code>nd</code> −0.35</td>
-<td>power ≥ 0.80</td>
+<td>0.10</td>
 <td>19 (1)</td>
 <td>10</td>
+<td>0.53 (0.32–0.73)</td>
 <td>fails</td>
 <td><code>nd</code> 10, <code>dd</code> 9</td>
 </tr>
 <tr>
+<td><code>d</code> −0.35</td>
+<td>0.10</td>
+<td>8 (12)</td>
+<td>4</td>
+<td>0.50 (0.22–0.78)</td>
+<td>not decided</td>
+<td><code>nd</code> 4, <code>cr</code> 3, <code>nk</code> 1</td>
+</tr>
+<tr>
+<td><code>ed</code> −0.35</td>
+<td>0.10</td>
+<td>12 (8)</td>
+<td>3</td>
+<td>0.25 (0.09–0.53)</td>
+<td>fails</td>
+<td><code>nd</code> 5, <code>ned</code> 3, <code>nk</code> 3, <code>dd</code> 1</td>
+</tr>
+<tr>
 <td><code>k</code> −0.35</td>
-<td>power ≥ 0.80</td>
+<td>0.10</td>
 <td>16 (4)</td>
 <td>4</td>
+<td>0.25 (0.10–0.49)</td>
 <td>fails</td>
-<td><code>nk</code> 4, <code>dd</code> 7, <code>cr</code> 5</td>
+<td><code>dd</code> 7, <code>cr</code> 5, <code>nk</code> 4</td>
 </tr>
 <tr>
 <td><code>nedc</code> +0.35</td>
-<td>power ≥ 0.80</td>
+<td>0.10</td>
 <td>19 (1)</td>
 <td>3</td>
+<td>0.16 (0.06–0.38)</td>
 <td>fails</td>
-<td><code>ned</code> 3, <code>dd</code> 14, <code>cr</code> 2</td>
+<td><code>dd</code> 14, <code>ned</code> 3, <code>cr</code> 2</td>
+</tr>
+<tr>
+<td><code>d</code> +0.35</td>
+<td>0.10</td>
+<td>17 (3)</td>
+<td>2</td>
+<td>0.12 (0.03–0.34)</td>
+<td>fails</td>
+<td><code>cr</code> 14, <code>nd</code> 2, <code>dd</code> 1</td>
+</tr>
+<tr>
+<td><code>nd</code> +0.35</td>
+<td>0.10</td>
+<td>18 (2)</td>
+<td>2</td>
+<td>0.11 (0.03–0.33)</td>
+<td>fails</td>
+<td><code>dd</code> 14, <code>cr</code> 2, <code>nd</code> 2</td>
 </tr>
 <tr>
 <td><code>nedc</code> −0.35</td>
-<td>power ≥ 0.80</td>
+<td>0.10</td>
 <td>19 (1)</td>
 <td>2</td>
+<td>0.11 (0.03–0.31)</td>
 <td>fails</td>
-<td><code>ned</code> 2, <code>dd</code> 9, <code>nd</code> 6, <code>cr</code> 1, <code>nk</code> 1</td>
+<td><code>dd</code> 9, <code>nd</code> 6, <code>ned</code> 2, <code>cr</code> 1, <code>nk</code> 1</td>
 </tr>
 <tr>
-<td><code>ned</code> +0.35</td>
-<td>power ≥ 0.80</td>
-<td>19 (1)</td>
+<td><code>ed</code> +0.35</td>
+<td>0.10</td>
+<td>11 (9)</td>
 <td>1</td>
+<td>0.09 (0.02–0.38)</td>
 <td>fails</td>
-<td><code>ned</code> 1, <code>dd</code> 18</td>
+<td><code>cr</code> 10, <code>ned</code> 1</td>
+</tr>
+<tr>
+<td><code>edc</code> +0.35</td>
+<td>0.10</td>
+<td>13 (7)</td>
+<td>1</td>
+<td>0.08 (0.01–0.33)</td>
+<td>fails</td>
+<td><code>cr</code> 12, <code>ned</code> 1</td>
 </tr>
 <tr>
 <td><code>ned</code> −0.35</td>
-<td>power ≥ 0.80</td>
+<td>0.10</td>
 <td>19 (1)</td>
 <td>1</td>
+<td>0.05 (0.01–0.25)</td>
 <td>fails</td>
-<td><code>ned</code> 1, <code>dd</code> 14, <code>cr</code> 4</td>
+<td><code>dd</code> 14, <code>cr</code> 4, <code>ned</code> 1</td>
+</tr>
+<tr>
+<td><code>ned</code> +0.35</td>
+<td>0.10</td>
+<td>19 (1)</td>
+<td>1</td>
+<td>0.05 (0.01–0.25)</td>
+<td>fails</td>
+<td><code>dd</code> 18, <code>ned</code> 1</td>
+</tr>
+<tr>
+<td><code>nk</code> +0.35</td>
+<td>0.40</td>
+<td>13 (7)</td>
+<td>3</td>
+<td>0.23 (0.08–0.50)</td>
+<td>fails</td>
+<td><code>cr</code> 6, <code>dd</code> 3, <code>nk</code> 3, <code>ned</code> 1</td>
+</tr>
+<tr>
+<td><code>d</code> +0.35</td>
+<td>0.40</td>
+<td>12 (8)</td>
+<td>1</td>
+<td>0.08 (0.01–0.35)</td>
+<td>fails</td>
+<td><code>cr</code> 11, <code>nd</code> 1</td>
+</tr>
+<tr>
+<td><code>nd</code> −0.35</td>
+<td>0.40</td>
+<td>10 (10)</td>
+<td>0</td>
+<td>0.00 (0.00–0.28)</td>
+<td>fails</td>
+<td><code>cr</code> 9, <code>dd</code> 1</td>
+</tr>
+<tr>
+<td><code>nd</code> +0.35</td>
+<td>0.40</td>
+<td>10 (10)</td>
+<td>0</td>
+<td>0.00 (0.00–0.28)</td>
+<td>fails</td>
+<td><code>cr</code> 10</td>
+</tr>
+<tr>
+<td><code>ned</code> +0.35</td>
+<td>0.40</td>
+<td>18 (2)</td>
+<td>0</td>
+<td>0.00 (0.00–0.18)</td>
+<td>fails</td>
+<td><code>cr</code> 12, <code>dd</code> 5, <code>nd</code> 1</td>
+</tr>
+<tr>
+<td><code>nedc</code> +0.35</td>
+<td>0.40</td>
+<td>15 (5)</td>
+<td>0</td>
+<td>0.00 (0.00–0.20)</td>
+<td>fails</td>
+<td><code>cr</code> 8, <code>dd</code> 6, <code>nk</code> 1</td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>Two cells are budget-limited and not read (<code>ed</code> −0.35 and <code>k</code> +0.35 at turnover 0.40 and 0.10: 13 and 14 fits on the clock); 22 are still filling. Descriptive, on the 383 of 640 trees with a complete ladder: no lineage-level model on any of the 52 null trees (<code>cr</code> on 20 of 22 <code>cr</code> trees, <code>dd</code> on 19 of 30 <code>dd</code> trees). Twenty-one fits ended on the cap without a log-likelihood; their trees are unread. The cause is in the package, not the trees: the M-step's optimiser returned an estimate one rounding error (<span class="math inline">\(5.6 \times 10^{-17}\)</span>) past a bound of the box, and NLopt refused every later step that started there, the one that evaluates the log-likelihood included. emphasis <code>aeb2fe8</code> puts the start inside the box; on one of the 21 (<code>nd</code>, 23 tips) the fit then has no failed step and returns a log-likelihood.</p>
+<p><strong>Rule 3, budget.</strong> Ten cells have more than a tenth of their fits on the clock and are not read: <code>cr</code> at turnover 0.40; <code>edc</code> −0.35 and <code>k</code> +0.35 at 0.10; <code>d</code> −0.35, <code>ed</code> −0.35 and +0.35, <code>edc</code> −0.35 and +0.35, <code>nedc</code> −0.35 and <code>k</code> +0.35 at 0.40. The clock falls on the <code>ned</code> rung (145 fits on the clock and 35 stopped by the cluster, of 640) and the <code>nk</code> rung (65 and 19); <code>cr</code> has none and <code>dd</code> 3.</p>
+<p><strong>What the ladder chooses instead.</strong> At turnover 0.10 the 256 complete ladders go to <code>dd</code> on 110 trees and <code>cr</code> on 78: the generators that contain diversity dependence are read as <code>dd</code> (<code>ned</code> 32 of 38, <code>nd</code> 23 of 37, <code>nedc</code> 23 of 38) and those with a single covariate as <code>cr</code> (<code>d</code> 17 of 25, <code>edc</code> 14 of 20, <code>k</code> 11 of 22, <code>ed</code> 10 of 23). At turnover 0.40, <code>cr</code> is chosen on 103 of 143 trees, among them 9 of 12 <code>dd</code> trees.</p>
+<p><strong>Pairwise, descriptive</strong> (the generator against the model it nests, on trees where both fits finished; no rule). The generator is chosen, at turnover 0.10: <code>ed</code> −0.35 on 18 of 20, <code>edc</code> −0.35 18 of 20, <code>k</code> −0.35 15 of 20, <code>d</code> −0.35 14 of 20, <code>nk</code> +0.35 13 of 20, <code>ed</code> +0.35 11 of 20, <code>nedc</code> −0.35 11 of 19, <code>nd</code> −0.35 10 of 20, <code>d</code> +0.35 8 of 19, <code>edc</code> +0.35 8 of 20, <code>k</code> +0.35 4 of 17, <code>nd</code> +0.35 3 of 19, <code>nedc</code> +0.35 2 of 20, <code>ned</code> −0.35 and +0.35 1 of 20 each. At turnover 0.40: <code>edc</code> −0.35 15 of 20, <code>d</code> −0.35 11 of 20, <code>ed</code> +0.35 11 of 20, <code>ed</code> −0.35 10 of 17, <code>nedc</code> −0.35 9 of 17, <code>nk</code> +0.35 9 of 20, <code>edc</code> +0.35 5 of 20, <code>k</code> +0.35 4 of 18, <code>d</code> +0.35 2 of 20, <code>ned</code> +0.35 1 of 18, <code>nd</code> −0.35 and +0.35 0 of 18, <code>nedc</code> +0.35 0 of 16.</p>
+<p><strong>Fits without a log-likelihood.</strong> Twenty-one fits ended on the cap without a log-likelihood; their trees are unread. The cause is in the package, not the trees: the M-step's optimiser returned an estimate one rounding error (<span class="math inline">\(5.6 \times 10^{-17}\)</span>) past a bound of the box, and NLopt refused every later step that started there, the one that evaluates the log-likelihood included. emphasis <code>aeb2fe8</code> puts the start inside the box; on one of the 21 (<code>nd</code>, 23 tips) the fit then has no failed step and returns a log-likelihood.</p>
 <p><strong>First pass (182055b, <code>mc_error</code>, <code>results/V7-182055b</code>)</strong>, on the 992 fits of 5 November; not read against the rerun. "The cap" is the 1000-iteration limit (<code>max_iter</code>), "the clock" the 22-hour limit (<code>time_budget</code>); the tenth in rule 3 is of the planned fits (100 or 120 a cell).</p>
 <p><strong>Outcomes:</strong> 584 converged, 160 on the cap, 246 on the clock (123 of them with no conditioned iteration: the clock went to the unconditioned start, see <a href="../open-issues.html">Open issues</a>), 2 E-step failures. Of the written fits, <code>nd</code>, <code>ned</code> and <code>nk</code> end on the cap or the clock on 91%, 80% and 90%.</p>
 <p><strong>Rule 3.</strong> 16 of 32 cells are budget-limited whatever the remaining fits do: both <code>cr</code> and both <code>dd</code> cells, all four <code>d</code> cells, <code>nd</code> t10 +0.35 and t40 +0.35, <code>ed</code> t40 −0.35, <code>edc</code> t40 +0.35, <code>ned</code> t10 −0.35, <code>nedc</code> t10 −0.35, <code>k</code> t10 +0.35 and t40 +0.35. Rule 1 (false choice) therefore cannot be read in any cell. The other 16 cells are 1–6 cap or clock fits away from the same state.</p>
 <p><strong>Ladders.</strong> 73 trees have all five ladder fits written; none has all five converged (converged share on those trees: <code>cr</code> 0.95, <code>dd</code> 0.84, <code>nd</code> 0.07, <code>ned</code> 0.15, <code>nk</code> 0.07).</p>
 <p><strong>Descriptive, not a rule reading.</strong> Pairwise choice on the 38 trees with both fits converged: the generator is chosen on 19 (<code>d</code> 4/8, <code>ed</code> 8/14, <code>edc</code> 4/5, <code>k</code> 2/7, <code>nedc</code> 1/2, <code>ned</code> 0/1, <code>nk</code> 0/1). On two trees a converged richer fit lies more than 1 log-likelihood unit below the model it nests (<code>k</code> t10 +0.35: k08 <code>ned</code> against <code>dd</code>, −1.45; k07 <code>nd</code> against <code>cr</code>, −1.02); fits start from the box default, not the nested estimate.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>On trees of about 100 tips with an effect of ±0.35 per scale unit, the ladder does not choose a lineage-level model where there is none (0 of 54 <code>cr</code> and <code>dd</code> trees; the rule holds in the one cell that can be decided) and names the generating covariate on at most 60% of trees where there is one: the power rule fails in 18 of 19 cells. A lineage-level choice on a tree of this size is evidence of an effect; the absence of one is not evidence against it. The ladder is also the wrong instrument for a single covariate without diversity dependence: <code>ed</code>, <code>edc</code>, <code>d</code> and <code>k</code> with a negative effect are chosen over <code>cr</code> on 14 to 18 of 20 trees pairwise and reach the ladder's choice on at most 4.</p>
+<h2 id="related">Related</h2>
+<ul>
+<li><a href="V3.html">V3</a>: how a fit on the cap is read. <a href="V5.html">V5</a>: recovery of the coefficients on the same generators.</li>
+<li><a href="V11.html">V11</a>: the ladder on the real trees. <a href="V9.html">V9</a>: false choice on trees from misspecified models.</li>
+<li><a href="estimability.html">Estimability</a>.</li>
+</ul>
 
 </article>
 </main>
