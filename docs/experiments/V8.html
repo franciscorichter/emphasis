@@ -63,7 +63,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>registered 2026-10-31; runs on V7's trees once their <code>dd</code> fits are written</td>
+<td>complete on 13 November 2026 (636 of 640 paths; emphasis <code>b21083f</code>); sampler-limited: the median effective sample of the 3000 draws is 6.9</td>
 </tr>
 <tr>
 <td>Series</td>
@@ -115,7 +115,13 @@ window.MathJax = {
 <li>On each lineage-level generator's trees its covariate is active on at least 80%.</li>
 </ol>
 <h2 id="results">Results</h2>
-<p>Not yet.</p>
+<p><em>Complete, 13 November 2026: 636 of 640 trees have a path (4 jobs wrote no row).</em> The draws are made by thinning at each tree's <code>dd</code> estimate, and they carry little weight: the median effective sample of the 3000 draws is 6.9, and it is below 10 on 389 of the 636 trees. The readings below are therefore sampler-limited.</p>
+<ul>
+<li><strong>Null trees</strong> (no lineage-level covariate active at BIC's optimum on at least 90%): holds on <code>cr</code> at turnover 0.10 (19 of 20) and <code>dd</code> at 0.40 (19 of 20); fails on <code>dd</code> at 0.10 (13 of 20) and <code>cr</code> at 0.40 (17 of 20).</li>
+<li><strong>Lineage-level generators</strong> (the generating covariate active on at least 80%): holds in 1 of 28 cells, <code>nedc</code> −0.35 at turnover 0.10 (17 of 20). Next are <code>nd</code> at turnover 0.10 (12 and 11 of 20), <code>ed</code> −0.35 (11 of 20 at both turnovers) and <code>d</code> −0.35 at 0.10 (10 of 20). With a positive effect of ED the covariate is active on 0 to 3 of 20 trees in every cell.</li>
+<li><strong>Order of entry.</strong> <span class="math inline">\(D\)</span> enters first on 13 to 15 of 20 <code>d</code> trees in all four cells, and on 0 or 1 of 20 trees for ED in the <code>ed</code>, <code>edc</code> and <code>ned</code> cells, where <span class="math inline">\(D\)</span> or <span class="math inline">\(N\)</span> enters first.</li>
+</ul>
+<p>Table: <code>results/V8/rule.csv</code> (<code>sim/V8-analysis.R</code>).</p>
 
 </article>
 </main>

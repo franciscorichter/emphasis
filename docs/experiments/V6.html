@@ -56,6 +56,8 @@ window.MathJax = {
 </li>
 <li><a href="#results">Results</a>
 </li>
+<li><a href="#first-pass-182055b">First pass (<code>182055b</code>)</a>
+</li>
 </ol>
 </nav>
 <div class="table-wrap">
@@ -63,7 +65,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>rerun in full under emphasis <code>b21083f</code> and <code>projected</code> submitted 8 November (arrays <code>v6</code>, 3,200 jobs, one a task, queued behind V7; amendments of 2026-11-07 and 2026-11-08), a fit on the 1000-iteration cap read as the estimate; first pass on <code>182055b</code> (993 of 3,200 fits, no cell–condition read) archived under <code>results/V6-182055b</code></td>
+<td>complete on 17 November 2026 (3,197 of 3,200 fits under emphasis <code>b21083f</code> and <code>projected</code>, arrays <code>v6</code> on Bre; 3 stopped by the cluster's 24-hour limit, counted on the clock): 73 of 160 cell–conditions read, 87 not readable (81 with 11 or more fits at an effective sample below 10); rule 1 holds for every speciation coefficient on 19 of the 73; first pass on <code>182055b</code> (993 of 3,200 fits, no cell–condition read) archived under <code>results/V6-182055b</code></td>
 </tr>
 <tr>
 <td>Series</td>
@@ -79,7 +81,7 @@ window.MathJax = {
 </tr>
 <tr>
 <td>Data / analysis</td>
-<td><code>results/V6/jobs/</code> on Bre; merged rows and tables in <code>results/V6/</code>; <code>sim/V6-analysis.R</code></td>
+<td><code>results/V6/jobs/</code> (on Bre and in the repository, not committed); tables in <code>results/V6/</code> (<code>conditions.csv</code>, <code>rule2.csv</code>, <code>descriptive-misstated.csv</code>); <code>sim/V6-analysis.R</code></td>
 </tr>
 </tbody>
 </table>
@@ -119,7 +121,158 @@ window.MathJax = {
 <li>A misstated <span class="math inline">\(\rho\)</span> is harmless for a coefficient when its median ratio moves by less than 0.1.</li>
 </ol>
 <h2 id="results">Results</h2>
-<p>Interim, on the 927 fits of 5 November. The design sets no readability condition; the analysis uses <a href="E46.html">E46</a>'s rule (1): a cell–condition is read when at least 16 of its 20 fits converged and the median final effective sample is at least 10.</p>
+<p>On all 3,200 fits under <code>b21083f</code> (<code>sim/V6-analysis.R</code>, read 17 November). The design sets no readability condition; the analysis uses <a href="E46.html">E46</a>'s rule (1): a cell–condition is read when at least 16 of its 20 fits finished (converged, or on the 1000-iteration cap, read as the estimate since the amendment of 2026-11-08) and the median final effective sample is at least 10.</p>
+<p><strong>Outcomes.</strong> 289 converged, 2,743 on the 1000-iteration cap, 161 on the 22-hour clock (3 of them stopped by the cluster's 24-hour task limit, counted on the clock as in <a href="V7.html">V7</a>'s amendment of 2026-11-12), 4 E-step failures; one fit (<code>ned</code>, 51 tips) has no conditioned iteration. The lineage-level models account for the cap: 2,591 of their 2,797 fits end on it and 45 converge, with a median final effective sample of 6.8 (<code>cr</code> and <code>dd</code>: 244 converged, 152 on the cap, median 200).</p>
+<p><strong>Readability.</strong> 73 of 160 cell–conditions are read. Of the 87 that are not, 81 have 11 or more of their 20 fits with a final effective sample below 10 (sampler-limited) and 10 have more than 4 unfinished (6 both). Every <code>cr</code> and <code>dd</code> cell–condition is read; <code>d</code>, <code>nd</code>, <code>ed</code>, <code>ned</code>, <code>nedc</code> and <code>nk</code> are read only at <span class="math inline">\(\rho\)</span> 0.9 and at <span class="math inline">\(\rho\)</span> 0.75 told 0.85; <code>edc</code> and <code>k</code> have cells read at every <span class="math inline">\(\rho\)</span>.</p>
+<p><strong>Rule 1: the smallest <span class="math inline">\(\rho\)</span> at which each speciation coefficient holds</strong> (median ratio in [0.8, 1.25], central 80% within [0.5, 2]; <span class="math inline">\(\rho\)</span> told the truth; – = not read):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>cell</th>
+<th>coefficient</th>
+<th><span class="math inline">\(\rho\)</span> 0.9</th>
+<th>0.75</th>
+<th>0.5</th>
+<th>smallest <span class="math inline">\(\rho\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code> t10, t40</td>
+<td><span class="math inline">\(\beta_0\)</span></td>
+<td>holds</td>
+<td>holds</td>
+<td>holds</td>
+<td>0.5</td>
+</tr>
+<tr>
+<td><code>dd</code> t10</td>
+<td><span class="math inline">\(\beta_0\)</span> / <span class="math inline">\(\beta_N\)</span></td>
+<td>holds / fails (median 0.76)</td>
+<td>fails / holds</td>
+<td>holds / holds</td>
+<td>0.5 only (both hold)</td>
+</tr>
+<tr>
+<td><code>dd</code> t40</td>
+<td><span class="math inline">\(\beta_0\)</span>, <span class="math inline">\(\beta_N\)</span></td>
+<td>fail</td>
+<td>fail</td>
+<td>fail</td>
+<td>none (<span class="math inline">\(\beta_N\)</span> median ratio −0.33 to −0.02)</td>
+</tr>
+<tr>
+<td><code>d</code> t10 −0.35</td>
+<td><span class="math inline">\(\beta_0\)</span>, <span class="math inline">\(\beta_D\)</span></td>
+<td>hold</td>
+<td>–</td>
+<td>–</td>
+<td>0.9</td>
+</tr>
+<tr>
+<td><code>d</code> t10 +0.35, t40 −0.35</td>
+<td><span class="math inline">\(\beta_D\)</span></td>
+<td>fails</td>
+<td>–</td>
+<td>–</td>
+<td>none</td>
+</tr>
+<tr>
+<td><code>ed</code> t10 −0.35</td>
+<td><span class="math inline">\(\beta_{ED}\)</span></td>
+<td>holds (<span class="math inline">\(\beta_0\)</span> fails)</td>
+<td>–</td>
+<td>–</td>
+<td>none on both</td>
+</tr>
+<tr>
+<td><code>edc</code> t10 −0.35</td>
+<td><span class="math inline">\(\beta_0\)</span>, <span class="math inline">\(\beta_{ED}\)</span></td>
+<td>hold</td>
+<td>hold</td>
+<td>–</td>
+<td>0.75</td>
+</tr>
+<tr>
+<td><code>edc</code> t40 −0.35</td>
+<td><span class="math inline">\(\beta_0\)</span>, <span class="math inline">\(\beta_{ED}\)</span></td>
+<td>hold</td>
+<td>fail</td>
+<td><span class="math inline">\(\beta_{ED}\)</span> fails</td>
+<td>0.9</td>
+</tr>
+<tr>
+<td><code>edc</code> t40 +0.35</td>
+<td><span class="math inline">\(\beta_0\)</span>, <span class="math inline">\(\beta_{ED}\)</span></td>
+<td>hold</td>
+<td>hold</td>
+<td>fail</td>
+<td>0.75</td>
+</tr>
+<tr>
+<td><code>edc</code> t10 +0.35</td>
+<td><span class="math inline">\(\beta_{ED}\)</span></td>
+<td>fails</td>
+<td>fails</td>
+<td>fails</td>
+<td>none</td>
+</tr>
+<tr>
+<td><code>k</code> t10 +0.35, t40 +0.35</td>
+<td><span class="math inline">\(\beta_K\)</span></td>
+<td>fails</td>
+<td>fails</td>
+<td>fails</td>
+<td>none</td>
+</tr>
+<tr>
+<td><code>k</code> t10 −0.35</td>
+<td><span class="math inline">\(\beta_0\)</span>, <span class="math inline">\(\beta_K\)</span></td>
+<td>fail</td>
+<td>–</td>
+<td>–</td>
+<td>none</td>
+</tr>
+<tr>
+<td><code>nd</code> (4 cells)</td>
+<td><span class="math inline">\(\beta_N\)</span>, <span class="math inline">\(\beta_D\)</span></td>
+<td><span class="math inline">\(\beta_D\)</span> fails in all 4</td>
+<td>–</td>
+<td>–</td>
+<td>none</td>
+</tr>
+<tr>
+<td><code>ned</code>, <code>nedc</code> (4 cells)</td>
+<td><span class="math inline">\(\beta_N\)</span>, <span class="math inline">\(\beta_{ED}\)</span></td>
+<td>fail</td>
+<td>–</td>
+<td>–</td>
+<td>none</td>
+</tr>
+<tr>
+<td><code>nk</code> t10 +0.35</td>
+<td><span class="math inline">\(\beta_N\)</span>, <span class="math inline">\(\beta_K\)</span></td>
+<td>hold (<span class="math inline">\(\beta_0\)</span> fails, 0.72)</td>
+<td>–</td>
+<td>–</td>
+<td>none on all three</td>
+</tr>
+<tr>
+<td><code>nk</code> t40 +0.35</td>
+<td>all</td>
+<td>fail</td>
+<td>–</td>
+<td>–</td>
+<td>none</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Over the 73 read cell–conditions, rule 1 holds for every speciation coefficient on 19: all 10 of <code>cr</code>, 1 of <code>dd</code> (t10 at <span class="math inline">\(\rho\)</span> 0.5), 7 of <code>edc</code> and 1 of <code>d</code>. By coefficient: <span class="math inline">\(\beta_0\)</span> on 42 of 73, <span class="math inline">\(\beta_N\)</span> on 7 of 30, <span class="math inline">\(\beta_{ED}\)</span> on 10 of 27, <span class="math inline">\(\beta_D\)</span> on 1 of 11, <span class="math inline">\(\beta_K\)</span> on 1 of 15. At turnover 0.40 the speciation intercept of every model with <span class="math inline">\(N\)</span> is under-estimated: median ratio 0.44–0.62 for <code>dd</code>, <code>nd</code>, <code>ned</code>, <code>nedc</code> and <code>nk</code> in every read condition.</p>
+<p><strong>Rule 2: a misstated <span class="math inline">\(\rho\)</span>.</strong> Read where the told-true, told-0.65 and told-0.85 cell–conditions at <span class="math inline">\(\rho\)</span> 0.75 are all read: 12 coefficients in 7 cells. The median ratio moves by less than 0.1 for <span class="math inline">\(\beta_0\)</span> in 5 of 7 cells (not <code>cr</code> t40, +0.14 when told 0.65; not <code>k</code> t40, −0.10 when told 0.85), for <span class="math inline">\(\beta_K\)</span> of <code>k</code> t40 (+0.02, +0.02; a coefficient that fails rule 1), and for none of the others: <span class="math inline">\(\beta_N\)</span> of <code>dd</code> moves by −0.25 / +0.17 (t10) and −0.44 / +0.10 (t40), <span class="math inline">\(\beta_{ED}\)</span> of <code>edc</code> t10 +0.35 by +0.15 when told 0.85, <span class="math inline">\(\beta_K\)</span> of <code>k</code> t10 by +0.30 when told 0.65. <strong>Descriptive</strong> (every tree whose three fits finished, 40–80 a model): a <span class="math inline">\(\rho\)</span> told too low lowers <span class="math inline">\(\beta_N\)</span>'s median ratio and one told too high raises it, by 0.12–0.31 in each of <code>dd</code>, <code>nd</code>, <code>ned</code>, <code>nedc</code> and <code>nk</code>; <span class="math inline">\(\beta_0\)</span>, <span class="math inline">\(\beta_D\)</span> and <span class="math inline">\(\beta_K\)</span> move by less than 0.1 in every model, <span class="math inline">\(\beta_{ED}\)</span> by 0.15–0.46 in <code>ned</code> and <code>nedc</code> and by less than 0.04 in <code>ed</code> and <code>edc</code>.</p>
+<h2 id="first-pass-182055b">First pass (<code>182055b</code>)</h2>
+<p>On the 927 fits of 5 November. The design sets no readability condition; the analysis uses <a href="E46.html">E46</a>'s rule (1): a cell–condition is read when at least 16 of its 20 fits converged and the median final effective sample is at least 10.</p>
 <p><strong>Outcomes:</strong> 243 converged, 243 on the 1000-iteration cap, 212 on the 22-hour clock after some iterations, 225 on the clock with <strong>no conditioned iteration</strong> (<code>iterations</code> = 0), 4 E-step failures. <strong>Read:</strong> none of 160 cell–conditions; 76 can no longer be read whatever the remaining fits do (more than 4 of 20 unfinished), 84 are pending. No <code>ned</code>, <code>nedc</code> or <code>nk</code> fit has converged (0 of 167).</p>
 <p><strong>Descriptive, not a rule reading.</strong> Converged fits are on smaller trees than unconverged ones (median 23–41 against 34–68 tips for <code>d</code>, <code>ed</code>, <code>edc</code>, <code>k</code>), so only <code>cr</code>, where every fit converged, is free of that selection. <code>cr</code> median speciation ratio: 1.03 at <span class="math inline">\(\rho\)</span> 0.9, 1.07 at 0.75, 1.02 at 0.5 (20–22 trees each). Misstated <span class="math inline">\(\rho\)</span> at 0.75, on the 17 <code>cr</code> trees with all three fits converged: told 0.65 moves the median ratio by +0.16, told 0.85 by −0.13, both beyond the 0.1 of rule 2.</p>
 <p><strong>The fits with no conditioned iteration</strong> never occur under <code>cr</code> or <code>dd</code>; they make up 79% of <code>ned</code> fits, 60% of <code>nk</code>, 38% of <code>edc</code>, 33% of <code>nd</code>, 31% of <code>nedc</code>, 21% of <code>ed</code>, 14% of <code>d</code>, 6% of <code>k</code>. Their share rises with tree size (1% at 50 tips or fewer, 42% at 76–100, 62–69% above 150; logistic coefficient of log tips +5.8, z = 10) and, at equal size, as the stated <span class="math inline">\(\rho\)</span> falls. They hold 2,939 of the 3,077 fit-hours spent. They did not stall in a first E-step: the fit spent its clock in the unconditioned start that precedes the conditioned segments (216 of 225 returned that start's trace, at 2400 draws), which <code>iterations</code> does not count (<a href="../open-issues.html">Open issues</a>); since emphasis <code>b21083f</code> the start gets at most a quarter of the clock.</p>
