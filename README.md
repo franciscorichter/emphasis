@@ -1,6 +1,7 @@
 # emphasis
 
 [![R-CMD-check](https://github.com/franciscorichter/emphasis/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/franciscorichter/emphasis/actions/workflows/R-CMD-check.yaml)
+[![CRAN](https://www.r-pkg.org/badges/version/emphasis)](https://cran.r-project.org/package=emphasis)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Docs](https://img.shields.io/badge/docs-site-1d6d5a.svg)](https://franciscorichter.github.io/emphasis/)
 
@@ -12,11 +13,14 @@ A reconstructed phylogeny shows only the species alive today. Everything that we
 
 *A clade simulated under diversity dependence. Left: everything that happened. Middle: the same tree with its extinct lineages removed, which is all a phylogeny of living species records. Right: one set of extinct lineages that emphasis's sampler proposes for that observed tree; a fit averages over hundreds of such draws.*
 
-Version 1.1.0, submitted to CRAN. Documentation: <https://franciscorichter.github.io/emphasis/>.
+Version 1.1.0 is on CRAN (published 18 November 2026); `main` is 1.1.0.9000. Documentation: <https://franciscorichter.github.io/emphasis/>.
 
 ## Installation
 
 ```r
+install.packages("emphasis")
+
+# the development version, with the fixes listed in NEWS.md under 1.1.0.9000
 # install.packages("devtools")
 devtools::install_github("franciscorichter/emphasis")
 ```
@@ -172,7 +176,7 @@ The estimator is tested in a series of simulation experiments, each with its rul
 - Under constant rates, conditioned MCEM with the `mc_error` stopping rule (up to 1000 iterations, [E45](https://franciscorichter.github.io/emphasis/experiments/E45.html)) reaches the exact maximum-likelihood estimate in all 24 settings tested (25 to 800 tips, three turnovers, complete and 80% sampling); under diversity dependence with complete sampling it does so in 11 of 14, and the three that miss stopped on their eight-hour time limit.
 - Speciation under constant rates is estimated reliably from 25 tips. Extinction is estimated reliably only at turnover 0.4 and from 200 tips; at lower turnover the exact estimate itself is often zero.
 - With nothing hidden, every model's likelihood returns the coefficients that generated the tree.
-- A validation series (V1 to V12) is measuring, model by model, the tree size from which each lineage-level coefficient is recovered. Until it reports, no lineage-level coefficient has a measured reliable tree size.
+- A validation series (V1 to V12) measures, model by model, the tree size from which each lineage-level coefficient is recovered. At 50 and 100 tips (V5, interim reading of 19 November) a lineage-level slope is identified in a minority of cells and most cells are limited by the sampler; 200 and 400 tips are running. The [estimability page](https://franciscorichter.github.io/emphasis/estimability.html) carries the current numbers.
 
 ## Citation
 

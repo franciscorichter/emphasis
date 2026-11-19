@@ -315,7 +315,8 @@ The full account, by question, is on [What is established](established.html); wh
 ## 12. Install
 
 ```r
-remotes::install_github("franciscorichter/emphasis")
+install.packages("emphasis")                          # 1.1.0, on CRAN since 18 November 2026
+remotes::install_github("franciscorichter/emphasis")  # the development version
 ```
 
 The package needs R 3.5 or later and a C++ compiler. It imports `Rcpp`, `RcppParallel` (TBB parallelism in the likelihood, the simulator and the thinning proposal), `nloptr`, `ape`, `mgcv` (the survival and likelihood GAMs), `progress` and `DDD`. Suggested packages: `nnet` for a network emulator, `dglars` as the reference the selection path is checked against, `TreeSim` for the bound finder's tests. `R CMD check` runs on Linux, macOS and Windows at every push. Source, issues and the test suite are on [GitHub](https://github.com/franciscorichter/emphasis).
