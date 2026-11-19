@@ -127,27 +127,19 @@ diagnose_mcem(fit)                                       # the trace of every it
 
 ### Choose a model
 
-There are three ways to decide which covariates the data support:
-
 ```r
-# 1. compare fits you made yourself
+# compare fits you made yourself
 compare_models(cr = fit_cr, dd = fit_dd, nd = fit_nd)
 
-# 2. fit the nested ladder cr, dd, nd, ned, nk in one call (five fits: on a 135-tip tree
-#    it had not finished after 50 minutes)
+# or fit the nested ladder cr, dd, nd, ned, nk in one call (five fits: on a 135-tip
+# tree it had not finished after 50 minutes)
 fits <- estimate_rates(phy, model = "all")
 fits$comparison; fits$chosen
-
-# 3. follow a dgLARS path over all four covariates at once
-cp <- covariate_path(phy, covariates = c("N", "D", "ED", "K"), criterion = "BIC")
-cp$speciation$entry_order; cp$speciation$active
 ```
 
-`compare_models()` reports AIC together with each fit's effective sample and its Monte Carlo gap, and warns when the ranking could be an artefact of sampling. Its `chosen` model is the one with the fewest parameters among those within 2 AIC of the best. `covariate_path()` works on the Poisson form of the likelihood that `lineage_table()` exposes: one row per lineage and time segment, with its covariates and whether it split.
+`compare_models()` reports AIC together with each fit's effective sample and its Monte Carlo gap, and warns when the ranking could be an artefact of sampling. Its `chosen` model is the one with the fewest parameters among those within 2 AIC of the best.
 
-![Coefficient paths of the four covariates on a tree simulated with an age effect](man/figures/readme-path.png)
-
-*`covariate_path()` on a 218-tip tree simulated with an effect of $D$ on speciation and none of $N$, $\mathrm{ED}$ or $K$. Reading the path from left to right, covariates enter as the penalty falls; BIC stops where only $D$ has entered, at a coefficient of -0.41.*
+`covariate_path()` is exploratory: it follows a dgLARS path over all four covariates from one set of draws, on the Poisson form of the likelihood that `lineage_table()` exposes (one row per lineage and time segment). At a fitted `dd` estimate on 100-tip trees it named the generating covariate on at least 80% of trees in 1 of 28 simulated settings, with a median effective sample of 6.9 of 3000 draws ([V8](https://franciscorichter.github.io/emphasis/experiments/V8.html)), so it does not replace fitting the models.
 
 ### Read what a fit says about itself
 
@@ -160,7 +152,7 @@ A fit prints its effective sample, an indication of how far its log-likelihood s
 | `simulate_tree()` | forward simulation under every model and link; given a tree, draws of its hidden lineages |
 | `estimate_rates()` | Monte Carlo EM for one model, or the nested ladder with `model = "all"` |
 | `compare_models()` | AIC table with effective sample, Monte Carlo gap and the parsimonious choice |
-| `covariate_path()` | the dgLARS path over the covariates, for speciation and extinction |
+| `covariate_path()` | the dgLARS path over the covariates, for speciation and extinction (exploratory) |
 | `lineage_table()` | the per-lineage, per-segment table the likelihood is built on |
 | `auto_bounds()` | a parameter box computed from the observed tree |
 | `survival_mc()`, `survival_surface()` | the survival probability by direct simulation, and a local surface of it |
@@ -169,14 +161,18 @@ A fit prints its effective sample, an indication of how far its log-likelihood s
 
 Every argument is documented on the [reference page](https://franciscorichter.github.io/emphasis/reference.html) and in R (`?estimate_rates`).
 
-## What has been measured
+## What to expect from a fit
 
-The estimator is tested in a series of simulation experiments, each with its rule fixed before it runs. Their results are on the docs site: [what is established](https://franciscorichter.github.io/emphasis/established.html), [estimability](https://franciscorichter.github.io/emphasis/estimability.html) by tree size, and [one page per experiment](https://franciscorichter.github.io/emphasis/experiments/). In short:
+Each statement below is a measurement on simulated trees with known generating values, from experiments whose rules were fixed before they ran, with the likelihood conditioned on survival. Several are still running; the [estimability page](https://franciscorichter.github.io/emphasis/experiments/estimability.html) carries the current numbers and [one page per experiment](https://franciscorichter.github.io/emphasis/experiments/) the design and data behind each.
 
-- Under constant rates, conditioned MCEM with the `mc_error` stopping rule (up to 1000 iterations, [E45](https://franciscorichter.github.io/emphasis/experiments/E45.html)) reaches the exact maximum-likelihood estimate in all 24 settings tested (25 to 800 tips, three turnovers, complete and 80% sampling); under diversity dependence with complete sampling it does so in 11 of 14, and the three that miss stopped on their eight-hour time limit.
-- Speciation under constant rates is estimated reliably from 25 tips. Extinction is estimated reliably only at turnover 0.4 and from 200 tips; at lower turnover the exact estimate itself is often zero.
-- With nothing hidden, every model's likelihood returns the coefficients that generated the tree.
-- A validation series (V1 to V12) measures, model by model, the tree size from which each lineage-level coefficient is recovered. At 50 and 100 tips (V5, interim reading of 19 November) a lineage-level slope is identified in a minority of cells and most cells are limited by the sampler; 200 and 400 tips are running. The [estimability page](https://franciscorichter.github.io/emphasis/estimability.html) carries the current numbers.
+- **Where an exact likelihood exists, MCEM reaches it.** Under constant rates the estimate sits at the exact conditioned maximum in every setting tested (25 to 800 tips); under diversity dependence in 11 of 14, and the three that miss stopped on their time limit ([E45](https://franciscorichter.github.io/emphasis/experiments/E45.html)).
+- **Speciation is read from small trees, extinction from large ones.** Speciation is within a factor of 2 of the truth from 25 tips under constant rates and from 50 under diversity dependence. Extinction is not, at any size up to 800 tips, unless turnover is high; at turnover 0.4 it is from about 200 tips.
+- **Lineage-level slopes are recovered in a minority of settings.** At 50 and 100 tips, 17 of 73 slope settings meet the recovery rule, mostly at 100 tips and low turnover; fit by fit the slope is within a factor of 2 of the truth on 71% of 1,481 fits, with the right sign on 90% ([V5](https://franciscorichter.github.io/emphasis/experiments/V5.html), interim; 200 and 400 tips are running).
+- **The sampler sets the limit before the data do.** `ned`, `nedc`, `ed` with a negative effect, and the thinning sampler at high turnover keep about 10 effective draws or fewer; `d`, `edc` and `nd` on the default `"bdi"` sampler keep hundreds. A fit whose effective sample is below 10 says so when printed; treat its estimate as unread.
+- **At about 100 tips, AIC does not invent a lineage-level effect and usually misses a real one.** No lineage-level model was chosen on any of 54 constant-rate or diversity-dependent trees; on trees generated with a lineage-level effect of ±0.35, the generating covariate's model was chosen on at least 80% of trees in none of 19 settings (at best 12 of 20) ([V7](https://franciscorichter.github.io/emphasis/experiments/V7.html)). Choosing `cr` or `dd` on a tree of this size does not rule out a lineage-level effect.
+- **With nothing hidden, every model's likelihood returns the coefficients that generated the tree.**
+
+On 175 bird and mammal phylogenies the same ladder chooses a lineage-level model on 35 of the 49 trees whose five fits all read (`ned` 17, `nk` 16, `nd` 2), with $\beta_K > 0$ on all 16 `nk` trees ([V11](https://franciscorichter.github.io/emphasis/experiments/V11.html)). Whether those choices reflect a lineage-level process or a feature of real trees that the simulations lack is not settled.
 
 ## Citation
 
@@ -211,11 +207,11 @@ dev/          the estimator's audit, the simulator check and research prototypes
 
 **Tests.** 42 files. About 42,000 expectations pass with `NOT_CRAN=true` and about 2,300 in CRAN mode, where the Monte Carlo tests are skipped. Several check the C++ likelihood and samplers against computations written independently in R: closed forms, quadrature, brute-force marginal likelihoods on 2- to 4-tip trees, and `ape`'s tree quantities.
 
-**Docs site.** `python3 site/build.py --wiki <experiments wiki checkout>` rebuilds every page into `docs/` from `site/src/*.md`, the function reference in `site/reference/` (made by `site/reference.R`) and the experiments wiki (`forge:pancho/emphasis-paper.wiki`, private). It fails on a broken internal link. A push to `main` publishes it.
+**Docs site.** `python3 site/build.py --wiki <experiments wiki checkout>` rebuilds every page into `docs/` from `site/src/*.md`, the function reference in `site/reference/` (made by `site/reference.R`) and the experiment pages, which come from a separate experiments repository. It fails on a broken internal link. A push to `main` publishes it.
 
 **README figures.** `Rscript site/figures/readme.R` redraws `man/figures/readme-*.png` from the package; it runs in about a minute.
 
-**Related repositories (private, on the forge).** `emphasis-paper`: the experiments' pre-registrations, drivers, results and reports. `emphasis-methods` and `emphasis-biology`: the two manuscripts, the method and the bird and mammal application, which are being revised to state only results that hold; both lack an abstract and a final title.
+**Experiments and papers.** The simulation experiments (pre-registrations, drivers, results) and the two manuscripts that report them, one on the method and one on bird and mammal phylogenies, are in separate repositories that are not yet public; the experiment pages on the docs site are their public record.
 
 ## Authors
 
