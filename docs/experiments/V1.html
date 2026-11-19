@@ -63,7 +63,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>complete 2026-10-31 (2560 of 2560 trees); registered rule met in 29 of 64 cells; pooled over each cell's trees, 138 of 150 coefficients within [0.9, 1.1]</td>
+<td>complete 2026-10-31 (2560 of 2560 trees); registered rule met in 29 of 64 cells; pooled over each cell's trees, 135 of the 150 speciation coefficients within [0.9, 1.1]</td>
 </tr>
 <tr>
 <td>Series</td>
@@ -122,7 +122,7 @@ window.MathJax = {
 <li>The cells that fail split two ways. Single-covariate models miss by 5–10% on the intercept or the slope (<code>d</code>, <code>ed</code>), or on the sign share of <code>k</code> at <span class="math inline">\(+0.35\)</span> (0.78–0.93). The <span class="math inline">\(N\)</span> models at turnover 0.40 (<code>dd</code>, <code>nd</code>, <code>ned</code>, <code>nedc</code>) read <span class="math inline">\(\beta_N\)</span> at 1.1–1.4 of its value and the intercept 5–10% high.</li>
 <li>The per-tree rule reads a 100- or 200-tip maximum, which carries small-sample error, on trees selected for survival and for staying under the lineage cap. A pooled estimate per cell (one parameter vector for the cell's 40 trees, <code>sim/V1-pooled.R</code>, a diagnostic beside the rule, not a change to it) separates the two: small-sample error averages out of it, selection does not.</li>
 </ul>
-<p><strong>Pooled estimate (diagnostic, <code>results/V1/pooled.csv</code>).</strong> 138 of the 150 coefficients lie within [0.9, 1.1] of their generating values, and almost no clade was dropped at the lineage cap (a share of 0 in the <span class="math inline">\(N\)</span>-model cells at turnover 0.40, 0.02 elsewhere), so the cap does not explain the failures and most per-tree failures are small-sample error. Outside [0.9, 1.1]: <span class="math inline">\(\beta_N\)</span> of <code>dd</code> at turnover 0.40 (1.17, 1.15), of <code>nd</code> (1.21, 0.86), <code>ned</code> (0.85) and <code>nedc</code> (1.14, 1.15); <span class="math inline">\(\beta_D\)</span> of <code>d</code> and <code>nd</code> (1.10–1.16) in three cells; <span class="math inline">\(\beta_{ED}\)</span> of <code>ned</code> (0.85, 1.16). These are what is left once 40 trees are pooled, on trees kept only when both crown lineages survive.</p>
+<p><strong>Pooled estimate (diagnostic, <code>results/V1/pooled.csv</code>).</strong> 135 of the 150 speciation coefficients lie within [0.9, 1.1] of their generating values, and almost no clade was dropped at the lineage cap (a share of 0 in the <span class="math inline">\(N\)</span>-model cells at turnover 0.40, 0.02 elsewhere), so the cap does not explain the failures and most per-tree failures are small-sample error. Outside [0.9, 1.1]: <span class="math inline">\(\beta_N\)</span> of <code>dd</code> at turnover 0.40 (1.17, 1.15), of <code>nd</code> (1.21, 0.86), <code>ned</code> (0.85) and <code>nedc</code> (1.14, 1.15); <span class="math inline">\(\beta_D\)</span> of <code>d</code> and <code>nd</code> (1.10–1.16) in three cells; <span class="math inline">\(\beta_{ED}\)</span> of <code>ned</code> (0.85, 1.16); and the intercepts of <code>ed</code> at <span class="math inline">\(-0.35\)</span> and turnover 0.40 and of <code>k</code> at <span class="math inline">\(-0.35\)</span> (100 and 200 tips), whose generating values lie between <span class="math inline">\(-0.25\)</span> and 0.03, off by 0.02 to 0.05. These are what is left once 40 trees are pooled, on trees kept only when both crown lineages survive.</p>
 
 </article>
 </main>
