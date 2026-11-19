@@ -56,6 +56,8 @@ window.MathJax = {
 </li>
 <li><a href="#results">Results</a>
 </li>
+<li><a href="#amendment-of-19-november-v11b">Amendment of 19 November (V11b)</a>
+</li>
 </ol>
 </nav>
 <div class="table-wrap">
@@ -63,7 +65,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>submitted 11 November 2026 (array <code>v11</code>, 875 jobs: 175 trees × the ladder), behind V6 and V9, ahead of the readings of V5–V10 (amendment of 2026-11-11); nothing read</td>
+<td>complete on 18 November 2026 (865 of 875 fits under emphasis <code>b21083f</code> and <code>projected</code>): 49 of 175 trees read; on them the conditioned ladder makes the unconditioned choice of <a href="E40.html">E40</a> on 46 of 49. Amendment of 2026-11-19 (V11b): every tree's <code>nd</code> fit refitted on the surrogate proposal (175 fits, running on Bre) and the 10 stopped fits refitted with a 44-hour clock</td>
 </tr>
 <tr>
 <td>Series</td>
@@ -106,7 +108,14 @@ window.MathJax = {
 <li>Registered to be submitted once V1–V10 are read; submitted on 11 November under the protocol settled on 8 November, because <a href="V7.html">V7</a>'s first reading (the conditioned ladder names <code>ned</code> on 2 of 52 simulated trees with an ED effect, <code>nk</code> on 12 of 20 in the one cell read) puts in question the <code>ned</code> and <code>nk</code> choices the unconditioned fits made on the real trees (<a href="E40.html">E40</a>: 50 and 67 of 170). A change of protocol V5–V10 call for reruns it.</li>
 </ol>
 <h2 id="results">Results</h2>
-<p>Not yet.</p>
+<p>Read 18 November (<code>sim/V11-analysis.R</code>; tables in <code>results/V11/</code>). A fit is read when it ended converged or on the 1000-iteration cap with a finite log-likelihood and a final effective sample of at least 10 (the protocol of the amendment of 2026-11-11); a tree is read when its five ladder fits are; the choice is the fewest parameters within 2 AIC of the minimum.</p>
+<p><strong>Fits.</strong> 668 of 865 read: <code>cr</code> 175 of 175, <code>dd</code> 168, <code>ned</code> 143, <code>nk</code> 108, <code>nd</code> 74. The unread fits are at an effective sample below 10 (<code>nd</code> 93, <code>nk</code> 45, <code>ned</code> 24, <code>dd</code> 4), on the 22-hour clock (15) or without a log-likelihood (16).</p>
+<p><strong>Trees.</strong> 49 read, 116 unread, 10 incomplete (a job without a row). <code>nd</code> alone leaves 101 trees unread, <code>nk</code> 67, <code>ned</code> 32, <code>dd</code> 7 (a tree can fail on several). The read trees have 50–196 tips (median 109), the unread ones 50–370 (median 125).</p>
+<p><strong>Choice on the 49 read trees:</strong> <code>cr</code> 5, <code>dd</code> 9, <code>nd</code> 2, <code>ned</code> 17, <code>nk</code> 16 — a lineage-level model on 35. By set: class-tree clades <code>cr</code> 3, <code>dd</code> 5, <code>ned</code> 14, <code>nk</code> 10; Condamine families <code>cr</code> 2, <code>dd</code> 4, <code>nd</code> 2, <code>ned</code> 3, <code>nk</code> 6. Against <a href="E40.html">E40</a>'s unconditioned choice on the same trees the choice is the same on 46 of 49 (<code>cr</code> 5, <code>dd</code> 9, <code>ned</code> 16, <code>nk</code> 16); the three that differ move from <code>cr</code> or <code>dd</code> to <code>nd</code> and from <code>nk</code> to <code>ned</code>. <span class="math inline">\(\beta_K\)</span> is positive on all 16 <code>nk</code> trees (median 0.148). A richer read fit lies more than 1 log-likelihood unit below the model it nests on 3 read trees.</p>
+<p><strong>Descriptive, not the design's ladder</strong> (the four fits <code>cr</code>, <code>dd</code>, <code>ned</code>, <code>nk</code>, leaving out <code>nd</code>, whose sampler fails most often): 96 trees have all four read; the choice is <code>cr</code> 6, <code>dd</code> 19, <code>ned</code> 33, <code>nk</code> 38, and E40's choice is kept on 90 of 96. The trees choosing <code>ned</code> or <code>nk</code> have a median of 124 tips, those choosing <code>cr</code> or <code>dd</code> 71.</p>
+<p><strong>What it does not settle.</strong> On simulated trees of about 100 tips the same ladder names a lineage-level model on 0 of 54 trees without one and misses most real effects (<a href="V7.html">V7</a>); on real trees it names one on 35 of 49 read trees. Whether those choices reflect a lineage-level process or a feature of real trees that the simulations lack (imbalance, the processes of <a href="V9.html">V9</a>) is not decided by V11.</p>
+<h2 id="amendment-of-19-november-v11b">Amendment of 19 November (V11b)</h2>
+<p>The <code>nd</code> fit, on its default thinning proposal, has a final effective sample below 10 on 93 of 175 trees and alone leaves 101 trees unread. Every tree's <code>nd</code> fit is refitted with the surrogate proposal (<code>control$sampling = "bdi"</code>), otherwise as above, with an 18-hour clock, and the 10 fits the cluster stopped (nine <code>nk</code>, one <code>ned</code>) are refitted as above with a 44-hour clock (<code>sim/V11b.R</code>, <code>results/V11b</code>). A test fit on a 50-tip tree kept 191 effective draws of 200. The reading (<code>sim/V11-analysis.R --v11b</code>) replaces each tree's <code>nd</code> row by its V11b row; the reading above stays as the registered one.</p>
 
 </article>
 </main>

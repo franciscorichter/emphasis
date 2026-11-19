@@ -205,9 +205,9 @@ window.MathJax = {
 </tr>
 <tr>
 <td><a href="V5.html">V5</a></td>
-<td>From how many tips is each lineage-level parameter reliable?</td>
+<td>From how many tips is each lineage-level coefficient recovered?</td>
 <td>Running</td>
-<td>423 of 1,710 fits (12 November), no cell read: over 414 finished fits the covariate slope is within a factor of 2 on 74%, the right sign on 92%; the extinction intercept within a factor of 2 on 11%. First pass: <a href="E46.html">E46</a>.</td>
+<td>Interim at 50 and 100 tips (1,540 of 1,710 fits): 17 of 73 slope cells identified, mostly at 100 tips and turnover 0.10; <span class="math inline">\(\beta_N\)</span> nowhere at 0.40; no extinction intercept anywhere. 200 tips: 15 cells pass the sampler gate, fits submitted.</td>
 </tr>
 <tr>
 <td><a href="V6.html">V6</a></td>
@@ -217,9 +217,9 @@ window.MathJax = {
 </tr>
 <tr>
 <td><a href="V7.html">V7</a></td>
-<td>Does model choice name the generating model, and how often a richer one?</td>
-<td>Complete</td>
-<td>22 of 32 cells read at 100 tips and ±0.35. No lineage-level model on any of 54 null trees (false choice holds in the cell decided). Power fails in 18 of 19 cells: the ladder names the generating covariate on at most 12 of 20 trees (<code>nk</code>) and 10 of 19 (<code>nd</code>).</td>
+<td>Does model choice name the generating model?</td>
+<td>Complete; 200-tip wave running</td>
+<td>22 of 32 cells read: no lineage-level model on 54 null trees; the generating covariate on at most 12 of 20 trees (power fails in 18 of 19 cells). V7b repeats it at 200 tips from the nested start.</td>
 </tr>
 <tr>
 <td><a href="V8.html">V8</a></td>
@@ -241,9 +241,9 @@ window.MathJax = {
 </tr>
 <tr>
 <td><a href="V11.html">V11</a></td>
-<td>The analysis of record on real phylogenies</td>
-<td>Running</td>
-<td>Submitted 11 November (875 fits: 175 trees × the ladder, <code>b21083f</code>, <code>projected</code>), ahead of the readings of V5–V10.</td>
+<td>The ladder on the real trees, conditioned</td>
+<td>Complete; <code>nd</code> refit running</td>
+<td>49 of 175 trees read (<code>nd</code>'s sampler leaves 101 unread); on them a lineage-level model is chosen on 35, on the least balanced trees; <span class="math inline">\(\beta_K &gt; 0\)</span> on 104 of 108 read <code>nk</code> fits. V11b refits <code>nd</code> on the surrogate.</td>
 </tr>
 <tr>
 <td><a href="V12.html">V12</a></td>

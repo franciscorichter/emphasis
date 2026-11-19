@@ -56,6 +56,8 @@ window.MathJax = {
 </li>
 <li><a href="#results">Results</a>
 </li>
+<li><a href="#the-200--and-400-tip-cells-amendments-of-18-november">The 200- and 400-tip cells (amendments of 18 November)</a>
+</li>
 </ol>
 </nav>
 <div class="table-wrap">
@@ -63,7 +65,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>running since 10 November 2026 on two local hosts (24 and 8 workers); 423 of 1,710 fits written on 12 November; no cell read yet</td>
+<td>50 and 100 tips: running, 1,540 of 1,710 fits written on 19 November, 50 of 57 cells read (interim). 200 tips: sampler gate complete (15 of 28 cells pass, <code>d</code> and <code>nd</code> on the surrogate), 450 fits submitted on Bre (array <code>v5b</code>, start after the maintenance of 20 November). 400 tips: gate complete (8 of 24 pass); fits follow the 200-tip reading</td>
 </tr>
 <tr>
 <td>Series</td>
@@ -112,88 +114,15 @@ window.MathJax = {
 <h2 id="pre-set-rules">Pre-set rules</h2>
 <p>E46's. A cell is read when at least 80% of its fits finished (converged or on the cap) and the median final effective sample is at least 10. A coefficient is <em>reliable</em> in a cell when the median ratio to its generating value lies in [0.8, 1.25] and the central 80% of ratios within [0.5, 2]; <em>identified</em> when reliable with the right sign on at least 95% of trees. The answer is the smallest size from which each coefficient is reliable.</p>
 <h2 id="results">Results</h2>
-<p><em>Interim, 12 November: 423 of 1,710 fits written, about a quarter of every cell.</em> 414 finished (67 met the stopping rule, 347 on the iteration cap, read as the estimate) and 9 ended on the 22-hour clock. No cell has its 30 trees, so none is read by the rule; over the finished fits:</p>
+<p><em>Interim, 19 November: 1,540 of 1,710 fits at 50 and 100 tips; 1,481 finished (227 met the stopping rule, 1,254 on the iteration cap, read as the estimate), 58 on the 22-hour clock.</em> A cell is read when at least 24 of its 30 fits finished and its median final effective sample is at least 10: 50 of 57 cells. Table 6 of the methods paper (built by <code>report/paper-tables.R</code>) gives every cell.</p>
 <ul>
-<li><strong>Covariate slope.</strong> Within a factor of 2 of its generating value on 74% of fits, right sign on 92% (fits that met the rule: 79% of 67; capped fits: 73% of 347).</li>
-<li><strong>By model, effect and turnover</strong> (50 and 100 tips together; share within a factor of 2, median ratio):</li>
+<li><strong>Covariate slopes.</strong> Of 73 slope cells read, 17 meet rule 2, and all 17 are also identified (sign right on at least 95%). <span class="math inline">\(\beta_N\)</span>: at turnover 0.10 in 6 of 7 cells at 100 tips (<code>nd</code> and <code>nedc</code> at both signs, <code>ned</code> and <code>nk</code> at <span class="math inline">\(+0.35\)</span>) and 2 of 8 at 50; at turnover 0.40 in none. <span class="math inline">\(\beta_{ED}\)</span>: <code>ed</code> (turnover 0.10 both signs, 0.40 at <span class="math inline">\(+0.35\)</span>) and <code>edc</code> (<span class="math inline">\(-0.35\)</span> at both turnovers; at 50 tips at 0.40); none in <code>ned</code> or <code>nedc</code>. <span class="math inline">\(\beta_K\)</span>: <code>k</code> at <span class="math inline">\(-0.35\)</span> and <code>nk</code> at <span class="math inline">\(+0.35\)</span>, 100 tips, turnover 0.10. <span class="math inline">\(\beta_D\)</span>: <code>d</code> at <span class="math inline">\(-0.35\)</span>, 100 tips, turnover 0.10; none in <code>nd</code>.</li>
+<li><strong>Intercepts.</strong> <span class="math inline">\(\beta_0\)</span> meets the rule in 22 of 50 cells, in none of the 8 cells of an <span class="math inline">\(N\)</span> model at turnover 0.40. <span class="math inline">\(\gamma_0\)</span> meets it in none; within a factor of 2 on a median 8% of a cell's fits.</li>
+<li><strong>Not read.</strong> <code>k</code> at <span class="math inline">\(+0.35\)</span> (100 tips, both turnovers; unfinished), and at turnover 0.40 <code>ed</code> <span class="math inline">\(-0.35\)</span> (100), <code>ned</code> <span class="math inline">\(+0.35\)</span> (100), <code>nedc</code> (three cells).</li>
 </ul>
-<div class="table-wrap">
-<table>
-<thead>
-<tr>
-<th></th>
-<th>turnover 0.10, −</th>
-<th>turnover 0.10, +</th>
-<th>turnover 0.40, −</th>
-<th>turnover 0.40, +</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>d</code></td>
-<td>94%, 1.12</td>
-<td>71%, 0.92</td>
-<td>88%, 0.97</td>
-<td>59%, 0.79</td>
-</tr>
-<tr>
-<td><code>nd</code></td>
-<td>88%, 1.38</td>
-<td>50%, 0.64</td>
-<td>54%, 0.61</td>
-<td>40%, 0.42</td>
-</tr>
-<tr>
-<td><code>ed</code></td>
-<td>93%, 1.01</td>
-<td>88%, 1.18</td>
-<td>69%, 0.74</td>
-<td>87%, 1.20</td>
-</tr>
-<tr>
-<td><code>edc</code></td>
-<td>93%, 1.11</td>
-<td>56%, 0.67</td>
-<td>92%, 1.02</td>
-<td>82%, 1.04</td>
-</tr>
-<tr>
-<td><code>ned</code></td>
-<td>46%, 0.99</td>
-<td>47%, 1.86</td>
-<td>no trees</td>
-<td>73%, 1.11</td>
-</tr>
-<tr>
-<td><code>nedc</code></td>
-<td>67%, 1.02</td>
-<td>79%, 0.73</td>
-<td>83%, 0.95</td>
-<td>83%, 0.98</td>
-</tr>
-<tr>
-<td><code>k</code></td>
-<td>100%, 1.13</td>
-<td>60%, 0.77</td>
-<td>no trees</td>
-<td>38%, 0.43</td>
-</tr>
-<tr>
-<td><code>nk</code></td>
-<td>71%, 1.20</td>
-<td>87%, 0.85</td>
-<td>no trees</td>
-<td>93%, 1.21</td>
-</tr>
-</tbody>
-</table>
-</div>
-<ul>
-<li><strong>Intercepts.</strong> Speciation within a factor of 2 on 81% of fits; extinction on 11%.</li>
-<li><strong>Box edges.</strong> The extinction intercept is on an edge of the box on 67% of <code>ed</code> fits, 64% of <code>nedc</code>, 56% of <code>ned</code>, 36% of <code>nk</code>, 27% of <code>nd</code> and of <code>k</code>, 11% of <code>d</code>, 2% of <code>edc</code>.</li>
-<li><strong>Effective sample at the estimate.</strong> Median 29 to 53 of 200 draws for <code>d</code>, <code>edc</code>, <code>k</code>, <code>nd</code>, <code>nk</code> and 184 to 190 for <code>ed</code>, <code>ned</code>, <code>nedc</code>; fits with the extinction intercept on an edge keep a median 188, the others 35. 46 of 414 fits end below 10.</li>
-</ul>
-<p>Tables: <code>results/V5/cells.csv</code>, <code>coef.csv</code>, <code>fits.csv</code>, <code>slope.csv</code> (<code>sim/V5-analysis.R</code>).</p>
+<h2 id="the-200--and-400-tip-cells-amendments-of-18-november">The 200- and 400-tip cells (amendments of 18 November)</h2>
+<p><strong>The gate</strong> (<code>sim/V5g.R</code>, <code>results/V5g/gate.csv</code>): on every reachable cell at 200 and 400 tips, the effective sample of 2,400 draws at the generating values on the 30 trees V5 fits, with the fit's proposal. With thinning, the default for <code>d</code> and <code>nd</code>, 7 of their 8 cells keep a median of 1.7 to 7.5 effective draws at 200 tips; the surrogate keeps 143 to 620 on every <code>nd</code> cell and 16 to 256 on every <code>d</code> cell. By the evening amendment <code>d</code> and <code>nd</code> are fitted and gated on the surrogate at 200 and 400 tips, and <code>k</code> at <span class="math inline">\(+0.35\)</span> (median 50 and 55 tips at the 200-tip target) is not a 200-tip cell. <strong>Pass at 200 tips (15 of 28):</strong> <code>d</code> and <code>nd</code> (all 8, surrogate), <code>ed</code> <span class="math inline">\(+0.35\)</span> (both turnovers), <code>edc</code> (turnover 0.10 both signs, 0.40 <span class="math inline">\(+0.35\)</span>), <code>ned</code> (turnover 0.10 both signs). <strong>Pass at 400 tips (8 of 24):</strong> <code>d</code> (turnover 0.10 both, 0.40 <span class="math inline">\(+0.35\)</span>), <code>nd</code> (turnover 0.10 both), <code>ed</code> <span class="math inline">\(+0.35\)</span> and <code>edc</code> (turnover 0.10).</p>
+<p><strong>The 200-tip fits</strong> (<code>sim/V5b.R</code>, <code>results/V5b</code>): 450 fits on the 15 passing cells, 44-hour clock, array <code>v5b</code> on Bre.</p>
 
 </article>
 </main>
