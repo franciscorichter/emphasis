@@ -225,14 +225,14 @@ window.MathJax = {
 </ul>
 <p>A slope estimated within a factor of 2 is not a model selected: <code>ned</code>'s ED slope is in that range on about half of its trees and <code>ned</code> is chosen on 1 of 19.</p>
 <h2 id="on-real-trees">On real trees</h2>
-<p>On the 175 real trees MCEM reaches the exact conditioned maximum for <code>cr</code> and <code>dd</code> (median shortfall -0.01 to -0.16; <a href="V4.html">V4</a>). For the lineage-level models the two limits above appear on the 217 real trees fitted with <code>nd</code> before the conditioned fits (<a href="E48.html">E48</a>): 69 fits are sampler-limited, and among the 145 that can be read, an extinction-side or D coefficient sits on an edge of the parameter box on 47. The ladder is being refitted on the 175 trees under the conditioned likelihood (<a href="V11.html">V11</a>).</p>
+<p>On the 175 real trees MCEM reaches the exact conditioned maximum for <code>cr</code> and <code>dd</code> (median shortfall -0.01 to -0.16; <a href="V4.html">V4</a>). Under the conditioned likelihood, with the <code>nd</code> fit on the surrogate (<a href="V11.html">V11</a>, reading V11b), the sampler limits the lineage-level fits: the final effective sample is below 10 on 66 <code>nd</code>, 45 <code>nk</code> and 24 <code>ned</code> fits of 175, and 63 of the 175 trees have all five fits read (10 refits pending); with the <code>nd</code> fit on thinning, the registered reading, 93 <code>nd</code> fits are below 10 and 49 trees are read. An extinction parameter sits on an edge of the box on 275 of the 354 read lineage-level fits.</p>
 <h2 id="not-yet-known">Not yet known</h2>
 <ul>
 <li>From how many tips each lineage-level coefficient is reliable beyond 100: the 200-tip fits of the cells whose sampler holds are running, and 400 tips follow where a coefficient is not reliable at 200 (<a href="V5.html">V5</a>).</li>
 <li>Whether a larger tree or a stronger effect brings model choice to the 80% rule: it was measured at about 100 tips and ±0.35 only (<a href="V7.html">V7</a>).</li>
 <li>From which sampling fraction the lineage-level coefficients are reliable: below <span class="math inline">\(\rho\)</span> 0.9 their fits are sampler-limited at 100 tips, and where read only <span class="math inline">\(\beta_{ED}\)</span> of <code>edc</code> holds, to <span class="math inline">\(\rho\)</span> 0.75; <code>cr</code> holds to <span class="math inline">\(\rho\)</span> 0.5, and a misstated <span class="math inline">\(\rho\)</span> moves <span class="math inline">\(\beta_N\)</span>'s median ratio by 0.12–0.31 (<a href="V6.html">V6</a>).</li>
 <li>Whether a latent rate, protracted speciation or two regions make the ladder choose <code>nk</code>: every V9 cell is sampler-limited (<a href="V9.html">V9</a>), as is the covariate path at the <code>dd</code> estimate (<a href="V8.html">V8</a>).</li>
-<li>Which choices on real trees hold under the conditioned likelihood (<a href="V11.html">V11</a>).</li>
+<li>Whether the lineage-level choices on the read real trees reflect a lineage-level process or a feature of real trees that the simulations lack (<a href="V11.html">V11</a>, <a href="V9.html">V9</a>).</li>
 <li>Not under study: effects smaller than ±0.35 per scale unit, turnover 0.25 for the lineage-level models, and covariates that drive extinction.</li>
 </ul>
 <h2 id="where-the-numbers-come-from">Where the numbers come from</h2>
@@ -293,8 +293,8 @@ window.MathJax = {
 </tr>
 <tr>
 <td>real trees</td>
-<td><a href="V4.html">V4</a>, <a href="E48.html">E48</a></td>
-<td>175; 217</td>
+<td><a href="V4.html">V4</a>, <a href="V11.html">V11</a></td>
+<td>175</td>
 </tr>
 </tbody>
 </table>
