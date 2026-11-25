@@ -48,7 +48,7 @@ window.MathJax = {
 <nav class="toc" aria-label="Contents">
 <p class="toc-title">Contents</p>
 <ul>
-<li><a href="#where-the-series-stands-21-november-2026">Where the series stands (21 November 2026)</a>
+<li><a href="#where-the-series-stands-25-november-2026">Where the series stands (25 November 2026)</a>
 </li>
 <li><a href="#identifiable-estimable-informative">Identifiable, estimable, informative</a>
 </li>
@@ -104,7 +104,7 @@ window.MathJax = {
 }
 </style>
 <p>These are the pre-registered experiments behind the <code>emphasis</code> package: each tests the Monte Carlo EM estimator against an exact answer or a generating value, or asks what a dated tree can estimate. The <strong>validation series V1–V12</strong> validates every method the two papers use, under one protocol: calibrated generators with no size window, the likelihood conditioned on survival, the exponential link, the package's default stopping rule, and a fit on the 1000-iteration cap read as the estimate (build 1.1.0.9000, <code>b21083f</code>, for the runs since 7 November). The experiments E1–E48 before it are the earlier record; each row below says what of it holds now. The conclusions that hold now are collected in <a href="../established.html">What we know</a>, what a tree of a given size estimates in <a href="estimability.html">Estimability</a>, and the terms in the <a href="../glossary.html">Glossary</a>.</p>
-<h2 id="where-the-series-stands-21-november-2026">Where the series stands (21 November 2026)</h2>
+<h2 id="where-the-series-stands-25-november-2026">Where the series stands (25 November 2026)</h2>
 <figure id="figure-1">
 <img src="../assets/wiki/state-estimability.png" alt="Which lineage-level slopes a reconstructed tree recovers, by model, turnover, effect and size (V5 at 50 and 100 tips; the V5 sampler gate at 200 and 400 tips). A slope is recovered when the median estimate lies within 0.8 to 1.25 of the truth, 80% of the 30 trees within a factor of 2, and the sign is right on 95%." loading="lazy">
 <figcaption><strong>Figure 1.</strong> Which lineage-level slopes a reconstructed tree recovers, by model, turnover, effect and size (V5 at 50 and 100 tips; the V5 sampler gate at 200 and 400 tips). A slope is recovered when the median estimate lies within 0.8 to 1.25 of the truth, 80% of the 30 trees within a factor of 2, and the sign is right on 95%.</figcaption>
@@ -179,7 +179,7 @@ window.MathJax = {
 <li><strong>unfinished</strong>: the fits ran to their iteration cap without meeting the stopping rule.</li>
 </ul>
 <h2 id="the-validation-series-v1v12">The validation series V1–V12</h2>
-<p>Registered 2026-10-31. Each experiment validates one method of the papers; the <a href="validation.html">series page</a> gives the common protocol. Findings are as of 21 November 2026.</p>
+<p>Registered 2026-10-31. Each experiment validates one method of the papers; the <a href="validation.html">series page</a> gives the common protocol. Findings are as of 25 November 2026.</p>
 <div class="table-wrap">
 <table>
 <thead>
@@ -231,7 +231,7 @@ window.MathJax = {
 <td><a href="V7.html">V7</a></td>
 <td>Does model choice name the generating model?</td>
 <td>Complete; 200-tip wave running</td>
-<td>22 of 32 cells read: no lineage-level model on 54 null trees; the generating covariate on at most 12 of 20 trees (power fails in 18 of 19 cells). V7b repeats it at 200 tips from the nested start.</td>
+<td>22 of 32 cells read: no lineage-level model on 54 null trees; the generating covariate on at most 12 of 20 trees (power fails in 18 of 19 cells). V7b repeats it at 200 tips from the nested start (1,689 of 3,580 fits).</td>
 </tr>
 <tr>
 <td><a href="V8.html">V8</a></td>
@@ -255,7 +255,7 @@ window.MathJax = {
 <td><a href="V11.html">V11</a></td>
 <td>The ladder on the real trees, conditioned</td>
 <td>Read; V11c running</td>
-<td>With the <code>nd</code> fit on the surrogate (V11b), 63 of 175 trees read; on them a lineage-level model is chosen on 47, on the least balanced trees, and E40's choice is kept on 60; the <span class="math inline">\(K\)</span> factor is above 1 on 104 of 108 read <code>nk</code> fits. With the thinning <code>nd</code> (the registered reading) 49 trees are read, 35 lineage-level. V11c (registered 21 November) refits every <code>nd</code> and <code>nk</code> fit with 1000 draws: 60 of 350 in, <code>nd</code> read on 41 of those trees against 40 with 200 draws.</td>
+<td>With the <code>nd</code> fit on the surrogate (V11b), 63 of 175 trees read; on them a lineage-level model is chosen on 47, on the least balanced trees, and E40's choice is kept on 60; the <span class="math inline">\(K\)</span> factor is above 1 on 104 of 108 read <code>nk</code> fits. With the thinning <code>nd</code> (the registered reading) 49 trees are read, 35 lineage-level. V11c (registered 21 November) refits every <code>nd</code> and <code>nk</code> fit with 1000 draws: 112 of 350 in; of 111 trees, <code>nd</code> is read on 79 against 69 with 200 draws (22 gained, 12 lost).</td>
 </tr>
 <tr>
 <td><a href="V12.html">V12</a></td>
