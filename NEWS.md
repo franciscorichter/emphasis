@@ -1,3 +1,10 @@
+# emphasis 1.1.1
+
+* A test of `num_threads > 1` asserted that two runs under one seed share some
+  draws. How many they share depends on how the threads are scheduled, and on
+  CRAN's r-devel Fedora clang check they shared none. The test now asserts a
+  full sample of finite draws. The package code is unchanged.
+
 # emphasis 1.1.0
 
 * The trees an E-step returns under the thinning proposal carry their lineage
