@@ -1,8 +1,5 @@
 # emphasis 1.1.0.9000
 
-* A test of `num_threads > 1` asserted that two runs under one seed share some draws, which depends on
-  how the threads are scheduled and failed on CRAN's r-devel Fedora clang check. It now asserts a full
-  sample of finite draws.
 
 * The M-step puts its start inside the parameter box and clamps the optimum
   it returns. NLopt refuses a start outside its bounds, and BOBYQA, which
@@ -54,6 +51,13 @@
   fixed point projected from the last `proj_window` (8) iterates are both
   below `tol`. The trace records the projected distance in the column
   `projected`. `"rel_change"`, the previous default, remains available.
+
+# emphasis 1.1.1
+
+* A test of `num_threads > 1` asserted that two runs under one seed share some
+  draws. How many they share depends on how the threads are scheduled, and on
+  CRAN's r-devel Fedora clang check they shared none. The test now asserts a
+  full sample of finite draws. The package code is unchanged.
 
 # emphasis 1.1.0
 
