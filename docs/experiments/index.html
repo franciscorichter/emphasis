@@ -48,7 +48,7 @@ window.MathJax = {
 <nav class="toc" aria-label="Contents">
 <p class="toc-title">Contents</p>
 <ul>
-<li><a href="#where-the-series-stands-25-november-2026">Where the series stands (25 November 2026)</a>
+<li><a href="#where-the-series-stands-26-november-2026">Where the series stands (26 November 2026)</a>
 </li>
 <li><a href="#identifiable-estimable-informative">Identifiable, estimable, informative</a>
 </li>
@@ -104,10 +104,10 @@ window.MathJax = {
 }
 </style>
 <p>These are the pre-registered experiments behind the <code>emphasis</code> package: each tests the Monte Carlo EM estimator against an exact answer or a generating value, or asks what a dated tree can estimate. The <strong>validation series V1–V12</strong> validates every method the two papers use, under one protocol: calibrated generators with no size window, the likelihood conditioned on survival, the exponential link, the package's default stopping rule, and a fit on the 1000-iteration cap read as the estimate (build 1.1.0.9000, <code>b21083f</code>, for the runs since 7 November). The experiments E1–E48 before it are the earlier record; each row below says what of it holds now. The conclusions that hold now are collected in <a href="../established.html">What we know</a>, what a tree of a given size estimates in <a href="estimability.html">Estimability</a>, and the terms in the <a href="../glossary.html">Glossary</a>.</p>
-<h2 id="where-the-series-stands-25-november-2026">Where the series stands (25 November 2026)</h2>
+<h2 id="where-the-series-stands-26-november-2026">Where the series stands (26 November 2026)</h2>
 <figure id="figure-1">
-<img src="../assets/wiki/state-estimability.png" alt="Which lineage-level slopes a reconstructed tree recovers, by model, turnover, effect and size (V5 at 50 and 100 tips; the V5 sampler gate at 200 and 400 tips). A slope is recovered when the median estimate lies within 0.8 to 1.25 of the truth, 80% of the 30 trees within a factor of 2, and the sign is right on 95%." loading="lazy">
-<figcaption><strong>Figure 1.</strong> Which lineage-level slopes a reconstructed tree recovers, by model, turnover, effect and size (V5 at 50 and 100 tips; the V5 sampler gate at 200 and 400 tips). A slope is recovered when the median estimate lies within 0.8 to 1.25 of the truth, 80% of the 30 trees within a factor of 2, and the sign is right on 95%.</figcaption>
+<img src="../assets/wiki/state-estimability.png" alt="Which lineage-level slopes a reconstructed tree recovers, by model, turnover, effect and size (V5 at 50 and 100 tips, V5b at 200 and 400). A slope is recovered when the median estimate lies within 0.8 to 1.25 of the truth, 80% of the 30 trees within a factor of 2, and the sign is right on 95%. Symbols mark settings not yet read: a circle where fits are running, a cross where the sampler fails and nothing is fitted." loading="lazy">
+<figcaption><strong>Figure 1.</strong> Which lineage-level slopes a reconstructed tree recovers, by model, turnover, effect and size (V5 at 50 and 100 tips, V5b at 200 and 400). A slope is recovered when the median estimate lies within 0.8 to 1.25 of the truth, 80% of the 30 trees within a factor of 2, and the sign is right on 95%. Symbols mark settings not yet read: a circle where fits are running, a cross where the sampler fails and nothing is fitted.</figcaption>
 </figure><figure id="figure-2">
 <img src="../assets/wiki/state-choice.png" alt="How often the ladder (cr, dd, nd, ned, nk) names the generating covariate on trees of about 100 tips (V7), with 95% Wilson intervals; the rule asks for 80%." loading="lazy">
 <figcaption><strong>Figure 2.</strong> How often the ladder (cr, dd, nd, ned, nk) names the generating covariate on trees of about 100 tips (V7), with 95% Wilson intervals; the rule asks for 80%.</figcaption>
@@ -179,7 +179,7 @@ window.MathJax = {
 <li><strong>unfinished</strong>: the fits ran to their iteration cap without meeting the stopping rule.</li>
 </ul>
 <h2 id="the-validation-series-v1v12">The validation series V1–V12</h2>
-<p>Registered 2026-10-31. Each experiment validates one method of the papers; the <a href="validation.html">series page</a> gives the common protocol. Findings are as of 25 November 2026.</p>
+<p>Registered 2026-10-31. Each experiment validates one method of the papers; the <a href="validation.html">series page</a> gives the common protocol. Findings are as of 26 November 2026; the counts of fits still running are of that day.</p>
 <div class="table-wrap">
 <table>
 <thead>
@@ -213,25 +213,25 @@ window.MathJax = {
 <td><a href="V4.html">V4</a></td>
 <td>On real and simulated trees, does MCEM reach the exact conditioned maximum?</td>
 <td>Complete</td>
-<td>On the 175 real trees the rule holds for <code>cr</code> and <code>dd</code> under both stopping rules (median shortfall -0.01 to -0.16); <code>mc_error</code> lands closer on 75% of trees; Picidae under <code>dd</code> stops 14.8 below. On simulated trees (E45, repaired <code>dd</code> reference, complete sampling) the rule holds in 11 of 14 <code>dd</code> cells.</td>
+<td>On the 175 real trees the rule holds for <code>cr</code> and <code>dd</code> under both stopping rules (median shortfall -0.01 to -0.16); <code>mc_error</code> lands closer on 75% of trees, and the agreement on extinction holds under it only; Picidae under <code>dd</code> stops 14.8 below. On simulated trees (E45, repaired <code>dd</code> reference, complete sampling) the rule holds in 11 of 14 <code>dd</code> cells; the reliability rule for the exact <code>dd</code> estimate holds from no size on (E45).</td>
 </tr>
 <tr>
 <td><a href="V5.html">V5</a></td>
 <td>From how many tips is each lineage-level coefficient recovered?</td>
 <td>Running</td>
-<td>Interim at 50 and 100 tips (1,678 of 1,710 fits): 21 of 80 slope cells identified, mostly at 100 tips and turnover 0.10; <span class="math inline">\(\beta_N\)</span> nowhere at 0.40; no extinction intercept anywhere. 200 tips (V5b, 449 of 450 fits): 8 of 20 slope cells identified, all but one at turnover 0.10. 400 tips: <code>nd</code> and <code>edc</code> <span class="math inline">\(+0.35\)</span> read, their three slopes identified (none was at 200); six cells queued.</td>
+<td>50 and 100 tips (1,691 of 1,710 fits, at most one missing a cell): 21 of 80 slopes identified, mostly at 100 tips and turnover 0.10; <span class="math inline">\(\beta_N\)</span> nowhere at 0.40; no extinction intercept anywhere; the missing fits can change the verdict of one slope. 200 tips (V5b, 449 of 450): 8 of 20 slopes identified, all but one at turnover 0.10. 400 tips: <code>nd</code> and <code>edc</code> <span class="math inline">\(+0.35\)</span> at 0.10 read, on four threads, their three slopes identified (chosen because they missed at 200); the other six cells running (21 of 180 fits).</td>
 </tr>
 <tr>
 <td><a href="V6.html">V6</a></td>
 <td>What do incomplete sampling and a misstated sampling fraction cost?</td>
 <td>Complete, mostly sampler-limited</td>
-<td>73 of 160 cell–conditions read (lineage-level fits: median effective sample 6.8). <code>cr</code> holds down to <span class="math inline">\(\rho\)</span> 0.5; of the lineage-level slopes only <span class="math inline">\(\beta_{ED}\)</span> of <code>edc</code> holds below <span class="math inline">\(\rho\)</span> 0.9. A misstated <span class="math inline">\(\rho\)</span> moves <span class="math inline">\(\beta_N\)</span>'s median ratio by 0.12–0.31.</td>
+<td>73 of 160 cell–conditions read; most lineage-level cells below <span class="math inline">\(\rho\)</span> 0.9 are sampler-limited. <code>cr</code> holds down to <span class="math inline">\(\rho\)</span> 0.5; of the lineage-level slopes only <span class="math inline">\(\beta_{ED}\)</span> of <code>edc</code> holds below <span class="math inline">\(\rho\)</span> 0.9. A misstated <span class="math inline">\(\rho\)</span> moves <span class="math inline">\(\beta_N\)</span>'s median ratio by 0.12–0.31, and <span class="math inline">\(\beta_{ED}\)</span>'s by 0.15–0.46 where <span class="math inline">\(N\)</span> is in the model.</td>
 </tr>
 <tr>
 <td><a href="V7.html">V7</a></td>
 <td>Does model choice name the generating model?</td>
 <td>Complete; 200-tip wave running</td>
-<td>22 of 32 cells read: no lineage-level model on 54 null trees; the generating covariate on at most 12 of 20 trees (power fails in 18 of 19 cells). V7b repeats it at 200 tips from the nested start (1,689 of 3,580 fits).</td>
+<td>22 of 32 cells read: no lineage-level model on 54 null trees; the generating covariate on at most 12 of 20 trees (power fails in 18 of 19 cells). V7b repeats it at 200 tips from the nested start (1,949 of 3,580 fits on 26 November).</td>
 </tr>
 <tr>
 <td><a href="V8.html">V8</a></td>
@@ -243,7 +243,7 @@ window.MathJax = {
 <td><a href="V9.html">V9</a></td>
 <td>On trees with no lineage-level effect, how often is one chosen?</td>
 <td>Complete, sampler-limited</td>
-<td>All 15 calibrated cells have more than 6 of 30 trees unread, so no cell is read. Descriptive, on the 141 read trees: a lineage-level model is chosen on 7, <code>nk</code> on 2 (both with <span class="math inline">\(\beta_K &lt; 0\)</span>).</td>
+<td>All 15 calibrated cells have 11 to 27 of 30 trees unread, so no cell is read. Descriptive, on the 141 read trees: a lineage-level model is chosen on 7, <code>nk</code> on 2 (both with <span class="math inline">\(\beta_K &lt; 0\)</span>).</td>
 </tr>
 <tr>
 <td><a href="V10.html">V10</a></td>
@@ -255,7 +255,7 @@ window.MathJax = {
 <td><a href="V11.html">V11</a></td>
 <td>The ladder on the real trees, conditioned</td>
 <td>Read; V11c running</td>
-<td>With the <code>nd</code> fit on the surrogate (V11b), 63 of 175 trees read; on them a lineage-level model is chosen on 47, on the least balanced trees, and E40's choice is kept on 60; the <span class="math inline">\(K\)</span> factor is above 1 on 104 of 108 read <code>nk</code> fits. With the thinning <code>nd</code> (the registered reading) 49 trees are read, 35 lineage-level. V11c (registered 21 November) refits every <code>nd</code> and <code>nk</code> fit with 1000 draws: 112 of 350 in; of 111 trees, <code>nd</code> is read on 79 against 69 with 200 draws (22 gained, 12 lost).</td>
+<td>With the <code>nd</code> fit on the surrogate (V11b), 63 of 175 trees read; on them a lineage-level model is chosen on 47, on the least balanced trees, and E40's choice is kept on 60; the <span class="math inline">\(K\)</span> factor is above 1 on 104 of 108 read <code>nk</code> fits. With the thinning <code>nd</code> (the registered reading) 49 trees are read, 35 lineage-level. V11c (registered 21 November) refits every <code>nd</code> and <code>nk</code> fit with 1000 draws: 137 of 350 in on 26 November, all <code>nd</code>; on 25 November, of 111 trees, <code>nd</code> was read on 79 against 69 with 200 draws (22 gained, 12 lost). Not registered: <code>ned</code> is chosen on 13 of the 17 read clades whose tips were extended by more than 15% of the crown age, and on 7 of the other 31 (V11 page).</td>
 </tr>
 <tr>
 <td><a href="V12.html">V12</a></td>
@@ -300,7 +300,7 @@ window.MathJax = {
 <td><a href="E4.html">E4</a></td>
 <td>What does one E-step cost?</td>
 <td>Partly holds</td>
-<td>0.06-4 s from 25 to 400 tips; the surrogate costs 4.7-7.0× thinning under <code>cr</code>, less per effective draw from 100 tips.</td>
+<td>0.06-4 s from 25 to 400 tips; the surrogate costs 4.7-7.0× thinning under <code>cr</code>, less per effective draw from 50 tips.</td>
 </tr>
 <tr>
 <td><a href="E6.html">E6</a></td>
@@ -564,7 +564,7 @@ window.MathJax = {
 </table>
 </div>
 <h2 id="6-real-trees">6. Real trees</h2>
-<p>The results on the 170 bird and mammal trees of E40, with figures, are on <a href="../real-phylogenies.html">Real phylogenies</a>.</p>
+<p>The results on the 175 bird and mammal trees, with figures, are on <a href="../real-phylogenies.html">Real phylogenies</a>; the reading of record is <a href="V11.html">V11</a>. The rows below are the earlier record.</p>
 <div class="table-wrap">
 <table>
 <thead>
@@ -622,7 +622,7 @@ window.MathJax = {
 <td><a href="E41.html">E41</a></td>
 <td>Do E40's fits change when continued, with edges moved out?</td>
 <td>Partly holds</td>
-<td>Choice unchanged on 16 of 16 trees; the edge binds on 4 of 63 fits. The <code>nd</code> and <code>nk</code> fits kept their starting draws (the stopping rule could not grow them on that build), so their convergence is measured by <a href="V3.html">V3</a>.</td>
+<td>On 16 of the 34 trees with 50–65 tips: choice unchanged on 16 of 16; the edge binds on 4 of 63 fits. The <code>nd</code> and <code>nk</code> fits kept their starting draws (the stopping rule could not grow them on that build), so their convergence is measured by <a href="V3.html">V3</a>.</td>
 </tr>
 <tr>
 <td><a href="E48.html">E48</a></td>
@@ -661,13 +661,13 @@ window.MathJax = {
 <tr>
 <td><a href="E45.html">E45</a></td>
 <td>Conditioned <code>cr</code> and <code>dd</code> against the exact estimate</td>
-<td>Partly holds (<code>cr</code>; <code>dd</code> on the repaired reference)</td>
-<td>1720 of 1720 fits: MCEM at the exact maximum in all 24 <code>cr</code> cells, <span class="math inline">\(\lambda\)</span> reliable from 25 tips at turnover 0.10; on the repaired <code>dd</code> reference at complete sampling the rule holds in 11 of 14 <code>dd</code> cells (all nine of 25–100 tips; misses at 400 tips and turnover 0.10, and 200 and 400 tips at 0.25, where most fits ended on the clock); 747 of 756 rescored trees have a valid maximum. Reliable sizes for <code>dd</code>: pending.</td>
+<td>Holds (<code>cr</code>; <code>dd</code> on the repaired reference)</td>
+<td>1720 of 1720 fits: MCEM at the exact maximum in all 24 <code>cr</code> cells. With the registered Wald interval <span class="math inline">\(\lambda\)</span> is reliable from 25, 400 and 100 tips at turnover 0.10, 0.25, 0.40 (from 25 with the profile interval), <span class="math inline">\(\mu\)</span> only at 0.40. Under <code>dd</code> MCEM reaches the exact maximum in 11 of 14 cells, and no parameter of the exact estimate is reliable from some size on.</td>
 </tr>
 <tr>
 <td><a href="E46.html">E46</a></td>
 <td>The eight lineage-level models, conditioned, by size, turnover and effect</td>
-<td>Running (the series' V5)</td>
+<td>Run as <a href="V5.html">V5</a></td>
 <td>57 cells at 50 and 100 tips, larger only where a parameter is not reliable; 19 of 57 cell–proposal pairs are sampler-limited; the lineage-level fits rerun under <code>b21083f</code> after V3.</td>
 </tr>
 </tbody>
