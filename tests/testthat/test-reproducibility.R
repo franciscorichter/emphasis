@@ -166,12 +166,14 @@ test_that("num_threads > 1 draws from seeded substreams but is not yet reproduci
   # draws is a function of the seed alone.  Which attempts a worker completes
   # before the sample fills, and in which order the results take the mutex, is
   # not: E_step (src/E_step.cpp) keeps the first sample_size trees to arrive.
-  # Two runs under one seed therefore share most of their draws without being
-  # identical.  Pinning this needs the collection order fixed in E_step
-  # (audit ids H62, H63), which this change does not touch.
+  # How many draws two runs under one seed share depends on the scheduling of
+  # the threads, and can be none (CRAN's r-devel Fedora clang check, 1.1.0), so
+  # the test asserts only what holds whatever the scheduling: a full sample of
+  # finite draws.  Pinning the draws needs the collection order fixed in E_step
+  # (audit ids H62, H63).
   a <- aug(num_threads = 2L, seed = 11L)
   b <- aug(num_threads = 2L, seed = 11L)
-  pooled <- unique(c(a$logf, b$logf))
   expect_length(a$logf, 12L)
-  expect_lt(length(pooled), 2L * length(a$logf))
+  expect_length(b$logf, 12L)
+  expect_true(all(is.finite(c(a$logf, b$logf))))
 })

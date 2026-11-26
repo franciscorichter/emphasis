@@ -1,5 +1,9 @@
 # emphasis 1.1.0.9000
 
+* A test of `num_threads > 1` asserted that two runs under one seed share some draws, which depends on
+  how the threads are scheduled and failed on CRAN's r-devel Fedora clang check. It now asserts a full
+  sample of finite draws.
+
 * The M-step puts its start inside the parameter box and clamps the optimum
   it returns. NLopt refuses a start outside its bounds, and BOBYQA, which
   works in coordinates scaled by the initial step, can return a point one
