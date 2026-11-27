@@ -56,6 +56,8 @@ window.MathJax = {
 </li>
 <li><a href="#results">Results</a>
 </li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
 </ol>
 </nav>
 <div class="table-wrap">
@@ -63,7 +65,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>registered 2026-10-31; an analysis of <a href="E45.html">E45</a>, <a href="E46.html">E46</a> and <a href="E38.html">E38</a></td>
+<td>read 2026-11-27; an analysis of <a href="E45.html">E45</a>, <a href="V5.html">V5</a> (E46) and <a href="E38.html">E38</a></td>
 </tr>
 <tr>
 <td>Series</td>
@@ -71,7 +73,7 @@ window.MathJax = {
 </tr>
 <tr>
 <td>Package build</td>
-<td>emphasis <code>182055b</code> (1.0.0.9000), R 4.5.3</td>
+<td>the builds of the fits it reads (E45: the exact references of 30 October; V5: <code>b21083f</code>)</td>
 </tr>
 <tr>
 <td>Driver</td>
@@ -104,7 +106,46 @@ window.MathJax = {
 <li>Does MCEM's extinction estimate track the exact one?</li>
 </ol>
 <h2 id="results">Results</h2>
-<p>Not yet.</p>
+<p><code>Rscript sim/V10.R</code>; tables in <code>results/V10/</code> (<code>rate.csv</code>, <code>slope0.csv</code>, <code>track.csv</code>, <code>reading.txt</code>). The design fixes no threshold for rules 2 and 3, so they are reported as distributions.</p>
+<p><strong>Rule 1, the extinction rate by V5's rule 2</strong> (median ratio in [0.8, 1.25], central 80% within [0.5, 2]):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>cells where it holds</th>
+<th>where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code>, exact and MCEM</td>
+<td>4 of 24</td>
+<td>turnover 0.40: 200, 400 and 800 tips at <span class="math inline">\(\rho\)</span> 1, 200 at <span class="math inline">\(\rho\)</span> 0.8</td>
+</tr>
+<tr>
+<td><code>dd</code>, exact (repaired reference)</td>
+<td>0 of 19</td>
+<td>median ratio 0.05–0.33</td>
+</tr>
+<tr>
+<td><code>dd</code>, MCEM</td>
+<td>0 of 19</td>
+<td></td>
+</tr>
+<tr>
+<td>eight lineage-level models, MCEM (V5, V5b)</td>
+<td>0 of 80</td>
+<td>median ratio 0.004–1.47, 10th percentile at most 0.70</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Under <code>cr</code> the exact estimate is zero on 10–50% of trees at turnover 0.10 (50% at 25 tips, 10% at 800), 0–32% at 0.25 and 0–20% at 0.40.</p>
+<p><strong>Rule 2, slopes generated at 0.</strong> Under <code>dd</code> the exact <span class="math inline">\(\gamma_N\)</span> has a median of +0.006 to +0.12 and lies on its <span class="math inline">\(+3/n\)</span> cap on 32–98% of the trees of a cell; its central 80% contains 0 in 11 of 19 cells, those of 100 tips and more. Of the lineage-level slopes, the central 80% contains 0 in every cell for <span class="math inline">\(\gamma_D\)</span> (<code>d</code>, <code>nd</code>), centred ED (<code>edc</code>, <code>nedc</code>) and <span class="math inline">\(K\)</span> (<code>k</code>, <code>nk</code>), with 0–37% of fits on a box edge. Raw ED is fitted negative: under <code>ed</code> the median <span class="math inline">\(\gamma_{ED}\)</span> is the lower edge, −0.40, in 6 of 10 cells, a median 97% of fits are negative, and the central 80% contains 0 in 4 of 10; under <code>ned</code> the median is −0.04 to −0.40, with 21–59% of fits on the edge.</p>
+<p><strong>Rule 3, MCEM against the exact estimate.</strong> Under <code>cr</code>, where the exact <span class="math inline">\(\mu\)</span> is positive, the median ratio of MCEM to exact is 0.93–1.07 in every cell, with a rank correlation of 0.94–1.00. Where the exact <span class="math inline">\(\mu\)</span> is zero (0 to 20 of 40 trees a cell), MCEM returns a positive rate, a median 0.02–0.35 of its <span class="math inline">\(\lambda\)</span>. Under <code>dd</code> the ratio of the cell medians of MCEM and exact ranges from 0.16 to 55, so MCEM does not track the exact extinction estimate. The <code>dd</code> MCEM ratios are on the trees valid under the first exact reference, a subset of those of the repaired one.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Extinction is read from these trees only under constant rates at turnover 0.40 and 200 tips or more, by both MCEM and the exact estimate. Under diversity dependence and every lineage-level model it is read in no cell, and an extinction slope generated at 0 sits on a box edge on a large share of fits, toward negative values for raw ED.</p>
 
 </article>
 </main>

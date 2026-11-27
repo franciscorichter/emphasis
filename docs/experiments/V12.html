@@ -56,6 +56,8 @@ window.MathJax = {
 </li>
 <li><a href="#results">Results</a>
 </li>
+<li><a href="#conclusion">Conclusion</a>
+</li>
 </ol>
 </nav>
 <div class="table-wrap">
@@ -63,7 +65,7 @@ window.MathJax = {
 <tbody>
 <tr>
 <td>Status</td>
-<td>registered 2026-10-31; an analysis of the other experiments' rows</td>
+<td>read 2026-11-27; an analysis of the other experiments' rows</td>
 </tr>
 <tr>
 <td>Series</td>
@@ -71,7 +73,7 @@ window.MathJax = {
 </tr>
 <tr>
 <td>Package build</td>
-<td>emphasis <code>182055b</code> (1.0.0.9000), R 4.5.3</td>
+<td>the builds of the rows it reads (<code>b21083f</code> for V3, V5–V9, V11)</td>
 </tr>
 <tr>
 <td>Driver</td>
@@ -102,7 +104,97 @@ window.MathJax = {
 <li>Descriptive: median and 90th percentile of time per fit by model, size, proposal and stopping rule.</li>
 </ol>
 <h2 id="results">Results</h2>
-<p>Not yet.</p>
+<p><code>Rscript sim/V12.R</code>; 13,849 fits; tables in <code>results/V12/</code> (<code>cost.csv</code>, <code>reading.txt</code>). Times are of the whole fit (unconditioned start, survival surfaces and MCEM), on one thread; fits on the clock count at the clock (22 hours, 44 at 200 and 400 tips). Simulated cells pool turnover, effect and sampling fraction.</p>
+<p><strong>Median hours per fit, simulated trees, <code>projected</code></strong> (90th percentile in parentheses):</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>50 tips</th>
+<th>100</th>
+<th>200</th>
+<th>400</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cr</code></td>
+<td>0.04 (0.1)</td>
+<td>0.03 (0.1)</td>
+<td>0.05 (0.7)</td>
+<td>0.5 (3.9)</td>
+</tr>
+<tr>
+<td><code>dd</code></td>
+<td>0.7 (3.5)</td>
+<td>0.6 (3.3)</td>
+<td>0.3 (2.1)</td>
+<td>2.5 (11)</td>
+</tr>
+<tr>
+<td><code>d</code></td>
+<td>0.2 (0.6)</td>
+<td>0.6 (1.6)</td>
+<td>2.9 (18)</td>
+<td>5.5 (12)</td>
+</tr>
+<tr>
+<td><code>nd</code></td>
+<td>0.9 (6.4)</td>
+<td>1.3 (5.5)</td>
+<td>6.0 (22)</td>
+<td>16 (24)</td>
+</tr>
+<tr>
+<td><code>ed</code></td>
+<td>2.9 (7.3)</td>
+<td>5.3 (22)</td>
+<td>14 (22)</td>
+<td>6.7 (23)</td>
+</tr>
+<tr>
+<td><code>edc</code></td>
+<td>1.6 (5.7)</td>
+<td>3.7 (12)</td>
+<td>6.8 (20)</td>
+<td>9.3 (14)</td>
+</tr>
+<tr>
+<td><code>ned</code></td>
+<td>4.8 (22)</td>
+<td>7.0 (22)</td>
+<td>15 (23)</td>
+<td>23 (24)</td>
+</tr>
+<tr>
+<td><code>nedc</code></td>
+<td>5.0 (22)</td>
+<td>5.9 (22)</td>
+<td>13 (13)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>1.1 (8.3)</td>
+<td>1.4 (21)</td>
+<td>20 (22)</td>
+<td>22 (23)</td>
+</tr>
+<tr>
+<td><code>nk</code></td>
+<td>1.4 (13)</td>
+<td>2.5 (13)</td>
+<td>9.3 (22)</td>
+<td>22 (23)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Stopping rules at 100 tips</strong> (<a href="V3.html">V3</a>, median hours): <code>projected</code> 0.04 (<code>cr</code>) to 5.9 (<code>ed</code>, <code>ned</code>, <code>nk</code>); the reference run (1200 draws, 400 iterations) 0.9 to 12.7. V3's <code>mc_error</code> arm holds only its first 81 fits and <code>rel_change</code> has not run, so they are not compared here.</p>
+<p><strong>Real trees</strong> (175, 50–370 tips): under <code>projected</code>, <code>cr</code> 0.02 hours, <code>dd</code> 0.2, <code>nd</code> on the surrogate 3.7 (90th percentile 9.5), <code>ned</code> 3.8 (15.6), <code>nk</code> 2.6 (8.8). On the same trees <code>cr</code> takes 0.04 hours under <code>rel_change</code> and 1.7 under <code>mc_error</code> with draws grown to 2400 (<a href="V4.html">V4</a>).</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>A lineage-level fit takes hours where <code>cr</code> and <code>dd</code> take minutes, and its time grows with size: at 200 tips the 90th percentile of every lineage-level model reaches the clock.</p>
 
 </article>
 </main>
