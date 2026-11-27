@@ -71,6 +71,8 @@ WIKI_PAGES = {
 }
 
 EXPERIMENT_RE = re.compile(r"^(E\d+|V\d+|S)$")
+# Experiment pages kept in the private wiki only: not published, and links to them become plain text.
+PRIVATE = {"V1"}
 
 INDEX_STYLE = """<style>
 .table-wrap:has(th:nth-child(4)) table { table-layout: fixed; }
@@ -104,7 +106,8 @@ KEPT = ["simulator.html"]
 
 # Pages that moved: old path -> new path. Each old path gets a page that redirects.
 REDIRECTS = {"D.html": "covariates/D.html", "estimability.html": "experiments/estimability.html",
-             "established.html": "experiments/index.html"}   # What we know is kept in the private wiki only
+             "established.html": "experiments/index.html",
+             "experiments/V1.html": "experiments/index.html"}   # V1 is kept in the private wiki only   # What we know is kept in the private wiki only
 
 # Anchors the kept pages link to, kept stable whatever the heading's own id becomes:
 # page -> {anchor: regex matched against the heading id it should land on}.
@@ -162,6 +165,8 @@ def root_prefix(page):
 
 def wiki_target(name):
     """The site path of a wiki page name, or None if it is not one."""
+    if name in PRIVATE:
+        return None
     if name in WIKI_PAGES:
         return WIKI_PAGES[name]
     if EXPERIMENT_RE.match(name):
@@ -189,6 +194,7 @@ def rewrite_links(body, page):
             return 'src="' + rel("assets/wiki/" + url[len("images/"):], page) + '"'
         return m.group(0)
 
+    body = re.sub(r'<a href="(?:%s)(?:#[^"]*)?"[^>]*>(.*?)</a>' % "|".join(sorted(PRIVATE)), r"\1", body, flags=re.S)
     body = re.sub(r'href="([^"]*)"', href, body)
     body = re.sub(r'src="([^"]*)"', src, body)
     return body
@@ -594,7 +600,7 @@ def main():
 
     # The experiments.
     site.experiments_index()
-    exp = sorted((p for p in wiki.glob("*.md") if EXPERIMENT_RE.match(p.stem)),
+    exp = sorted((p for p in wiki.glob("*.md") if EXPERIMENT_RE.match(p.stem) and p.stem not in PRIVATE),
                  key=lambda p: ("SEV".index(p.stem[0]), int(p.stem[1:] or 0)))
     for p in exp:
         site.markdown_page(p, "experiments/" + p.stem + ".html", p.stem, meta_first=True)
