@@ -25,7 +25,7 @@ $N$ says when the clade diversifies; $D$, ED and $K$ say which of its lineages d
 | simulation | estimated against an exact maximum; `dd` chosen on 0.90 of its own trees at 100 tips | under the current likelihood, conditioned on survival: within a factor of 2 on 40% to 94% of fits by model, sign of the effect and turnover ([V5](../experiments/V5.html), interim) | sign on at least 0.95 of trees; selection over `dd` needs an effect of 0.35 to 0.60 of the speciation rate | recovered at 0.92 to 0.95 by fitting, 0.65 to 0.76 on budget-stopped ladder fits; `nk` chosen on 11 to 15 of 20 of its trees |
 | real trees | `dd` leads `cr` in 32 of 46 families, $\beta_N < 0$ in all 46 | factor below 1 on 92 of 109 read fits, median 0.78, from fits of which 7 of 170 met the stopping rule | factor below 1 on all 45 read trees that chose `ned`, median 0.49 | factor above 1 on all 54 read trees that chose `nk`, median 1.63 |
 
-The within-tree correlations are from [E39](../experiments/E39.html); the simulation and real-tree numbers are from the experiments each page cites, summarised on [What is established](../established.html) and [Real phylogenies](../real-phylogenies.html).
+The within-tree correlations are from [E39](../experiments/E39.html); the simulation and real-tree numbers are from the experiments each page cites, summarised on [Real phylogenies](../real-phylogenies.html).
 
 ## The two pairs the trees do not separate
 

@@ -12,7 +12,6 @@ Inputs
     site/src/covariates/*.md    -> covariates/*.html (the biological meaning of N, D, ED and K)
     site/reference/*.html       Rd fragments (site/reference.R, run on whitebox) -> reference.html
                                 ordered by site/reference/index.json when it exists
-    <wiki>/What-we-know.md      -> established.html
     <wiki>/Estimability.md      -> experiments/estimability.html (estimability.html redirects to it)
     <wiki>/Real-phylogenies.md  -> real-phylogenies.html
     <wiki>/Open-issues.md       -> open-issues.html
@@ -64,7 +63,6 @@ NAV = [
 # Wiki page name -> site path (relative to the repository root).
 WIKI_PAGES = {
     "Home": "experiments/index.html",
-    "What-we-know": "established.html",
     "Estimability": "experiments/estimability.html",
     "Real-phylogenies": "real-phylogenies.html",
     "Open-issues": "open-issues.html",
@@ -105,7 +103,8 @@ INDEX_STYLE = """<style>
 KEPT = ["simulator.html"]
 
 # Pages that moved: old path -> new path. Each old path gets a page that redirects.
-REDIRECTS = {"D.html": "covariates/D.html", "estimability.html": "experiments/estimability.html"}
+REDIRECTS = {"D.html": "covariates/D.html", "estimability.html": "experiments/estimability.html",
+             "established.html": "experiments/index.html"}   # What we know is kept in the private wiki only
 
 # Anchors the kept pages link to, kept stable whatever the heading's own id becomes:
 # page -> {anchor: regex matched against the heading id it should land on}.
